@@ -3,9 +3,9 @@
 version = 4
 
 [[package]]
-name = "wayfarer"
+name = "hermes"
 version = "0.1.0"
 
 [[package]]
-name = "wayfarer_core"
+name = "hermes_core"
 version = "0.1.0"
