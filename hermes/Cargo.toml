@@ -4,3 +4,6 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+geojson = "0.24.2"
+hermes_core = { version = "0.1.0", path = "../hermes_core" }
+
