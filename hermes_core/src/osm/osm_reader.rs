@@ -1,10 +1,6 @@
+use crate::latlng::LatLng;
 use osmpbf::{DenseNode, Element, ElementReader, Node, Way};
 use std::collections::HashMap;
-
-pub struct LatLng {
-    pub lat: f64,
-    pub lng: f64,
-}
 
 pub struct OsmNode {
     id: usize,
@@ -16,6 +12,17 @@ pub struct OsmWay {
     id: usize,
     pub nodes: Vec<usize>,
     pub tags: HashMap<String, String>,
+}
+
+impl OsmWay {
+    pub fn get_tag(&self, tag: &str) -> Option<&str> {
+        self.tags.get(tag).map(|tag| tag.as_str())
+    }
+
+    pub fn has_tag(&self, tag: &str, value: &str) -> bool {
+        self.get_tag(tag)
+            .map_or(false, |tag_value| tag_value == value)
+    }
 }
 
 pub struct OSMData {
@@ -154,21 +161,21 @@ pub fn parse_osm_file(file_path: &str) -> Box<OSMData> {
     reader
         .for_each(|element| {
             match element {
-                Element::Relation(relation) => {
+                Element::Relation(_) => {
                     // Process relation data
                     // println!("Relation ID: {}", relation.id());
                 }
                 Element::DenseNode(node) => {
                     osm_data.add_dense_node(&node);
                     node_count += 1;
-                    if (node_count % 10000 == 0) {
+                    if node_count % 10000 == 0 {
                         println!("Processed {} nodes", node_count);
                     }
                 }
                 Element::Node(node) => {
                     osm_data.add_node(&node);
                     node_count += 1;
-                    if (node_count % 10000 == 0) {
+                    if node_count % 10000 == 0 {
                         println!("Processed {} nodes", node_count);
                     }
                 }
@@ -176,7 +183,7 @@ pub fn parse_osm_file(file_path: &str) -> Box<OSMData> {
                     // Process way data
                     osm_data.add_way(&way);
                     way_count += 1;
-                    if (way_count % 10000 == 0) {
+                    if way_count % 10000 == 0 {
                         println!("Processed {} ways", way_count);
                     }
                 }

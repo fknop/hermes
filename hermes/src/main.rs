@@ -39,7 +39,7 @@ fn main() {
         })
     });
 
-    let mut geojson = GeoJson::FeatureCollection(FeatureCollection {
+    let geojson = GeoJson::FeatureCollection(FeatureCollection {
         bbox: None,
         foreign_members: None,
         features,
