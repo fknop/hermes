@@ -5,3 +5,4 @@ edition = "2024"
 
 [dependencies]
 osmpbf = "0.3.4"
+rstar = "0.12.2"

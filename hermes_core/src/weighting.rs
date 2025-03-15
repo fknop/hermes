@@ -2,28 +2,17 @@ use crate::graph::{Graph, GraphEdge};
 use crate::properties::property::Property;
 use crate::properties::property_map::EdgeDirection;
 
-struct Weighting;
+pub trait Weighting {
+    fn calc_edge_weight(&self, edge: &GraphEdge, direction: EdgeDirection) -> usize;
+    fn calc_edge_ms(&self, edge: &GraphEdge, direction: EdgeDirection) -> usize;
+}
 
-impl Weighting {
-    fn new(graph: &Graph) -> Weighting {
-        Weighting
+pub struct CarWeighting;
+
+impl CarWeighting {
+    pub fn new() -> Self {
+        CarWeighting {}
     }
-
-    fn calc_edge_weight(&self, edge: &GraphEdge, direction: EdgeDirection) -> f64 {
-        let speed = Self::get_speed(edge, direction);
-        if (speed == 0) {
-            return f64::INFINITY;
-        }
-
-        let speed_meters_per_second = (speed as f64) * (1000.0 / 3600.0);
-        return edge.get_distance() / speed_meters_per_second;
-    }
-
-    fn calc_edge_ms(&self, edge: &GraphEdge, direction: EdgeDirection) -> u64 {
-        let time = self.calc_edge_weight(edge, direction) * 1000.0;
-        time.round() as u64
-    }
-
     fn get_speed(edge: &GraphEdge, direction: EdgeDirection) -> u8 {
         let access = edge
             .properties
@@ -40,10 +29,19 @@ impl Weighting {
     }
 }
 
-fn test(a: u8) {}
+impl Weighting for CarWeighting {
+    fn calc_edge_weight(&self, edge: &GraphEdge, direction: EdgeDirection) -> usize {
+        let speed = Self::get_speed(edge, direction);
+        if (speed == 0) {
+            return usize::MAX;
+        }
 
-fn test2() {
-    let a: u8 = 2;
-    test(a);
-    test(a);
+        let speed_meters_per_second = (speed as f64) * (1000.0 / 3600.0);
+        (edge.get_distance() / speed_meters_per_second).round() as usize
+    }
+
+    fn calc_edge_ms(&self, edge: &GraphEdge, direction: EdgeDirection) -> usize {
+        let time = self.calc_edge_weight(edge, direction) * 1000;
+        time
+    }
 }

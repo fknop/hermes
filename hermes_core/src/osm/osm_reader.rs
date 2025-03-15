@@ -1,6 +1,7 @@
 use crate::latlng::LatLng;
 use osmpbf::{DenseNode, Element, ElementReader, Node, Way};
 use std::collections::HashMap;
+use std::slice::Iter;
 
 pub struct OsmNode {
     id: usize,
@@ -10,11 +11,14 @@ pub struct OsmNode {
 
 pub struct OsmWay {
     id: usize,
-    pub nodes: Vec<usize>,
+    nodes: Vec<usize>,
     pub tags: HashMap<String, String>,
 }
 
 impl OsmWay {
+    pub fn get_id(&self) -> usize {
+        self.id
+    }
     pub fn get_tag(&self, tag: &str) -> Option<&str> {
         self.tags.get(tag).map(|tag| tag.as_str())
     }
@@ -23,6 +27,18 @@ impl OsmWay {
         self.get_tag(tag)
             .map_or(false, |tag_value| tag_value == value)
     }
+
+    pub fn get_nodes(&self) -> &Vec<usize> {
+        &self.nodes
+    }
+
+    pub fn get_from_node(&self) -> usize {
+        self.nodes[0]
+    }
+
+    pub fn get_to_node(&self) -> usize {
+        self.nodes[self.nodes.len() - 1]
+    }
 }
 
 pub struct OSMData {
@@ -30,8 +46,8 @@ pub struct OSMData {
     next_way_id: usize,
     osm_node_ids_to_internal_id: HashMap<i64, usize>,
     osm_way_ids_to_internal_id: HashMap<i64, usize>,
-    pub osm_node_data: Vec<OsmNode>,
-    pub osm_ways_data: Vec<OsmWay>,
+    osm_node_data: Vec<OsmNode>,
+    osm_ways_data: Vec<OsmWay>,
 }
 
 impl OSMData {
@@ -44,6 +60,14 @@ impl OSMData {
             osm_node_data: Vec::new(),
             osm_ways_data: Vec::new(),
         }
+    }
+
+    pub fn get_nodes(&self) -> &Vec<OsmNode> {
+        &self.osm_node_data
+    }
+
+    pub fn get_ways(&self) -> &Vec<OsmWay> {
+        &self.osm_ways_data
     }
 
     fn add_node(&mut self, node: &Node) {
@@ -125,17 +149,16 @@ impl OSMData {
             None => None,
         }
     }
-
-    pub fn get_nodes(&self) -> &Vec<OsmNode> {
-        &self.osm_node_data
-    }
-
     pub fn get_node(&self, id: usize) -> Option<&OsmNode> {
         self.osm_node_data.get(id)
     }
 
-    pub fn get_ways(&self) -> &Vec<OsmWay> {
-        &self.osm_ways_data
+    pub fn get_way_geometry(&self, id: usize) -> Vec<LatLng> {
+        let way = &self.osm_ways_data[id];
+        way.get_nodes()
+            .iter()
+            .map(|node_id| self.osm_node_data[*node_id].coordinates)
+            .collect()
     }
 }
 
