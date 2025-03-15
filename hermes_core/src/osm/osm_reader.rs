@@ -1,4 +1,7 @@
 use crate::latlng::LatLng;
+use crate::properties::property::Property;
+use crate::properties::property_map::EdgePropertyMap;
+use crate::properties::tag_parser::handle_way;
 use osmpbf::{DenseNode, Element, ElementReader, Node, Way};
 use std::collections::HashMap;
 use std::slice::Iter;
@@ -13,6 +16,7 @@ pub struct OsmWay {
     id: usize,
     nodes: Vec<usize>,
     pub tags: HashMap<String, String>,
+    properties: EdgePropertyMap,
 }
 
 impl OsmWay {
@@ -39,6 +43,13 @@ impl OsmWay {
     pub fn get_to_node(&self) -> usize {
         self.nodes[self.nodes.len() - 1]
     }
+
+    pub fn get_properties(&self) -> &EdgePropertyMap {
+        &self.properties
+    }
+    pub fn get_properties_mut(&mut self) -> &mut EdgePropertyMap {
+        &mut self.properties
+    }
 }
 
 pub struct OSMData {
@@ -62,7 +73,7 @@ impl OSMData {
         }
     }
 
-    pub fn get_nodes(&self) -> &Vec<OsmNode> {
+    pub fn get_nodes(&self) -> &[OsmNode] {
         &self.osm_node_data
     }
 
@@ -123,17 +134,25 @@ impl OSMData {
             return;
         }
 
+        let properties = EdgePropertyMap::new();
+
         let way_id = self.next_way_id;
         self.osm_way_ids_to_internal_id.insert(way.id(), way_id);
 
-        self.osm_ways_data.push(OsmWay {
+        let mut way = OsmWay {
             id: way_id,
             nodes: way
                 .refs()
                 .filter_map(|node| self.get_node_id_from_osm_id(node))
                 .collect(),
             tags,
-        });
+            properties: EdgePropertyMap::new(),
+        };
+
+        handle_way(&mut way, Property::MaxSpeed);
+        handle_way(&mut way, Property::VehicleAccess("car".to_string()));
+
+        self.osm_ways_data.push(way);
 
         self.next_way_id += 1
     }

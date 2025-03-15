@@ -1,6 +1,7 @@
 use crate::properties::property::Property;
 use std::collections::HashMap;
 
+#[derive(Clone, Debug)]
 pub struct EdgePropertyMap {
     backward_bool_values: HashMap<Property, bool>,
     forward_bool_values: HashMap<Property, bool>,
@@ -16,9 +17,9 @@ impl EdgePropertyMap {
     pub fn new() -> EdgePropertyMap {
         EdgePropertyMap {
             forward_u8_values: HashMap::new(),
-            backward_bool_values: HashMap::new(),
-            forward_bool_values: HashMap::new(),
             backward_u8_values: HashMap::new(),
+            forward_bool_values: HashMap::new(),
+            backward_bool_values: HashMap::new(),
         }
     }
 
@@ -54,7 +55,7 @@ impl EdgePropertyMap {
         value: bool,
     ) -> Option<bool> {
         match direction {
-            FORWARD_EDGE => self.backward_bool_values.insert(property, !value),
+            FORWARD_EDGE => self.forward_bool_values.insert(property, value),
             BACKWARD_EDGE => self.backward_bool_values.insert(property, value),
         }
     }

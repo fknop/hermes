@@ -16,10 +16,12 @@ fn get_max_speed(way: &OsmWay) -> Option<u8> {
 
 // https://wiki.openstreetmap.org/wiki/Key:maxspeed
 impl TagParser for MaxSpeedParser {
-    fn handle_way(way: &OsmWay, properties: &mut EdgePropertyMap) {
+    fn handle_way(way: &mut OsmWay) {
         if let Some(max_speed) = get_max_speed(way) {
-            properties.insert_u8(Property::MaxSpeed, FORWARD_EDGE, max_speed);
-            properties.insert_u8(Property::MaxSpeed, BACKWARD_EDGE, max_speed);
+            way.get_properties_mut()
+                .insert_u8(Property::MaxSpeed, FORWARD_EDGE, max_speed);
+            way.get_properties_mut()
+                .insert_u8(Property::MaxSpeed, BACKWARD_EDGE, max_speed);
         }
     }
 }

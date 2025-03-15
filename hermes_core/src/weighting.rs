@@ -1,4 +1,4 @@
-use crate::graph::{Graph, GraphEdge};
+use crate::graph::GraphEdge;
 use crate::properties::property::Property;
 use crate::properties::property_map::EdgeDirection;
 

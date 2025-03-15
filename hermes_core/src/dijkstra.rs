@@ -1,8 +1,8 @@
 use crate::graph::Graph;
-use crate::properties::property_map::{BACKWARD_EDGE, EdgeDirection, FORWARD_EDGE};
-use crate::routing_path::RoutingPath;
+use crate::latlng::LatLng;
+use crate::properties::property_map::FORWARD_EDGE;
+use crate::routing_path::{RoutingPath, RoutingPathItem};
 use crate::weighting::Weighting;
-use osmpbf::Node;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 
@@ -37,9 +37,11 @@ struct NodeData {
     settled: bool,
     weight: usize,
     parent: usize,
+    edge_id: usize, // Edge ID from parent to current node
 }
 
 const INVALID_NODE: usize = usize::MAX;
+const INVALID_EDGE: usize = usize::MAX;
 const MAX_WEIGHT: usize = usize::MAX;
 
 impl NodeData {
@@ -48,77 +50,157 @@ impl NodeData {
             settled: false,
             weight: MAX_WEIGHT,
             parent: INVALID_NODE,
+            edge_id: INVALID_EDGE,
         }
     }
 }
 
-fn update_node(data: &mut Vec<NodeData>, node: usize, weight: usize, parent: usize) {
-    data[node].settled = false;
-    data[node].weight = weight;
-    data[node].parent = parent;
+pub trait ShortestPathAlgo {
+    fn calc_path(
+        &mut self,
+        graph: &Graph,
+        weighting: &impl Weighting,
+        start: usize,
+        end: usize,
+    ) -> RoutingPath;
 }
 
-pub fn dijkstra(
-    graph: &Graph,
-    weighting: &impl Weighting,
-    from_node: usize,
-    to_node: usize,
-) -> RoutingPath {
-    let mut path = RoutingPath::new();
+pub struct Dijkstra {
+    heap: BinaryHeap<HeapItem>,
+    data: Vec<NodeData>,
+}
 
-    let mut data: Vec<_> = (0..graph.get_node_count())
-        .map(|_| NodeData::new())
-        .collect();
-    let mut heap: BinaryHeap<HeapItem> = BinaryHeap::new();
+impl Dijkstra {
+    pub fn new(graph: &Graph) -> Self {
+        let data: Vec<_> = (0..graph.get_node_count())
+            .map(|_| NodeData::new())
+            .collect();
+        let heap: BinaryHeap<HeapItem> = BinaryHeap::new();
+        Dijkstra { heap, data }
+    }
 
-    update_node(&mut data, from_node, 0, INVALID_NODE);
-    heap.push(HeapItem {
-        node_id: from_node,
-        weight: 0,
-    });
+    fn init(&mut self, start: usize, end: usize) {
+        self.heap.push(HeapItem {
+            node_id: start,
+            weight: 0,
+        });
+        self.update_node_data(start, 0, INVALID_NODE, INVALID_EDGE)
+    }
 
-    while let Some(HeapItem { node_id, weight }) = heap.pop() {
-        if data[node_id].settled {
-            continue;
+    fn update_node_data(&mut self, node: usize, weight: usize, parent: usize, edge_id: usize) {
+        self.data[node].settled = false;
+        self.data[node].weight = weight;
+        self.data[node].parent = parent;
+        self.data[node].edge_id = edge_id;
+    }
+
+    fn is_settled(&self, node: usize) -> bool {
+        self.data[node].settled
+    }
+
+    fn get_current_shortest_weight(&self, node: usize) -> usize {
+        self.data[node].weight
+    }
+
+    fn build_path(
+        &self,
+        graph: &Graph,
+        weighting: &impl Weighting,
+        start: usize,
+        end: usize,
+    ) -> RoutingPath {
+        let mut path: Vec<RoutingPathItem> = Vec::new();
+
+        let mut node = end;
+
+        while self.data[node].parent != INVALID_NODE {
+            let edge_id = self.data[node].edge_id;
+            let parent = self.data[node].parent;
+
+            let direction = graph.get_edge_direction(edge_id, parent);
+
+            let edge = graph.get_edge(edge_id);
+
+            let geometry: Vec<LatLng> = if direction == FORWARD_EDGE {
+                graph.get_edge_geometry(edge_id).iter().cloned().collect()
+            } else {
+                graph
+                    .get_edge_geometry(edge_id)
+                    .iter()
+                    .rev()
+                    .cloned()
+                    .collect()
+            };
+
+            let distance = edge.get_distance();
+            let time = weighting.calc_edge_ms(edge, direction);
+
+            path.push(RoutingPathItem::new(distance, time, geometry));
+            node = self.data[node].parent;
         }
 
-        if weight > data[node_id].weight {
-            continue;
-        }
+        path.reverse();
 
-        for edge_id in graph.get_node_edges(node_id) {
-            let edge = graph.get_edge(*edge_id);
-            let edge_from_node = edge.get_from_node();
-            let edge_to_node = edge.get_to_node();
+        RoutingPath::new(path)
+    }
+}
 
-            let adj_node = if edge_from_node == node_id {
-                edge_to_node
-            } else {
-                edge_from_node
-            };
-            let direction = if edge_from_node == node_id {
-                FORWARD_EDGE
-            } else {
-                BACKWARD_EDGE
-            };
+impl ShortestPathAlgo for Dijkstra {
+    fn calc_path(
+        &mut self,
+        graph: &Graph,
+        weighting: &impl Weighting,
+        start: usize,
+        end: usize,
+    ) -> RoutingPath {
+        self.init(start, end);
 
-            let edge_weight = weighting.calc_edge_weight(&edge, direction);
-            let next_weight = weight + edge_weight;
+        while let Some(HeapItem { node_id, weight }) = self.heap.pop() {
+            // Node is already settled, skip
+            if self.is_settled(node_id) {
+                continue;
+            }
 
-            if next_weight < data[adj_node].weight {
-                update_node(&mut data, adj_node, next_weight, node_id);
-                heap.push(HeapItem {
-                    weight: next_weight,
-                    node_id: adj_node,
-                });
+            // The weight is bigger than the current shortest weight, skip
+            if weight > self.get_current_shortest_weight(node_id) {
+                continue;
+            }
+
+            for edge_id in graph.get_node_edges(node_id) {
+                let edge = graph.get_edge(*edge_id);
+                let edge_from_node = edge.get_from_node();
+                let edge_to_node = edge.get_to_node();
+
+                let adj_node = if edge_from_node == node_id {
+                    edge_to_node
+                } else {
+                    edge_from_node
+                };
+
+                let direction = graph.get_edge_direction(*edge_id, node_id);
+
+                let edge_weight = weighting.calc_edge_weight(&edge, direction);
+                let next_weight = if edge_weight == MAX_WEIGHT {
+                    MAX_WEIGHT
+                } else {
+                    weight + edge_weight
+                };
+
+                if next_weight < self.get_current_shortest_weight(adj_node) {
+                    self.update_node_data(adj_node, next_weight, node_id, edge_id.clone());
+                    self.heap.push(HeapItem {
+                        weight: next_weight,
+                        node_id: adj_node,
+                    });
+                }
+            }
+
+            self.data[node_id].settled = true;
+            if node_id == end {
+                break;
             }
         }
 
-        data[node_id].settled = true;
-        if node_id == to_node {
-            break;
-        }
+        self.build_path(graph, weighting, start, end)
     }
-
-    path
 }

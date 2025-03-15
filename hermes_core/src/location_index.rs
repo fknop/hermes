@@ -9,12 +9,12 @@ pub struct LocationIndex {
     tree: RTree<LocationIndexObject>,
 }
 
-impl RTreeObject for LatLng {
-    type Envelope = AABB<[f64; 2]>;
-    fn envelope(&self) -> Self::Envelope {
-        AABB::from_point([self.lng, self.lat])
-    }
-}
+// impl RTreeObject for LatLng {
+//     type Envelope = AABB<[f64; 2]>;
+//     fn envelope(&self) -> Self::Envelope {
+//         AABB::from_point([self.lng, self.lat])
+//     }
+// }
 
 impl LocationIndex {
     pub fn build_from_graph(graph: &Graph) -> LocationIndex {
