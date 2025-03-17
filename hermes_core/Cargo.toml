@@ -6,3 +6,4 @@ edition = "2024"
 [dependencies]
 osmpbf = "0.3.4"
 rstar = "0.12.2"
+serde = { version = "1.0.219", features = ["derive"] }

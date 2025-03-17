@@ -59,7 +59,7 @@ pub trait ShortestPathAlgo {
     fn calc_path(
         &mut self,
         graph: &Graph,
-        weighting: &impl Weighting,
+        weighting: &dyn Weighting,
         start: usize,
         end: usize,
     ) -> RoutingPath;
@@ -72,9 +72,7 @@ pub struct Dijkstra {
 
 impl Dijkstra {
     pub fn new(graph: &Graph) -> Self {
-        let data: Vec<_> = (0..graph.get_node_count())
-            .map(|_| NodeData::new())
-            .collect();
+        let data: Vec<_> = (0..graph.node_count()).map(|_| NodeData::new()).collect();
         let heap: BinaryHeap<HeapItem> = BinaryHeap::new();
         Dijkstra { heap, data }
     }
@@ -98,14 +96,14 @@ impl Dijkstra {
         self.data[node].settled
     }
 
-    fn get_current_shortest_weight(&self, node: usize) -> usize {
+    fn current_shortest_weight(&self, node: usize) -> usize {
         self.data[node].weight
     }
 
     fn build_path(
         &self,
         graph: &Graph,
-        weighting: &impl Weighting,
+        weighting: &dyn Weighting,
         start: usize,
         end: usize,
     ) -> RoutingPath {
@@ -117,22 +115,17 @@ impl Dijkstra {
             let edge_id = self.data[node].edge_id;
             let parent = self.data[node].parent;
 
-            let direction = graph.get_edge_direction(edge_id, parent);
+            let direction = graph.edge_direction(edge_id, parent);
 
-            let edge = graph.get_edge(edge_id);
+            let edge = graph.edge(edge_id);
 
             let geometry: Vec<LatLng> = if direction == FORWARD_EDGE {
-                graph.get_edge_geometry(edge_id).iter().cloned().collect()
+                graph.edge_geometry(edge_id).iter().cloned().collect()
             } else {
-                graph
-                    .get_edge_geometry(edge_id)
-                    .iter()
-                    .rev()
-                    .cloned()
-                    .collect()
+                graph.edge_geometry(edge_id).iter().rev().cloned().collect()
             };
 
-            let distance = edge.get_distance();
+            let distance = edge.distance();
             let time = weighting.calc_edge_ms(edge, direction);
 
             path.push(RoutingPathItem::new(distance, time, geometry));
@@ -149,7 +142,7 @@ impl ShortestPathAlgo for Dijkstra {
     fn calc_path(
         &mut self,
         graph: &Graph,
-        weighting: &impl Weighting,
+        weighting: &dyn Weighting,
         start: usize,
         end: usize,
     ) -> RoutingPath {
@@ -162,14 +155,14 @@ impl ShortestPathAlgo for Dijkstra {
             }
 
             // The weight is bigger than the current shortest weight, skip
-            if weight > self.get_current_shortest_weight(node_id) {
+            if weight > self.current_shortest_weight(node_id) {
                 continue;
             }
 
-            for edge_id in graph.get_node_edges(node_id) {
-                let edge = graph.get_edge(*edge_id);
-                let edge_from_node = edge.get_from_node();
-                let edge_to_node = edge.get_to_node();
+            for edge_id in graph.node_edges(node_id) {
+                let edge = graph.edge(*edge_id);
+                let edge_from_node = edge.start_node();
+                let edge_to_node = edge.end_node();
 
                 let adj_node = if edge_from_node == node_id {
                     edge_to_node
@@ -177,7 +170,7 @@ impl ShortestPathAlgo for Dijkstra {
                     edge_from_node
                 };
 
-                let direction = graph.get_edge_direction(*edge_id, node_id);
+                let direction = graph.edge_direction(*edge_id, node_id);
 
                 let edge_weight = weighting.calc_edge_weight(&edge, direction);
                 let next_weight = if edge_weight == MAX_WEIGHT {
@@ -186,7 +179,7 @@ impl ShortestPathAlgo for Dijkstra {
                     weight + edge_weight
                 };
 
-                if next_weight < self.get_current_shortest_weight(adj_node) {
+                if next_weight < self.current_shortest_weight(adj_node) {
                     self.update_node_data(adj_node, next_weight, node_id, edge_id.clone());
                     self.heap.push(HeapItem {
                         weight: next_weight,

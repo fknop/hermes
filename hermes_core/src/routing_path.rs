@@ -1,4 +1,6 @@
 use crate::latlng::LatLng;
+use serde::{Deserialize, Serialize};
+#[derive(Serialize)]
 
 pub struct RoutingPathItem {
     distance: f64,
@@ -7,15 +9,15 @@ pub struct RoutingPathItem {
 }
 
 impl RoutingPathItem {
-    pub fn get_distance(&self) -> f64 {
+    pub fn distance(&self) -> f64 {
         self.distance
     }
 
-    pub fn get_time(&self) -> usize {
+    pub fn time(&self) -> usize {
         self.time
     }
 
-    pub fn get_points(&self) -> &[LatLng] {
+    pub fn points(&self) -> &[LatLng] {
         &self.points
     }
 }
@@ -30,6 +32,8 @@ impl RoutingPathItem {
     }
 }
 
+#[derive(Serialize)]
+
 pub struct RoutingPath {
     items: Vec<RoutingPathItem>,
 }
@@ -39,7 +43,7 @@ impl RoutingPath {
         RoutingPath { items }
     }
 
-    pub fn get_legs(&self) -> &[RoutingPathItem] {
+    pub fn legs(&self) -> &[RoutingPathItem] {
         &self.items
     }
 }

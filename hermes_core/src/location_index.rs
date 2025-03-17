@@ -19,9 +19,9 @@ pub struct LocationIndex {
 impl LocationIndex {
     pub fn build_from_graph(graph: &Graph) -> LocationIndex {
         let tree: RTree<LocationIndexObject> = RTree::bulk_load(
-            (0..graph.get_edge_count())
+            (0..graph.edge_count())
                 .flat_map(|edge_id| {
-                    let geometry = graph.get_edge_geometry(edge_id);
+                    let geometry = graph.edge_geometry(edge_id);
                     geometry.iter().map(move |coordinates| {
                         LocationIndexObject::new(coordinates.into(), edge_id)
                     })
@@ -32,7 +32,7 @@ impl LocationIndex {
         LocationIndex { tree }
     }
 
-    pub fn get_closest(&self, coordinates: &LatLng) -> Option<usize> {
+    pub fn closest(&self, coordinates: &LatLng) -> Option<usize> {
         self.tree
             .nearest_neighbor(&coordinates.into())
             .map(|location| location.data)

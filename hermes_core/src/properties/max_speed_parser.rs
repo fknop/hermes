@@ -5,8 +5,8 @@ use crate::properties::tag_parser::TagParser;
 
 pub struct MaxSpeedParser;
 
-fn get_max_speed(way: &OsmWay) -> Option<u8> {
-    match way.get_tag("maxspeed") {
+fn max_speed(way: &OsmWay) -> Option<u8> {
+    match way.tag("maxspeed") {
         Some("walk") => Some(5),
         Some("none") => Some(150),
         Some(max_speed) => max_speed.parse::<u8>().ok(),
@@ -17,10 +17,10 @@ fn get_max_speed(way: &OsmWay) -> Option<u8> {
 // https://wiki.openstreetmap.org/wiki/Key:maxspeed
 impl TagParser for MaxSpeedParser {
     fn handle_way(way: &mut OsmWay) {
-        if let Some(max_speed) = get_max_speed(way) {
-            way.get_properties_mut()
+        if let Some(max_speed) = max_speed(way) {
+            way.properties_mut()
                 .insert_u8(Property::MaxSpeed, FORWARD_EDGE, max_speed);
-            way.get_properties_mut()
+            way.properties_mut()
                 .insert_u8(Property::MaxSpeed, BACKWARD_EDGE, max_speed);
         }
     }

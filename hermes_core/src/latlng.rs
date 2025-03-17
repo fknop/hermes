@@ -1,8 +1,8 @@
-use rstar::{AABB, RTreeObject};
+use serde::{Deserialize, Serialize};
 
 const EARTH_RADIUS: f64 = 6_371_000.0;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Serialize, Deserialize)]
 pub struct LatLng {
     pub lat: f64,
     pub lng: f64,

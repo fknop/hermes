@@ -20,34 +20,33 @@ pub struct OsmWay {
 }
 
 impl OsmWay {
-    pub fn get_id(&self) -> usize {
+    pub fn id(&self) -> usize {
         self.id
     }
-    pub fn get_tag(&self, tag: &str) -> Option<&str> {
+    pub fn tag(&self, tag: &str) -> Option<&str> {
         self.tags.get(tag).map(|tag| tag.as_str())
     }
 
     pub fn has_tag(&self, tag: &str, value: &str) -> bool {
-        self.get_tag(tag)
-            .map_or(false, |tag_value| tag_value == value)
+        self.tag(tag).map_or(false, |tag_value| tag_value == value)
     }
 
-    pub fn get_nodes(&self) -> &Vec<usize> {
+    pub fn nodes(&self) -> &Vec<usize> {
         &self.nodes
     }
 
-    pub fn get_from_node(&self) -> usize {
+    pub fn start_node(&self) -> usize {
         self.nodes[0]
     }
 
-    pub fn get_to_node(&self) -> usize {
+    pub fn end_node(&self) -> usize {
         self.nodes[self.nodes.len() - 1]
     }
 
-    pub fn get_properties(&self) -> &EdgePropertyMap {
+    pub fn properties(&self) -> &EdgePropertyMap {
         &self.properties
     }
-    pub fn get_properties_mut(&mut self) -> &mut EdgePropertyMap {
+    pub fn properties_mut(&mut self) -> &mut EdgePropertyMap {
         &mut self.properties
     }
 }
@@ -73,11 +72,11 @@ impl OSMData {
         }
     }
 
-    pub fn get_nodes(&self) -> &[OsmNode] {
+    pub fn nodes(&self) -> &[OsmNode] {
         &self.osm_node_data
     }
 
-    pub fn get_ways(&self) -> &Vec<OsmWay> {
+    pub fn ways(&self) -> &Vec<OsmWay> {
         &self.osm_ways_data
     }
 
@@ -143,7 +142,7 @@ impl OSMData {
             id: way_id,
             nodes: way
                 .refs()
-                .filter_map(|node| self.get_node_id_from_osm_id(node))
+                .filter_map(|node| self.node_id_from_osm_id(node))
                 .collect(),
             tags,
             properties: EdgePropertyMap::new(),
@@ -157,24 +156,24 @@ impl OSMData {
         self.next_way_id += 1
     }
 
-    fn get_node_id_from_osm_id(&self, osm_node_id: i64) -> Option<usize> {
+    fn node_id_from_osm_id(&self, osm_node_id: i64) -> Option<usize> {
         self.osm_node_ids_to_internal_id.get(&osm_node_id).cloned()
     }
 
-    fn get_tags(&self, node_id: usize) -> Option<&HashMap<String, String>> {
+    fn tags(&self, node_id: usize) -> Option<&HashMap<String, String>> {
         let node = self.osm_node_data.get(node_id);
         match node {
             Some(node) => Some(&node.tags),
             None => None,
         }
     }
-    pub fn get_node(&self, id: usize) -> Option<&OsmNode> {
+    pub fn node(&self, id: usize) -> Option<&OsmNode> {
         self.osm_node_data.get(id)
     }
 
-    pub fn get_way_geometry(&self, id: usize) -> Vec<LatLng> {
+    pub fn way_geometry(&self, id: usize) -> Vec<LatLng> {
         let way = &self.osm_ways_data[id];
-        way.get_nodes()
+        way.nodes()
             .iter()
             .map(|node_id| self.osm_node_data[*node_id].coordinates)
             .collect()

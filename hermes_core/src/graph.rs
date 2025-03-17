@@ -3,6 +3,7 @@ use crate::osm::osm_reader::OSMData;
 use crate::properties::property_map::{
     BACKWARD_EDGE, EdgeDirection, EdgePropertyMap, FORWARD_EDGE,
 };
+use crate::weighting::Weighting;
 
 pub struct GraphNode {
     id: usize,
@@ -10,23 +11,23 @@ pub struct GraphNode {
 
 pub struct GraphEdge {
     id: usize,
-    from_node: usize,
-    to_node: usize,
+    start_node: usize,
+    end_node: usize,
     distance: f64,
     pub properties: EdgePropertyMap,
 }
 
 impl GraphEdge {
-    pub fn get_distance(&self) -> f64 {
+    pub fn distance(&self) -> f64 {
         self.distance
     }
 
-    pub fn get_from_node(&self) -> usize {
-        self.from_node
+    pub fn start_node(&self) -> usize {
+        self.start_node
     }
 
-    pub fn get_to_node(&self) -> usize {
-        self.to_node
+    pub fn end_node(&self) -> usize {
+        self.end_node
     }
 }
 
@@ -49,16 +50,16 @@ impl Graph {
     }
 
     pub fn build_from_osm_data(osm_data: &OSMData) -> Graph {
-        let ways = osm_data.get_ways();
-        let nodes = osm_data.get_nodes();
+        let ways = osm_data.ways();
+        let nodes = osm_data.nodes();
         let mut graph = Graph::new(nodes.len(), ways.len());
 
         ways.iter().for_each(|way| {
             graph.add_edge(
-                way.get_from_node(),
-                way.get_to_node(),
-                way.get_properties().clone(),
-                osm_data.get_way_geometry(way.get_id()),
+                way.start_node(),
+                way.end_node(),
+                way.properties().clone(),
+                osm_data.way_geometry(way.id()),
             )
         });
 
@@ -75,8 +76,8 @@ impl Graph {
         let edge_id = self.edges.len();
         self.edges.push(GraphEdge {
             id: edge_id,
-            from_node,
-            to_node,
+            start_node: from_node,
+            end_node: to_node,
             properties,
             distance: self.compute_distance_for_geometry(&geometry),
         });
@@ -94,33 +95,33 @@ impl Graph {
         distance
     }
 
-    pub fn get_node_edges(&self, node: usize) -> &[usize] {
+    pub fn node_edges(&self, node: usize) -> &[usize] {
         &self.adjacency_list[node]
     }
 
-    pub fn get_edge(&self, edge: usize) -> &GraphEdge {
+    pub fn edge(&self, edge: usize) -> &GraphEdge {
         &self.edges[edge]
     }
 
-    pub fn get_edge_geometry(&self, edge: usize) -> &Vec<LatLng> {
+    pub fn edge_geometry(&self, edge: usize) -> &Vec<LatLng> {
         &self.geometry[edge]
     }
-    pub fn get_edge_count(&self) -> usize {
+    pub fn edge_count(&self) -> usize {
         self.edges.len()
     }
 
-    pub fn get_node_count(&self) -> usize {
+    pub fn node_count(&self) -> usize {
         self.nodes
     }
 
-    pub fn get_edge_direction(&self, edge_id: usize, start: usize) -> EdgeDirection {
+    pub fn edge_direction(&self, edge_id: usize, start: usize) -> EdgeDirection {
         let edge = &self.edges[edge_id];
 
-        if edge.from_node == start {
+        if edge.start_node == start {
             return FORWARD_EDGE;
         }
 
-        if edge.to_node == start {
+        if edge.end_node == start {
             return BACKWARD_EDGE;
         }
 
