@@ -14,6 +14,7 @@ pub struct OsmNode {
 
 pub struct OsmWay {
     id: usize,
+    osm_id: usize,
     nodes: Vec<usize>,
     pub tags: HashMap<String, String>,
     properties: EdgePropertyMap,
@@ -22,6 +23,10 @@ pub struct OsmWay {
 impl OsmWay {
     pub fn id(&self) -> usize {
         self.id
+    }
+
+    pub fn osm_id(&self) -> usize {
+        self.osm_id
     }
     pub fn tag(&self, tag: &str) -> Option<&str> {
         self.tags.get(tag).map(|tag| tag.as_str())
@@ -133,13 +138,12 @@ impl OSMData {
             return;
         }
 
-        let properties = EdgePropertyMap::new();
-
         let way_id = self.next_way_id;
         self.osm_way_ids_to_internal_id.insert(way.id(), way_id);
 
         let mut way = OsmWay {
             id: way_id,
+            osm_id: way.id() as usize,
             nodes: way
                 .refs()
                 .filter_map(|node| self.node_id_from_osm_id(node))
@@ -150,6 +154,7 @@ impl OSMData {
 
         handle_way(&mut way, Property::MaxSpeed);
         handle_way(&mut way, Property::VehicleAccess("car".to_string()));
+        handle_way(&mut way, Property::OsmId);
 
         self.osm_ways_data.push(way);
 

@@ -2,4 +2,5 @@
 pub enum Property {
     MaxSpeed,
     VehicleAccess(String),
+    OsmId,
 }

@@ -7,6 +7,8 @@ pub struct EdgePropertyMap {
     forward_bool_values: HashMap<Property, bool>,
     forward_u8_values: HashMap<Property, u8>,
     backward_u8_values: HashMap<Property, u8>,
+
+    usize_values: HashMap<Property, usize>,
 }
 
 pub type EdgeDirection = bool;
@@ -20,6 +22,7 @@ impl EdgePropertyMap {
             backward_u8_values: HashMap::new(),
             forward_bool_values: HashMap::new(),
             backward_bool_values: HashMap::new(),
+            usize_values: HashMap::new(),
         }
     }
 
@@ -35,6 +38,10 @@ impl EdgePropertyMap {
             FORWARD_EDGE => self.forward_bool_values.get(&property).cloned(),
             BACKWARD_EDGE => self.backward_bool_values.get(&property).cloned(),
         }
+    }
+
+    pub fn get_usize(&self, property: Property) -> Option<usize> {
+        self.usize_values.get(&property).cloned()
     }
 
     pub fn insert_u8(
@@ -58,5 +65,9 @@ impl EdgePropertyMap {
             FORWARD_EDGE => self.forward_bool_values.insert(property, value),
             BACKWARD_EDGE => self.backward_bool_values.insert(property, value),
         }
+    }
+
+    pub fn insert_usize(&mut self, property: Property, value: usize) -> Option<usize> {
+        self.usize_values.insert(property, value)
     }
 }

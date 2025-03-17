@@ -1,7 +1,9 @@
 use crate::dijkstra::{Dijkstra, ShortestPathAlgo};
 use crate::graph::Graph;
+use crate::latlng::LatLng;
 use crate::location_index::LocationIndex;
 use crate::osm::osm_reader::parse_osm_file;
+use crate::properties::property::Property;
 use crate::routing::routing_request::RoutingRequest;
 use crate::routing_path::RoutingPath;
 use crate::weighting::{CarWeighting, Weighting};
@@ -65,5 +67,17 @@ impl Hermes {
 
         let path = dijkstra.calc_path(self.graph(), weighting, start, end);
         Ok(path)
+    }
+
+    pub fn closest_edge(&self, lat_lng: LatLng) -> Option<usize> {
+        self.index
+            .closest(&lat_lng)
+            .map(|edge_id| {
+                self.graph
+                    .edge(edge_id)
+                    .properties
+                    .get_usize(Property::OsmId)
+            })
+            .flatten()
     }
 }

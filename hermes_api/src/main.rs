@@ -1,7 +1,9 @@
+mod debug;
 mod error;
 mod route;
 mod state;
 
+use crate::debug::closest::debug_closest_handler;
 use crate::route::route::route_handler;
 use crate::state::AppState;
 use axum::routing::{get, post};
@@ -17,6 +19,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/route", post(route_handler))
+        .route("/debug/closest", get(debug_closest_handler))
         .with_state(app_state);
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:8080")

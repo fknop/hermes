@@ -1,4 +1,6 @@
+use geo_types::Point;
 use serde::{Deserialize, Serialize};
+use std::f64::consts::PI;
 
 const EARTH_RADIUS: f64 = 6_371_000.0;
 
@@ -8,9 +10,25 @@ pub struct LatLng {
     pub lng: f64,
 }
 
+impl Into<Point> for LatLng {
+    fn into(self) -> Point {
+        let lat_rad = self.lat.to_radians();
+        let lon_rad = self.lng.to_radians();
+        // Convert to Cartesian
+        let x = EARTH_RADIUS * lat_rad.cos() * lon_rad.cos();
+        let y = EARTH_RADIUS * lat_rad.cos() * lon_rad.sin();
+        Point::new(x, y)
+    }
+}
+
 impl Into<[f64; 2]> for &LatLng {
     fn into(self) -> [f64; 2] {
-        [self.lng, self.lat]
+        let lat_rad = self.lat.to_radians();
+        let lon_rad = self.lng.to_radians();
+        // Convert to Cartesian
+        let x = EARTH_RADIUS * lon_rad;
+        let y = EARTH_RADIUS * (lat_rad / 2.0 + PI / 4.0).tan().ln();
+        [x, y]
     }
 }
 
