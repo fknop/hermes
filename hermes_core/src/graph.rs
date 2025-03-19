@@ -1,4 +1,4 @@
-use crate::latlng::LatLng;
+use crate::geopoint::GeoPoint;
 use crate::osm::osm_reader::OSMData;
 use crate::properties::property_map::{
     BACKWARD_EDGE, EdgeDirection, EdgePropertyMap, FORWARD_EDGE,
@@ -34,7 +34,7 @@ impl GraphEdge {
 pub struct Graph {
     nodes: usize,
     edges: Vec<GraphEdge>,
-    geometry: Vec<Vec<LatLng>>,
+    geometry: Vec<Vec<GeoPoint>>,
     adjacency_list: Vec<Vec<usize>>,
 }
 
@@ -71,7 +71,7 @@ impl Graph {
         from_node: usize,
         to_node: usize,
         properties: EdgePropertyMap,
-        geometry: Vec<LatLng>,
+        geometry: Vec<GeoPoint>,
     ) {
         let edge_id = self.edges.len();
         self.edges.push(GraphEdge {
@@ -86,7 +86,7 @@ impl Graph {
         self.adjacency_list[to_node].push(edge_id);
     }
 
-    fn compute_distance_for_geometry(&self, geometry: &Vec<LatLng>) -> f64 {
+    fn compute_distance_for_geometry(&self, geometry: &Vec<GeoPoint>) -> f64 {
         let mut distance = 0.0;
         for i in 0..geometry.len() - 1 {
             distance += geometry[i].haversine_distance(&geometry[i + 1])
@@ -103,7 +103,7 @@ impl Graph {
         &self.edges[edge]
     }
 
-    pub fn edge_geometry(&self, edge: usize) -> &Vec<LatLng> {
+    pub fn edge_geometry(&self, edge: usize) -> &Vec<GeoPoint> {
         &self.geometry[edge]
     }
     pub fn edge_count(&self) -> usize {

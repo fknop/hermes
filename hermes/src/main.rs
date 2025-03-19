@@ -1,19 +1,19 @@
 use geojson::Value::LineString;
 use geojson::{Feature, FeatureCollection, GeoJson, Geometry, JsonObject, JsonValue};
+use hermes_core::geopoint::GeoPoint;
 use hermes_core::hermes::Hermes;
-use hermes_core::latlng::LatLng;
 use hermes_core::routing::routing_request::RoutingRequest;
 use std::fs;
 
 fn main() {
     let hermes = Hermes::new_from_osm("./data/osm/brussels_capital_region-latest.osm.pbf");
 
-    let avenue_louise = LatLng {
+    let avenue_louise = GeoPoint {
         lat: 50.822147,
         lng: 4.369564,
     };
 
-    let rue_des_palais = LatLng {
+    let rue_des_palais = GeoPoint {
         lat: 50.866,
         lng: 4.3662,
     };

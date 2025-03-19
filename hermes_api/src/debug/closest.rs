@@ -1,7 +1,13 @@
+use crate::error::ApiError;
 use crate::state::AppState;
+use axum::Json;
 use axum::extract::{Query, State};
-use hermes_core::latlng::LatLng;
-use serde::Deserialize;
+use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
+use geojson::Value::LineString;
+use geojson::{Feature, FeatureCollection, GeoJson, Geometry, JsonObject, JsonValue};
+use hermes_core::geopoint::GeoPoint;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 #[derive(Deserialize)]
@@ -10,16 +16,53 @@ pub struct DebugClosestQuery {
     pub lng: f64,
 }
 
+#[derive(Serialize)]
+pub struct DebugClosestResponse {
+    pub edge_id: usize,
+    pub geojson: GeoJson,
+}
+
+impl IntoResponse for DebugClosestResponse {
+    fn into_response(self) -> Response {
+        (StatusCode::OK, Json(self)).into_response()
+    }
+}
+
 pub async fn debug_closest_handler(
     State(state): State<Arc<AppState>>,
     query: Query<DebugClosestQuery>,
-) -> Result<String, String> {
-    let closest = state.hermes.closest_edge(LatLng {
+) -> Result<DebugClosestResponse, ApiError> {
+    let closest = state.hermes.closest_edge(GeoPoint {
         lat: query.lat,
         lng: query.lng,
     });
 
-    closest
-        .map(|value| value.to_string())
-        .ok_or(String::from("Closest edge query not found"))
+    if closest.is_none() {
+        return Err(ApiError::BadRequest("Could not find edge".to_string()));
+    }
+
+    let edge_id = closest.unwrap();
+
+    let geometry = state.hermes.graph().edge_geometry(edge_id);
+
+    let mut features: Vec<geojson::Feature> = vec![Feature {
+        bbox: None,
+        id: None,
+        properties: None,
+        foreign_members: None,
+        geometry: Some(Geometry::new(LineString(
+            geometry
+                .iter()
+                .map(|coordinates| vec![coordinates.lng, coordinates.lat])
+                .collect(),
+        ))),
+    }];
+
+    let geojson = GeoJson::FeatureCollection(FeatureCollection {
+        bbox: None,
+        foreign_members: None,
+        features,
+    });
+
+    Ok(DebugClosestResponse { edge_id, geojson })
 }

@@ -1,4 +1,4 @@
-use crate::latlng::LatLng;
+use crate::geopoint::GeoPoint;
 use crate::properties::property::Property;
 use crate::properties::property_map::EdgePropertyMap;
 use crate::properties::tag_parser::handle_way;
@@ -8,7 +8,7 @@ use std::slice::Iter;
 
 pub struct OsmNode {
     id: usize,
-    pub coordinates: LatLng,
+    pub coordinates: GeoPoint,
     tags: HashMap<String, String>,
 }
 
@@ -97,7 +97,7 @@ impl OSMData {
 
         self.osm_node_data.push(OsmNode {
             id: node_id,
-            coordinates: LatLng {
+            coordinates: GeoPoint {
                 lat: node.lat(),
                 lng: node.lon(),
             },
@@ -118,7 +118,7 @@ impl OSMData {
 
         self.osm_node_data.push(OsmNode {
             id: node_id,
-            coordinates: LatLng {
+            coordinates: GeoPoint {
                 lat: node.lat(),
                 lng: node.lon(),
             },
@@ -176,7 +176,7 @@ impl OSMData {
         self.osm_node_data.get(id)
     }
 
-    pub fn way_geometry(&self, id: usize) -> Vec<LatLng> {
+    pub fn way_geometry(&self, id: usize) -> Vec<GeoPoint> {
         let way = &self.osm_ways_data[id];
         way.nodes()
             .iter()
