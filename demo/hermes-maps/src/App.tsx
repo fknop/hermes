@@ -53,11 +53,15 @@ export default function App() {
           await debugClosest({ query: { lat, lng } })
         }}
       >
-        {data && <Polyline data={data.geojson} color="gray" />}
+        {data && (
+          <Polyline id="closest-polyline" data={data.geojson} color="gray" />
+        )}
 
-        {routeData && <Polyline data={routeData.path} color="blue" />}
+        {routeData && (
+          <Polyline id="route" data={routeData.path} color="blue" />
+        )}
 
-        <div className="absolute top-4 left-4 bg-zinc-100 rounded shadow-xs border border-zinc-300 min-w-96">
+        <div className="z-10 absolute top-4 left-4 bg-zinc-100 rounded shadow-xs border border-zinc-300 min-w-96">
           <div className="flex flex-col gap-2.5 px-3 py-3">
             <div>
               <AddressSearch

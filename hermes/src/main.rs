@@ -22,7 +22,7 @@ fn main() {
         .route(RoutingRequest {
             start: avenue_louise,
             end: rue_des_palais,
-            profile: "car".to_string(),
+            profile: "car",
         })
         .unwrap();
 

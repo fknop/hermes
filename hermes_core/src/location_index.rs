@@ -32,13 +32,6 @@ impl LocationIndex {
 
     pub fn closest(&self, coordinates: &GeoPoint) -> Option<usize> {
         self.tree
-            .nearest_neighbors(&[coordinates.lng, coordinates.lat])
-            .iter()
-            .for_each(|location| println!("Edge ID: {}", location.data));
-
-        println!("Tree size: {}", self.tree.size());
-
-        self.tree
             .nearest_neighbor(&[coordinates.lng, coordinates.lat])
             .map(|location| location.data)
     }

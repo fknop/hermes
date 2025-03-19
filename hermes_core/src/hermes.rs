@@ -60,6 +60,9 @@ impl Hermes {
             .closest(&request.end)
             .expect("no way to rue des palais way");
 
+        println!("start_snap {}", start_snap);
+        println!("end_snap {}", end_snap);
+
         let start = self.graph().edge(start_snap).start_node();
         let end = self.graph().edge(end_snap).end_node();
 

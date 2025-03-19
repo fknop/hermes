@@ -3,7 +3,7 @@ use crate::properties::property::Property::VehicleAccess;
 use crate::properties::property_map::{BACKWARD_EDGE, EdgePropertyMap, FORWARD_EDGE};
 use crate::properties::tag_parser::TagParser;
 
-static HIGHWAY_VALUES: [&str; 16] = [
+pub static HIGHWAY_VALUES: [&'static str; 16] = [
     "motorway",
     "motorway_link",
     "trunk",

@@ -12,14 +12,16 @@ const layerStyle: Partial<LineLayer> = {
 export function Polyline({
   data,
   color,
+  id,
 }: {
   data: FeatureCollection
   color: string
+  id: string
 }) {
   return (
     <Source type="geojson" data={data}>
       <Layer
-        id="polyline"
+        id={id}
         type="line"
         {...layerStyle}
         paint={{

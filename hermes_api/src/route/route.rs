@@ -8,7 +8,6 @@ use geojson::Value::LineString;
 use geojson::{Feature, GeoJson, Geometry};
 use hermes_core::geopoint::GeoPoint;
 use hermes_core::routing::routing_request::RoutingRequest;
-use hermes_core::routing_path::RoutingPath;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -45,6 +44,8 @@ pub async fn route_handler(
             .iter()
             .flat_map(|leg| leg.points().iter().map(|point| vec![point.lng, point.lat]))
             .collect();
+
+        println!("found points with {:?}", points.len());
 
         let feature = Feature {
             bbox: None,
