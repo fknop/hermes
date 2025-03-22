@@ -6,7 +6,7 @@ use hermes_core::routing::routing_request::RoutingRequest;
 use std::fs;
 
 fn main() {
-    let hermes = Hermes::new_from_osm("./data/osm/brussels_capital_region-latest.osm.pbf");
+    let hermes = Hermes::from_osm_file("./data/osm/brussels_capital_region-latest.osm.pbf");
 
     let avenue_louise = GeoPoint {
         lat: 50.822147,

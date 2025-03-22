@@ -1,14 +1,15 @@
+use rkyv::with::{Identity, Inline, MapKV};
+
 use crate::properties::property::Property;
 use std::collections::HashMap;
 
-#[derive(Clone, Debug)]
+#[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Debug)]
 pub struct EdgePropertyMap {
-    backward_bool_values: HashMap<Property, bool>,
-    forward_bool_values: HashMap<Property, bool>,
-    forward_u8_values: HashMap<Property, u8>,
-    backward_u8_values: HashMap<Property, u8>,
-
-    usize_values: HashMap<Property, usize>,
+    backward_bool_values: HashMap<String, bool>,
+    forward_bool_values: HashMap<String, bool>,
+    forward_u8_values: HashMap<String, u8>,
+    backward_u8_values: HashMap<String, u8>,
+    usize_values: HashMap<String, usize>,
 }
 
 pub type EdgeDirection = bool;
@@ -28,20 +29,23 @@ impl EdgePropertyMap {
 
     pub fn get_u8(&self, property: Property, direction: EdgeDirection) -> Option<u8> {
         match direction {
-            FORWARD_EDGE => self.forward_u8_values.get(&property).cloned(),
-            BACKWARD_EDGE => self.backward_u8_values.get(&property).cloned(),
+            FORWARD_EDGE => self.forward_u8_values.get(&property.as_string()).cloned(),
+            BACKWARD_EDGE => self.backward_u8_values.get(&property.as_string()).cloned(),
         }
     }
 
     pub fn get_bool(&self, property: Property, direction: EdgeDirection) -> Option<bool> {
         match direction {
-            FORWARD_EDGE => self.forward_bool_values.get(&property).cloned(),
-            BACKWARD_EDGE => self.backward_bool_values.get(&property).cloned(),
+            FORWARD_EDGE => self.forward_bool_values.get(&property.as_string()).cloned(),
+            BACKWARD_EDGE => self
+                .backward_bool_values
+                .get(&property.as_string())
+                .cloned(),
         }
     }
 
     pub fn get_usize(&self, property: Property) -> Option<usize> {
-        self.usize_values.get(&property).cloned()
+        self.usize_values.get(&property.as_string()).cloned()
     }
 
     pub fn insert_u8(
@@ -51,8 +55,8 @@ impl EdgePropertyMap {
         value: u8,
     ) -> Option<u8> {
         match direction {
-            FORWARD_EDGE => self.forward_u8_values.insert(property, u8::from(value)),
-            BACKWARD_EDGE => self.backward_u8_values.insert(property, u8::from(value)),
+            FORWARD_EDGE => self.forward_u8_values.insert(property.as_string(), value),
+            BACKWARD_EDGE => self.backward_u8_values.insert(property.as_string(), value),
         }
     }
     pub fn insert_bool(
@@ -62,12 +66,20 @@ impl EdgePropertyMap {
         value: bool,
     ) -> Option<bool> {
         match direction {
-            FORWARD_EDGE => self.forward_bool_values.insert(property, value),
-            BACKWARD_EDGE => self.backward_bool_values.insert(property, value),
+            FORWARD_EDGE => self.forward_bool_values.insert(property.as_string(), value),
+            BACKWARD_EDGE => self
+                .backward_bool_values
+                .insert(property.as_string(), value),
         }
     }
 
     pub fn insert_usize(&mut self, property: Property, value: usize) -> Option<usize> {
-        self.usize_values.insert(property, value)
+        self.usize_values.insert(property.as_string(), value)
+    }
+}
+
+impl Default for EdgePropertyMap {
+    fn default() -> Self {
+        Self::new()
     }
 }

@@ -8,6 +8,7 @@ use crate::routing::routing_request::RoutingRequest;
 use crate::routing_path::RoutingPath;
 use crate::weighting::{CarWeighting, Weighting};
 use std::collections::HashMap;
+use std::path::Path;
 
 pub struct Hermes {
     graph: Graph,
@@ -16,11 +17,30 @@ pub struct Hermes {
     profiles: HashMap<String, Box<dyn Weighting + Sync + Send>>,
 }
 
+const GRAPH_FILE_NAME: &str = "graph.bin";
+
 impl Hermes {
-    pub fn new_from_osm(file_path: &str) -> Hermes {
+    pub fn from_directory(dir_path: &str) -> Hermes {
+        let directory = Path::new(dir_path);
+        let graph_file = directory.join(GRAPH_FILE_NAME);
+        let graph = Graph::from_file(graph_file.into_os_string().into_string().unwrap().as_str());
+        let location_index = LocationIndex::build_from_graph(&graph);
+
+        let mut profiles: HashMap<String, Box<dyn Weighting + Sync + Send>> = HashMap::new();
+        // Add default profile
+        profiles.insert("car".to_string(), Box::from(CarWeighting::new()));
+
+        Hermes {
+            graph,
+            index: location_index,
+            profiles,
+        }
+    }
+
+    pub fn from_osm_file(file_path: &str) -> Hermes {
         let osm_data = parse_osm_file(file_path);
 
-        let graph = Graph::build_from_osm_data(&osm_data);
+        let graph = Graph::from_osm_data(&osm_data);
         let index = LocationIndex::build_from_graph(&graph);
 
         let mut profiles: HashMap<String, Box<dyn Weighting + Sync + Send>> = HashMap::new();

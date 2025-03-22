@@ -4,7 +4,9 @@ use std::f64::consts::PI;
 
 const EARTH_RADIUS: f64 = 6_371_000.0;
 
-#[derive(Copy, Clone, Serialize, Deserialize)]
+#[derive(
+    Copy, Clone, Serialize, Deserialize, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize,
+)]
 pub struct GeoPoint {
     pub lat: f64,
     pub lng: f64,

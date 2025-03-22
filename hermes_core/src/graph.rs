@@ -1,9 +1,13 @@
+use std::fs::File;
+use std::io::{BufReader, Read};
+
 use crate::geopoint::GeoPoint;
 use crate::osm::osm_reader::OSMData;
 use crate::properties::property_map::{
     BACKWARD_EDGE, EdgeDirection, EdgePropertyMap, FORWARD_EDGE,
 };
 
+#[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
 pub struct GraphEdge {
     start_node: usize,
     end_node: usize,
@@ -25,6 +29,7 @@ impl GraphEdge {
     }
 }
 
+#[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
 pub struct Graph {
     nodes: usize,
     edges: Vec<GraphEdge>,
@@ -32,7 +37,25 @@ pub struct Graph {
     adjacency_list: Vec<Vec<usize>>,
 }
 
+fn read_bytes(path: &str) -> Vec<u8> {
+    let file = File::open(path).expect("Cannot open file");
+    let mut reader = BufReader::new(file);
+    let mut buffer = Vec::new();
+    reader.read_to_end(&mut buffer).unwrap();
+    buffer
+}
+
+fn from_bytes(bytes: &[u8]) -> Graph {
+    let graph = rkyv::from_bytes::<Graph, rkyv::rancor::Error>(bytes).unwrap();
+    graph
+}
+
 impl Graph {
+    pub fn from_file(path: &str) -> Graph {
+        let bytes = read_bytes(path);
+        from_bytes(&bytes)
+    }
+
     fn new(nodes: usize, edges: usize) -> Graph {
         let adjencency_list = vec![vec![]; nodes];
         Graph {
@@ -43,7 +66,7 @@ impl Graph {
         }
     }
 
-    pub fn build_from_osm_data(osm_data: &OSMData) -> Graph {
+    pub fn from_osm_data(osm_data: &OSMData) -> Graph {
         let ways = osm_data.ways();
         let nodes = osm_data.nodes();
         let mut graph = Graph::new(nodes.len(), ways.len());
