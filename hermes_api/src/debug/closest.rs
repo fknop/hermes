@@ -45,7 +45,7 @@ pub async fn debug_closest_handler(
 
     let geometry = state.hermes.graph().edge_geometry(edge_id);
 
-    let mut features: Vec<geojson::Feature> = vec![Feature {
+    let features: Vec<geojson::Feature> = vec![Feature {
         bbox: None,
         id: None,
         properties: None,

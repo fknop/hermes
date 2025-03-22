@@ -77,7 +77,7 @@ impl Dijkstra {
         Dijkstra { heap, data }
     }
 
-    fn init(&mut self, start: usize, end: usize) {
+    fn init(&mut self, start: usize, _end: usize) {
         self.heap.push(HeapItem {
             node_id: start,
             weight: 0,
@@ -104,7 +104,7 @@ impl Dijkstra {
         &self,
         graph: &Graph,
         weighting: &dyn Weighting,
-        start: usize,
+        _start: usize,
         end: usize,
     ) -> RoutingPath {
         let mut path: Vec<RoutingPathItem> = Vec::new();

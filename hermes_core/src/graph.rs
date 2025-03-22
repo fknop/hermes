@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::{BufReader, Read};
+use std::io::{self, BufReader, BufWriter, Read, Write};
 
 use crate::geopoint::GeoPoint;
 use crate::osm::osm_reader::OSMData;
@@ -47,12 +47,24 @@ fn read_bytes(path: &str) -> Vec<u8> {
 
 fn from_bytes(bytes: &[u8]) -> Graph {
     let graph = rkyv::from_bytes::<Graph, rkyv::rancor::Error>(bytes).unwrap();
+    println!("Deserialized graph from buffer");
     graph
 }
 
 impl Graph {
+    pub fn save_to_file(&self, path: &str) {
+        let bytes = rkyv::to_bytes::<rkyv::rancor::Error>(self).expect("to_bytes failed");
+        let file = File::create(path).expect("failed to create file");
+        let mut writer = BufWriter::new(file);
+
+        writer.write(&bytes[..]).expect("failed to write buffer");
+        writer.flush().expect("failed to flush buffer");
+    }
+
     pub fn from_file(path: &str) -> Graph {
+        println!("Reading from path {}", path);
         let bytes = read_bytes(path);
+        println!("Read from path {}, size {}", path, bytes.len());
         from_bytes(&bytes)
     }
 

@@ -3,7 +3,6 @@ use crate::geopoint::GeoPoint;
 use crate::graph::Graph;
 use crate::location_index::LocationIndex;
 use crate::osm::osm_reader::parse_osm_file;
-use crate::properties::property::Property;
 use crate::routing::routing_request::RoutingRequest;
 use crate::routing_path::RoutingPath;
 use crate::weighting::{CarWeighting, Weighting};
@@ -20,6 +19,14 @@ pub struct Hermes {
 const GRAPH_FILE_NAME: &str = "graph.bin";
 
 impl Hermes {
+    pub fn save(&self, dir_path: &str) {
+        let directory = Path::new(dir_path);
+        let graph_file = directory.join(GRAPH_FILE_NAME);
+
+        self.graph()
+            .save_to_file(graph_file.into_os_string().into_string().unwrap().as_str());
+    }
+
     pub fn from_directory(dir_path: &str) -> Hermes {
         let directory = Path::new(dir_path);
         let graph_file = directory.join(GRAPH_FILE_NAME);
