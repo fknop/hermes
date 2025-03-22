@@ -32,7 +32,7 @@ impl CarWeighting {
 impl Weighting for CarWeighting {
     fn calc_edge_weight(&self, edge: &GraphEdge, direction: EdgeDirection) -> usize {
         let speed = Self::speed(edge, direction);
-        if (speed == 0) {
+        if speed == 0 {
             return usize::MAX;
         }
 

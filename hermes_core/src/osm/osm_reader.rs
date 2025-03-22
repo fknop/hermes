@@ -4,7 +4,6 @@ use crate::properties::property_map::EdgePropertyMap;
 use crate::properties::tag_parser::handle_way;
 use osmpbf::{DenseNode, Element, ElementReader, Node, Way};
 use std::collections::HashMap;
-use std::slice::Iter;
 
 pub struct OsmNode {
     id: usize,

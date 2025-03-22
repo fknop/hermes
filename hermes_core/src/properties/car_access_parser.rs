@@ -1,6 +1,6 @@
 use crate::osm::osm_reader::OsmWay;
 use crate::properties::property::Property::VehicleAccess;
-use crate::properties::property_map::{BACKWARD_EDGE, EdgePropertyMap, FORWARD_EDGE};
+use crate::properties::property_map::{BACKWARD_EDGE, FORWARD_EDGE};
 use crate::properties::tag_parser::TagParser;
 
 static HIGHWAY_VALUES: [&str; 16] = [

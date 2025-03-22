@@ -1,5 +1,5 @@
 use crate::latlng::LatLng;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 #[derive(Serialize)]
 
 pub struct RoutingPathItem {

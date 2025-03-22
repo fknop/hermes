@@ -1,7 +1,7 @@
 use crate::graph::Graph;
 use crate::latlng::LatLng;
 use rstar::primitives::GeomWithData;
-use rstar::{AABB, RTree, RTreeObject};
+use rstar::RTree;
 
 type LocationIndexObject = GeomWithData<[f64; 2], usize>;
 
