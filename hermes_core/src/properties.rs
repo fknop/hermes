@@ -1,4 +1,4 @@
-mod car_access_parser;
+pub mod car_access_parser;
 mod max_speed_parser;
 mod osm_id_parser;
 pub mod property;

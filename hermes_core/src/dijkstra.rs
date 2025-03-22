@@ -1,5 +1,5 @@
+use crate::geopoint::GeoPoint;
 use crate::graph::Graph;
-use crate::latlng::LatLng;
 use crate::properties::property_map::FORWARD_EDGE;
 use crate::routing_path::{RoutingPath, RoutingPathItem};
 use crate::weighting::Weighting;
@@ -119,7 +119,7 @@ impl Dijkstra {
 
             let edge = graph.edge(edge_id);
 
-            let geometry: Vec<LatLng> = if direction == FORWARD_EDGE {
+            let geometry: Vec<GeoPoint> = if direction == FORWARD_EDGE {
                 graph.edge_geometry(edge_id).iter().cloned().collect()
             } else {
                 graph.edge_geometry(edge_id).iter().rev().cloned().collect()

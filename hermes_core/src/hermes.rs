@@ -1,6 +1,6 @@
 use crate::dijkstra::{Dijkstra, ShortestPathAlgo};
+use crate::geopoint::GeoPoint;
 use crate::graph::Graph;
-use crate::latlng::LatLng;
 use crate::location_index::LocationIndex;
 use crate::osm::osm_reader::parse_osm_file;
 use crate::properties::property::Property;
@@ -43,7 +43,7 @@ impl Hermes {
     }
 
     pub fn route(&self, request: RoutingRequest) -> Result<RoutingPath, String> {
-        let profile = self.profiles.get(&request.profile);
+        let profile = self.profiles.get(&request.profile.to_string());
 
         if profile.is_none() {
             return Err(format!("No profile found for {}", request.profile));
@@ -60,6 +60,9 @@ impl Hermes {
             .closest(&request.end)
             .expect("no way to rue des palais way");
 
+        println!("start_snap {}", start_snap);
+        println!("end_snap {}", end_snap);
+
         let start = self.graph().edge(start_snap).start_node();
         let end = self.graph().edge(end_snap).end_node();
 
@@ -69,12 +72,7 @@ impl Hermes {
         Ok(path)
     }
 
-    pub fn closest_edge(&self, lat_lng: LatLng) -> Option<usize> {
-        self.index.closest(&lat_lng).and_then(|edge_id| {
-            self.graph
-                .edge(edge_id)
-                .properties
-                .get_usize(Property::OsmId)
-        })
+    pub fn closest_edge(&self, lat_lng: GeoPoint) -> Option<usize> {
+        self.index.closest(&lat_lng)
     }
 }

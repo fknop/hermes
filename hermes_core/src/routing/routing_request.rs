@@ -1,7 +1,7 @@
-use crate::latlng::LatLng;
+use crate::geopoint::GeoPoint;
 
 pub struct RoutingRequest {
-    pub start: LatLng,
-    pub end: LatLng,
-    pub profile: String,
+    pub start: GeoPoint,
+    pub end: GeoPoint,
+    pub profile: &'static str,
 }
