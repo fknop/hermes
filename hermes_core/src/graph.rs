@@ -3,14 +3,8 @@ use crate::osm::osm_reader::OSMData;
 use crate::properties::property_map::{
     BACKWARD_EDGE, EdgeDirection, EdgePropertyMap, FORWARD_EDGE,
 };
-use crate::weighting::Weighting;
-
-pub struct GraphNode {
-    id: usize,
-}
 
 pub struct GraphEdge {
-    id: usize,
     start_node: usize,
     end_node: usize,
     distance: f64,
@@ -75,7 +69,6 @@ impl Graph {
     ) {
         let edge_id = self.edges.len();
         self.edges.push(GraphEdge {
-            id: edge_id,
             start_node: from_node,
             end_node: to_node,
             properties,

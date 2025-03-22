@@ -20,8 +20,8 @@ fn main() {
 
     let path = hermes
         .route(RoutingRequest {
-            start: avenue_louise,
-            end: rue_des_palais,
+            start: rue_des_palais,
+            end: avenue_louise,
             profile: "car".to_string(),
         })
         .unwrap();

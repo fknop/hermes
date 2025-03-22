@@ -70,14 +70,11 @@ impl Hermes {
     }
 
     pub fn closest_edge(&self, lat_lng: LatLng) -> Option<usize> {
-        self.index
-            .closest(&lat_lng)
-            .map(|edge_id| {
-                self.graph
-                    .edge(edge_id)
-                    .properties
-                    .get_usize(Property::OsmId)
-            })
-            .flatten()
+        self.index.closest(&lat_lng).and_then(|edge_id| {
+            self.graph
+                .edge(edge_id)
+                .properties
+                .get_usize(Property::OsmId)
+        })
     }
 }
