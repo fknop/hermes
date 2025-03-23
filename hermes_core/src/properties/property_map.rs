@@ -1,5 +1,3 @@
-use rkyv::with::{Identity, Inline, MapKV};
-
 use crate::properties::property::Property;
 use std::collections::HashMap;
 
@@ -24,6 +22,16 @@ impl EdgePropertyMap {
             forward_bool_values: HashMap::new(),
             backward_bool_values: HashMap::new(),
             usize_values: HashMap::new(),
+        }
+    }
+
+    pub fn as_reversed(&self) -> EdgePropertyMap {
+        EdgePropertyMap {
+            forward_u8_values: self.backward_u8_values.clone(),
+            backward_u8_values: self.forward_u8_values.clone(),
+            forward_bool_values: self.forward_bool_values.clone(),
+            backward_bool_values: self.backward_bool_values.clone(),
+            usize_values: self.usize_values.clone(),
         }
     }
 

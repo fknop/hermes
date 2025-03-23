@@ -55,11 +55,11 @@ impl NodeData {
 pub trait ShortestPathAlgo {
     fn calc_path(
         &mut self,
-        graph: &Graph,
+        graph: &impl Graph,
         weighting: &dyn Weighting,
         start: usize,
         end: usize,
-    ) -> RoutingPath;
+    ) -> Result<RoutingPath, String>;
 }
 
 pub struct Dijkstra {
@@ -68,7 +68,7 @@ pub struct Dijkstra {
 }
 
 impl Dijkstra {
-    pub fn new(graph: &Graph) -> Self {
+    pub fn new(graph: &impl Graph) -> Self {
         let data: Vec<_> = (0..graph.node_count()).map(|_| NodeData::new()).collect();
         let heap: BinaryHeap<HeapItem> = BinaryHeap::new();
         Dijkstra { heap, data }
@@ -99,7 +99,7 @@ impl Dijkstra {
 
     fn build_path(
         &self,
-        graph: &Graph,
+        graph: &impl Graph,
         weighting: &dyn Weighting,
         _start: usize,
         end: usize,
@@ -138,11 +138,19 @@ impl Dijkstra {
 impl ShortestPathAlgo for Dijkstra {
     fn calc_path(
         &mut self,
-        graph: &Graph,
+        graph: &impl Graph,
         weighting: &dyn Weighting,
         start: usize,
         end: usize,
-    ) -> RoutingPath {
+    ) -> Result<RoutingPath, String> {
+        if start == INVALID_NODE {
+            return Err(String::from("Dijkstra: start node is invalid"));
+        }
+
+        if end == INVALID_NODE {
+            return Err(String::from("Dijkstra: start node is invalid"));
+        }
+
         self.init(start, end);
 
         while let Some(HeapItem { node_id, weight }) = self.heap.pop() {
@@ -191,6 +199,6 @@ impl ShortestPathAlgo for Dijkstra {
             }
         }
 
-        self.build_path(graph, weighting, start, end)
+        Ok(self.build_path(graph, weighting, start, end))
     }
 }

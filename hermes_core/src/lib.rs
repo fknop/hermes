@@ -1,11 +1,14 @@
+pub mod base_graph;
 mod constants;
 pub mod dijkstra;
+mod geometry;
 pub mod geopoint;
 pub mod graph;
 pub mod hermes;
 pub mod location_index;
 pub mod osm;
 mod properties;
+mod query_graph;
 pub mod routing;
 pub mod routing_path;
 mod snap;

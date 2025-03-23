@@ -1,5 +1,5 @@
+use crate::base_graph::GraphEdge;
 use crate::constants::MAX_WEIGHT;
-use crate::graph::GraphEdge;
 use crate::properties::property::Property;
 use crate::properties::property_map::{BACKWARD_EDGE, EdgeDirection, FORWARD_EDGE};
 
@@ -38,6 +38,14 @@ impl CarWeighting {
 impl Weighting for CarWeighting {
     fn calc_edge_weight(&self, edge: &GraphEdge, direction: EdgeDirection) -> usize {
         let speed = Self::speed(edge, direction);
+        if edge.id() >= 95637 {
+            println!(
+                "Computing for virtual edge {}. Distance = {}, speed = {}",
+                edge.id(),
+                edge.distance(),
+                speed
+            )
+        }
         if speed == 0 {
             return usize::MAX;
         }

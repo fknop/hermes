@@ -7,6 +7,7 @@ use axum::response::{IntoResponse, Response};
 use geojson::Value::LineString;
 use geojson::{Feature, FeatureCollection, GeoJson, Geometry};
 use hermes_core::geopoint::GeoPoint;
+use hermes_core::graph::Graph;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 

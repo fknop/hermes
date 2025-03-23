@@ -1,8 +1,10 @@
+use crate::base_graph::BaseGraph;
 use crate::dijkstra::{Dijkstra, ShortestPathAlgo};
 use crate::geopoint::GeoPoint;
 use crate::graph::Graph;
 use crate::location_index::LocationIndex;
 use crate::osm::osm_reader::parse_osm_file;
+use crate::query_graph::{self, QueryGraph};
 use crate::routing::routing_request::RoutingRequest;
 use crate::routing_path::RoutingPath;
 use crate::weighting::{CarWeighting, Weighting};
@@ -10,7 +12,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 pub struct Hermes {
-    graph: Graph,
+    graph: BaseGraph,
     index: LocationIndex,
     // TODO: Sync + Send, I don't know what I'm doing here
     profiles: HashMap<String, Box<dyn Weighting + Sync + Send>>,
@@ -30,7 +32,8 @@ impl Hermes {
     pub fn from_directory(dir_path: &str) -> Hermes {
         let directory = Path::new(dir_path);
         let graph_file = directory.join(GRAPH_FILE_NAME);
-        let graph = Graph::from_file(graph_file.into_os_string().into_string().unwrap().as_str());
+        let graph =
+            BaseGraph::from_file(graph_file.into_os_string().into_string().unwrap().as_str());
         let location_index = LocationIndex::build_from_graph(&graph);
 
         let mut profiles: HashMap<String, Box<dyn Weighting + Sync + Send>> = HashMap::new();
@@ -47,7 +50,7 @@ impl Hermes {
     pub fn from_osm_file(file_path: &str) -> Hermes {
         let osm_data = parse_osm_file(file_path);
 
-        let graph = Graph::from_osm_data(&osm_data);
+        let graph = BaseGraph::from_osm_data(&osm_data);
         let index = LocationIndex::build_from_graph(&graph);
 
         let mut profiles: HashMap<String, Box<dyn Weighting + Sync + Send>> = HashMap::new();
@@ -61,7 +64,7 @@ impl Hermes {
         }
     }
 
-    pub fn graph(&self) -> &Graph {
+    pub fn graph(&self) -> &BaseGraph {
         &self.graph
     }
 
@@ -78,8 +81,6 @@ impl Hermes {
 
         let weighting = profile.unwrap().as_ref();
 
-        let mut dijkstra = Dijkstra::new(self.graph());
-
         let start_snap = self
             .index()
             .snap(&self.graph, weighting, &request.start)
@@ -89,14 +90,15 @@ impl Hermes {
             .snap(&self.graph, weighting, &request.end)
             .expect("no way to rue des palais way");
 
-        println!("start_snap {:?}", start_snap);
-        println!("end_snap {:?}", end_snap);
+        let mut snaps = [start_snap, end_snap];
 
-        let start = self.graph().edge(start_snap.edge_id).start_node();
-        let end = self.graph().edge(end_snap.edge_id).end_node();
+        let query_graph = QueryGraph::from_base_graph(&self.graph, &mut snaps[..]);
 
-        let path = dijkstra.calc_path(self.graph(), weighting, start, end);
-        Ok(path)
+        let start = snaps[0].closest_node();
+        let end = snaps[1].closest_node();
+
+        let mut dijkstra = Dijkstra::new(&query_graph);
+        dijkstra.calc_path(&query_graph, weighting, start, end)
     }
 
     pub fn closest_edge(&self, profile: String, coordinates: GeoPoint) -> Option<usize> {

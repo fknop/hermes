@@ -5,7 +5,15 @@ use std::f64::consts::PI;
 const EARTH_RADIUS: f64 = 6_371_000.0;
 
 #[derive(
-    Copy, Clone, Serialize, Deserialize, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize,
+    PartialEq,
+    Copy,
+    Clone,
+    Debug,
+    Serialize,
+    Deserialize,
+    rkyv::Archive,
+    rkyv::Serialize,
+    rkyv::Deserialize,
 )]
 pub struct GeoPoint {
     pub lat: f64,
@@ -38,20 +46,8 @@ impl Into<[f64; 2]> for &GeoPoint {
 }
 
 impl GeoPoint {
-    pub fn haversine_distance(&self, other: &GeoPoint) -> f64 {
-        let lat1 = self.lat.to_radians();
-        let lng1 = self.lng.to_radians();
-        let lat2 = other.lat.to_radians();
-        let lng2 = other.lng.to_radians();
-
-        let dlat = lat2 - lat1;
-        let dlng = lng2 - lng1;
-
-        let a = (dlat / 2.0).sin().powi(2) + lat1.cos() * lat2.cos() * (dlng / 2.0).sin().powi(2);
-        let c = 2.0 * a.sqrt().atan2((1.0 - a).sqrt());
-
-        // Calculate distance
-        EARTH_RADIUS * c
+    pub fn distance(&self, other: &GeoPoint) -> f64 {
+        haversine_distance(self.lat, self.lng, other.lat, other.lng)
     }
 }
 

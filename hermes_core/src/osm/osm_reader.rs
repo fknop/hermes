@@ -1,5 +1,4 @@
 use crate::geopoint::GeoPoint;
-use crate::properties::car_access_parser::HIGHWAY_VALUES;
 use crate::properties::property::Property;
 use crate::properties::property_map::EdgePropertyMap;
 use crate::properties::tag_parser::handle_way;
