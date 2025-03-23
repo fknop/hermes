@@ -29,7 +29,7 @@ export default function App() {
   const [start, setStart] = useState<GeoPoint | null>(null)
   const [end, setEnd] = useState<GeoPoint | null>(null)
 
-  const computeRoute = () => {
+  const computeRoute = ({ start, end }: { start: GeoPoint; end: GeoPoint }) => {
     if (!start || !end) {
       return
     }
@@ -68,8 +68,11 @@ export default function App() {
                 color="blue"
                 onRetrieve={async (response) => {
                   const [lng, lat] = response.geometry.coordinates
-                  setStart({ lng, lat })
-                  computeRoute()
+                  const start = { lng, lat }
+                  setStart(start)
+                  if (end) {
+                    computeRoute({ start, end })
+                  }
                 }}
               />
             </div>
@@ -78,8 +81,11 @@ export default function App() {
                 color="red"
                 onRetrieve={async (response) => {
                   const [lng, lat] = response.geometry.coordinates
-                  setEnd({ lng, lat })
-                  computeRoute()
+                  const end = { lng, lat }
+                  setEnd(end)
+                  if (start) {
+                    computeRoute({ start, end })
+                  }
                 }}
               />
             </div>

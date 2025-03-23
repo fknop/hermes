@@ -65,7 +65,13 @@ impl<'a> QueryGraph<'a> {
         let edge_end_node = edge.end_node();
 
         // Point if the first or last node of the edge, no need to create virtual edges
-        if geometry[0] == snap.coordinates || geometry[geometry.len() - 1] == snap.coordinates {
+        if geometry[0] == snap.coordinates {
+            snap.set_closest_node(edge_start_node);
+            return;
+        }
+
+        if geometry[geometry.len() - 1] == snap.coordinates {
+            snap.set_closest_node(edge_end_node);
             return;
         }
 

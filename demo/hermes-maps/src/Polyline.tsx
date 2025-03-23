@@ -4,7 +4,7 @@ import { LineLayer } from 'mapbox-gl'
 
 const layerStyle: Partial<LineLayer> = {
   paint: {
-    'line-width': 6,
+    'line-width': 4,
     'line-color': 'red',
   },
 }
