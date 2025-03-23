@@ -164,8 +164,8 @@ impl ShortestPathAlgo for Dijkstra {
                 continue;
             }
 
-            for edge_id in graph.node_edges(node_id) {
-                let edge = graph.edge(*edge_id);
+            for edge_id in graph.node_edges_iter(node_id) {
+                let edge = graph.edge(edge_id);
                 let edge_from_node = edge.start_node();
                 let edge_to_node = edge.end_node();
 
@@ -175,7 +175,7 @@ impl ShortestPathAlgo for Dijkstra {
                     edge_from_node
                 };
 
-                let direction = graph.edge_direction(*edge_id, node_id);
+                let direction = graph.edge_direction(edge_id, node_id);
 
                 let edge_weight = weighting.calc_edge_weight(&edge, direction);
                 let next_weight = if edge_weight == MAX_WEIGHT {
@@ -185,7 +185,7 @@ impl ShortestPathAlgo for Dijkstra {
                 };
 
                 if next_weight < self.current_shortest_weight(adj_node) {
-                    self.update_node_data(adj_node, next_weight, node_id, edge_id.clone());
+                    self.update_node_data(adj_node, next_weight, node_id, edge_id);
                     self.heap.push(HeapItem {
                         weight: next_weight,
                         node_id: adj_node,

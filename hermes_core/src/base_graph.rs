@@ -1,5 +1,6 @@
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Read, Write};
+use std::slice::Iter;
 
 use crate::geometry::compute_geometry_distance;
 use crate::geopoint::GeoPoint;
@@ -118,6 +119,10 @@ impl BaseGraph {
         graph
     }
 
+    pub fn node_edges(&self, node: usize) -> &[usize] {
+        &self.adjacency_list[node]
+    }
+
     fn add_edge(
         &mut self,
         from_node: usize,
@@ -140,8 +145,10 @@ impl BaseGraph {
 }
 
 impl Graph for BaseGraph {
-    fn node_edges(&self, node: usize) -> &[usize] {
-        &self.adjacency_list[node]
+    type EdgeIterator<'a> = std::iter::Copied<std::slice::Iter<'a, usize>>;
+
+    fn node_edges_iter(&self, node: usize) -> Self::EdgeIterator<'_> {
+        self.adjacency_list[node].iter().copied()
     }
 
     fn edge(&self, edge: usize) -> &GraphEdge {
