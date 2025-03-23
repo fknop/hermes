@@ -4,7 +4,7 @@ use crate::properties::property::Property;
 use crate::properties::property_map::EdgePropertyMap;
 use crate::properties::tag_parser::handle_way;
 use osmpbf::{DenseNode, Element, ElementReader, Node, Way};
-use std::collections::HashMap;
+use std::{collections::HashMap, env, path::Path};
 
 pub struct OsmNode {
     id: usize,
@@ -138,11 +138,6 @@ impl OSMData {
             return;
         }
 
-        // TODO: reintroduce footpaths later on
-        if !HIGHWAY_VALUES.contains(&tags["highway"].as_str()) {
-            return;
-        }
-
         let way_id = self.next_way_id;
         self.osm_way_ids_to_internal_id.insert(way.id(), way_id);
 
@@ -203,7 +198,8 @@ fn accept_way(way: &Way) -> bool {
 }
 
 pub fn parse_osm_file(file_path: &str) -> Box<OSMData> {
-    let reader = ElementReader::from_path(file_path).expect("Failed to read OSM file");
+    let reader = ElementReader::from_path(file_path)
+        .expect(format!("Failed to read OSM file: {:?}", file_path).as_str());
     let mut node_count = 0_i64;
     let mut way_count = 0_i64;
 

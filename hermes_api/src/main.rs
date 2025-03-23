@@ -16,7 +16,7 @@ use tower_http::cors::{Any, CorsLayer};
 
 #[tokio::main]
 async fn main() {
-    let hermes = Hermes::from_osm_file("./data/osm/brussels_capital_region-latest.osm.pbf");
+    let hermes = Hermes::from_directory("./data");
 
     let app_state = Arc::new(AppState { hermes });
 

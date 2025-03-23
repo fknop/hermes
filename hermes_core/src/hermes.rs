@@ -70,36 +70,41 @@ impl Hermes {
     }
 
     pub fn route(&self, request: RoutingRequest) -> Result<RoutingPath, String> {
-        let profile = self.profiles.get(&request.profile.to_string());
+        let profile = self.profiles.get(&request.profile);
 
         if profile.is_none() {
             return Err(format!("No profile found for {}", request.profile));
         }
 
+        let weighting = profile.unwrap().as_ref();
+
         let mut dijkstra = Dijkstra::new(self.graph());
 
         let start_snap = self
             .index()
-            .closest(&request.start)
+            .snap(&self.graph, weighting, &request.start)
             .expect("no way to avenue closest way");
         let end_snap = self
             .index()
-            .closest(&request.end)
+            .snap(&self.graph, weighting, &request.end)
             .expect("no way to rue des palais way");
 
-        println!("start_snap {}", start_snap);
-        println!("end_snap {}", end_snap);
+        println!("start_snap {:?}", start_snap);
+        println!("end_snap {:?}", end_snap);
 
-        let start = self.graph().edge(start_snap).start_node();
-        let end = self.graph().edge(end_snap).end_node();
-
-        let weighting = profile.unwrap().as_ref();
+        let start = self.graph().edge(start_snap.edge_id).start_node();
+        let end = self.graph().edge(end_snap.edge_id).end_node();
 
         let path = dijkstra.calc_path(self.graph(), weighting, start, end);
         Ok(path)
     }
 
-    pub fn closest_edge(&self, lat_lng: GeoPoint) -> Option<usize> {
-        self.index.closest(&lat_lng)
+    pub fn closest_edge(&self, profile: String, coordinates: GeoPoint) -> Option<usize> {
+        let weighting = self.profiles.get(&profile)?;
+
+        let snap = self
+            .index
+            .snap(self.graph(), weighting.as_ref(), &coordinates)?;
+        Some(snap.edge_id)
     }
 }

@@ -1,3 +1,4 @@
+mod constants;
 pub mod dijkstra;
 pub mod geopoint;
 pub mod graph;
@@ -7,4 +8,5 @@ pub mod osm;
 mod properties;
 pub mod routing;
 pub mod routing_path;
+mod snap;
 pub mod weighting;

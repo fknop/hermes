@@ -35,7 +35,7 @@ pub async fn route_handler(
     let path = state.hermes.route(RoutingRequest {
         start: body.start,
         end: body.end,
-        profile: "car",
+        profile: String::from("car"),
     });
 
     path.map(|path| {

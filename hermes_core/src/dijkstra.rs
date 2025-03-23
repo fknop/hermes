@@ -1,3 +1,4 @@
+use crate::constants::{INVALID_EDGE, INVALID_NODE, MAX_WEIGHT};
 use crate::geopoint::GeoPoint;
 use crate::graph::Graph;
 use crate::properties::property_map::FORWARD_EDGE;
@@ -39,10 +40,6 @@ struct NodeData {
     parent: usize,
     edge_id: usize, // Edge ID from parent to current node
 }
-
-const INVALID_NODE: usize = usize::MAX;
-const INVALID_EDGE: usize = usize::MAX;
-const MAX_WEIGHT: usize = usize::MAX;
 
 impl NodeData {
     fn new() -> Self {
