@@ -6,8 +6,8 @@ use std::{
 };
 
 pub trait DistanceUnit: Copy + Eq {
-    const name: &'static str;
-    const nanometers_in_unit: i64;
+    const NAME: &'static str;
+    const NANOMETERS_IN_UNIT: i64;
 }
 
 #[derive(Debug, Clone, Copy, Eq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
@@ -22,21 +22,21 @@ macro_rules! create_distance_unit {
         pub(crate) struct $struct_name; // unit-like struct
 
         impl DistanceUnit for $struct_name {
-            const name: &'static str = $string_name;
-            const nanometers_in_unit: i64 = $nm_conv;
+            const NAME: &'static str = $string_name;
+            const NANOMETERS_IN_UNIT: i64 = $nm_conv;
         }
 
         impl Distance<$struct_name> {
             pub fn new(value: i64) -> Distance<$struct_name> {
                 Distance {
-                    nm: value * $struct_name::nanometers_in_unit,
+                    nm: value * $struct_name::NANOMETERS_IN_UNIT,
                     unit: PhantomData,
                 }
             }
 
             #[inline(always)]
             pub fn value(&self) -> f64 {
-                (self.nm as f64) / ($struct_name::nanometers_in_unit as f64)
+                (self.nm as f64) / ($struct_name::NANOMETERS_IN_UNIT as f64)
             }
         }
     };
@@ -50,7 +50,7 @@ where
     T: DistanceUnit,
 {
     fn from(value: Distance<T>) -> Self {
-        (value.nm as f64) / T::nanometers_in_unit as f64
+        (value.nm as f64) / T::NANOMETERS_IN_UNIT as f64
     }
 }
 
@@ -59,13 +59,13 @@ where
     T: DistanceUnit,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let value: f64 = (self.nm as f64) / (T::nanometers_in_unit as f64);
+        let value: f64 = (self.nm as f64) / (T::NANOMETERS_IN_UNIT as f64);
 
         write!(
             f,
             "{} {}{}",
             value,
-            T::name,
+            T::NAME,
             match value {
                 1_f64 => "",
                 _ => "s",
@@ -110,7 +110,7 @@ where
 {
     fn from(value: f64) -> Self {
         Distance {
-            nm: (value * (T::nanometers_in_unit as f64)).round() as i64,
+            nm: (value * (T::NANOMETERS_IN_UNIT as f64)).round() as i64,
             unit: PhantomData,
         }
     }
@@ -122,7 +122,7 @@ where
 {
     fn from(value: i64) -> Self {
         Distance {
-            nm: value * T::nanometers_in_unit,
+            nm: value * T::NANOMETERS_IN_UNIT,
             unit: PhantomData,
         }
     }

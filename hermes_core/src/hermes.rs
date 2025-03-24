@@ -1,10 +1,9 @@
 use crate::base_graph::BaseGraph;
 use crate::dijkstra::{Dijkstra, ShortestPathAlgo};
 use crate::geopoint::GeoPoint;
-use crate::graph::Graph;
 use crate::location_index::LocationIndex;
 use crate::osm::osm_reader::parse_osm_file;
-use crate::query_graph::{self, QueryGraph};
+use crate::query_graph::{QueryGraph};
 use crate::routing::routing_request::RoutingRequest;
 use crate::routing_path::RoutingPath;
 use crate::weighting::{CarWeighting, Weighting};

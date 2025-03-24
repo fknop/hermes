@@ -1,6 +1,5 @@
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Read, Write};
-use std::slice::Iter;
 
 use crate::distance::{Distance, Meters};
 use crate::geometry::compute_geometry_distance;

@@ -1,7 +1,7 @@
-use std::{collections::HashMap, iter::empty};
+use std::collections::HashMap;
 
 use crate::{
-    base_graph::{self, BaseGraph, GraphEdge},
+    base_graph::{BaseGraph, GraphEdge},
     geometry::{compute_geometry_distance, create_virtual_geometries},
     geopoint::GeoPoint,
     graph::Graph,

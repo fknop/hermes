@@ -4,7 +4,7 @@ use std::f64::consts::PI;
 
 use crate::{
     constants::EARTH_RADIUS_METERS,
-    distance::{Distance, DistanceUnit, Meters, meters},
+    distance::{Distance, Meters, meters},
 };
 
 #[derive(
