@@ -17,11 +17,12 @@ pub trait Weighting {
     fn calc_edge_ms(&self, edge: &GraphEdge, direction: EdgeDirection) -> usize;
 }
 
+#[derive(Default)]
 pub struct CarWeighting;
 
 impl CarWeighting {
     pub fn new() -> Self {
-        CarWeighting {}
+        CarWeighting
     }
     fn speed(edge: &GraphEdge, direction: EdgeDirection) -> u8 {
         let access = edge
@@ -29,7 +30,7 @@ impl CarWeighting {
             .get_bool(Property::VehicleAccess("car".to_string()), direction)
             .unwrap_or(false);
 
-        if access == false {
+        if !access {
             return 0;
         }
 

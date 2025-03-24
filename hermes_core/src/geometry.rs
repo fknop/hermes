@@ -42,9 +42,9 @@ pub fn create_virtual_geometries(
     let (first_segment, second_segment) = split_geometry(points, point);
 
     first_geometry.extend_from_slice(first_segment);
-    first_geometry.push(point.clone());
+    first_geometry.push(*point);
 
-    second_geometry.push(point.clone());
+    second_geometry.push(*point);
     second_geometry.extend_from_slice(second_segment);
     (first_geometry, second_geometry)
 }

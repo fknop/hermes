@@ -147,7 +147,7 @@ impl<'a> QueryGraph<'a> {
     }
 }
 
-impl<'a> Graph for QueryGraph<'a> {
+impl Graph for QueryGraph<'_> {
     type EdgeIterator<'b>
         = QueryGraphEdgeIterator<'b>
     where
@@ -172,7 +172,7 @@ impl<'a> Graph for QueryGraph<'a> {
             let base_edges = self.base_graph.node_edges(node_id);
 
             match virtual_edges {
-                Some(virtual_edges) => QueryGraphEdgeIterator::new(base_edges, &virtual_edges),
+                Some(virtual_edges) => QueryGraphEdgeIterator::new(base_edges, virtual_edges),
                 None => QueryGraphEdgeIterator::new(base_edges, &[]),
             }
         }
@@ -238,7 +238,7 @@ impl<'a> QueryGraphEdgeIterator<'a> {
     }
 }
 
-impl<'a> Iterator for QueryGraphEdgeIterator<'a> {
+impl Iterator for QueryGraphEdgeIterator<'_> {
     type Item = usize;
 
     fn next(&mut self) -> Option<Self::Item> {

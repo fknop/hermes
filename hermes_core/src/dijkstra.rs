@@ -117,7 +117,7 @@ impl Dijkstra {
             let edge = graph.edge(edge_id);
 
             let geometry: Vec<GeoPoint> = if direction == FORWARD_EDGE {
-                graph.edge_geometry(edge_id).iter().cloned().collect()
+                graph.edge_geometry(edge_id).to_vec()
             } else {
                 graph.edge_geometry(edge_id).iter().rev().cloned().collect()
             };
@@ -177,7 +177,7 @@ impl ShortestPathAlgo for Dijkstra {
 
                 let direction = graph.edge_direction(edge_id, node_id);
 
-                let edge_weight = weighting.calc_edge_weight(&edge, direction);
+                let edge_weight = weighting.calc_edge_weight(edge, direction);
                 let next_weight = if edge_weight == MAX_WEIGHT {
                     MAX_WEIGHT
                 } else {

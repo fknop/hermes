@@ -3,7 +3,7 @@ use crate::properties::property::Property::VehicleAccess;
 use crate::properties::property_map::{BACKWARD_EDGE, FORWARD_EDGE};
 use crate::properties::tag_parser::TagParser;
 
-pub static HIGHWAY_VALUES: [&'static str; 16] = [
+pub static HIGHWAY_VALUES: [&str; 16] = [
     "motorway",
     "motorway_link",
     "trunk",
@@ -44,7 +44,7 @@ fn car_access(way: &OsmWay) -> WayAccess {
 // https://wiki.openstreetmap.org/wiki/Key:oneway
 fn is_oneway(way: &OsmWay) -> bool {
     way.tag("oneway")
-        .map_or(false, |value| ONEWAYS.contains(&value))
+        .is_some_and(|value| ONEWAYS.contains(&value))
 }
 
 fn is_forward_oneway(way: &OsmWay) -> bool {

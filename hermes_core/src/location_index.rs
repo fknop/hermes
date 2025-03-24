@@ -37,8 +37,7 @@ impl LocationIndex {
                 (0..graph.edge_count())
                     .flat_map(|edge_id| {
                         let geometry = graph.edge_geometry(edge_id);
-
-                        let interpolated_geometry = interpolate_geometry(&geometry, meters!(5));
+                        let interpolated_geometry = interpolate_geometry(geometry, meters!(5));
 
                         interpolated_geometry.into_iter().map(move |coordinates| {
                             LocationIndexObject::new(
@@ -69,17 +68,16 @@ impl LocationIndex {
     ) -> Option<Snap> {
         self.tree
             .nearest_neighbor_iter(&[coordinates.lng, coordinates.lat])
-            .filter(|nearest_neighbor| {
+            .find(|nearest_neighbor| {
                 let edge_id = nearest_neighbor.data.edge_id;
                 // We only consider edges that can be accessed by the weighting profile
                 weighting.can_access_edge(graph.edge(edge_id))
             })
-            .next()
             .map(|nearest_neighbor| {
                 println!("distance {}", coordinates.distance(nearest_neighbor.geom()));
                 Snap::new(
                     nearest_neighbor.data.edge_id,
-                    nearest_neighbor.geom().clone(),
+                    *nearest_neighbor.geom(),
                     coordinates.distance(nearest_neighbor.geom()),
                 )
             })

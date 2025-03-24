@@ -19,7 +19,7 @@ pub struct Distance<T: DistanceUnit> {
 macro_rules! create_distance_unit {
     ($struct_name:ident, $string_name:expr , $nm_conv:expr) => {
         #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-        pub(crate) struct $struct_name; // unit-like struct
+        pub struct $struct_name; // unit-like struct
 
         impl DistanceUnit for $struct_name {
             const NAME: &'static str = $string_name;

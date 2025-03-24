@@ -32,7 +32,7 @@ impl OsmWay {
     }
 
     pub fn has_tag(&self, tag: &str, value: &str) -> bool {
-        self.tag(tag).map_or(false, |tag_value| tag_value == value)
+        self.tag(tag) == Some(value)
     }
 
     pub fn nodes(&self) -> &Vec<usize> {
@@ -90,7 +90,6 @@ impl OSMData {
 
         let tags: HashMap<String, String> = node
             .tags()
-            .into_iter()
             .map(|tag| (tag.0.to_owned(), tag.1.to_owned()))
             .collect();
 
@@ -111,7 +110,6 @@ impl OSMData {
 
         let tags: HashMap<String, String> = node
             .tags()
-            .into_iter()
             .map(|tag| (tag.0.to_owned(), tag.1.to_owned()))
             .collect();
 
@@ -129,7 +127,6 @@ impl OSMData {
     fn add_way(&mut self, way: &Way) {
         let tags: HashMap<String, String> = way
             .tags()
-            .into_iter()
             .map(|tag| (tag.0.to_owned(), tag.1.to_owned()))
             .collect();
 
