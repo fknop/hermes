@@ -2,6 +2,7 @@ use std::fs::File;
 use std::io::{BufReader, BufWriter, Read, Write};
 use std::slice::Iter;
 
+use crate::distance::{Distance, Meters};
 use crate::geometry::compute_geometry_distance;
 use crate::geopoint::GeoPoint;
 use crate::graph::Graph;
@@ -15,7 +16,7 @@ pub struct GraphEdge {
     id: usize,
     start_node: usize,
     end_node: usize,
-    distance: f64,
+    distance: Distance<Meters>,
     pub properties: EdgePropertyMap,
 }
 
@@ -24,7 +25,7 @@ impl GraphEdge {
         id: usize,
         start_node: usize,
         end_node: usize,
-        distance: f64,
+        distance: Distance<Meters>,
         properties: EdgePropertyMap,
     ) -> Self {
         GraphEdge {
@@ -40,7 +41,7 @@ impl GraphEdge {
         self.id
     }
 
-    pub fn distance(&self) -> f64 {
+    pub fn distance(&self) -> Distance<Meters> {
         self.distance
     }
 

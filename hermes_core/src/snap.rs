@@ -1,15 +1,19 @@
-use crate::{constants::INVALID_NODE, geopoint::GeoPoint};
+use crate::{
+    constants::INVALID_NODE,
+    distance::{Distance, Meters},
+    geopoint::GeoPoint,
+};
 
 #[derive(Debug)]
 pub struct Snap {
     pub edge_id: usize,
     pub coordinates: GeoPoint,
-    pub distance: f64,
+    distance: Distance<Meters>,
     closest_node: Option<usize>,
 }
 
 impl Snap {
-    pub fn new(edge_id: usize, coordinates: GeoPoint, distance: f64) -> Self {
+    pub fn new(edge_id: usize, coordinates: GeoPoint, distance: Distance<Meters>) -> Self {
         Snap {
             edge_id,
             coordinates,

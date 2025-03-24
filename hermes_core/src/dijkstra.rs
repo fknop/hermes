@@ -3,7 +3,7 @@ use crate::geopoint::GeoPoint;
 use crate::graph::Graph;
 use crate::properties::property_map::FORWARD_EDGE;
 use crate::routing_path::{RoutingPath, RoutingPathItem};
-use crate::weighting::Weighting;
+use crate::weighting::{Weight, Weighting};
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 
@@ -36,7 +36,7 @@ impl Ord for HeapItem {
 
 struct NodeData {
     settled: bool,
-    weight: usize,
+    weight: Weight,
     parent: usize,
     edge_id: usize, // Edge ID from parent to current node
 }
@@ -82,7 +82,7 @@ impl Dijkstra {
         self.update_node_data(start, 0, INVALID_NODE, INVALID_EDGE)
     }
 
-    fn update_node_data(&mut self, node: usize, weight: usize, parent: usize, edge_id: usize) {
+    fn update_node_data(&mut self, node: usize, weight: Weight, parent: usize, edge_id: usize) {
         self.data[node].settled = false;
         self.data[node].weight = weight;
         self.data[node].parent = parent;
@@ -93,7 +93,7 @@ impl Dijkstra {
         self.data[node].settled
     }
 
-    fn current_shortest_weight(&self, node: usize) -> usize {
+    fn current_shortest_weight(&self, node: usize) -> Weight {
         self.data[node].weight
     }
 

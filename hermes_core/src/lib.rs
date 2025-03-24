@@ -1,6 +1,7 @@
 pub mod base_graph;
 mod constants;
 pub mod dijkstra;
+pub mod distance;
 mod geometry;
 pub mod geopoint;
 pub mod graph;

@@ -87,10 +87,10 @@ impl<'a> QueryGraph<'a> {
 
         self.virtual_edges.push(GraphEdge::new(
             virtual_edge_id_1,
-            virtual_node,
             edge_start_node,
+            virtual_node,
             compute_geometry_distance(&virtual_geometry_1),
-            edge.properties.as_reversed(),
+            edge.properties.clone(),
         ));
 
         self.add_virtual_edge_for_existing_node(virtual_edge_id_1, edge_start_node);

@@ -1,15 +1,17 @@
 use serde::Serialize;
 
-use crate::geopoint::GeoPoint;
-#[derive(Serialize)]
+use crate::{
+    distance::{Distance, Meters},
+    geopoint::GeoPoint,
+};
 pub struct RoutingPathItem {
-    distance: f64,
+    distance: Distance<Meters>,
     time: usize,
     points: Vec<GeoPoint>,
 }
 
 impl RoutingPathItem {
-    pub fn distance(&self) -> f64 {
+    pub fn distance(&self) -> Distance<Meters> {
         self.distance
     }
 
@@ -23,7 +25,7 @@ impl RoutingPathItem {
 }
 
 impl RoutingPathItem {
-    pub fn new(distance: f64, time: usize, points: Vec<GeoPoint>) -> RoutingPathItem {
+    pub fn new(distance: Distance<Meters>, time: usize, points: Vec<GeoPoint>) -> RoutingPathItem {
         RoutingPathItem {
             points,
             distance,
@@ -31,8 +33,6 @@ impl RoutingPathItem {
         }
     }
 }
-
-#[derive(Serialize)]
 
 pub struct RoutingPath {
     items: Vec<RoutingPathItem>,

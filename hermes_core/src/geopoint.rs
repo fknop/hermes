@@ -2,7 +2,10 @@ use rstar::{AABB, Envelope, PointDistance, RTreeObject};
 use serde::{Deserialize, Serialize};
 use std::f64::consts::PI;
 
-const EARTH_RADIUS: f64 = 6_371_000.0;
+use crate::{
+    constants::EARTH_RADIUS_METERS,
+    distance::{Distance, DistanceUnit, Meters, meters},
+};
 
 #[derive(
     PartialEq,
@@ -30,7 +33,7 @@ impl RTreeObject for GeoPoint {
 
 impl PointDistance for GeoPoint {
     fn distance_2(&self, point: &<Self::Envelope as Envelope>::Point) -> f64 {
-        haversine_distance(self.lat, self.lng, point[1], point[0]).powi(2)
+        f64::from(haversine_distance(self.lat, self.lng, point[1], point[0])).powi(2)
     }
 }
 
@@ -39,19 +42,19 @@ impl Into<[f64; 2]> for &GeoPoint {
         let lat_rad = self.lat.to_radians();
         let lon_rad = self.lng.to_radians();
         // Convert to Cartesian
-        let x = EARTH_RADIUS * lon_rad;
-        let y = EARTH_RADIUS * (lat_rad / 2.0 + PI / 4.0).tan().ln();
+        let x = EARTH_RADIUS_METERS * lon_rad;
+        let y = EARTH_RADIUS_METERS * (lat_rad / 2.0 + PI / 4.0).tan().ln();
         [x, y]
     }
 }
 
 impl GeoPoint {
-    pub fn distance(&self, other: &GeoPoint) -> f64 {
+    pub fn distance(&self, other: &GeoPoint) -> Distance<Meters> {
         haversine_distance(self.lat, self.lng, other.lat, other.lng)
     }
 }
 
-pub fn haversine_distance(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> f64 {
+pub fn haversine_distance(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> Distance<Meters> {
     let lat1_rad = lat1.to_radians();
     let lon1_rad = lon1.to_radians();
     let lat2_rad = lat2.to_radians();
@@ -65,5 +68,5 @@ pub fn haversine_distance(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> f64 {
     let c = 2.0 * a.sqrt().atan2((1.0 - a).sqrt());
 
     // Calculate distance
-    EARTH_RADIUS * c
+    meters!(EARTH_RADIUS_METERS * c)
 }
