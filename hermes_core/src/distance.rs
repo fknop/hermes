@@ -43,7 +43,7 @@ macro_rules! create_distance_unit {
 }
 
 create_distance_unit!(Meters, "meter", 1_000_000_000);
-create_distance_unit!(Kilometers, "kilometer", 1_000_000_000);
+create_distance_unit!(Kilometers, "kilometer", 1_000_000_000_000);
 
 impl<T> From<Distance<T>> for f64
 where
@@ -176,4 +176,31 @@ macro_rules! meters {
     };
 }
 
+macro_rules! kilometers {
+    ($num:expr) => {
+        crate::distance::Distance::<crate::distance::Kilometers>::from($num)
+    };
+}
+
 pub(crate) use meters;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn should_add_distances_together() {
+        let result = meters!(10) + kilometers!(1);
+        assert_eq!(result, meters!(1010));
+    }
+
+    #[test]
+    fn should_divide_distance() {
+        assert_eq!(meters!(100) / meters!(10), 10.0);
+    }
+
+    #[test]
+    fn value() {
+        assert_eq!(meters!(100).value(), 100.0);
+    }
+}
