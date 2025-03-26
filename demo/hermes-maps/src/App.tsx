@@ -5,7 +5,7 @@ import type { Feature, FeatureCollection } from 'geojson'
 import { Polyline } from './Polyline.tsx'
 import { useState } from 'react'
 
-type GeoPoint = { lat: number; lng: number }
+type GeoPoint = { lat: number; lon: number }
 
 export default function App() {
   const [debugClosest, { data, loading }] = useFetch<
@@ -67,8 +67,8 @@ export default function App() {
               <AddressSearch
                 color="blue"
                 onRetrieve={async (response) => {
-                  const [lng, lat] = response.geometry.coordinates
-                  const start = { lng, lat }
+                  const [lon, lat] = response.geometry.coordinates
+                  const start = { lon, lat }
                   setStart(start)
                   if (end) {
                     computeRoute({ start, end })
@@ -80,8 +80,8 @@ export default function App() {
               <AddressSearch
                 color="red"
                 onRetrieve={async (response) => {
-                  const [lng, lat] = response.geometry.coordinates
-                  const end = { lng, lat }
+                  const [lon, lat] = response.geometry.coordinates
+                  const end = { lon, lat }
                   setEnd(end)
                   if (start) {
                     computeRoute({ start, end })

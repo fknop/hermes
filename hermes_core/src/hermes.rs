@@ -2,8 +2,7 @@ use crate::base_graph::BaseGraph;
 use crate::dijkstra::{Dijkstra, ShortestPathAlgo};
 use crate::geopoint::GeoPoint;
 use crate::location_index::LocationIndex;
-use crate::osm::osm_reader::parse_osm_file;
-use crate::query_graph::{QueryGraph};
+use crate::query_graph::QueryGraph;
 use crate::routing::routing_request::RoutingRequest;
 use crate::routing_path::RoutingPath;
 use crate::weighting::{CarWeighting, Weighting};
@@ -47,9 +46,7 @@ impl Hermes {
     }
 
     pub fn from_osm_file(file_path: &str) -> Hermes {
-        let osm_data = parse_osm_file(file_path);
-
-        let graph = BaseGraph::from_osm_data(&osm_data);
+        let graph = BaseGraph::from_osm_file(&file_path);
         let index = LocationIndex::build_from_graph(&graph);
 
         let mut profiles: HashMap<String, Box<dyn Weighting + Sync + Send>> = HashMap::new();

@@ -3,6 +3,8 @@ use crate::properties::property::Property::VehicleAccess;
 use crate::properties::property_map::{BACKWARD_EDGE, FORWARD_EDGE};
 use crate::properties::tag_parser::TagParser;
 
+use super::property_map::EdgePropertyMap;
+
 pub static HIGHWAY_VALUES: [&str; 16] = [
     "motorway",
     "motorway_link",
@@ -62,12 +64,12 @@ fn is_roundabout(way: &OsmWay) -> bool {
 
 // https://wiki.openstreetmap.org/wiki/Tag:highway%3Dservice
 impl TagParser for CarAccessParser {
-    fn handle_way(way: &mut OsmWay) {
+    fn handle_way(way: &OsmWay, properties: &mut EdgePropertyMap) {
         let vehicle_key = "car";
         if let WayAccess::Way = car_access(way) {
             if is_oneway(way) || is_roundabout(way) {
                 if is_forward_oneway(way) {
-                    way.properties_mut().insert_bool(
+                    properties.insert_bool(
                         VehicleAccess(vehicle_key.to_string()),
                         FORWARD_EDGE,
                         true,
@@ -75,35 +77,19 @@ impl TagParser for CarAccessParser {
                 }
 
                 if is_backward_oneway(way) {
-                    way.properties_mut().insert_bool(
+                    properties.insert_bool(
                         VehicleAccess(vehicle_key.to_string()),
                         BACKWARD_EDGE,
                         true,
                     );
                 }
             } else {
-                way.properties_mut().insert_bool(
-                    VehicleAccess(vehicle_key.to_string()),
-                    FORWARD_EDGE,
-                    true,
-                );
-                way.properties_mut().insert_bool(
-                    VehicleAccess(vehicle_key.to_string()),
-                    BACKWARD_EDGE,
-                    true,
-                );
+                properties.insert_bool(VehicleAccess(vehicle_key.to_string()), FORWARD_EDGE, true);
+                properties.insert_bool(VehicleAccess(vehicle_key.to_string()), BACKWARD_EDGE, true);
             }
         } else {
-            way.properties_mut().insert_bool(
-                VehicleAccess(vehicle_key.to_string()),
-                FORWARD_EDGE,
-                false,
-            );
-            way.properties_mut().insert_bool(
-                VehicleAccess(vehicle_key.to_string()),
-                BACKWARD_EDGE,
-                false,
-            );
+            properties.insert_bool(VehicleAccess(vehicle_key.to_string()), FORWARD_EDGE, false);
+            properties.insert_bool(VehicleAccess(vehicle_key.to_string()), BACKWARD_EDGE, false);
         }
     }
 }

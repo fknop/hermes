@@ -1,3 +1,4 @@
+use std::cmp::max;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Read, Write};
 
@@ -5,7 +6,7 @@ use crate::distance::{Distance, Meters};
 use crate::geometry::compute_geometry_distance;
 use crate::geopoint::GeoPoint;
 use crate::graph::Graph;
-use crate::osm::osm_reader::OSMData;
+use crate::osm::osm_reader::OsmReader;
 use crate::properties::property_map::{
     BACKWARD_EDGE, EdgeDirection, EdgePropertyMap, FORWARD_EDGE,
 };
@@ -53,7 +54,7 @@ impl GraphEdge {
     }
 }
 
-#[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[derive(Default, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
 pub struct BaseGraph {
     nodes: usize,
     edges: Vec<GraphEdge>,
@@ -76,6 +77,20 @@ fn from_bytes(bytes: &[u8]) -> BaseGraph {
 }
 
 impl BaseGraph {
+    fn add_node(&mut self, node_id: usize) {
+        self.nodes = max(self.nodes, node_id + 1);
+
+        if self.nodes > self.adjacency_list.len() {
+            // TODO: improve this by setting the capacity in advance
+            self.adjacency_list
+                .reserve_exact(self.nodes - self.adjacency_list.capacity());
+
+            for _ in 0..(self.nodes - self.adjacency_list.len()) {
+                self.adjacency_list.push(vec![]);
+            }
+        }
+    }
+
     pub fn save_to_file(&self, path: &str) {
         let bytes = rkyv::to_bytes::<rkyv::rancor::Error>(self).expect("to_bytes failed");
         let file = File::create(path).expect("failed to create file");
@@ -102,18 +117,19 @@ impl BaseGraph {
         }
     }
 
-    pub fn from_osm_data(osm_data: &OSMData) -> BaseGraph {
-        let ways = osm_data.ways();
-        let nodes = osm_data.nodes();
-        let mut graph = BaseGraph::new(nodes.len(), ways.len());
+    pub fn from_osm_file(path: &str) -> BaseGraph {
+        let mut osm_reader = OsmReader::default();
 
-        ways.iter().for_each(|way| {
+        let mut graph = BaseGraph::default();
+        osm_reader.parse_osm_file(path, |edge_segment| {
+            graph.add_node(edge_segment.start_node);
+            graph.add_node(edge_segment.end_node);
             graph.add_edge(
-                way.start_node(),
-                way.end_node(),
-                way.properties().clone(),
-                osm_data.way_geometry(way.id()),
-            )
+                edge_segment.start_node,
+                edge_segment.end_node,
+                edge_segment.properties,
+                edge_segment.geometry,
+            );
         });
 
         graph

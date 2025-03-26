@@ -5,25 +5,18 @@ use crate::properties::tag_parser::handle_way;
 use osmpbf::{DenseNode, Element, ElementReader, Node, Way};
 use std::collections::HashMap;
 
-pub struct OsmNode {
+struct OsmNode {
     id: usize,
-    pub coordinates: GeoPoint,
+    coordinates: GeoPoint,
     tags: HashMap<String, String>,
 }
 
 pub struct OsmWay {
-    id: usize,
     osm_id: usize,
-    nodes: Vec<usize>,
-    pub tags: HashMap<String, String>,
-    properties: EdgePropertyMap,
+    tags: HashMap<String, String>,
 }
 
 impl OsmWay {
-    pub fn id(&self) -> usize {
-        self.id
-    }
-
     pub fn osm_id(&self) -> usize {
         self.osm_id
     }
@@ -34,150 +27,130 @@ impl OsmWay {
     pub fn has_tag(&self, tag: &str, value: &str) -> bool {
         self.tag(tag) == Some(value)
     }
-
-    pub fn nodes(&self) -> &Vec<usize> {
-        &self.nodes
-    }
-
-    pub fn start_node(&self) -> usize {
-        self.nodes[0]
-    }
-
-    pub fn end_node(&self) -> usize {
-        self.nodes[self.nodes.len() - 1]
-    }
-
-    pub fn properties(&self) -> &EdgePropertyMap {
-        &self.properties
-    }
-    pub fn properties_mut(&mut self) -> &mut EdgePropertyMap {
-        &mut self.properties
-    }
 }
 
-pub struct OSMData {
-    next_node_id: usize,
-    next_way_id: usize,
-    osm_node_ids_to_internal_id: HashMap<i64, usize>,
-    osm_way_ids_to_internal_id: HashMap<i64, usize>,
-    osm_node_data: Vec<OsmNode>,
-    osm_ways_data: Vec<OsmWay>,
-}
+// pub struct OSMData {
+//     next_node_id: usize,
+//     next_way_id: usize,
+//     osm_node_ids_to_internal_id: HashMap<i64, usize>,
+//     osm_way_ids_to_internal_id: HashMap<i64, usize>,
+//     osm_node_data: Vec<OsmNode>,
+//     osm_ways_data: Vec<OsmWay>,
+// }
 
-impl OSMData {
-    fn new() -> Self {
-        OSMData {
-            next_node_id: 0,
-            next_way_id: 0,
-            osm_node_ids_to_internal_id: HashMap::new(),
-            osm_way_ids_to_internal_id: HashMap::new(),
-            osm_node_data: Vec::new(),
-            osm_ways_data: Vec::new(),
-        }
-    }
+// impl OSMData {
+//     fn new() -> Self {
+//         OSMData {
+//             next_node_id: 0,
+//             next_way_id: 0,
+//             osm_node_ids_to_internal_id: HashMap::new(),
+//             osm_way_ids_to_internal_id: HashMap::new(),
+//             osm_node_data: Vec::new(),
+//             osm_ways_data: Vec::new(),
+//         }
+//     }
 
-    pub fn nodes(&self) -> &[OsmNode] {
-        &self.osm_node_data
-    }
+//     pub fn nodes(&self) -> &[OsmNode] {
+//         &self.osm_node_data
+//     }
 
-    pub fn ways(&self) -> &Vec<OsmWay> {
-        &self.osm_ways_data
-    }
+//     pub fn ways(&self) -> &Vec<OsmWay> {
+//         &self.osm_ways_data
+//     }
 
-    fn add_node(&mut self, node: &Node) {
-        let node_id = self.next_node_id;
-        self.osm_node_ids_to_internal_id.insert(node.id(), node_id);
+//     fn add_node(&mut self, node: &Node) {
+//         let node_id = self.next_node_id;
+//         self.osm_node_ids_to_internal_id.insert(node.id(), node_id);
 
-        let tags: HashMap<String, String> = node
-            .tags()
-            .map(|tag| (tag.0.to_owned(), tag.1.to_owned()))
-            .collect();
+//         let tags: HashMap<String, String> = node
+//             .tags()
+//             .map(|tag| (tag.0.to_owned(), tag.1.to_owned()))
+//             .collect();
 
-        self.osm_node_data.push(OsmNode {
-            id: node_id,
-            coordinates: GeoPoint {
-                lat: node.lat(),
-                lon: node.lon(),
-            },
-            tags,
-        });
-        self.next_node_id += 1;
-    }
+//         self.osm_node_data.push(OsmNode {
+//             id: node_id,
+//             coordinates: GeoPoint {
+//                 lat: node.lat(),
+//                 lon: node.lon(),
+//             },
+//             tags,
+//         });
+//         self.next_node_id += 1;
+//     }
 
-    fn add_dense_node(&mut self, node: &DenseNode) {
-        let node_id = self.next_node_id;
-        self.osm_node_ids_to_internal_id.insert(node.id(), node_id);
+//     fn add_dense_node(&mut self, node: &DenseNode) {
+//         let node_id = self.next_node_id;
+//         self.osm_node_ids_to_internal_id.insert(node.id(), node_id);
 
-        let tags: HashMap<String, String> = node
-            .tags()
-            .map(|tag| (tag.0.to_owned(), tag.1.to_owned()))
-            .collect();
+//         let tags: HashMap<String, String> = node
+//             .tags()
+//             .map(|tag| (tag.0.to_owned(), tag.1.to_owned()))
+//             .collect();
 
-        self.osm_node_data.push(OsmNode {
-            id: node_id,
-            coordinates: GeoPoint {
-                lat: node.lat(),
-                lon: node.lon(),
-            },
-            tags,
-        });
-        self.next_node_id += 1;
-    }
+//         self.osm_node_data.push(OsmNode {
+//             id: node_id,
+//             coordinates: GeoPoint {
+//                 lat: node.lat(),
+//                 lon: node.lon(),
+//             },
+//             tags,
+//         });
+//         self.next_node_id += 1;
+//     }
 
-    fn add_way(&mut self, way: &Way) {
-        let tags: HashMap<String, String> = way
-            .tags()
-            .map(|tag| (tag.0.to_owned(), tag.1.to_owned()))
-            .collect();
+//     fn add_way(&mut self, way: &Way) {
+//         let tags: HashMap<String, String> = way
+//             .tags()
+//             .map(|tag| (tag.0.to_owned(), tag.1.to_owned()))
+//             .collect();
 
-        let way_id = self.next_way_id;
-        self.osm_way_ids_to_internal_id.insert(way.id(), way_id);
+//         let way_id = self.next_way_id;
+//         self.osm_way_ids_to_internal_id.insert(way.id(), way_id);
 
-        let mut way = OsmWay {
-            id: way_id,
-            osm_id: way.id() as usize,
-            nodes: way
-                .refs()
-                .filter_map(|node| self.node_id_from_osm_id(node))
-                .collect(),
-            tags,
-            properties: EdgePropertyMap::new(),
-        };
+//         let mut way = OsmWay {
+//             osm_id: way.id() as usize,
+//             nodes: way
+//                 .refs()
+//                 .filter_map(|node| self.node_id_from_osm_id(node))
+//                 .collect(),
+//             tags,
+//             properties: EdgePropertyMap::new(),
+//         };
 
-        handle_way(&mut way, Property::MaxSpeed);
-        handle_way(&mut way, Property::VehicleAccess("car".to_string()));
-        handle_way(&mut way, Property::OsmId);
+//         handle_way(&mut way, Property::MaxSpeed);
+//         handle_way(&mut way, Property::VehicleAccess("car".to_string()));
+//         handle_way(&mut way, Property::OsmId);
 
-        self.osm_ways_data.push(way);
+//         self.osm_ways_data.push(way);
 
-        self.next_way_id += 1
-    }
+//         self.next_way_id += 1
+//     }
 
-    fn node_id_from_osm_id(&self, osm_node_id: i64) -> Option<usize> {
-        self.osm_node_ids_to_internal_id.get(&osm_node_id).cloned()
-    }
+//     fn node_id_from_osm_id(&self, osm_node_id: i64) -> Option<usize> {
+//         self.osm_node_ids_to_internal_id.get(&osm_node_id).cloned()
+//     }
 
-    fn tags(&self, node_id: usize) -> Option<&HashMap<String, String>> {
-        let node = self.osm_node_data.get(node_id);
-        match node {
-            Some(node) => Some(&node.tags),
-            None => None,
-        }
-    }
-    pub fn node(&self, id: usize) -> Option<&OsmNode> {
-        self.osm_node_data.get(id)
-    }
+//     fn tags(&self, node_id: usize) -> Option<&HashMap<String, String>> {
+//         let node = self.osm_node_data.get(node_id);
+//         match node {
+//             Some(node) => Some(&node.tags),
+//             None => None,
+//         }
+//     }
+//     pub fn node(&self, id: usize) -> Option<&OsmNode> {
+//         self.osm_node_data.get(id)
+//     }
 
-    pub fn way_geometry(&self, id: usize) -> Vec<GeoPoint> {
-        let way = &self.osm_ways_data[id];
-        way.nodes()
-            .iter()
-            .map(|node_id| self.osm_node_data[*node_id].coordinates)
-            .collect()
-    }
-}
+//     pub fn way_geometry(&self, id: usize) -> Vec<GeoPoint> {
+//         let way = &self.osm_ways_data[id];
+//         way.nodes()
+//             .iter()
+//             .map(|node_id| self.osm_node_data[*node_id].coordinates)
+//             .collect()
+//     }
+// }
 
-#[derive(PartialEq, Eq, Clone)]
+#[derive(PartialEq, Eq, Clone, Debug)]
 enum OsmNodeType {
     /// Start or end of a line
     End,
@@ -188,14 +161,21 @@ enum OsmNodeType {
     Geometry,
 }
 
+pub struct OsmWaySegment {
+    pub start_node: usize,
+    pub end_node: usize,
+    pub geometry: Vec<GeoPoint>,
+    pub properties: EdgePropertyMap,
+}
+
 #[derive(Default)]
-struct OsmReader {
+pub struct OsmReader {
+    accepted_ways: usize,
+    processed_segments: usize,
     routing_nodes: Vec<OsmNode>,
     geometry_nodes: Vec<OsmNode>,
     osm_node_id_to_node_type: HashMap<i64, OsmNodeType>,
     osm_node_id_to_node_id: HashMap<i64, usize>,
-    next_way_id: usize,
-    next_node_id: usize,
 }
 
 impl OsmReader {
@@ -226,13 +206,6 @@ impl OsmReader {
         self.geometry_nodes.len()
     }
 
-    fn generate_next_way_id(&mut self) -> usize {
-        let next_way_id = self.next_way_id;
-        self.next_way_id += 1;
-
-        next_way_id
-    }
-
     fn accept_way(way: &Way) -> bool {
         if way.refs().len() < 2 {
             return false;
@@ -258,6 +231,10 @@ impl OsmReader {
 
                 for (index, node) in way.refs().enumerate() {
                     let is_start_or_end = index == 0 || index == way_node_count - 1;
+
+                    if node == 4597819068 {
+                        println!("Add node {}", node);
+                    }
                     self.update_node_type(
                         node,
                         if is_start_or_end {
@@ -267,12 +244,21 @@ impl OsmReader {
                         },
                     );
                 }
+
+                self.accepted_ways += 1;
+
+                if self.accepted_ways % 10000 == 0 {
+                    println!("Preprocessed {} ways", self.accepted_ways);
+                }
             }
             _ => {}
         }
     }
 
-    fn handle_element_second_pass(&mut self, element: Element) {
+    fn handle_element_second_pass<F>(&mut self, element: Element, mut handle_edge: F)
+    where
+        F: FnMut(OsmWaySegment) -> (),
+    {
         match element {
             Element::Relation(_) => {
                 // Process relation data
@@ -300,10 +286,64 @@ impl OsmReader {
                     .map(|tag| (tag.0.to_owned(), tag.1.to_owned()))
                     .collect(),
             ),
-            Element::Way(way) if OsmReader::accept_way(&way) => {
-                let nodes: Vec<i64> = way.refs().collect();
-                self.split_way(&nodes);
+            Element::Way(raw_way) if OsmReader::accept_way(&raw_way) => {
+                let mut way = OsmWay {
+                    osm_id: raw_way.id() as usize,
+                    tags: raw_way
+                        .tags()
+                        .map(|tag| (tag.0.to_owned(), tag.1.to_owned()))
+                        .collect(),
+                };
+
+                let mut properties = EdgePropertyMap::new();
+
+                // TODO: move somewhere else
+                handle_way(&mut way, &mut properties, Property::MaxSpeed);
+                handle_way(
+                    &mut way,
+                    &mut properties,
+                    Property::VehicleAccess("car".to_string()),
+                );
+                handle_way(&mut way, &mut properties, Property::OsmId);
+
+                let nodes: Vec<i64> = raw_way
+                    .refs()
+                    .filter(|osm_id| self.osm_node_id_to_node_id.contains_key(osm_id))
+                    .collect();
+                let segments = self.split_way(&nodes);
+
+                for segment in segments {
+                    let start_node = self.osm_node_id_to_node_id[&segment[0]];
+                    let end_node = self.osm_node_id_to_node_id[&segment[segment.len() - 1]];
+
+                    let geometry: Vec<GeoPoint> = segment
+                        .iter()
+                        .map(|osm_node_id| {
+                            let node_id = self.osm_node_id_to_node_id[osm_node_id];
+                            if self.is_routing_node(*osm_node_id) {
+                                self.routing_nodes[node_id].coordinates
+                            } else {
+                                self.geometry_nodes[node_id].coordinates
+                            }
+                        })
+                        .collect();
+
+                    handle_edge(OsmWaySegment {
+                        start_node,
+                        end_node,
+                        geometry,
+                        properties: properties.clone(),
+                    });
+
+                    self.processed_segments += 1;
+
+                    if self.processed_segments % 10000 == 0 {
+                        println!("Processed {} segments", self.processed_segments)
+                    }
+                }
+
                 // TODO: Split ways at JUNCTION nodes
+                //
             }
             _ => {}
         }
@@ -340,17 +380,23 @@ impl OsmReader {
     }
 
     fn add_node(&mut self, osm_id: i64, coordinates: GeoPoint, tags: HashMap<String, String>) {
-        if self.osm_node_id_to_node_type.contains_key(&osm_id) {
+        let node_type = self.osm_node_id_to_node_type.get(&osm_id);
+
+        if node_type.is_none() {
             return;
         }
-
-        let node_type = self.osm_node_id_to_node_type.get(&osm_id);
 
         match node_type {
             Some(OsmNodeType::End) => self.add_routing_node(osm_id, coordinates, tags),
             Some(OsmNodeType::Junction) => self.add_routing_node(osm_id, coordinates, tags),
             Some(OsmNodeType::Geometry) => self.add_geometry_node(osm_id, coordinates, tags),
             None => (),
+        }
+
+        let node_count = self.routing_nodes.len() + self.geometry_nodes.len();
+
+        if node_count % 10000 == 0 {
+            println!("Processed {} nodes", node_count);
         }
     }
 
@@ -409,57 +455,17 @@ impl OsmReader {
         reader.for_each(handler).expect("Failed to parse OSM file");
     }
 
-    fn parse_osm_file(&mut self, file_path: &str) {
+    pub fn parse_osm_file<F>(&mut self, file_path: &str, mut handle_edge: F)
+    where
+        F: FnMut(OsmWaySegment) -> (),
+    {
+        println!("Starting first OSM parsing pass");
         OsmReader::read_osm(file_path, |element| self.handle_element_first_pass(element));
+        println!("Starting second OSM parsing pass");
         OsmReader::read_osm(file_path, |element| {
-            self.handle_element_second_pass(element)
+            self.handle_element_second_pass(element, &mut handle_edge)
         });
     }
-}
-
-pub fn parse_osm_file(file_path: &str) -> Box<OSMData> {
-    let reader = ElementReader::from_path(file_path)
-        .expect(format!("Failed to read OSM file: {:?}", file_path).as_str());
-    let mut node_count = 0_i64;
-    let mut way_count = 0_i64;
-
-    let mut osm_data = Box::new(OSMData::new());
-
-    reader
-        .for_each(|element| {
-            match element {
-                Element::Relation(_) => {
-                    // Process relation data
-                    // println!("Relation ID: {}", relation.id());
-                }
-                Element::DenseNode(node) => {
-                    osm_data.add_dense_node(&node);
-                    node_count += 1;
-                    if node_count % 10000 == 0 {
-                        println!("Processed {} nodes", node_count);
-                    }
-                }
-                Element::Node(node) => {
-                    osm_data.add_node(&node);
-                    node_count += 1;
-                    if node_count % 10000 == 0 {
-                        println!("Processed {} nodes", node_count);
-                    }
-                }
-                Element::Way(way) if OsmReader::accept_way(&way) => {
-                    // Process way data
-                    osm_data.add_way(&way);
-                    way_count += 1;
-                    if way_count % 10000 == 0 {
-                        println!("Processed {} ways", way_count);
-                    }
-                }
-                _ => {}
-            }
-        })
-        .expect("Failed to parse OSM file");
-
-    osm_data
 }
 
 #[cfg(test)]
