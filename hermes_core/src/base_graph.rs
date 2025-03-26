@@ -107,16 +107,6 @@ impl BaseGraph {
         from_bytes(&bytes)
     }
 
-    fn new(nodes: usize, edges: usize) -> BaseGraph {
-        let adjencency_list = vec![vec![]; nodes];
-        BaseGraph {
-            nodes,
-            edges: Vec::with_capacity(edges),
-            geometry: Vec::with_capacity(edges),
-            adjacency_list: adjencency_list,
-        }
-    }
-
     pub fn from_osm_file(path: &str) -> BaseGraph {
         let mut osm_reader = OsmReader::default();
 

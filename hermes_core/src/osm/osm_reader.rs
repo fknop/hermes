@@ -2,11 +2,10 @@ use crate::geopoint::GeoPoint;
 use crate::properties::property::Property;
 use crate::properties::property_map::EdgePropertyMap;
 use crate::properties::tag_parser::handle_way;
-use osmpbf::{DenseNode, Element, ElementReader, Node, Way};
+use osmpbf::{Element, ElementReader, Way};
 use std::collections::HashMap;
 
 struct OsmNode {
-    id: usize,
     coordinates: GeoPoint,
     tags: HashMap<String, String>,
 }
@@ -28,127 +27,6 @@ impl OsmWay {
         self.tag(tag) == Some(value)
     }
 }
-
-// pub struct OSMData {
-//     next_node_id: usize,
-//     next_way_id: usize,
-//     osm_node_ids_to_internal_id: HashMap<i64, usize>,
-//     osm_way_ids_to_internal_id: HashMap<i64, usize>,
-//     osm_node_data: Vec<OsmNode>,
-//     osm_ways_data: Vec<OsmWay>,
-// }
-
-// impl OSMData {
-//     fn new() -> Self {
-//         OSMData {
-//             next_node_id: 0,
-//             next_way_id: 0,
-//             osm_node_ids_to_internal_id: HashMap::new(),
-//             osm_way_ids_to_internal_id: HashMap::new(),
-//             osm_node_data: Vec::new(),
-//             osm_ways_data: Vec::new(),
-//         }
-//     }
-
-//     pub fn nodes(&self) -> &[OsmNode] {
-//         &self.osm_node_data
-//     }
-
-//     pub fn ways(&self) -> &Vec<OsmWay> {
-//         &self.osm_ways_data
-//     }
-
-//     fn add_node(&mut self, node: &Node) {
-//         let node_id = self.next_node_id;
-//         self.osm_node_ids_to_internal_id.insert(node.id(), node_id);
-
-//         let tags: HashMap<String, String> = node
-//             .tags()
-//             .map(|tag| (tag.0.to_owned(), tag.1.to_owned()))
-//             .collect();
-
-//         self.osm_node_data.push(OsmNode {
-//             id: node_id,
-//             coordinates: GeoPoint {
-//                 lat: node.lat(),
-//                 lon: node.lon(),
-//             },
-//             tags,
-//         });
-//         self.next_node_id += 1;
-//     }
-
-//     fn add_dense_node(&mut self, node: &DenseNode) {
-//         let node_id = self.next_node_id;
-//         self.osm_node_ids_to_internal_id.insert(node.id(), node_id);
-
-//         let tags: HashMap<String, String> = node
-//             .tags()
-//             .map(|tag| (tag.0.to_owned(), tag.1.to_owned()))
-//             .collect();
-
-//         self.osm_node_data.push(OsmNode {
-//             id: node_id,
-//             coordinates: GeoPoint {
-//                 lat: node.lat(),
-//                 lon: node.lon(),
-//             },
-//             tags,
-//         });
-//         self.next_node_id += 1;
-//     }
-
-//     fn add_way(&mut self, way: &Way) {
-//         let tags: HashMap<String, String> = way
-//             .tags()
-//             .map(|tag| (tag.0.to_owned(), tag.1.to_owned()))
-//             .collect();
-
-//         let way_id = self.next_way_id;
-//         self.osm_way_ids_to_internal_id.insert(way.id(), way_id);
-
-//         let mut way = OsmWay {
-//             osm_id: way.id() as usize,
-//             nodes: way
-//                 .refs()
-//                 .filter_map(|node| self.node_id_from_osm_id(node))
-//                 .collect(),
-//             tags,
-//             properties: EdgePropertyMap::new(),
-//         };
-
-//         handle_way(&mut way, Property::MaxSpeed);
-//         handle_way(&mut way, Property::VehicleAccess("car".to_string()));
-//         handle_way(&mut way, Property::OsmId);
-
-//         self.osm_ways_data.push(way);
-
-//         self.next_way_id += 1
-//     }
-
-//     fn node_id_from_osm_id(&self, osm_node_id: i64) -> Option<usize> {
-//         self.osm_node_ids_to_internal_id.get(&osm_node_id).cloned()
-//     }
-
-//     fn tags(&self, node_id: usize) -> Option<&HashMap<String, String>> {
-//         let node = self.osm_node_data.get(node_id);
-//         match node {
-//             Some(node) => Some(&node.tags),
-//             None => None,
-//         }
-//     }
-//     pub fn node(&self, id: usize) -> Option<&OsmNode> {
-//         self.osm_node_data.get(id)
-//     }
-
-//     pub fn way_geometry(&self, id: usize) -> Vec<GeoPoint> {
-//         let way = &self.osm_ways_data[id];
-//         way.nodes()
-//             .iter()
-//             .map(|node_id| self.osm_node_data[*node_id].coordinates)
-//             .collect()
-//     }
-// }
 
 #[derive(PartialEq, Eq, Clone, Debug)]
 enum OsmNodeType {
@@ -322,8 +200,13 @@ impl OsmReader {
                             let node_id = self.osm_node_id_to_node_id[osm_node_id];
                             if self.is_routing_node(*osm_node_id) {
                                 self.routing_nodes[node_id].coordinates
-                            } else {
+                            } else if self.is_geometry_node(*osm_node_id) {
                                 self.geometry_nodes[node_id].coordinates
+                            } else {
+                                panic!(
+                                    "Unknown node type osm_node_id={}, node_id={}",
+                                    osm_node_id, node_id
+                                );
                             }
                         })
                         .collect();
@@ -409,11 +292,7 @@ impl OsmReader {
     ) {
         let node_id = self.generate_next_routing_node_id();
         self.osm_node_id_to_node_id.insert(osm_id, node_id);
-        self.routing_nodes.push(OsmNode {
-            id: node_id,
-            tags,
-            coordinates,
-        })
+        self.routing_nodes.push(OsmNode { tags, coordinates })
     }
 
     #[inline(always)]
@@ -425,11 +304,7 @@ impl OsmReader {
     ) {
         let node_id = self.generate_next_geometry_node_id();
         self.osm_node_id_to_node_id.insert(osm_id, node_id);
-        self.geometry_nodes.push(OsmNode {
-            id: node_id,
-            tags,
-            coordinates,
-        })
+        self.geometry_nodes.push(OsmNode { tags, coordinates })
     }
 
     fn is_routing_node(&self, osm_id: i64) -> bool {
