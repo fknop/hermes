@@ -20,27 +20,27 @@ use crate::{
 )]
 pub struct GeoPoint {
     pub lat: f64,
-    pub lng: f64,
+    pub lon: f64,
 }
 
 impl RTreeObject for GeoPoint {
     type Envelope = AABB<[f64; 2]>;
 
     fn envelope(&self) -> Self::Envelope {
-        AABB::from_point([self.lng, self.lat])
+        AABB::from_point([self.lon, self.lat])
     }
 }
 
 impl PointDistance for GeoPoint {
     fn distance_2(&self, point: &<Self::Envelope as Envelope>::Point) -> f64 {
-        f64::from(haversine_distance(self.lat, self.lng, point[1], point[0])).powi(2)
+        f64::from(haversine_distance(self.lat, self.lon, point[1], point[0])).powi(2)
     }
 }
 
 impl Into<[f64; 2]> for &GeoPoint {
     fn into(self) -> [f64; 2] {
         let lat_rad = self.lat.to_radians();
-        let lon_rad = self.lng.to_radians();
+        let lon_rad = self.lon.to_radians();
         // Convert to Cartesian
         let x = EARTH_RADIUS_METERS * lon_rad;
         let y = EARTH_RADIUS_METERS * (lat_rad / 2.0 + PI / 4.0).tan().ln();
@@ -50,7 +50,7 @@ impl Into<[f64; 2]> for &GeoPoint {
 
 impl GeoPoint {
     pub fn distance(&self, other: &GeoPoint) -> Distance<Meters> {
-        haversine_distance(self.lat, self.lng, other.lat, other.lng)
+        haversine_distance(self.lat, self.lon, other.lat, other.lon)
     }
 }
 

@@ -56,7 +56,7 @@ impl LocationIndex {
 
     pub fn closest(&self, coordinates: &GeoPoint) -> Option<usize> {
         self.tree
-            .nearest_neighbor(&[coordinates.lng, coordinates.lat])
+            .nearest_neighbor(&[coordinates.lon, coordinates.lat])
             .map(|location| location.data.edge_id)
     }
 
@@ -67,7 +67,7 @@ impl LocationIndex {
         coordinates: &GeoPoint,
     ) -> Option<Snap> {
         self.tree
-            .nearest_neighbor_iter(&[coordinates.lng, coordinates.lat])
+            .nearest_neighbor_iter(&[coordinates.lon, coordinates.lat])
             .find(|nearest_neighbor| {
                 let edge_id = nearest_neighbor.data.edge_id;
                 // We only consider edges that can be accessed by the weighting profile

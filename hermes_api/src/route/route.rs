@@ -42,7 +42,7 @@ pub async fn route_handler(
         let points: Vec<Vec<f64>> = path
             .legs()
             .iter()
-            .flat_map(|leg| leg.points().iter().map(|point| vec![point.lng, point.lat]))
+            .flat_map(|leg| leg.points().iter().map(|point| vec![point.lon, point.lat]))
             .collect();
 
         println!("found points with {:?}", points.len());

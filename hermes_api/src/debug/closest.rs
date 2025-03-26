@@ -37,7 +37,7 @@ pub async fn debug_closest_handler(
         String::from("car"),
         GeoPoint {
             lat: query.lat,
-            lng: query.lng,
+            lon: query.lng,
         },
     );
 
@@ -57,7 +57,7 @@ pub async fn debug_closest_handler(
         geometry: Some(Geometry::new(LineString(
             geometry
                 .iter()
-                .map(|coordinates| vec![coordinates.lng, coordinates.lat])
+                .map(|coordinates| vec![coordinates.lon, coordinates.lat])
                 .collect(),
         ))),
     }];

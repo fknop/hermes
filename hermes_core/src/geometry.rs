@@ -65,7 +65,7 @@ pub fn generate_intermediate_points_on_line(
 
         points.push(GeoPoint {
             lat: start.lat + fraction * (end.lat - start.lat),
-            lng: start.lng + fraction * (end.lng - start.lng),
+            lon: start.lon + fraction * (end.lon - start.lon),
         })
     }
 
