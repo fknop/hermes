@@ -34,7 +34,9 @@ impl CarWeighting {
             return 0;
         }
 
-        let speed = edge.properties.get_u8(Property::MaxSpeed, direction);
+        let speed = edge
+            .properties
+            .get_u8(Property::AverageSpeed("car".to_string()), direction);
 
         speed.unwrap_or(0)
     }

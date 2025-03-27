@@ -96,7 +96,9 @@ impl BaseGraph {
         let file = File::create(path).expect("failed to create file");
         let mut writer = BufWriter::new(file);
 
-        writer.write(&bytes[..]).expect("failed to write buffer");
+        writer
+            .write_all(&bytes[..])
+            .expect("failed to write buffer");
         writer.flush().expect("failed to flush buffer");
     }
 

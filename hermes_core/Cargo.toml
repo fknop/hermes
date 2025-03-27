@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 geo-types = "0.7.15"
+osmio = "0.14.0"
 osmpbf = "0.3.4"
 rkyv = "0.8.10"
 rstar = "0.12.2"
