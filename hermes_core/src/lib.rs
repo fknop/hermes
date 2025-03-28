@@ -1,5 +1,6 @@
 pub mod base_graph;
 mod constants;
+mod degrees;
 pub mod dijkstra;
 pub mod distance;
 mod geometry;
