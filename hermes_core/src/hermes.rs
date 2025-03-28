@@ -5,6 +5,7 @@ use crate::location_index::LocationIndex;
 use crate::query_graph::QueryGraph;
 use crate::routing::routing_request::RoutingRequest;
 use crate::routing_path::RoutingPath;
+use crate::stopwatch::Stopwatch;
 use crate::weighting::{CarWeighting, Weighting};
 use std::collections::HashMap;
 use std::path::Path;
@@ -77,24 +78,42 @@ impl Hermes {
 
         let weighting = profile.unwrap().as_ref();
 
+        let start_snap_stop_watch = Stopwatch::new("snap/start");
         let start_snap = self
             .index()
             .snap(&self.graph, weighting, &request.start)
             .expect("no way to avenue closest way");
+
+        start_snap_stop_watch.report();
+
+        let end_snap_stop_watch = Stopwatch::new("snap/end");
+
         let end_snap = self
             .index()
             .snap(&self.graph, weighting, &request.end)
             .expect("no way to rue des palais way");
 
+        end_snap_stop_watch.report();
+
         let mut snaps = [start_snap, end_snap];
 
+        let build_query_graph_sw = Stopwatch::new("querygraph/build");
+
         let query_graph = QueryGraph::from_base_graph(&self.graph, &mut snaps[..]);
+
+        build_query_graph_sw.report();
 
         let start = snaps[0].closest_node();
         let end = snaps[1].closest_node();
 
+        let dijkstra_sw = Stopwatch::new("dijkstra/calc_path");
+
         let mut dijkstra = Dijkstra::new(&query_graph);
-        dijkstra.calc_path(&query_graph, weighting, start, end)
+        let path = dijkstra.calc_path(&query_graph, weighting, start, end);
+
+        dijkstra_sw.report();
+
+        path
     }
 
     pub fn closest_edge(&self, profile: String, coordinates: GeoPoint) -> Option<usize> {

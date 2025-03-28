@@ -13,4 +13,5 @@ mod query_graph;
 pub mod routing;
 pub mod routing_path;
 mod snap;
+mod stopwatch;
 pub mod weighting;
