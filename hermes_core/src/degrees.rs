@@ -9,11 +9,16 @@ pub const COORD_PRECISION_NANOS: i32 = 100;
 /// See [`COORD_PRECISION_NANOS`].
 pub const COORD_SCALE_FACTOR: f64 = (1_000_000_000 / COORD_PRECISION_NANOS) as f64;
 
+#[derive(PartialEq, Copy, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
 pub struct Degrees(i32);
 
 impl Degrees {
     pub fn degrees(&self) -> f64 {
         self.0 as f64 / COORD_SCALE_FACTOR
+    }
+
+    pub fn nanos(&self) -> i32 {
+        self.0
     }
 }
 

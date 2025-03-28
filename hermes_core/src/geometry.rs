@@ -63,10 +63,10 @@ pub fn generate_intermediate_points_on_line(
     for i in 1..num_points {
         let fraction = i as f64 / num_points as f64;
 
-        points.push(GeoPoint {
-            lat: start.lat + fraction * (end.lat - start.lat),
-            lon: start.lon + fraction * (end.lon - start.lon),
-        })
+        points.push(GeoPoint::new(
+            start.lat() + fraction * (end.lat() - start.lat()),
+            start.lon() + fraction * (end.lon() - start.lon()),
+        ))
     }
 
     points

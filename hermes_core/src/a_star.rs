@@ -1,10 +1,9 @@
 use crate::constants::{INVALID_EDGE, INVALID_NODE, MAX_WEIGHT};
 use crate::geopoint::GeoPoint;
 use crate::graph::Graph;
-use crate::properties::property_map::FORWARD_EDGE;
+use crate::properties::property_map::{BACKWARD_EDGE, EdgeDirection, FORWARD_EDGE};
 use crate::routing_path::{RoutingPath, RoutingPathItem};
 use crate::shortest_path_algorithm::ShortestPathAlgorithm;
-use crate::stopwatch::{self, Stopwatch};
 use crate::weighting::{Weight, Weighting};
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
@@ -12,12 +11,13 @@ use std::collections::BinaryHeap;
 #[derive(Eq, Copy, Clone, Debug)]
 struct HeapItem {
     node_id: usize,
-    weight: usize,
+    g_score: Weight, // weight
+    f_score: Weight, // g_score + h_score
 }
 
 impl PartialEq for HeapItem {
     fn eq(&self, other: &HeapItem) -> bool {
-        self.weight == other.weight
+        self.f_score == other.f_score
     }
 }
 impl PartialOrd for HeapItem {
@@ -30,15 +30,15 @@ impl Ord for HeapItem {
     fn cmp(&self, other: &Self) -> Ordering {
         // Flip weight to make this a min-heap
         other
-            .weight
-            .cmp(&self.weight)
+            .f_score
+            .cmp(&self.f_score)
             .then_with(|| self.node_id.cmp(&other.node_id))
     }
 }
 
 struct NodeData {
-    weight: Weight,
     settled: bool,
+    weight: Weight,
     parent: usize,
     edge_id: usize, // Edge ID from parent to current node
 }
@@ -54,28 +54,49 @@ impl NodeData {
     }
 }
 
-pub struct Dijkstra {
+fn get_node_coordinates(graph: &impl Graph, node: usize) -> &GeoPoint {
+    let edge = graph.node_edges_iter(node).next().unwrap();
+    let edge_direction = graph.edge_direction(edge, node);
+    let geometry = graph.edge_geometry(edge);
+    match edge_direction {
+        FORWARD_EDGE => &geometry[0],
+        BACKWARD_EDGE => &geometry[geometry.len() - 1],
+    }
+}
+
+fn estimate(graph: &impl Graph, start: usize, end: usize) -> Weight {
+    let start_coordinates = get_node_coordinates(graph, start);
+    let end_coordinates = get_node_coordinates(graph, end);
+    let distance = start_coordinates.distance(end_coordinates).value();
+
+    let speed_meters_per_second = 70.0 * (1000.0 / 3600.0);
+
+    (distance / speed_meters_per_second) as usize
+}
+
+pub struct AStar {
     heap: BinaryHeap<HeapItem>,
     data: Vec<NodeData>,
 }
 
-impl Dijkstra {
+impl AStar {
     pub fn new(graph: &impl Graph) -> Self {
         let mut data: Vec<NodeData> = Vec::with_capacity(graph.node_count());
         data.resize_with(graph.node_count(), NodeData::new);
         let heap: BinaryHeap<HeapItem> = BinaryHeap::with_capacity(1024);
-        Dijkstra { heap, data }
+        AStar { heap, data }
     }
 
-    fn init(&mut self, start: usize, _end: usize) {
+    fn init(&mut self, graph: &impl Graph, start: usize, end: usize) {
+        let h_score = estimate(graph, start, end);
         self.heap.push(HeapItem {
             node_id: start,
-            weight: 0,
+            g_score: 0,
+            f_score: h_score,
         });
         self.update_node_data(start, 0, INVALID_NODE, INVALID_EDGE)
     }
 
-    #[inline(always)]
     fn update_node_data(&mut self, node: usize, weight: Weight, parent: usize, edge_id: usize) {
         self.data[node].settled = false;
         self.data[node].weight = weight;
@@ -83,12 +104,10 @@ impl Dijkstra {
         self.data[node].edge_id = edge_id;
     }
 
-    #[inline(always)]
     fn is_settled(&self, node: usize) -> bool {
         self.data[node].settled
     }
 
-    #[inline(always)]
     fn current_shortest_weight(&self, node: usize) -> Weight {
         self.data[node].weight
     }
@@ -131,7 +150,7 @@ impl Dijkstra {
     }
 }
 
-impl ShortestPathAlgorithm for Dijkstra {
+impl ShortestPathAlgorithm for AStar {
     fn calc_path(
         &mut self,
         graph: &impl Graph,
@@ -139,7 +158,6 @@ impl ShortestPathAlgorithm for Dijkstra {
         start: usize,
         end: usize,
     ) -> Result<RoutingPath, String> {
-        let stopwatch = Stopwatch::new("dijkstra/calc_path");
         if start == INVALID_NODE {
             return Err(String::from("Dijkstra: start node is invalid"));
         }
@@ -148,61 +166,62 @@ impl ShortestPathAlgorithm for Dijkstra {
             return Err(String::from("Dijkstra: start node is invalid"));
         }
 
-        self.init(start, end);
+        self.init(graph, start, end);
 
-        let mut iterations = 0;
-
-        while let Some(HeapItem { node_id, weight }) = self.heap.pop() {
+        while let Some(HeapItem {
+            node_id, g_score, ..
+        }) = self.heap.pop()
+        {
             // Node is already settled, skip
             if self.is_settled(node_id) {
                 continue;
             }
 
             // The weight is bigger than the current shortest weight, skip
-            if weight > self.current_shortest_weight(node_id) {
-                continue;
-            }
-
-            if weight > self.current_shortest_weight(end) {
+            if g_score > self.current_shortest_weight(node_id) {
                 continue;
             }
 
             for edge_id in graph.node_edges_iter(node_id) {
                 let edge = graph.edge(edge_id);
-                let adj_node = edge.adj_node(node_id);
+                let edge_from_node = edge.start_node();
+                let edge_to_node = edge.end_node();
 
-                if self.data[adj_node].settled {
-                    continue;
-                }
+                let adj_node = if edge_from_node == node_id {
+                    edge_to_node
+                } else {
+                    edge_from_node
+                };
 
                 let direction = graph.edge_direction(edge_id, node_id);
 
                 let edge_weight = weighting.calc_edge_weight(edge, direction);
-
                 let next_weight = if edge_weight == MAX_WEIGHT {
                     MAX_WEIGHT
                 } else {
-                    weight + edge_weight
+                    g_score + edge_weight
                 };
 
                 if next_weight < self.current_shortest_weight(adj_node) {
                     self.update_node_data(adj_node, next_weight, node_id, edge_id);
+                    let h_score = estimate(graph, adj_node, end);
                     self.heap.push(HeapItem {
-                        weight: next_weight,
+                        g_score: next_weight,
+                        f_score: if next_weight == MAX_WEIGHT {
+                            MAX_WEIGHT
+                        } else {
+                            next_weight + h_score
+                        },
                         node_id: adj_node,
                     });
                 }
             }
 
             self.data[node_id].settled = true;
-            iterations += 1;
             if node_id == end {
                 break;
             }
         }
-
-        println!("Dijkstra iterations: {}", iterations);
-        stopwatch.report();
 
         Ok(self.build_path(graph, weighting, start, end))
     }

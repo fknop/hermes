@@ -172,11 +172,11 @@ impl OsmReader {
             .filter(|element| element.is_node() || element.is_way())
             .for_each(|element| match element {
                 StringOSMObj::Node(node) => {
-                    let lat_lon = node.lat_lon_f64();
+                    let lat_lon = node.lat_lon();
                     if let Some((lat, lon)) = lat_lon {
                         self.add_node(
                             node.id(),
-                            GeoPoint { lat, lon },
+                            GeoPoint::from_nano(lat.inner(), lon.inner()),
                             node.tags()
                                 .map(|tag| (tag.0.to_owned(), tag.1.to_owned()))
                                 .collect(),

@@ -52,6 +52,14 @@ impl GraphEdge {
     pub fn end_node(&self) -> usize {
         self.end_node
     }
+
+    pub fn adj_node(&self, node: usize) -> usize {
+        if self.start_node == node {
+            self.end_node
+        } else {
+            self.start_node
+        }
+    }
 }
 
 #[derive(Default, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]

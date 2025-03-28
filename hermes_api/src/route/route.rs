@@ -23,9 +23,21 @@ impl IntoResponse for RouteResponse {
 }
 
 #[derive(Deserialize)]
+pub struct GeoPointBody {
+    lat: f64,
+    lon: f64,
+}
+
+impl From<GeoPointBody> for GeoPoint {
+    fn from(value: GeoPointBody) -> Self {
+        GeoPoint::new(value.lat, value.lon)
+    }
+}
+
+#[derive(Deserialize)]
 pub struct RouteRequestBody {
-    start: GeoPoint,
-    end: GeoPoint,
+    start: GeoPointBody,
+    end: GeoPointBody,
 }
 
 pub async fn route_handler(
@@ -33,8 +45,8 @@ pub async fn route_handler(
     Json(body): Json<RouteRequestBody>,
 ) -> Result<RouteResponse, ApiError> {
     let path = state.hermes.route(RoutingRequest {
-        start: body.start,
-        end: body.end,
+        start: body.start.into(),
+        end: body.end.into(),
         profile: String::from("car"),
     });
 
@@ -42,7 +54,11 @@ pub async fn route_handler(
         let points: Vec<Vec<f64>> = path
             .legs()
             .iter()
-            .flat_map(|leg| leg.points().iter().map(|point| vec![point.lon, point.lat]))
+            .flat_map(|leg| {
+                leg.points()
+                    .iter()
+                    .map(|point| vec![point.lon(), point.lat()])
+            })
             .collect();
 
         println!("found points with {:?}", points.len());

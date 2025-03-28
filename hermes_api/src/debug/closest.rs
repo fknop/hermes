@@ -33,13 +33,9 @@ pub async fn debug_closest_handler(
     State(state): State<Arc<AppState>>,
     query: Query<DebugClosestQuery>,
 ) -> Result<DebugClosestResponse, ApiError> {
-    let closest = state.hermes.closest_edge(
-        String::from("car"),
-        GeoPoint {
-            lat: query.lat,
-            lon: query.lng,
-        },
-    );
+    let closest = state
+        .hermes
+        .closest_edge(String::from("car"), GeoPoint::new(query.lat, query.lng));
 
     if closest.is_none() {
         return Err(ApiError::BadRequest("Could not find edge".to_string()));
@@ -57,7 +53,7 @@ pub async fn debug_closest_handler(
         geometry: Some(Geometry::new(LineString(
             geometry
                 .iter()
-                .map(|coordinates| vec![coordinates.lon, coordinates.lat])
+                .map(|coordinates| vec![coordinates.lon(), coordinates.lat()])
                 .collect(),
         ))),
     }];

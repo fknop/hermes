@@ -1,3 +1,4 @@
+mod a_star;
 pub mod base_graph;
 mod constants;
 mod degrees;
@@ -13,6 +14,7 @@ mod properties;
 mod query_graph;
 pub mod routing;
 pub mod routing_path;
+mod shortest_path_algorithm;
 mod snap;
 mod stopwatch;
 pub mod weighting;

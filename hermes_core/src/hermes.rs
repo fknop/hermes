@@ -1,10 +1,12 @@
+use crate::a_star::AStar;
 use crate::base_graph::BaseGraph;
-use crate::dijkstra::{Dijkstra, ShortestPathAlgo};
+use crate::dijkstra::Dijkstra;
 use crate::geopoint::GeoPoint;
 use crate::location_index::LocationIndex;
 use crate::query_graph::QueryGraph;
 use crate::routing::routing_request::RoutingRequest;
 use crate::routing_path::RoutingPath;
+use crate::shortest_path_algorithm::ShortestPathAlgorithm;
 use crate::stopwatch::Stopwatch;
 use crate::weighting::{CarWeighting, Weighting};
 use std::collections::HashMap;
@@ -106,7 +108,7 @@ impl Hermes {
         let start = snaps[0].closest_node();
         let end = snaps[1].closest_node();
 
-        let dijkstra_sw = Stopwatch::new("dijkstra/calc_path");
+        let dijkstra_sw = Stopwatch::new("Dijkstra/calc_path+build_path");
 
         let mut dijkstra = Dijkstra::new(&query_graph);
         let path = dijkstra.calc_path(&query_graph, weighting, start, end);

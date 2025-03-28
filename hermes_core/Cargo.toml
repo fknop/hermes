@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+geo = "0.30.0"
 geo-types = "0.7.15"
 osmio = "0.14.0"
 osmpbf = "0.3.4"
