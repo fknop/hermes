@@ -1,13 +1,29 @@
+use rkyv::with::{Identity, MapKV};
+
 use crate::properties::property::Property;
-use std::collections::HashMap;
+
+#[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Debug)]
+struct SmallMap<T>(Vec<(Property, T)>);
+impl<T> SmallMap<T> {
+    fn new() -> Self {
+        SmallMap(Vec::new())
+    }
+    fn get(&self, property: &Property) -> Option<&T> {
+        self.0.iter().find(|(p, _)| p == property).map(|(_, v)| v)
+    }
+
+    fn insert(&mut self, property: Property, value: T) {
+        self.0.push((property, value));
+    }
+}
 
 #[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Debug)]
 pub struct EdgePropertyMap {
-    backward_bool_values: HashMap<String, bool>,
-    forward_bool_values: HashMap<String, bool>,
-    forward_u8_values: HashMap<String, u8>,
-    backward_u8_values: HashMap<String, u8>,
-    usize_values: HashMap<String, usize>,
+    backward_bool_values: SmallMap<bool>,
+    forward_bool_values: SmallMap<bool>,
+    forward_u8_values: SmallMap<u8>,
+    backward_u8_values: SmallMap<u8>,
+    usize_values: SmallMap<usize>,
 }
 
 pub type EdgeDirection = bool;
@@ -17,11 +33,11 @@ pub const BACKWARD_EDGE: EdgeDirection = false;
 impl EdgePropertyMap {
     pub fn new() -> EdgePropertyMap {
         EdgePropertyMap {
-            forward_u8_values: HashMap::new(),
-            backward_u8_values: HashMap::new(),
-            forward_bool_values: HashMap::new(),
-            backward_bool_values: HashMap::new(),
-            usize_values: HashMap::new(),
+            forward_u8_values: SmallMap::new(),
+            backward_u8_values: SmallMap::new(),
+            forward_bool_values: SmallMap::new(),
+            backward_bool_values: SmallMap::new(),
+            usize_values: SmallMap::new(),
         }
     }
 
@@ -37,23 +53,20 @@ impl EdgePropertyMap {
 
     pub fn get_u8(&self, property: Property, direction: EdgeDirection) -> Option<u8> {
         match direction {
-            FORWARD_EDGE => self.forward_u8_values.get(&property.to_string()).cloned(),
-            BACKWARD_EDGE => self.backward_u8_values.get(&property.to_string()).cloned(),
+            FORWARD_EDGE => self.forward_u8_values.get(&property).cloned(),
+            BACKWARD_EDGE => self.backward_u8_values.get(&property).cloned(),
         }
     }
 
     pub fn get_bool(&self, property: Property, direction: EdgeDirection) -> Option<bool> {
         match direction {
-            FORWARD_EDGE => self.forward_bool_values.get(&property.to_string()).cloned(),
-            BACKWARD_EDGE => self
-                .backward_bool_values
-                .get(&property.to_string())
-                .cloned(),
+            FORWARD_EDGE => self.forward_bool_values.get(&property).cloned(),
+            BACKWARD_EDGE => self.backward_bool_values.get(&property).cloned(),
         }
     }
 
     pub fn get_usize(&self, property: Property) -> Option<usize> {
-        self.usize_values.get(&property.to_string()).cloned()
+        self.usize_values.get(&property).cloned()
     }
 
     pub fn insert_u8(
@@ -63,9 +76,11 @@ impl EdgePropertyMap {
         value: u8,
     ) -> Option<u8> {
         match direction {
-            FORWARD_EDGE => self.forward_u8_values.insert(property.to_string(), value),
-            BACKWARD_EDGE => self.backward_u8_values.insert(property.to_string(), value),
+            FORWARD_EDGE => self.forward_u8_values.insert(property, value),
+            BACKWARD_EDGE => self.backward_u8_values.insert(property, value),
         }
+
+        Some(value)
     }
     pub fn insert_bool(
         &mut self,
@@ -74,15 +89,17 @@ impl EdgePropertyMap {
         value: bool,
     ) -> Option<bool> {
         match direction {
-            FORWARD_EDGE => self.forward_bool_values.insert(property.to_string(), value),
-            BACKWARD_EDGE => self
-                .backward_bool_values
-                .insert(property.to_string(), value),
+            FORWARD_EDGE => self.forward_bool_values.insert(property, value),
+            BACKWARD_EDGE => self.backward_bool_values.insert(property, value),
         }
+
+        Some(value)
     }
 
     pub fn insert_usize(&mut self, property: Property, value: usize) -> Option<usize> {
-        self.usize_values.insert(property.to_string(), value)
+        self.usize_values.insert(property, value);
+
+        Some(value)
     }
 }
 

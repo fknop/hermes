@@ -1,3 +1,5 @@
+use intmap::IntMap;
+
 use crate::constants::{INVALID_EDGE, INVALID_NODE, MAX_WEIGHT};
 use crate::geopoint::GeoPoint;
 use crate::graph::Graph;
@@ -7,7 +9,8 @@ use crate::shortest_path_algorithm::ShortestPathAlgorithm;
 use crate::stopwatch::{self, Stopwatch};
 use crate::weighting::{Weight, Weighting};
 use std::cmp::Ordering;
-use std::collections::BinaryHeap;
+use std::collections::{BinaryHeap, HashMap};
+use std::time::Duration;
 
 #[derive(Eq, Copy, Clone, Debug)]
 struct HeapItem {
@@ -56,13 +59,15 @@ impl NodeData {
 
 pub struct Dijkstra {
     heap: BinaryHeap<HeapItem>,
-    data: Vec<NodeData>,
+
+    // Use a HashMap instead of a vector. Creating a vector with a capacity of the entire nodes of the planet is not scalable.
+    data: HashMap<usize, NodeData>,
 }
 
 impl Dijkstra {
     pub fn new(graph: &impl Graph) -> Self {
-        let mut data: Vec<NodeData> = Vec::with_capacity(graph.node_count());
-        data.resize_with(graph.node_count(), NodeData::new);
+        println!("graph nodes count {}", graph.node_count());
+        let data = HashMap::with_capacity(10000);
         let heap: BinaryHeap<HeapItem> = BinaryHeap::with_capacity(1024);
         Dijkstra { heap, data }
     }
@@ -75,26 +80,46 @@ impl Dijkstra {
         self.update_node_data(start, 0, INVALID_NODE, INVALID_EDGE)
     }
 
-    #[inline(always)]
     fn update_node_data(&mut self, node: usize, weight: Weight, parent: usize, edge_id: usize) {
-        self.data[node].settled = false;
-        self.data[node].weight = weight;
-        self.data[node].parent = parent;
-        self.data[node].edge_id = edge_id;
+        if let Some(data) = self.data.get_mut(&node) {
+            data.weight = weight;
+            data.settled = false;
+            data.parent = parent;
+            data.edge_id = edge_id;
+        } else {
+            self.data.insert(
+                node,
+                NodeData {
+                    weight,
+                    settled: false,
+                    edge_id,
+                    parent,
+                },
+            );
+        }
+    }
+
+    fn node_data(&mut self, node: usize) -> &NodeData {
+        self.data.entry(node).or_insert_with(NodeData::new)
     }
 
     #[inline(always)]
-    fn is_settled(&self, node: usize) -> bool {
-        self.data[node].settled
+    fn set_settled(&mut self, node: usize) {
+        self.data.get_mut(&node).unwrap().settled = true
     }
 
     #[inline(always)]
-    fn current_shortest_weight(&self, node: usize) -> Weight {
-        self.data[node].weight
+    fn is_settled(&mut self, node: usize) -> bool {
+        self.node_data(node).settled
+    }
+
+    #[inline(always)]
+    fn current_shortest_weight(&mut self, node: usize) -> Weight {
+        self.node_data(node).weight
     }
 
     fn build_path(
-        &self,
+        &mut self,
         graph: &impl Graph,
         weighting: &dyn Weighting,
         _start: usize,
@@ -103,10 +128,11 @@ impl Dijkstra {
         let mut path: Vec<RoutingPathItem> = Vec::with_capacity(32);
 
         let mut node = end;
+        let mut node_data = self.node_data(node);
 
-        while self.data[node].parent != INVALID_NODE {
-            let edge_id = self.data[node].edge_id;
-            let parent = self.data[node].parent;
+        while node_data.parent != INVALID_NODE {
+            let edge_id = node_data.edge_id;
+            let parent = node_data.parent;
 
             let direction = graph.edge_direction(edge_id, parent);
 
@@ -122,7 +148,8 @@ impl Dijkstra {
             let time = weighting.calc_edge_ms(edge, direction);
 
             path.push(RoutingPathItem::new(distance, time, geometry));
-            node = self.data[node].parent;
+            node = node_data.parent;
+            node_data = self.node_data(node);
         }
 
         path.reverse();
@@ -151,6 +178,8 @@ impl ShortestPathAlgorithm for Dijkstra {
         self.init(start, end);
 
         let mut iterations = 0;
+        let mut nodes_visited = 0;
+        let mut calc_weight_duration: Duration = Duration::new(0, 0);
 
         while let Some(HeapItem { node_id, weight }) = self.heap.pop() {
             // Node is already settled, skip
@@ -171,19 +200,23 @@ impl ShortestPathAlgorithm for Dijkstra {
                 let edge = graph.edge(edge_id);
                 let adj_node = edge.adj_node(node_id);
 
-                if self.data[adj_node].settled {
+                if self.is_settled(adj_node) {
                     continue;
                 }
 
                 let direction = graph.edge_direction(edge_id, node_id);
 
+                let sw = Stopwatch::new("calc_weight");
                 let edge_weight = weighting.calc_edge_weight(edge, direction);
+                calc_weight_duration += sw.elapsed();
 
-                let next_weight = if edge_weight == MAX_WEIGHT {
-                    MAX_WEIGHT
-                } else {
-                    weight + edge_weight
-                };
+                if edge_weight == MAX_WEIGHT {
+                    continue;
+                }
+
+                nodes_visited += 1;
+
+                let next_weight = weight + edge_weight;
 
                 if next_weight < self.current_shortest_weight(adj_node) {
                     self.update_node_data(adj_node, next_weight, node_id, edge_id);
@@ -194,7 +227,7 @@ impl ShortestPathAlgorithm for Dijkstra {
                 }
             }
 
-            self.data[node_id].settled = true;
+            self.set_settled(node_id);
             iterations += 1;
             if node_id == end {
                 break;
@@ -202,6 +235,8 @@ impl ShortestPathAlgorithm for Dijkstra {
         }
 
         println!("Dijkstra iterations: {}", iterations);
+        println!("Dijkstra nodes visited: {}", nodes_visited);
+        println!("[calc_weight]: {:?}", calc_weight_duration);
         stopwatch.report();
 
         Ok(self.build_path(graph, weighting, start, end))

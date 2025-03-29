@@ -6,7 +6,7 @@ use crate::routing_path::{RoutingPath, RoutingPathItem};
 use crate::shortest_path_algorithm::ShortestPathAlgorithm;
 use crate::weighting::{Weight, Weighting};
 use std::cmp::Ordering;
-use std::collections::BinaryHeap;
+use std::collections::{BinaryHeap, HashMap};
 
 #[derive(Eq, Copy, Clone, Debug)]
 struct HeapItem {
@@ -69,20 +69,18 @@ fn estimate(graph: &impl Graph, start: usize, end: usize) -> Weight {
     let end_coordinates = get_node_coordinates(graph, end);
     let distance = start_coordinates.distance(end_coordinates).value();
 
-    let speed_meters_per_second = 70.0 * (1000.0 / 3600.0);
-
-    (distance / speed_meters_per_second) as usize
+    distance as usize
 }
 
 pub struct AStar {
     heap: BinaryHeap<HeapItem>,
-    data: Vec<NodeData>,
+    // Use a HashMap instead of a vector. Creating a vector with a capacity of the entire nodes of the planet is not scalable.
+    data: HashMap<usize, NodeData>,
 }
 
 impl AStar {
     pub fn new(graph: &impl Graph) -> Self {
-        let mut data: Vec<NodeData> = Vec::with_capacity(graph.node_count());
-        data.resize_with(graph.node_count(), NodeData::new);
+        let data = HashMap::with_capacity(10000);
         let heap: BinaryHeap<HeapItem> = BinaryHeap::with_capacity(1024);
         AStar { heap, data }
     }
@@ -98,22 +96,44 @@ impl AStar {
     }
 
     fn update_node_data(&mut self, node: usize, weight: Weight, parent: usize, edge_id: usize) {
-        self.data[node].settled = false;
-        self.data[node].weight = weight;
-        self.data[node].parent = parent;
-        self.data[node].edge_id = edge_id;
+        if let Some(data) = self.data.get_mut(&node) {
+            data.weight = weight;
+            data.settled = false;
+            data.parent = parent;
+            data.edge_id = edge_id;
+        } else {
+            self.data.insert(
+                node,
+                NodeData {
+                    weight,
+                    settled: false,
+                    edge_id,
+                    parent,
+                },
+            );
+        }
     }
 
-    fn is_settled(&self, node: usize) -> bool {
-        self.data[node].settled
+    fn node_data(&mut self, node: usize) -> &NodeData {
+        self.data.entry(node).or_insert_with(NodeData::new)
     }
 
-    fn current_shortest_weight(&self, node: usize) -> Weight {
-        self.data[node].weight
+    fn set_settled(&mut self, node: usize) {
+        self.data.get_mut(&node).unwrap().settled = true
+    }
+
+    #[inline(always)]
+    fn is_settled(&mut self, node: usize) -> bool {
+        self.node_data(node).settled
+    }
+
+    #[inline(always)]
+    fn current_shortest_weight(&mut self, node: usize) -> Weight {
+        self.node_data(node).weight
     }
 
     fn build_path(
-        &self,
+        &mut self,
         graph: &impl Graph,
         weighting: &dyn Weighting,
         _start: usize,
@@ -123,9 +143,10 @@ impl AStar {
 
         let mut node = end;
 
-        while self.data[node].parent != INVALID_NODE {
-            let edge_id = self.data[node].edge_id;
-            let parent = self.data[node].parent;
+        let mut node_data = self.node_data(node);
+        while node_data.parent != INVALID_NODE {
+            let edge_id = node_data.edge_id;
+            let parent = node_data.parent;
 
             let direction = graph.edge_direction(edge_id, parent);
 
@@ -141,7 +162,8 @@ impl AStar {
             let time = weighting.calc_edge_ms(edge, direction);
 
             path.push(RoutingPathItem::new(distance, time, geometry));
-            node = self.data[node].parent;
+            node = node_data.parent;
+            node_data = self.node_data(node);
         }
 
         path.reverse();
@@ -168,6 +190,9 @@ impl ShortestPathAlgorithm for AStar {
 
         self.init(graph, start, end);
 
+        let mut iterations = 0;
+        let mut nodes_visited = 0;
+
         while let Some(HeapItem {
             node_id, g_score, ..
         }) = self.heap.pop()
@@ -184,44 +209,45 @@ impl ShortestPathAlgorithm for AStar {
 
             for edge_id in graph.node_edges_iter(node_id) {
                 let edge = graph.edge(edge_id);
-                let edge_from_node = edge.start_node();
-                let edge_to_node = edge.end_node();
 
-                let adj_node = if edge_from_node == node_id {
-                    edge_to_node
-                } else {
-                    edge_from_node
-                };
+                let adj_node = edge.adj_node(node_id);
+
+                if self.is_settled(adj_node) {
+                    continue;
+                }
 
                 let direction = graph.edge_direction(edge_id, node_id);
 
                 let edge_weight = weighting.calc_edge_weight(edge, direction);
-                let next_weight = if edge_weight == MAX_WEIGHT {
-                    MAX_WEIGHT
-                } else {
-                    g_score + edge_weight
-                };
+
+                if edge_weight == MAX_WEIGHT {
+                    continue;
+                }
+
+                nodes_visited += 1;
+
+                let next_weight = g_score + edge_weight;
 
                 if next_weight < self.current_shortest_weight(adj_node) {
                     self.update_node_data(adj_node, next_weight, node_id, edge_id);
                     let h_score = estimate(graph, adj_node, end);
                     self.heap.push(HeapItem {
                         g_score: next_weight,
-                        f_score: if next_weight == MAX_WEIGHT {
-                            MAX_WEIGHT
-                        } else {
-                            next_weight + h_score
-                        },
+                        f_score: next_weight + h_score,
                         node_id: adj_node,
                     });
                 }
             }
 
-            self.data[node_id].settled = true;
+            self.set_settled(node_id);
+            iterations += 1;
             if node_id == end {
                 break;
             }
         }
+
+        println!("Dijkstra iterations: {}", iterations);
+        println!("Dijkstra nodes visited: {}", nodes_visited);
 
         Ok(self.build_path(graph, weighting, start, end))
     }

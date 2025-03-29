@@ -644,6 +644,7 @@ version = "0.1.0"
 dependencies = [
  "geo",
  "geo-types",
+ "intmap",
  "osmio",
  "osmpbf",
  "rkyv",
@@ -824,6 +825,12 @@ dependencies = [
  "equivalent",
  "hashbrown 0.15.2",
 ]
+
+[[package]]
+name = "intmap"
+version = "3.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "210870d5399600055a955c020cc97e462203c234dc2b103b5da5d80fdbd5eed5"
 
 [[package]]
 name = "iovec"

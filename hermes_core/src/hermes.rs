@@ -110,7 +110,7 @@ impl Hermes {
 
         let dijkstra_sw = Stopwatch::new("Dijkstra/calc_path+build_path");
 
-        let mut dijkstra = Dijkstra::new(&query_graph);
+        let mut dijkstra = AStar::new(&query_graph);
         let path = dijkstra.calc_path(&query_graph, weighting, start, end);
 
         dijkstra_sw.report();

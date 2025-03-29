@@ -223,8 +223,7 @@ impl Graph for QueryGraph<'_> {
 pub struct QueryGraphEdgeIterator<'a> {
     base_edges: &'a [usize],
     virtual_edges: &'a [usize],
-    base_index: usize,
-    virtual_index: usize,
+    index: usize,
 }
 
 impl<'a> QueryGraphEdgeIterator<'a> {
@@ -232,8 +231,7 @@ impl<'a> QueryGraphEdgeIterator<'a> {
         QueryGraphEdgeIterator {
             base_edges,
             virtual_edges,
-            base_index: 0,
-            virtual_index: 0,
+            index: 0,
         }
     }
 }
@@ -242,15 +240,17 @@ impl Iterator for QueryGraphEdgeIterator<'_> {
     type Item = usize;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.base_index < self.base_edges.len() {
-            let edge = self.base_edges[self.base_index];
-            self.base_index += 1;
+        if self.index < self.base_edges.len() {
+            let edge = self.base_edges[self.index];
+            self.index += 1;
             return Some(edge);
         }
 
-        if self.virtual_index < self.virtual_edges.len() {
-            let edge = self.virtual_edges[self.virtual_index];
-            self.virtual_index += 1;
+        let virtual_index = self.index - self.base_edges.len();
+
+        if virtual_index < self.virtual_edges.len() {
+            let edge = self.virtual_edges[virtual_index];
+            self.index += 1;
             return Some(edge);
         }
 
