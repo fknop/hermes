@@ -5,33 +5,34 @@ use crate::snap::Snap;
 use crate::weighting::Weighting;
 use geo::HaversineClosestPoint;
 use rstar::primitives::GeomWithData;
-use rstar::{AABB, PointDistance, RStarInsertionStrategy, RTree, RTreeObject, RTreeParams};
+use rstar::{AABB, PointDistance, RTree, RTreeObject};
 
-struct IndexedLine(geo::Line);
+struct IndexedLine(geo::LineString);
 
 impl IndexedLine {
-    fn new(start: &GeoPoint, end: &GeoPoint) -> Self {
-        IndexedLine(geo::Line::new(start, end))
+    fn new(points: &[GeoPoint]) -> Self {
+        IndexedLine(geo::LineString::new(
+            points.iter().map(|p| p.into()).collect(),
+        ))
     }
 
-    fn line(&self) -> &geo::Line {
+    fn line(&self) -> &geo::LineString {
         &self.0
     }
 }
 
 impl RTreeObject for IndexedLine {
-    type Envelope = AABB<[f64; 2]>;
+    type Envelope = AABB<geo::Point>;
 
     fn envelope(&self) -> Self::Envelope {
         let line = self.line();
-        AABB::from_corners([line.start.x, line.start.y], [line.end.x, line.end.y])
+        line.envelope()
     }
 }
 
 impl PointDistance for IndexedLine {
-    fn distance_2(&self, point: &[f64; 2]) -> f64 {
-        let point = geo::Point::new(point[0], point[1]);
-        self.0.distance_2(&point)
+    fn distance_2(&self, point: &geo::Point) -> f64 {
+        self.0.distance_2(point)
     }
 }
 
@@ -41,39 +42,33 @@ struct IndexedData {
 
 type LocationIndexObject = GeomWithData<IndexedLine, IndexedData>;
 
-struct LocationIndexTreeParams;
+// struct LocationIndexTreeParams;
 
-impl RTreeParams for LocationIndexTreeParams {
-    type DefaultInsertionStrategy = RStarInsertionStrategy;
+// impl RTreeParams for LocationIndexTreeParams {
+//     type DefaultInsertionStrategy = RStarInsertionStrategy;
 
-    const MAX_SIZE: usize = 64;
-    const MIN_SIZE: usize = 28;
-    const REINSERTION_COUNT: usize = 5;
-}
+//     const MAX_SIZE: usize = 8;
+//     const MIN_SIZE: usize = 2;
+//     const REINSERTION_COUNT: usize = 5;
+// }
 
 pub struct LocationIndex {
-    tree: RTree<LocationIndexObject, LocationIndexTreeParams>,
+    tree: RTree<LocationIndexObject>,
 }
 
 impl LocationIndex {
     pub fn build_from_graph(graph: &BaseGraph) -> LocationIndex {
         println!("Building location index");
 
-        let tree: RTree<LocationIndexObject, LocationIndexTreeParams> =
-            RTree::bulk_load_with_params(
-                (0..graph.edge_count())
-                    .flat_map(|edge_id| {
-                        let geometry = graph.edge_geometry(edge_id);
+        let tree: RTree<LocationIndexObject> = RTree::bulk_load(
+            (0..graph.edge_count())
+                .map(|edge_id| {
+                    let geometry = graph.edge_geometry(edge_id);
 
-                        geometry.windows(2).map(move |c| {
-                            LocationIndexObject::new(
-                                IndexedLine::new(&c[0], &c[1]),
-                                IndexedData { edge_id },
-                            )
-                        })
-                    })
-                    .collect(),
-            );
+                    LocationIndexObject::new(IndexedLine::new(geometry), IndexedData { edge_id })
+                })
+                .collect(),
+        );
 
         println!("Finished building location index");
 
@@ -87,7 +82,7 @@ impl LocationIndex {
         coordinates: &GeoPoint,
     ) -> Option<Snap> {
         self.tree
-            .nearest_neighbor_iter(&[coordinates.lon(), coordinates.lat()])
+            .nearest_neighbor_iter(&coordinates.into())
             .find(|nearest_neighbor| {
                 let edge_id = nearest_neighbor.data.edge_id;
                 // We only consider edges that can be accessed by the weighting profile
@@ -101,7 +96,7 @@ impl LocationIndex {
                     match line.haversine_closest_point(&coordinates.into()) {
                         geo::Closest::Intersection(point) => point.into(),
                         geo::Closest::SinglePoint(point) => point.into(),
-                        geo::Closest::Indeterminate => line.start.into(),
+                        geo::Closest::Indeterminate => line.points().next().unwrap().into(),
                     };
 
                 Snap::new(
