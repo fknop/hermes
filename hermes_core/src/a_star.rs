@@ -1,3 +1,5 @@
+use geo::Haversine;
+
 use crate::constants::{INVALID_EDGE, INVALID_NODE, MAX_WEIGHT};
 use crate::geopoint::GeoPoint;
 use crate::graph::Graph;
@@ -9,18 +11,25 @@ use crate::weighting::{Weight, Weighting};
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
 
+/// https://en.wikipedia.org/wiki/A*_search_algorithm
+
 #[derive(Eq, Copy, Clone, Debug)]
 struct HeapItem {
     node_id: usize,
-    g_score: Weight, // weight
-    f_score: Weight, // g_score + h_score
+
+    /// g_score is the current cheapest weight from start to node "node_id"
+    g_score: Weight,
+
+    /// f_score = g_score + h_score, with h_score being the heuristic value from node_id to the end
+    f_score: Weight,
 }
 
 impl PartialEq for HeapItem {
     fn eq(&self, other: &HeapItem) -> bool {
-        self.f_score == other.f_score
+        self.f_score == other.f_score && self.g_score == other.g_score
     }
 }
+
 impl PartialOrd for HeapItem {
     fn partial_cmp(&self, other: &HeapItem) -> Option<Ordering> {
         Some(self.cmp(other))
@@ -56,44 +65,61 @@ impl NodeData {
     }
 }
 
-fn get_node_coordinates(graph: &impl Graph, node: usize) -> &GeoPoint {
-    let edge = graph.node_edges_iter(node).next().unwrap();
-    let edge_direction = graph.edge_direction(edge, node);
-    let geometry = graph.edge_geometry(edge);
-    match edge_direction {
-        FORWARD_EDGE => &geometry[0],
-        BACKWARD_EDGE => &geometry[geometry.len() - 1],
+pub trait AStarHeuristic {
+    fn estimate(&self, graph: &impl Graph, start: usize, end: usize) -> Weight;
+}
+
+pub struct HaversineHeuristic;
+
+impl HaversineHeuristic {
+    fn get_node_coordinates(graph: &impl Graph, node: usize) -> &GeoPoint {
+        let edge = graph.node_edges_iter(node).next().unwrap();
+        let edge_direction = graph.edge_direction(edge, node);
+        let geometry = graph.edge_geometry(edge);
+        match edge_direction {
+            FORWARD_EDGE => &geometry[0],
+            BACKWARD_EDGE => &geometry[geometry.len() - 1],
+        }
     }
 }
 
-fn estimate(graph: &impl Graph, start: usize, end: usize) -> Weight {
-    let start_coordinates = get_node_coordinates(graph, start);
-    let end_coordinates = get_node_coordinates(graph, end);
-    let distance = start_coordinates
-        .haversine_distance(end_coordinates)
-        .value();
+impl AStarHeuristic for HaversineHeuristic {
+    fn estimate(&self, graph: &impl Graph, start: usize, end: usize) -> Weight {
+        let start_coordinates = HaversineHeuristic::get_node_coordinates(graph, start);
+        let end_coordinates = HaversineHeuristic::get_node_coordinates(graph, end);
+        let distance = start_coordinates
+            .haversine_distance(end_coordinates)
+            .value();
 
-    let speed_kmh = 120.0;
-    let speed_ms = speed_kmh / 3.6;
+        let speed_kmh = 120.0;
+        let speed_ms = speed_kmh / 3.6;
 
-    (distance * 0.7 + (distance / speed_ms).round()) as usize
+        (distance * 0.7 + (distance / speed_ms).round()) as usize
+    }
 }
 
-pub struct AStar {
+pub struct AStar<H: AStarHeuristic> {
     heap: BinaryHeap<HeapItem>,
     // Use a HashMap instead of a vector. Creating a vector with a capacity of the entire nodes of the planet is not scalable.
     data: HashMap<usize, NodeData>,
+
+    heuristic: H,
 }
 
-impl AStar {
-    pub fn new(graph: &impl Graph) -> Self {
+impl<H: AStarHeuristic> AStar<H> {
+    pub fn with_heuristic(_graph: &impl Graph, heuristic: H) -> AStar<H> {
+        // TODO: better estimate the capacity to allocate
         let data = HashMap::with_capacity(10000);
         let heap: BinaryHeap<HeapItem> = BinaryHeap::with_capacity(1024);
-        AStar { heap, data }
+        AStar {
+            data,
+            heap,
+            heuristic,
+        }
     }
 
     fn init(&mut self, graph: &impl Graph, start: usize, end: usize) {
-        let h_score = estimate(graph, start, end);
+        let h_score = self.heuristic.estimate(graph, start, end);
         self.heap.push(HeapItem {
             node_id: start,
             g_score: 0,
@@ -179,7 +205,7 @@ impl AStar {
     }
 }
 
-impl ShortestPathAlgorithm for AStar {
+impl<H: AStarHeuristic> ShortestPathAlgorithm for AStar<H> {
     fn calc_path(
         &mut self,
         graph: &impl Graph,
@@ -242,7 +268,7 @@ impl ShortestPathAlgorithm for AStar {
 
                 if next_weight < self.current_shortest_weight(adj_node) {
                     self.update_node_data(adj_node, next_weight, node_id, edge_id);
-                    let h_score = estimate(graph, adj_node, end);
+                    let h_score = self.heuristic.estimate(graph, adj_node, end);
 
                     self.heap.push(HeapItem {
                         g_score: next_weight,
@@ -265,5 +291,11 @@ impl ShortestPathAlgorithm for AStar {
         stopwatch.report();
 
         Ok(self.build_path(graph, weighting, start, end))
+    }
+}
+
+impl AStar<HaversineHeuristic> {
+    pub fn new(graph: &impl Graph) -> AStar<HaversineHeuristic> {
+        Self::with_heuristic(graph, HaversineHeuristic)
     }
 }

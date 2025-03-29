@@ -21,7 +21,7 @@ impl GeoPoint {
         }
     }
 
-    pub fn from_nano(lat: i32, lon: i32) -> GeoPoint {
+    pub fn from_nano(lon: i32, lat: i32) -> GeoPoint {
         GeoPoint {
             lat: Degrees::from(lat),
             lon: Degrees::from(lon),
@@ -98,17 +98,6 @@ impl From<geo::Point> for GeoPoint {
 impl From<geo::Coord> for GeoPoint {
     fn from(value: geo::Coord) -> Self {
         GeoPoint::new(value.x, value.y)
-    }
-}
-
-impl Into<[f64; 2]> for &GeoPoint {
-    fn into(self) -> [f64; 2] {
-        let lat_rad = self.lat().to_radians();
-        let lon_rad = self.lon().to_radians();
-        // Convert to Cartesian
-        let x = EARTH_RADIUS_METERS * lon_rad;
-        let y = EARTH_RADIUS_METERS * (lat_rad / 2.0 + PI / 4.0).tan().ln();
-        [x, y]
     }
 }
 

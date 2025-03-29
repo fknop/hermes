@@ -175,7 +175,7 @@ impl OsmReader {
                     if let Some((lat, lon)) = lat_lon {
                         self.add_node(
                             node.id(),
-                            GeoPoint::from_nano(lat.inner(), lon.inner()),
+                            GeoPoint::from_nano(lon.inner(), lat.inner()),
                             node.tags()
                                 .map(|tag| (tag.0.to_owned(), tag.1.to_owned()))
                                 .collect(),

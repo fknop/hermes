@@ -176,23 +176,11 @@ macro_rules! meters {
     };
 }
 
-macro_rules! kilometers {
-    ($num:expr) => {
-        crate::distance::Distance::<crate::distance::Kilometers>::from($num)
-    };
-}
-
 pub(crate) use meters;
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn should_add_distances_together() {
-        let result = meters!(10) + kilometers!(1);
-        assert_eq!(result, meters!(1010));
-    }
 
     #[test]
     fn should_divide_distance() {

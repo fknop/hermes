@@ -1,5 +1,6 @@
 use crate::a_star::AStar;
 use crate::base_graph::BaseGraph;
+use crate::dijkstra::{self, Dijkstra};
 use crate::geopoint::GeoPoint;
 use crate::location_index::LocationIndex;
 use crate::query_graph::QueryGraph;
@@ -48,7 +49,7 @@ impl Hermes {
     }
 
     pub fn from_osm_file(file_path: &str) -> Hermes {
-        let graph = BaseGraph::from_osm_file(&file_path);
+        let graph = BaseGraph::from_osm_file(file_path);
         let index = LocationIndex::build_from_graph(&graph);
 
         let mut profiles: HashMap<String, Box<dyn Weighting + Sync + Send>> = HashMap::new();
