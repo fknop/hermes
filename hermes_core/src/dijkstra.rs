@@ -179,7 +179,6 @@ impl ShortestPathAlgorithm for Dijkstra {
 
         let mut iterations = 0;
         let mut nodes_visited = 0;
-        let mut calc_weight_duration: Duration = Duration::new(0, 0);
 
         while let Some(HeapItem { node_id, weight }) = self.heap.pop() {
             // Node is already settled, skip
@@ -206,9 +205,7 @@ impl ShortestPathAlgorithm for Dijkstra {
 
                 let direction = graph.edge_direction(edge_id, node_id);
 
-                let sw = Stopwatch::new("calc_weight");
                 let edge_weight = weighting.calc_edge_weight(edge, direction);
-                calc_weight_duration += sw.elapsed();
 
                 if edge_weight == MAX_WEIGHT {
                     continue;
@@ -236,7 +233,6 @@ impl ShortestPathAlgorithm for Dijkstra {
 
         println!("Dijkstra iterations: {}", iterations);
         println!("Dijkstra nodes visited: {}", nodes_visited);
-        println!("[calc_weight]: {:?}", calc_weight_duration);
         stopwatch.report();
 
         Ok(self.build_path(graph, weighting, start, end))

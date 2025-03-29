@@ -6,7 +6,7 @@ use crate::{
 pub fn compute_geometry_distance(geometry: &[GeoPoint]) -> Distance<Meters> {
     let mut distance = meters!(0);
     for i in 0..geometry.len() - 1 {
-        distance = distance + geometry[i].distance(&geometry[i + 1]);
+        distance = distance + geometry[i].haversine_distance(&geometry[i + 1]);
     }
 
     distance
@@ -16,7 +16,11 @@ pub fn closest_point_index(points: &[GeoPoint], point: &GeoPoint) -> Option<usiz
     points
         .iter()
         .enumerate()
-        .min_by(|(_, p), (_, p2)| point.distance(p).cmp(&point.distance(p2)))
+        .min_by(|(_, p), (_, p2)| {
+            point
+                .haversine_distance(p)
+                .cmp(&point.haversine_distance(p2))
+        })
         .map(|v| v.0)
 }
 
@@ -54,7 +58,7 @@ pub fn generate_intermediate_points_on_line(
     end: &GeoPoint,
     interval: Distance<Meters>,
 ) -> Vec<GeoPoint> {
-    let distance = start.distance(end);
+    let distance = start.haversine_distance(end);
 
     let num_points = (distance / interval).ceil() as usize;
 
@@ -64,8 +68,8 @@ pub fn generate_intermediate_points_on_line(
         let fraction = i as f64 / num_points as f64;
 
         points.push(GeoPoint::new(
-            start.lat() + fraction * (end.lat() - start.lat()),
             start.lon() + fraction * (end.lon() - start.lon()),
+            start.lat() + fraction * (end.lat() - start.lat()),
         ))
     }
 

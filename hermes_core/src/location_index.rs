@@ -107,7 +107,7 @@ impl LocationIndex {
                 Snap::new(
                     nearest_neighbor.data.edge_id,
                     closest_point,
-                    coordinates.distance(&closest_point),
+                    coordinates.haversine_distance(&closest_point),
                 )
             })
     }

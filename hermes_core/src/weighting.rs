@@ -47,12 +47,12 @@ const DISTANCE_INFLUENCE: f64 = 0.7;
 impl Weighting for CarWeighting {
     fn calc_edge_weight(&self, edge: &GraphEdge, direction: EdgeDirection) -> Weight {
         let ms = self.calc_edge_ms(edge, direction);
-        let distance_costs = edge.distance().value() * 1000.0 * DISTANCE_INFLUENCE;
 
         if ms == MAX_WEIGHT {
             return MAX_WEIGHT;
         }
 
+        let distance_costs = edge.distance().value() * DISTANCE_INFLUENCE;
         ms + (distance_costs.round() as usize)
     }
 

@@ -30,7 +30,7 @@ pub struct GeoPointBody {
 
 impl From<GeoPointBody> for GeoPoint {
     fn from(value: GeoPointBody) -> Self {
-        GeoPoint::new(value.lat, value.lon)
+        GeoPoint::new(value.lon, value.lat)
     }
 }
 

@@ -15,7 +15,7 @@ pub struct GeoPoint {
 }
 
 impl GeoPoint {
-    pub fn new(lat: f64, lon: f64) -> GeoPoint {
+    pub fn new(lon: f64, lat: f64) -> GeoPoint {
         GeoPoint {
             lat: Degrees::try_from(lat).unwrap(),
             lon: Degrees::try_from(lon).unwrap(),
@@ -92,13 +92,13 @@ impl From<&GeoPoint> for geo::Point {
 
 impl From<geo::Point> for GeoPoint {
     fn from(value: geo::Point) -> Self {
-        GeoPoint::new(value.0.y, value.0.x)
+        GeoPoint::new(value.0.x, value.0.y)
     }
 }
 
 impl From<geo::Coord> for GeoPoint {
     fn from(value: geo::Coord) -> Self {
-        GeoPoint::new(value.y, value.x)
+        GeoPoint::new(value.x, value.y)
     }
 }
 
@@ -114,7 +114,7 @@ impl Into<[f64; 2]> for &GeoPoint {
 }
 
 impl GeoPoint {
-    pub fn distance(&self, other: &GeoPoint) -> Distance<Meters> {
+    pub fn haversine_distance(&self, other: &GeoPoint) -> Distance<Meters> {
         haversine_distance(self.lat(), self.lon(), other.lat(), other.lon())
     }
 }
@@ -134,4 +134,18 @@ pub fn haversine_distance(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> Distanc
 
     // Calculate distance
     meters!(EARTH_RADIUS_METERS * c)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_haversine_distance() {
+        let brussels = GeoPoint::new(4.3517, 50.8503);
+        let paris = GeoPoint::new(2.3522, 48.8566);
+
+        let distance = brussels.haversine_distance(&paris).value().floor();
+        assert_eq!(distance, 263975.0);
+    }
 }

@@ -4,6 +4,7 @@ use crate::graph::Graph;
 use crate::properties::property_map::{BACKWARD_EDGE, EdgeDirection, FORWARD_EDGE};
 use crate::routing_path::{RoutingPath, RoutingPathItem};
 use crate::shortest_path_algorithm::ShortestPathAlgorithm;
+use crate::stopwatch::Stopwatch;
 use crate::weighting::{Weight, Weighting};
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
@@ -32,6 +33,7 @@ impl Ord for HeapItem {
         other
             .f_score
             .cmp(&self.f_score)
+            .then_with(|| other.g_score.cmp(&self.g_score))
             .then_with(|| self.node_id.cmp(&other.node_id))
     }
 }
@@ -67,9 +69,14 @@ fn get_node_coordinates(graph: &impl Graph, node: usize) -> &GeoPoint {
 fn estimate(graph: &impl Graph, start: usize, end: usize) -> Weight {
     let start_coordinates = get_node_coordinates(graph, start);
     let end_coordinates = get_node_coordinates(graph, end);
-    let distance = start_coordinates.distance(end_coordinates).value();
+    let distance = start_coordinates
+        .haversine_distance(end_coordinates)
+        .value();
 
-    distance as usize
+    let speed_kmh = 120.0;
+    let speed_ms = speed_kmh * (1000.0 / 3600.0);
+
+    (distance * 0.7 + ((distance / speed_ms) * 1000.0).round()) as usize
 }
 
 pub struct AStar {
@@ -180,12 +187,13 @@ impl ShortestPathAlgorithm for AStar {
         start: usize,
         end: usize,
     ) -> Result<RoutingPath, String> {
+        let stopwatch = Stopwatch::new("astar/calc_path");
         if start == INVALID_NODE {
-            return Err(String::from("Dijkstra: start node is invalid"));
+            return Err(String::from("AStar: start node is invalid"));
         }
 
         if end == INVALID_NODE {
-            return Err(String::from("Dijkstra: start node is invalid"));
+            return Err(String::from("AStar: start node is invalid"));
         }
 
         self.init(graph, start, end);
@@ -204,6 +212,10 @@ impl ShortestPathAlgorithm for AStar {
 
             // The weight is bigger than the current shortest weight, skip
             if g_score > self.current_shortest_weight(node_id) {
+                continue;
+            }
+
+            if g_score > self.current_shortest_weight(end) {
                 continue;
             }
 
@@ -231,6 +243,7 @@ impl ShortestPathAlgorithm for AStar {
                 if next_weight < self.current_shortest_weight(adj_node) {
                     self.update_node_data(adj_node, next_weight, node_id, edge_id);
                     let h_score = estimate(graph, adj_node, end);
+
                     self.heap.push(HeapItem {
                         g_score: next_weight,
                         f_score: next_weight + h_score,
@@ -246,8 +259,10 @@ impl ShortestPathAlgorithm for AStar {
             }
         }
 
-        println!("Dijkstra iterations: {}", iterations);
-        println!("Dijkstra nodes visited: {}", nodes_visited);
+        println!("AStar iterations: {}", iterations);
+        println!("AStar nodes visited: {}", nodes_visited);
+
+        stopwatch.report();
 
         Ok(self.build_path(graph, weighting, start, end))
     }

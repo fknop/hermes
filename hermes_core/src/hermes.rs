@@ -108,14 +108,8 @@ impl Hermes {
         let start = snaps[0].closest_node();
         let end = snaps[1].closest_node();
 
-        let dijkstra_sw = Stopwatch::new("Dijkstra/calc_path+build_path");
-
-        let mut dijkstra = AStar::new(&query_graph);
-        let path = dijkstra.calc_path(&query_graph, weighting, start, end);
-
-        dijkstra_sw.report();
-
-        path
+        let mut astar = AStar::new(&query_graph);
+        astar.calc_path(&query_graph, weighting, start, end)
     }
 
     pub fn closest_edge(&self, profile: String, coordinates: GeoPoint) -> Option<usize> {
