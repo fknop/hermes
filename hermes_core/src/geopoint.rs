@@ -1,5 +1,4 @@
 use rstar::{AABB, Envelope, PointDistance, RTreeObject};
-use serde::{Deserialize, Serialize};
 use std::f64::consts::PI;
 
 use crate::{

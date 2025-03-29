@@ -1,6 +1,5 @@
 use crate::a_star::AStar;
 use crate::base_graph::BaseGraph;
-use crate::dijkstra::Dijkstra;
 use crate::geopoint::GeoPoint;
 use crate::location_index::LocationIndex;
 use crate::query_graph::QueryGraph;

@@ -1,4 +1,3 @@
-use intmap::IntMap;
 
 use crate::constants::{INVALID_EDGE, INVALID_NODE, MAX_WEIGHT};
 use crate::geopoint::GeoPoint;
@@ -6,11 +5,10 @@ use crate::graph::Graph;
 use crate::properties::property_map::FORWARD_EDGE;
 use crate::routing_path::{RoutingPath, RoutingPathItem};
 use crate::shortest_path_algorithm::ShortestPathAlgorithm;
-use crate::stopwatch::{self, Stopwatch};
+use crate::stopwatch::{Stopwatch};
 use crate::weighting::{Weight, Weighting};
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
-use std::time::Duration;
 
 #[derive(Eq, Copy, Clone, Debug)]
 struct HeapItem {

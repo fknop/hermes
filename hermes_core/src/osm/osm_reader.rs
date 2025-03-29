@@ -6,7 +6,6 @@ use osmio::{
     Node, OSMObj, OSMObjBase, OSMReader, Way,
     obj_types::{StringOSMObj, StringWay},
 };
-use osmpbf::{Element, ElementReader};
 use std::{collections::HashMap, fs::File, io::BufReader};
 
 struct OsmNode {

@@ -1,7 +1,7 @@
 use crate::constants::{INVALID_EDGE, INVALID_NODE, MAX_WEIGHT};
 use crate::geopoint::GeoPoint;
 use crate::graph::Graph;
-use crate::properties::property_map::{BACKWARD_EDGE, EdgeDirection, FORWARD_EDGE};
+use crate::properties::property_map::{BACKWARD_EDGE, FORWARD_EDGE};
 use crate::routing_path::{RoutingPath, RoutingPathItem};
 use crate::shortest_path_algorithm::ShortestPathAlgorithm;
 use crate::stopwatch::Stopwatch;
