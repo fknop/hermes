@@ -1,5 +1,5 @@
 use crate::{
-    a_star::{AStar, AStarHeuristic},
+    astar::{AStar, AStarHeuristic},
     graph::Graph,
     weighting::Weight,
 };

@@ -1,5 +1,6 @@
-use crate::a_star::AStar;
+use crate::astar::AStar;
 use crate::base_graph::BaseGraph;
+use crate::bidirectional_astar::BidirectionalAStar;
 use crate::dijkstra::{self, Dijkstra};
 use crate::geopoint::GeoPoint;
 use crate::location_index::LocationIndex;
@@ -108,8 +109,8 @@ impl Hermes {
         let start = snaps[0].closest_node();
         let end = snaps[1].closest_node();
 
-        let mut astar = AStar::new(&query_graph);
-        astar.calc_path(&query_graph, weighting, start, end)
+        let mut bdirastar = BidirectionalAStar::new(&query_graph);
+        bdirastar.calc_path(&query_graph, weighting, start, end)
     }
 
     pub fn closest_edge(&self, profile: String, coordinates: GeoPoint) -> Option<usize> {

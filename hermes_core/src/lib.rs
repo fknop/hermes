@@ -1,5 +1,6 @@
-mod a_star;
+mod astar;
 pub mod base_graph;
+mod bidirectional_astar;
 mod constants;
 mod degrees;
 pub mod dijkstra;

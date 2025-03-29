@@ -50,7 +50,22 @@ export default function App() {
       <Map
         onClick={async (event) => {
           const { lat, lng } = event.lngLat
-          await debugClosest({ query: { lat, lng } })
+
+          console.log(event.originalEvent.button)
+
+          if (event.originalEvent.button === 0) {
+            const start = { lat, lon: lng }
+            setStart(start)
+            if (end) {
+              computeRoute({ start, end })
+            }
+          } else if (event.originalEvent.button === 1) {
+            const end = { lat, lon: lng }
+            setEnd(end)
+            if (start) {
+              computeRoute({ start, end })
+            }
+          }
         }}
       >
         {data && (

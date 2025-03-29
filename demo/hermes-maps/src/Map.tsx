@@ -20,6 +20,8 @@ export function Map({
 }: PropsWithChildren<Pick<MapProps, 'onClick'>>) {
   return (
     <Mapbox
+      projection="mercator"
+      dragRotate={false}
       initialViewState={initialViewState}
       mapboxAccessToken={MAPBOX_ACCESS_TOKEN}
       style={{ flex: 1 }}

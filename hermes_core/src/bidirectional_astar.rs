@@ -1,0 +1,539 @@
+use crate::constants::{INVALID_EDGE, INVALID_NODE, MAX_WEIGHT};
+use crate::geopoint::GeoPoint;
+use crate::graph::Graph;
+use crate::properties::property_map::{BACKWARD_EDGE, FORWARD_EDGE};
+use crate::routing_path::{RoutingPath, RoutingPathItem};
+use crate::shortest_path_algorithm::ShortestPathAlgorithm;
+use crate::stopwatch::Stopwatch;
+use crate::weighting::{Weight, Weighting};
+use std::cmp::Ordering;
+use std::collections::{BinaryHeap, HashMap};
+
+/// Bidirectional A* search algorithm
+
+// TODO: verify that it's correct, this file is mostly generated from ClaudeAI from the original astar.rs
+
+#[derive(Eq, Copy, Clone, Debug)]
+struct HeapItem {
+    node_id: usize,
+
+    /// g_score is the current cheapest weight from start/end to node "node_id"
+    g_score: Weight,
+
+    /// f_score = g_score + h_score, with h_score being the heuristic value
+    f_score: Weight,
+}
+
+impl PartialEq for HeapItem {
+    fn eq(&self, other: &HeapItem) -> bool {
+        self.f_score == other.f_score && self.g_score == other.g_score
+    }
+}
+
+impl PartialOrd for HeapItem {
+    fn partial_cmp(&self, other: &HeapItem) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for HeapItem {
+    fn cmp(&self, other: &Self) -> Ordering {
+        // Flip weight to make this a min-heap
+        other
+            .f_score
+            .cmp(&self.f_score)
+            .then_with(|| other.g_score.cmp(&self.g_score))
+            .then_with(|| self.node_id.cmp(&other.node_id))
+    }
+}
+
+struct NodeData {
+    settled: bool,
+    weight: Weight,
+    parent: usize,
+    edge_id: usize, // Edge ID from parent to current node
+}
+
+impl NodeData {
+    fn new() -> Self {
+        NodeData {
+            settled: false,
+            weight: MAX_WEIGHT,
+            parent: INVALID_NODE,
+            edge_id: INVALID_EDGE,
+        }
+    }
+}
+
+/// Direction of search (forward from start or backward from target)
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+enum SearchDirection {
+    Forward,
+    Backward,
+}
+
+pub trait AStarHeuristic {
+    fn estimate(&self, graph: &impl Graph, from: usize, to: usize) -> Weight;
+}
+
+pub struct HaversineHeuristic;
+
+impl HaversineHeuristic {
+    fn get_node_coordinates(graph: &impl Graph, node: usize) -> &GeoPoint {
+        let edge = graph.node_edges_iter(node).next().unwrap();
+        let edge_direction = graph.edge_direction(edge, node);
+        let geometry = graph.edge_geometry(edge);
+        match edge_direction {
+            FORWARD_EDGE => &geometry[0],
+            BACKWARD_EDGE => &geometry[geometry.len() - 1],
+        }
+    }
+}
+
+impl AStarHeuristic for HaversineHeuristic {
+    fn estimate(&self, graph: &impl Graph, from: usize, to: usize) -> Weight {
+        let from_coordinates = HaversineHeuristic::get_node_coordinates(graph, from);
+        let to_coordinates = HaversineHeuristic::get_node_coordinates(graph, to);
+        let distance = from_coordinates.haversine_distance(to_coordinates).value();
+
+        let speed_kmh = 120.0;
+        let speed_ms = speed_kmh / 3.6;
+
+        (distance * 0.7 + (distance / speed_ms).round()) as usize
+    }
+}
+
+pub struct BidirectionalAStar<H: AStarHeuristic> {
+    // Forward search (from start node)
+    forward_heap: BinaryHeap<HeapItem>,
+    forward_data: HashMap<usize, NodeData>,
+
+    // Backward search (from target node)
+    backward_heap: BinaryHeap<HeapItem>,
+    backward_data: HashMap<usize, NodeData>,
+
+    // Best meeting point and total path weight
+    best_meeting_node: usize,
+    best_path_weight: Weight,
+
+    heuristic: H,
+}
+
+impl<H: AStarHeuristic> BidirectionalAStar<H> {
+    pub fn with_heuristic(_graph: &impl Graph, heuristic: H) -> BidirectionalAStar<H> {
+        // Allocate data structures for both search directions
+        let forward_data = HashMap::with_capacity(10000);
+        let forward_heap: BinaryHeap<HeapItem> = BinaryHeap::with_capacity(1024);
+
+        let backward_data = HashMap::with_capacity(10000);
+        let backward_heap: BinaryHeap<HeapItem> = BinaryHeap::with_capacity(1024);
+
+        BidirectionalAStar {
+            forward_data,
+            forward_heap,
+            backward_data,
+            backward_heap,
+            best_meeting_node: INVALID_NODE,
+            best_path_weight: MAX_WEIGHT,
+            heuristic,
+        }
+    }
+
+    fn init(&mut self, graph: &impl Graph, start: usize, end: usize) {
+        // Initialize forward search from start
+        let forward_h_score = self.heuristic.estimate(graph, start, end);
+        self.forward_heap.push(HeapItem {
+            node_id: start,
+            g_score: 0,
+            f_score: forward_h_score,
+        });
+        self.update_node_data(
+            SearchDirection::Forward,
+            start,
+            0,
+            INVALID_NODE,
+            INVALID_EDGE,
+        );
+
+        // Initialize backward search from end
+        let backward_h_score = self.heuristic.estimate(graph, end, start);
+        self.backward_heap.push(HeapItem {
+            node_id: end,
+            g_score: 0,
+            f_score: backward_h_score,
+        });
+        self.update_node_data(
+            SearchDirection::Backward,
+            end,
+            0,
+            INVALID_NODE,
+            INVALID_EDGE,
+        );
+    }
+
+    fn data_for_direction(&mut self, dir: SearchDirection) -> &mut HashMap<usize, NodeData> {
+        match dir {
+            SearchDirection::Forward => &mut self.forward_data,
+            SearchDirection::Backward => &mut self.backward_data,
+        }
+    }
+
+    fn heap_for_direction(&mut self, dir: SearchDirection) -> &mut BinaryHeap<HeapItem> {
+        match dir {
+            SearchDirection::Forward => &mut self.forward_heap,
+            SearchDirection::Backward => &mut self.backward_heap,
+        }
+    }
+
+    fn update_node_data(
+        &mut self,
+        dir: SearchDirection,
+        node: usize,
+        weight: Weight,
+        parent: usize,
+        edge_id: usize,
+    ) {
+        let data = self.data_for_direction(dir);
+        if let Some(node_data) = data.get_mut(&node) {
+            node_data.weight = weight;
+            node_data.settled = false;
+            node_data.parent = parent;
+            node_data.edge_id = edge_id;
+        } else {
+            data.insert(
+                node,
+                NodeData {
+                    weight,
+                    settled: false,
+                    edge_id,
+                    parent,
+                },
+            );
+        }
+    }
+
+    fn node_data(&mut self, dir: SearchDirection, node: usize) -> &NodeData {
+        let data = self.data_for_direction(dir);
+        data.entry(node).or_insert_with(NodeData::new)
+    }
+
+    fn set_settled(&mut self, dir: SearchDirection, node: usize) {
+        self.data_for_direction(dir).get_mut(&node).unwrap().settled = true;
+    }
+
+    #[inline(always)]
+    fn is_settled(&mut self, dir: SearchDirection, node: usize) -> bool {
+        self.node_data(dir, node).settled
+    }
+
+    #[inline(always)]
+    fn current_shortest_weight(&mut self, dir: SearchDirection, node: usize) -> Weight {
+        self.node_data(dir, node).weight
+    }
+
+    fn process_node(
+        &mut self,
+        graph: &impl Graph,
+        weighting: &dyn Weighting,
+        dir: SearchDirection,
+        node_id: usize,
+        g_score: Weight,
+        target: usize,
+    ) {
+        // If this node has already been settled in this direction, skip it
+        if self.is_settled(dir, node_id) {
+            return;
+        }
+
+        // If the weight is bigger than the current shortest weight, skip
+        if g_score > self.current_shortest_weight(dir, node_id) {
+            return;
+        }
+
+        // If we already found a path and this path is longer, skip
+        if g_score > self.best_path_weight {
+            return;
+        }
+
+        // Check if this node has been visited from the other direction
+        let opposite_dir = match dir {
+            SearchDirection::Forward => SearchDirection::Backward,
+            SearchDirection::Backward => SearchDirection::Forward,
+        };
+
+        if self.current_shortest_weight(opposite_dir, node_id) != MAX_WEIGHT {
+            // We found a meeting point! Calculate the total path weight
+            let total_weight = g_score + self.current_shortest_weight(opposite_dir, node_id);
+            // If this is better than our best path so far, update it
+            if total_weight < self.best_path_weight {
+                self.best_path_weight = total_weight;
+                self.best_meeting_node = node_id;
+            }
+        }
+
+        // Process all adjacent nodes
+        for edge_id in graph.node_edges_iter(node_id) {
+            let edge = graph.edge(edge_id);
+            let adj_node = edge.adj_node(node_id);
+
+            if self.is_settled(dir, adj_node) {
+                continue;
+            }
+
+            let edge_direction = match dir {
+                SearchDirection::Forward => graph.edge_direction(edge_id, node_id),
+                SearchDirection::Backward => {
+                    // Reverse the direction for backward search
+                    if graph.edge_direction(edge_id, node_id) == FORWARD_EDGE {
+                        BACKWARD_EDGE
+                    } else {
+                        FORWARD_EDGE
+                    }
+                }
+            };
+
+            let edge_weight = weighting.calc_edge_weight(edge, edge_direction);
+
+            if edge_weight == MAX_WEIGHT {
+                continue;
+            }
+
+            let next_weight = g_score + edge_weight;
+
+            if next_weight < self.current_shortest_weight(dir, adj_node) {
+                self.update_node_data(dir, adj_node, next_weight, node_id, edge_id);
+
+                // Calculate heuristic
+                let h_score = match dir {
+                    SearchDirection::Forward => self.heuristic.estimate(graph, adj_node, target),
+                    SearchDirection::Backward => self.heuristic.estimate(graph, adj_node, target),
+                };
+
+                self.heap_for_direction(dir).push(HeapItem {
+                    g_score: next_weight,
+                    f_score: next_weight + h_score,
+                    node_id: adj_node,
+                });
+            }
+        }
+
+        self.set_settled(dir, node_id);
+    }
+
+    fn build_forward_path(
+        &mut self,
+        graph: &impl Graph,
+        weighting: &dyn Weighting,
+        node: usize,
+    ) -> Vec<RoutingPathItem> {
+        let mut path: Vec<RoutingPathItem> = Vec::with_capacity(32);
+        let mut current_node = node;
+
+        while let Some(node_data) = self.forward_data.get(&current_node) {
+            if node_data.parent == INVALID_NODE {
+                break;
+            }
+
+            let edge_id = node_data.edge_id;
+            let parent = node_data.parent;
+            let direction = graph.edge_direction(edge_id, parent);
+            let edge = graph.edge(edge_id);
+
+            let geometry: Vec<GeoPoint> = if direction == FORWARD_EDGE {
+                graph.edge_geometry(edge_id).to_vec()
+            } else {
+                graph.edge_geometry(edge_id).iter().rev().cloned().collect()
+            };
+
+            let distance = edge.distance();
+            let time = weighting.calc_edge_ms(edge, direction);
+
+            path.push(RoutingPathItem::new(distance, time, geometry));
+            current_node = parent;
+        }
+
+        path.reverse();
+        path
+    }
+
+    fn build_backward_path(
+        &mut self,
+        graph: &impl Graph,
+        weighting: &dyn Weighting,
+        node: usize,
+    ) -> Vec<RoutingPathItem> {
+        let mut path: Vec<RoutingPathItem> = Vec::with_capacity(32);
+
+        // Start with the first outgoing edge from the meeting node
+        let mut current_node = node;
+
+        while let Some(node_data) = self.backward_data.get(&current_node) {
+            if node_data.parent == INVALID_NODE {
+                break;
+            }
+
+            let edge_id = node_data.edge_id;
+            let parent = node_data.parent;
+
+            // For backward search, we need to reverse the direction
+            let direction = graph.edge_direction(edge_id, current_node);
+
+            let edge = graph.edge(edge_id);
+
+            let geometry: Vec<GeoPoint> = if direction == FORWARD_EDGE {
+                graph.edge_geometry(edge_id).to_vec()
+            } else {
+                graph.edge_geometry(edge_id).iter().rev().cloned().collect()
+            };
+
+            let distance = edge.distance();
+            let time = weighting.calc_edge_ms(edge, direction);
+
+            path.push(RoutingPathItem::new(distance, time, geometry));
+            current_node = parent;
+        }
+
+        path
+    }
+
+    fn build_path(
+        &mut self,
+        graph: &impl Graph,
+        weighting: &dyn Weighting,
+        start: usize,
+        end: usize,
+    ) -> RoutingPath {
+        // If no path was found
+        if self.best_meeting_node == INVALID_NODE {
+            return RoutingPath::new(Vec::new());
+        }
+
+        // Get the forward path (start to meeting point)
+        let mut forward_path = self.build_forward_path(graph, weighting, self.best_meeting_node);
+
+        // Get the backward path (meeting point to end) and append to forward path
+        let backward_path = self.build_backward_path(graph, weighting, self.best_meeting_node);
+
+        // Combine the two paths
+        forward_path.extend(backward_path);
+
+        RoutingPath::new(forward_path)
+    }
+}
+
+impl<H: AStarHeuristic> ShortestPathAlgorithm for BidirectionalAStar<H> {
+    fn calc_path(
+        &mut self,
+        graph: &impl Graph,
+        weighting: &dyn Weighting,
+        start: usize,
+        end: usize,
+    ) -> Result<RoutingPath, String> {
+        let stopwatch = Stopwatch::new("bidirectional_astar/calc_path");
+
+        if start == INVALID_NODE {
+            return Err(String::from("BidirectionalAStar: start node is invalid"));
+        }
+
+        if end == INVALID_NODE {
+            return Err(String::from("BidirectionalAStar: end node is invalid"));
+        }
+
+        // Initialize
+        self.init(graph, start, end);
+        self.best_meeting_node = INVALID_NODE;
+        self.best_path_weight = MAX_WEIGHT;
+
+        let mut iterations = 0;
+        let mut nodes_visited = 0;
+        let mut active_direction = SearchDirection::Forward;
+
+        // Continue until both heaps are empty or we've found the optimal path
+        while !self.forward_heap.is_empty() || !self.backward_heap.is_empty() {
+            // If one direction is empty, switch to the other
+            if self.forward_heap.is_empty() {
+                active_direction = SearchDirection::Backward;
+            } else if self.backward_heap.is_empty() {
+                active_direction = SearchDirection::Forward;
+            }
+            // Otherwise alternate directions
+            else {
+                active_direction = match active_direction {
+                    SearchDirection::Forward => SearchDirection::Backward,
+                    SearchDirection::Backward => SearchDirection::Forward,
+                };
+            }
+
+            // Get the current heap for the active direction
+            let maybe_item = match active_direction {
+                SearchDirection::Forward => self.forward_heap.pop(),
+                SearchDirection::Backward => self.backward_heap.pop(),
+            };
+
+            // If there's nothing to process in this direction, skip
+            if maybe_item.is_none() {
+                continue;
+            }
+
+            let HeapItem {
+                node_id, g_score, ..
+            } = maybe_item.unwrap();
+
+            // If we already found a path and the min f_score is higher
+            // than our best path, we can stop the search in this direction
+            if g_score > self.best_path_weight {
+                continue;
+            }
+
+            let target = match active_direction {
+                SearchDirection::Forward => end,
+                SearchDirection::Backward => start,
+            };
+
+            self.process_node(graph, weighting, active_direction, node_id, g_score, target);
+
+            nodes_visited += 1;
+            iterations += 1;
+
+            // Check if we can terminate early
+            if self.best_meeting_node != INVALID_NODE {
+                // Check if there's any chance to find a better path using g_scores
+                // Get minimum g_score from forward heap
+                let min_forward_g = self
+                    .forward_heap
+                    .peek()
+                    .map_or(MAX_WEIGHT, |item| item.g_score);
+
+                // Get minimum g_score from backward heap
+                let min_backward_g = self
+                    .backward_heap
+                    .peek()
+                    .map_or(MAX_WEIGHT, |item| item.g_score);
+
+                // If the sum of minimum g_scores from both frontiers
+                // is >= our best path, we can terminate
+                if min_forward_g + min_backward_g >= self.best_path_weight {
+                    // No better path is possible
+                    break;
+                }
+            }
+        }
+
+        println!("BidirectionalAStar iterations: {}", iterations);
+        println!("BidirectionalAStar nodes visited: {}", nodes_visited);
+        println!(
+            "BidirectionalAStar best path weight: {}",
+            self.best_path_weight
+        );
+
+        stopwatch.report();
+
+        Ok(self.build_path(graph, weighting, start, end))
+    }
+}
+
+impl BidirectionalAStar<HaversineHeuristic> {
+    pub fn new(graph: &impl Graph) -> BidirectionalAStar<HaversineHeuristic> {
+        Self::with_heuristic(graph, HaversineHeuristic)
+    }
+}
