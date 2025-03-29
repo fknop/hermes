@@ -74,9 +74,9 @@ fn estimate(graph: &impl Graph, start: usize, end: usize) -> Weight {
         .value();
 
     let speed_kmh = 120.0;
-    let speed_ms = speed_kmh * (1000.0 / 3600.0);
+    let speed_ms = speed_kmh / 3.6;
 
-    (distance * 0.7 + ((distance / speed_ms) * 1000.0).round()) as usize
+    (distance * 0.7 + (distance / speed_ms).round()) as usize
 }
 
 pub struct AStar {

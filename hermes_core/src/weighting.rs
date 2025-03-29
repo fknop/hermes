@@ -53,7 +53,7 @@ impl Weighting for CarWeighting {
         }
 
         let distance_costs = edge.distance().value() * DISTANCE_INFLUENCE;
-        ms + (distance_costs.round() as usize)
+        ((ms as f64 / 1000.0) + distance_costs).round() as usize
     }
 
     fn calc_edge_ms(&self, edge: &GraphEdge, direction: EdgeDirection) -> usize {
@@ -62,7 +62,7 @@ impl Weighting for CarWeighting {
             return usize::MAX;
         }
 
-        let speed_meters_per_second = (speed as f64) * (1000.0 / 3600.0);
+        let speed_meters_per_second = (speed as f64) / 3.6;
         let ms: f64 = (edge.distance().value() / speed_meters_per_second) * 1000.0;
 
         ms.round() as usize
