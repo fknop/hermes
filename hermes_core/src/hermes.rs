@@ -5,9 +5,11 @@ use crate::dijkstra::{self, Dijkstra};
 use crate::geopoint::GeoPoint;
 use crate::location_index::LocationIndex;
 use crate::query_graph::QueryGraph;
-use crate::routing::routing_request::RoutingRequest;
+use crate::routing::routing_request::{RoutingAlgorithm, RoutingRequest};
 use crate::routing_path::RoutingPath;
-use crate::shortest_path_algorithm::ShortestPathAlgorithm;
+use crate::shortest_path_algorithm::{
+    ShortestPathAlgorithm, ShortestPathOptions, ShortestPathResult,
+};
 use crate::stopwatch::Stopwatch;
 use crate::weighting::{CarWeighting, Weighting};
 use std::collections::HashMap;
@@ -72,7 +74,7 @@ impl Hermes {
         &self.index
     }
 
-    pub fn route(&self, request: RoutingRequest) -> Result<RoutingPath, String> {
+    pub fn route(&self, request: RoutingRequest) -> Result<ShortestPathResult, String> {
         let profile = self.profiles.get(&request.profile);
 
         if profile.is_none() {
@@ -109,8 +111,29 @@ impl Hermes {
         let start = snaps[0].closest_node();
         let end = snaps[1].closest_node();
 
-        let mut bdirastar = BidirectionalAStar::new(&query_graph);
-        bdirastar.calc_path(&query_graph, weighting, start, end)
+        let request_options = request.options.as_ref();
+        let options = ShortestPathOptions {
+            include_debug_info: request_options.and_then(|options| options.include_debug_info),
+        };
+
+        match request_options.and_then(|options| options.algorithm) {
+            Some(RoutingAlgorithm::Dijkstra) => {
+                let mut dijkstra = Dijkstra::new(&query_graph);
+                dijkstra.calc_path(&query_graph, weighting, start, end, Some(options))
+            }
+            Some(RoutingAlgorithm::Astar) => {
+                let mut astar = AStar::new(&query_graph);
+                astar.calc_path(&query_graph, weighting, start, end, Some(options))
+            }
+            Some(RoutingAlgorithm::BidirectionalAstar) => {
+                let mut bdirastar = BidirectionalAStar::new(&query_graph);
+                bdirastar.calc_path(&query_graph, weighting, start, end, Some(options))
+            }
+            None => {
+                let mut bdirastar = BidirectionalAStar::new(&query_graph);
+                bdirastar.calc_path(&query_graph, weighting, start, end, Some(options))
+            }
+        }
     }
 
     pub fn closest_edge(&self, profile: String, coordinates: GeoPoint) -> Option<usize> {

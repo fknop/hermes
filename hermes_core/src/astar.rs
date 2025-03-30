@@ -5,7 +5,9 @@ use crate::geopoint::GeoPoint;
 use crate::graph::Graph;
 use crate::properties::property_map::{BACKWARD_EDGE, FORWARD_EDGE};
 use crate::routing_path::{RoutingPath, RoutingPathItem};
-use crate::shortest_path_algorithm::ShortestPathAlgorithm;
+use crate::shortest_path_algorithm::{
+    ShortestPathAlgorithm, ShortestPathDebugInfo, ShortestPathOptions, ShortestPathResult,
+};
 use crate::stopwatch::Stopwatch;
 use crate::weighting::{Weight, Weighting};
 use std::cmp::Ordering;
@@ -103,6 +105,8 @@ pub struct AStar<H: AStarHeuristic> {
     // Use a HashMap instead of a vector. Creating a vector with a capacity of the entire nodes of the planet is not scalable.
     data: HashMap<usize, NodeData>,
 
+    debug_visited_nodes: Option<Vec<usize>>,
+
     heuristic: H,
 }
 
@@ -113,6 +117,7 @@ impl<H: AStarHeuristic> AStar<H> {
         let heap: BinaryHeap<HeapItem> = BinaryHeap::with_capacity(1024);
         AStar {
             data,
+            debug_visited_nodes: None,
             heap,
             heuristic,
         }
@@ -203,6 +208,25 @@ impl<H: AStarHeuristic> AStar<H> {
 
         RoutingPath::new(path)
     }
+
+    fn add_visited_node(&mut self, node: usize) {
+        let debug_visited_nodes = self.debug_visited_nodes.get_or_insert_with(Vec::new);
+        debug_visited_nodes.push(node);
+    }
+
+    fn debug_info(&self, graph: &impl Graph) -> ShortestPathDebugInfo {
+        ShortestPathDebugInfo {
+            forward_visited_nodes: self
+                .debug_visited_nodes
+                .as_deref()
+                .unwrap_or_default()
+                .iter()
+                .map(|node_id| graph.node_geometry(*node_id))
+                .cloned()
+                .collect(),
+            backward_visited_nodes: vec![],
+        }
+    }
 }
 
 impl<H: AStarHeuristic> ShortestPathAlgorithm for AStar<H> {
@@ -212,7 +236,8 @@ impl<H: AStarHeuristic> ShortestPathAlgorithm for AStar<H> {
         weighting: &dyn Weighting,
         start: usize,
         end: usize,
-    ) -> Result<RoutingPath, String> {
+        options: Option<ShortestPathOptions>,
+    ) -> Result<ShortestPathResult, String> {
         let stopwatch = Stopwatch::new("astar/calc_path");
         if start == INVALID_NODE {
             return Err(String::from("AStar: start node is invalid"));
@@ -221,6 +246,10 @@ impl<H: AStarHeuristic> ShortestPathAlgorithm for AStar<H> {
         if end == INVALID_NODE {
             return Err(String::from("AStar: start node is invalid"));
         }
+
+        let include_debug_info: bool = options
+            .and_then(|options| options.include_debug_info)
+            .unwrap_or(false);
 
         self.init(graph, start, end);
 
@@ -262,8 +291,6 @@ impl<H: AStarHeuristic> ShortestPathAlgorithm for AStar<H> {
                     continue;
                 }
 
-                nodes_visited += 1;
-
                 let next_weight = g_score + edge_weight;
 
                 if next_weight < self.current_shortest_weight(adj_node) {
@@ -278,6 +305,12 @@ impl<H: AStarHeuristic> ShortestPathAlgorithm for AStar<H> {
                 }
             }
 
+            if include_debug_info {
+                self.add_visited_node(node_id);
+            }
+
+            nodes_visited += 1;
+
             self.set_settled(node_id);
             iterations += 1;
             if node_id == end {
@@ -290,7 +323,16 @@ impl<H: AStarHeuristic> ShortestPathAlgorithm for AStar<H> {
 
         stopwatch.report();
 
-        Ok(self.build_path(graph, weighting, start, end))
+        let path = self.build_path(graph, weighting, start, end);
+
+        Ok(ShortestPathResult {
+            path,
+            debug: if include_debug_info {
+                Some(self.debug_info(graph))
+            } else {
+                None
+            },
+        })
     }
 }
 

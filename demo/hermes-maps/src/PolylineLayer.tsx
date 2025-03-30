@@ -9,26 +9,28 @@ const layerStyle: Partial<LineLayer> = {
   },
 }
 
-export function Polyline({
-  data,
+export function PolylineLayer({
   color,
   id,
+  featureId,
+  sourceId,
 }: {
-  data: FeatureCollection
   color: string
   id: string
+  featureId: string
+  sourceId: string
 }) {
   return (
-    <Source type="geojson" data={data}>
-      <Layer
-        id={id}
-        type="line"
-        {...layerStyle}
-        paint={{
-          ...layerStyle.paint,
-          'line-color': color,
-        }}
-      />
-    </Source>
+    <Layer
+      id={id}
+      source={sourceId}
+      type="line"
+      filter={['==', ['get', 'id'], featureId]}
+      {...layerStyle}
+      paint={{
+        ...layerStyle.paint,
+        'line-color': color,
+      }}
+    />
   )
 }

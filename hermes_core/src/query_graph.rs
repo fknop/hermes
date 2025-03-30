@@ -195,6 +195,20 @@ impl Graph for QueryGraph<'_> {
         }
     }
 
+    fn node_geometry(&self, node_id: usize) -> &GeoPoint {
+        if self.is_virtual_node(node_id) {
+            let first_edge_id = self.virtual_adjacency_list[self.virtual_node_id(node_id)][0];
+            let edge_geometry = &self.virtual_edge_geometry[self.virtual_edge_id(first_edge_id)];
+            let edge_direction = self.edge_direction(first_edge_id, node_id);
+            match edge_direction {
+                FORWARD_EDGE => &edge_geometry[0],
+                BACKWARD_EDGE => &edge_geometry[edge_geometry.len() - 1],
+            }
+        } else {
+            self.base_graph.node_geometry(node_id)
+        }
+    }
+
     fn edge_direction(&self, edge_id: usize, start_node_id: usize) -> EdgeDirection {
         if self.is_virtual_edge(edge_id) {
             let edge = self.virtual_edge(edge_id);

@@ -175,6 +175,16 @@ impl Graph for BaseGraph {
         &self.geometry[edge][..]
     }
 
+    fn node_geometry(&self, node_id: usize) -> &GeoPoint {
+        let first_edge_id = self.adjacency_list[node_id][0];
+        let edge_geometry = &self.geometry[first_edge_id];
+        let edge_direction = self.edge_direction(first_edge_id, node_id);
+        match edge_direction {
+            FORWARD_EDGE => &edge_geometry[0],
+            BACKWARD_EDGE => &edge_geometry[edge_geometry.len() - 1],
+        }
+    }
+
     fn edge_count(&self) -> usize {
         self.edges.len()
     }

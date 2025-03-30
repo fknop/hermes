@@ -3,7 +3,9 @@ use crate::geopoint::GeoPoint;
 use crate::graph::Graph;
 use crate::properties::property_map::{BACKWARD_EDGE, FORWARD_EDGE};
 use crate::routing_path::{RoutingPath, RoutingPathItem};
-use crate::shortest_path_algorithm::ShortestPathAlgorithm;
+use crate::shortest_path_algorithm::{
+    ShortestPathAlgorithm, ShortestPathDebugInfo, ShortestPathOptions, ShortestPathResult,
+};
 use crate::stopwatch::Stopwatch;
 use crate::weighting::{Weight, Weighting};
 use std::cmp::Ordering;
@@ -108,9 +110,13 @@ pub struct BidirectionalAStar<H: AStarHeuristic> {
     forward_heap: BinaryHeap<HeapItem>,
     forward_data: HashMap<usize, NodeData>,
 
+    debug_forward_visited_nodes: Option<Vec<usize>>,
+
     // Backward search (from target node)
     backward_heap: BinaryHeap<HeapItem>,
     backward_data: HashMap<usize, NodeData>,
+
+    debug_backward_visited_nodes: Option<Vec<usize>>,
 
     // Best meeting point and total path weight
     best_meeting_node: usize,
@@ -136,6 +142,8 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
             best_meeting_node: INVALID_NODE,
             best_path_weight: MAX_WEIGHT,
             heuristic,
+            debug_forward_visited_nodes: None,
+            debug_backward_visited_nodes: None,
         }
     }
 
@@ -183,6 +191,16 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
             SearchDirection::Forward => &mut self.forward_heap,
             SearchDirection::Backward => &mut self.backward_heap,
         }
+    }
+
+    fn add_visited_node(&mut self, dir: SearchDirection, node: usize) {
+        let debug_visited_nodes = match dir {
+            SearchDirection::Forward => &mut self.debug_forward_visited_nodes,
+            SearchDirection::Backward => &mut self.debug_backward_visited_nodes,
+        }
+        .get_or_insert_with(Vec::new);
+
+        debug_visited_nodes.push(node);
     }
 
     fn update_node_data(
@@ -419,6 +437,27 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
 
         RoutingPath::new(forward_path)
     }
+
+    fn debug_info(&self, graph: &impl Graph) -> ShortestPathDebugInfo {
+        ShortestPathDebugInfo {
+            forward_visited_nodes: self
+                .debug_forward_visited_nodes
+                .as_deref()
+                .unwrap_or_default()
+                .iter()
+                .map(|node_id| graph.node_geometry(*node_id))
+                .cloned()
+                .collect(),
+            backward_visited_nodes: self
+                .debug_backward_visited_nodes
+                .as_deref()
+                .unwrap_or_default()
+                .iter()
+                .map(|node_id| graph.node_geometry(*node_id))
+                .cloned()
+                .collect(),
+        }
+    }
 }
 
 impl<H: AStarHeuristic> ShortestPathAlgorithm for BidirectionalAStar<H> {
@@ -428,7 +467,8 @@ impl<H: AStarHeuristic> ShortestPathAlgorithm for BidirectionalAStar<H> {
         weighting: &dyn Weighting,
         start: usize,
         end: usize,
-    ) -> Result<RoutingPath, String> {
+        options: Option<ShortestPathOptions>,
+    ) -> Result<ShortestPathResult, String> {
         let stopwatch = Stopwatch::new("bidirectional_astar/calc_path");
 
         if start == INVALID_NODE {
@@ -438,6 +478,10 @@ impl<H: AStarHeuristic> ShortestPathAlgorithm for BidirectionalAStar<H> {
         if end == INVALID_NODE {
             return Err(String::from("BidirectionalAStar: end node is invalid"));
         }
+
+        let include_debug_info: bool = options
+            .and_then(|options| options.include_debug_info)
+            .unwrap_or(false);
 
         // Initialize
         self.init(graph, start, end);
@@ -492,6 +536,10 @@ impl<H: AStarHeuristic> ShortestPathAlgorithm for BidirectionalAStar<H> {
 
             self.process_node(graph, weighting, active_direction, node_id, g_score, target);
 
+            if include_debug_info {
+                self.add_visited_node(active_direction, node_id);
+            }
+
             nodes_visited += 1;
             iterations += 1;
 
@@ -528,7 +576,15 @@ impl<H: AStarHeuristic> ShortestPathAlgorithm for BidirectionalAStar<H> {
 
         stopwatch.report();
 
-        Ok(self.build_path(graph, weighting, start, end))
+        let debug = if include_debug_info {
+            Some(self.debug_info(graph))
+        } else {
+            None
+        };
+
+        let path = self.build_path(graph, weighting, start, end);
+
+        Ok(ShortestPathResult { path, debug })
     }
 }
 
