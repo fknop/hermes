@@ -1,7 +1,7 @@
 use crate::constants::{INVALID_EDGE, INVALID_NODE, MAX_WEIGHT};
+use crate::edge_direction::EdgeDirection;
 use crate::geopoint::GeoPoint;
 use crate::graph::Graph;
-use crate::properties::property_map::{BACKWARD_EDGE, FORWARD_EDGE};
 use crate::routing_path::{RoutingPath, RoutingPathItem};
 use crate::shortest_path_algorithm::{
     ShortestPathAlgorithm, ShortestPathDebugInfo, ShortestPathOptions, ShortestPathResult,
@@ -80,23 +80,13 @@ pub trait AStarHeuristic {
 
 pub struct HaversineHeuristic;
 
-impl HaversineHeuristic {
-    fn get_node_coordinates(graph: &impl Graph, node: usize) -> &GeoPoint {
-        let edge = graph.node_edges_iter(node).next().unwrap();
-        let edge_direction = graph.edge_direction(edge, node);
-        let geometry = graph.edge_geometry(edge);
-        match edge_direction {
-            FORWARD_EDGE => &geometry[0],
-            BACKWARD_EDGE => &geometry[geometry.len() - 1],
-        }
-    }
-}
-
 impl AStarHeuristic for HaversineHeuristic {
     fn estimate(&self, graph: &impl Graph, from: usize, to: usize) -> Weight {
-        let from_coordinates = HaversineHeuristic::get_node_coordinates(graph, from);
-        let to_coordinates = HaversineHeuristic::get_node_coordinates(graph, to);
-        let distance = from_coordinates.haversine_distance(to_coordinates).value();
+        let start_coordinates = graph.node_geometry(from);
+        let end_coordinates = graph.node_geometry(to);
+        let distance = start_coordinates
+            .haversine_distance(end_coordinates)
+            .value();
 
         let speed_kmh = 150.0;
         let speed_ms = speed_kmh / 3.6;
@@ -295,10 +285,10 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
                 SearchDirection::Forward => graph.edge_direction(edge_id, node_id),
                 SearchDirection::Backward => {
                     // Reverse the direction for backward search
-                    if graph.edge_direction(edge_id, node_id) == FORWARD_EDGE {
-                        BACKWARD_EDGE
+                    if graph.edge_direction(edge_id, node_id) == EdgeDirection::Forward {
+                        EdgeDirection::Backward
                     } else {
-                        FORWARD_EDGE
+                        EdgeDirection::Forward
                     }
                 }
             };
@@ -350,7 +340,7 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
             let direction = graph.edge_direction(edge_id, parent);
             let edge = graph.edge(edge_id);
 
-            let geometry: Vec<GeoPoint> = if direction == FORWARD_EDGE {
+            let geometry: Vec<GeoPoint> = if direction == EdgeDirection::Forward {
                 graph.edge_geometry(edge_id).to_vec()
             } else {
                 graph.edge_geometry(edge_id).iter().rev().cloned().collect()
@@ -391,7 +381,7 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
 
             let edge = graph.edge(edge_id);
 
-            let geometry: Vec<GeoPoint> = if direction == FORWARD_EDGE {
+            let geometry: Vec<GeoPoint> = if direction == EdgeDirection::Forward {
                 graph.edge_geometry(edge_id).to_vec()
             } else {
                 graph.edge_geometry(edge_id).iter().rev().cloned().collect()

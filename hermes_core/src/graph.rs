@@ -1,4 +1,4 @@
-use crate::{base_graph::GraphEdge, geopoint::GeoPoint, properties::property_map::EdgeDirection};
+use crate::{base_graph::GraphEdge, edge_direction::EdgeDirection, geopoint::GeoPoint};
 
 pub trait Graph {
     type EdgeIterator<'a>: Iterator<Item = usize>

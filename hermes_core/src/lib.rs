@@ -5,6 +5,7 @@ mod constants;
 mod degrees;
 pub mod dijkstra;
 pub mod distance;
+pub mod edge_direction;
 mod geometry;
 pub mod geopoint;
 pub mod graph;

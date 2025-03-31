@@ -1,5 +1,4 @@
-
-use crate::properties::property::Property;
+use crate::{edge_direction::EdgeDirection, properties::property::Property};
 
 #[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Debug)]
 struct SmallMap<T>(Vec<(Property, T)>);
@@ -25,10 +24,6 @@ pub struct EdgePropertyMap {
     usize_values: SmallMap<usize>,
 }
 
-pub type EdgeDirection = bool;
-pub const FORWARD_EDGE: EdgeDirection = true;
-pub const BACKWARD_EDGE: EdgeDirection = false;
-
 impl EdgePropertyMap {
     pub fn new() -> EdgePropertyMap {
         EdgePropertyMap {
@@ -52,15 +47,15 @@ impl EdgePropertyMap {
 
     pub fn get_u8(&self, property: Property, direction: EdgeDirection) -> Option<u8> {
         match direction {
-            FORWARD_EDGE => self.forward_u8_values.get(&property).cloned(),
-            BACKWARD_EDGE => self.backward_u8_values.get(&property).cloned(),
+            EdgeDirection::Forward => self.forward_u8_values.get(&property).cloned(),
+            EdgeDirection::Backward => self.backward_u8_values.get(&property).cloned(),
         }
     }
 
     pub fn get_bool(&self, property: Property, direction: EdgeDirection) -> Option<bool> {
         match direction {
-            FORWARD_EDGE => self.forward_bool_values.get(&property).cloned(),
-            BACKWARD_EDGE => self.backward_bool_values.get(&property).cloned(),
+            EdgeDirection::Forward => self.forward_bool_values.get(&property).cloned(),
+            EdgeDirection::Backward => self.backward_bool_values.get(&property).cloned(),
         }
     }
 
@@ -75,8 +70,8 @@ impl EdgePropertyMap {
         value: u8,
     ) -> Option<u8> {
         match direction {
-            FORWARD_EDGE => self.forward_u8_values.insert(property, value),
-            BACKWARD_EDGE => self.backward_u8_values.insert(property, value),
+            EdgeDirection::Forward => self.forward_u8_values.insert(property, value),
+            EdgeDirection::Backward => self.backward_u8_values.insert(property, value),
         }
 
         Some(value)
@@ -88,8 +83,8 @@ impl EdgePropertyMap {
         value: bool,
     ) -> Option<bool> {
         match direction {
-            FORWARD_EDGE => self.forward_bool_values.insert(property, value),
-            BACKWARD_EDGE => self.backward_bool_values.insert(property, value),
+            EdgeDirection::Forward => self.forward_bool_values.insert(property, value),
+            EdgeDirection::Backward => self.backward_bool_values.insert(property, value),
         }
 
         Some(value)

@@ -1,6 +1,4 @@
-import type { Feature, FeatureCollection } from 'geojson'
-import { Layer, Source } from 'react-map-gl/mapbox'
-import { CircleLayer } from 'mapbox-gl'
+import { Layer } from 'react-map-gl/mapbox'
 
 export function MultiPointLayer({
   color,

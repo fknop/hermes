@@ -1,6 +1,6 @@
+use crate::edge_direction::EdgeDirection;
 use crate::osm::osm_reader::OsmWay;
 use crate::properties::property::Property::VehicleAccess;
-use crate::properties::property_map::{BACKWARD_EDGE, FORWARD_EDGE};
 use crate::properties::tag_parser::TagParser;
 
 use super::property_map::EdgePropertyMap;
@@ -71,7 +71,7 @@ impl TagParser for CarAccessParser {
                 if is_forward_oneway(way) {
                     properties.insert_bool(
                         VehicleAccess(vehicle_key.to_string()),
-                        FORWARD_EDGE,
+                        EdgeDirection::Forward,
                         true,
                     );
                 }
@@ -79,17 +79,33 @@ impl TagParser for CarAccessParser {
                 if is_backward_oneway(way) {
                     properties.insert_bool(
                         VehicleAccess(vehicle_key.to_string()),
-                        BACKWARD_EDGE,
+                        EdgeDirection::Backward,
                         true,
                     );
                 }
             } else {
-                properties.insert_bool(VehicleAccess(vehicle_key.to_string()), FORWARD_EDGE, true);
-                properties.insert_bool(VehicleAccess(vehicle_key.to_string()), BACKWARD_EDGE, true);
+                properties.insert_bool(
+                    VehicleAccess(vehicle_key.to_string()),
+                    EdgeDirection::Forward,
+                    true,
+                );
+                properties.insert_bool(
+                    VehicleAccess(vehicle_key.to_string()),
+                    EdgeDirection::Backward,
+                    true,
+                );
             }
         } else {
-            properties.insert_bool(VehicleAccess(vehicle_key.to_string()), FORWARD_EDGE, false);
-            properties.insert_bool(VehicleAccess(vehicle_key.to_string()), BACKWARD_EDGE, false);
+            properties.insert_bool(
+                VehicleAccess(vehicle_key.to_string()),
+                EdgeDirection::Forward,
+                false,
+            );
+            properties.insert_bool(
+                VehicleAccess(vehicle_key.to_string()),
+                EdgeDirection::Backward,
+                false,
+            );
         }
     }
 }

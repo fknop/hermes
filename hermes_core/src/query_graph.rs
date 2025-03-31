@@ -2,10 +2,10 @@ use std::collections::HashMap;
 
 use crate::{
     base_graph::{BaseGraph, GraphEdge},
+    edge_direction::EdgeDirection,
     geometry::{compute_geometry_distance, create_virtual_geometries},
     geopoint::GeoPoint,
     graph::Graph,
-    properties::property_map::{BACKWARD_EDGE, EdgeDirection, FORWARD_EDGE},
     snap::Snap,
 };
 
@@ -201,8 +201,8 @@ impl Graph for QueryGraph<'_> {
             let edge_geometry = &self.virtual_edge_geometry[self.virtual_edge_id(first_edge_id)];
             let edge_direction = self.edge_direction(first_edge_id, node_id);
             match edge_direction {
-                FORWARD_EDGE => &edge_geometry[0],
-                BACKWARD_EDGE => &edge_geometry[edge_geometry.len() - 1],
+                EdgeDirection::Forward => &edge_geometry[0],
+                EdgeDirection::Backward => &edge_geometry[edge_geometry.len() - 1],
             }
         } else {
             self.base_graph.node_geometry(node_id)
@@ -214,9 +214,9 @@ impl Graph for QueryGraph<'_> {
             let edge = self.virtual_edge(edge_id);
 
             if edge.start_node() == start_node_id {
-                return FORWARD_EDGE;
+                return EdgeDirection::Forward;
             } else if edge.end_node() == start_node_id {
-                return BACKWARD_EDGE;
+                return EdgeDirection::Backward;
             }
 
             panic!(

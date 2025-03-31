@@ -5,15 +5,12 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use geojson::Value::{LineString, MultiPoint};
-use geojson::feature::Id;
 use geojson::{Feature, FeatureCollection, GeoJson, Geometry, JsonValue};
 use hermes_core::geopoint::GeoPoint;
 use hermes_core::routing::routing_request::{
     RoutingAlgorithm, RoutingRequest, RoutingRequestOptions,
 };
 use serde::{Deserialize, Serialize};
-use serde_json::Map;
-use std::collections::HashMap;
 use std::sync::Arc;
 
 #[derive(Serialize)]

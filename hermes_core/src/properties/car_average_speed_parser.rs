@@ -1,9 +1,7 @@
-use crate::osm::osm_reader::OsmWay;
+use crate::{edge_direction::EdgeDirection, osm::osm_reader::OsmWay};
 
 use super::{
-    max_speed_parser::MaxSpeedParser,
-    property::Property,
-    property_map::{BACKWARD_EDGE, EdgePropertyMap, FORWARD_EDGE},
+    max_speed_parser::MaxSpeedParser, property::Property, property_map::EdgePropertyMap,
     tag_parser::TagParser,
 };
 
@@ -56,12 +54,12 @@ impl TagParser for CarAverageSpeedParser {
         let car_average_speed = CarAverageSpeedParser::parse_average_speed(way);
         properties.insert_u8(
             Property::AverageSpeed(String::from("car")),
-            FORWARD_EDGE,
+            EdgeDirection::Forward,
             car_average_speed,
         );
         properties.insert_u8(
             Property::AverageSpeed(String::from("car")),
-            BACKWARD_EDGE,
+            EdgeDirection::Backward,
             car_average_speed,
         );
     }

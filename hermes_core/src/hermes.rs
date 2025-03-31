@@ -1,12 +1,11 @@
 use crate::astar::AStar;
 use crate::base_graph::BaseGraph;
 use crate::bidirectional_astar::BidirectionalAStar;
-use crate::dijkstra::{self, Dijkstra};
+use crate::dijkstra::Dijkstra;
 use crate::geopoint::GeoPoint;
 use crate::location_index::LocationIndex;
 use crate::query_graph::QueryGraph;
 use crate::routing::routing_request::{RoutingAlgorithm, RoutingRequest};
-use crate::routing_path::RoutingPath;
 use crate::shortest_path_algorithm::{
     ShortestPathAlgorithm, ShortestPathOptions, ShortestPathResult,
 };

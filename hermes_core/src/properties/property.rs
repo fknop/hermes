@@ -13,6 +13,7 @@ pub enum Property {
     OsmId,
 }
 
+// TODO: fix ToString -> Display
 impl ToString for Property {
     fn to_string(&self) -> String {
         match self {

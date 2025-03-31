@@ -1,6 +1,5 @@
-import type { Feature, FeatureCollection } from 'geojson'
-import { Layer, Source } from 'react-map-gl/mapbox'
 import { LineLayer } from 'mapbox-gl'
+import { Layer } from 'react-map-gl/mapbox'
 
 const layerStyle: Partial<LineLayer> = {
   paint: {

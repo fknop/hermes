@@ -2,15 +2,15 @@ use std::f64;
 
 use crate::base_graph::GraphEdge;
 use crate::constants::MAX_WEIGHT;
+use crate::edge_direction::EdgeDirection;
 use crate::properties::property::Property;
-use crate::properties::property_map::{BACKWARD_EDGE, EdgeDirection, FORWARD_EDGE};
 
 pub type Weight = usize;
 
 pub trait Weighting {
     fn can_access_edge(&self, edge: &GraphEdge) -> bool {
-        self.calc_edge_weight(edge, FORWARD_EDGE) != MAX_WEIGHT
-            || self.calc_edge_weight(edge, BACKWARD_EDGE) != MAX_WEIGHT
+        self.calc_edge_weight(edge, EdgeDirection::Forward) != MAX_WEIGHT
+            || self.calc_edge_weight(edge, EdgeDirection::Backward) != MAX_WEIGHT
     }
 
     fn calc_edge_weight(&self, edge: &GraphEdge, direction: EdgeDirection) -> Weight;

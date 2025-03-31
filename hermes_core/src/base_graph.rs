@@ -3,13 +3,12 @@ use std::fs::File;
 use std::io::{BufReader, BufWriter, Read, Write};
 
 use crate::distance::{Distance, Meters};
+use crate::edge_direction::EdgeDirection;
 use crate::geometry::compute_geometry_distance;
 use crate::geopoint::GeoPoint;
 use crate::graph::Graph;
 use crate::osm::osm_reader::OsmReader;
-use crate::properties::property_map::{
-    BACKWARD_EDGE, EdgeDirection, EdgePropertyMap, FORWARD_EDGE,
-};
+use crate::properties::property_map::EdgePropertyMap;
 
 #[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
 pub struct GraphEdge {
@@ -180,8 +179,8 @@ impl Graph for BaseGraph {
         let edge_geometry = &self.geometry[first_edge_id];
         let edge_direction = self.edge_direction(first_edge_id, node_id);
         match edge_direction {
-            FORWARD_EDGE => &edge_geometry[0],
-            BACKWARD_EDGE => &edge_geometry[edge_geometry.len() - 1],
+            EdgeDirection::Forward => &edge_geometry[0],
+            EdgeDirection::Backward => &edge_geometry[edge_geometry.len() - 1],
         }
     }
 
@@ -197,11 +196,11 @@ impl Graph for BaseGraph {
         let edge = &self.edges[edge_id];
 
         if edge.start_node == start {
-            return FORWARD_EDGE;
+            return EdgeDirection::Forward;
         }
 
         if edge.end_node == start {
-            return BACKWARD_EDGE;
+            return EdgeDirection::Backward;
         }
 
         panic!(

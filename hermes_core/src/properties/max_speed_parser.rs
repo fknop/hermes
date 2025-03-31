@@ -1,6 +1,6 @@
+use crate::edge_direction::EdgeDirection;
 use crate::osm::osm_reader::OsmWay;
 use crate::properties::property::Property;
-use crate::properties::property_map::{BACKWARD_EDGE, FORWARD_EDGE};
 use crate::properties::tag_parser::TagParser;
 
 use super::property_map::EdgePropertyMap;
@@ -22,8 +22,8 @@ impl MaxSpeedParser {
 impl TagParser for MaxSpeedParser {
     fn handle_way(way: &OsmWay, properties: &mut EdgePropertyMap) {
         if let Some(max_speed) = MaxSpeedParser::parse_max_speed(way) {
-            properties.insert_u8(Property::MaxSpeed, FORWARD_EDGE, max_speed);
-            properties.insert_u8(Property::MaxSpeed, BACKWARD_EDGE, max_speed);
+            properties.insert_u8(Property::MaxSpeed, EdgeDirection::Forward, max_speed);
+            properties.insert_u8(Property::MaxSpeed, EdgeDirection::Backward, max_speed);
         }
     }
 }
