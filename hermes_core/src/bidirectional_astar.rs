@@ -8,12 +8,13 @@ use crate::shortest_path_algorithm::{
 };
 use crate::stopwatch::Stopwatch;
 use crate::weighting::{Weight, Weighting};
-use std::cmp::Ordering;
+use std::cmp::{Ordering, max};
 use std::collections::{BinaryHeap, HashMap};
 
 /// Bidirectional A* search algorithm
-
-// TODO: verify that it's correct, this file is mostly generated from ClaudeAI from the original astar.rs
+/// Implement strategies from "Yet another bidirectional algorithm for shortest paths"
+/// Wim Pijls, Henk Post
+/// https://repub.eur.nl/pub/16100/ei2009-10.pdf
 
 #[derive(Eq, Copy, Clone, Debug)]
 struct HeapItem {
@@ -67,7 +68,6 @@ impl NodeData {
     }
 }
 
-/// Direction of search (forward from start or backward from target)
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 enum SearchDirection {
     Forward,
@@ -98,7 +98,7 @@ impl AStarHeuristic for HaversineHeuristic {
         let to_coordinates = HaversineHeuristic::get_node_coordinates(graph, to);
         let distance = from_coordinates.haversine_distance(to_coordinates).value();
 
-        let speed_kmh = 120.0;
+        let speed_kmh = 150.0;
         let speed_ms = speed_kmh / 3.6;
 
         (distance * 0.7 + (distance / speed_ms).round()) as usize
@@ -128,11 +128,11 @@ pub struct BidirectionalAStar<H: AStarHeuristic> {
 impl<H: AStarHeuristic> BidirectionalAStar<H> {
     pub fn with_heuristic(_graph: &impl Graph, heuristic: H) -> BidirectionalAStar<H> {
         // Allocate data structures for both search directions
-        let forward_data = HashMap::with_capacity(10000);
-        let forward_heap: BinaryHeap<HeapItem> = BinaryHeap::with_capacity(1024);
+        let forward_data = HashMap::with_capacity(50000);
+        let forward_heap: BinaryHeap<HeapItem> = BinaryHeap::with_capacity(50000);
 
-        let backward_data = HashMap::with_capacity(10000);
-        let backward_heap: BinaryHeap<HeapItem> = BinaryHeap::with_capacity(1024);
+        let backward_data = HashMap::with_capacity(50000);
+        let backward_heap: BinaryHeap<HeapItem> = BinaryHeap::with_capacity(50000);
 
         BidirectionalAStar {
             forward_data,
@@ -179,7 +179,7 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
         );
     }
 
-    fn data_for_direction(&mut self, dir: SearchDirection) -> &mut HashMap<usize, NodeData> {
+    fn node_data_for_direction(&mut self, dir: SearchDirection) -> &mut HashMap<usize, NodeData> {
         match dir {
             SearchDirection::Forward => &mut self.forward_data,
             SearchDirection::Backward => &mut self.backward_data,
@@ -193,16 +193,6 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
         }
     }
 
-    fn add_visited_node(&mut self, dir: SearchDirection, node: usize) {
-        let debug_visited_nodes = match dir {
-            SearchDirection::Forward => &mut self.debug_forward_visited_nodes,
-            SearchDirection::Backward => &mut self.debug_backward_visited_nodes,
-        }
-        .get_or_insert_with(Vec::new);
-
-        debug_visited_nodes.push(node);
-    }
-
     fn update_node_data(
         &mut self,
         dir: SearchDirection,
@@ -211,7 +201,7 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
         parent: usize,
         edge_id: usize,
     ) {
-        let data = self.data_for_direction(dir);
+        let data = self.node_data_for_direction(dir);
         if let Some(node_data) = data.get_mut(&node) {
             node_data.weight = weight;
             node_data.settled = false;
@@ -231,12 +221,15 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
     }
 
     fn node_data(&mut self, dir: SearchDirection, node: usize) -> &NodeData {
-        let data = self.data_for_direction(dir);
+        let data = self.node_data_for_direction(dir);
         data.entry(node).or_insert_with(NodeData::new)
     }
 
     fn set_settled(&mut self, dir: SearchDirection, node: usize) {
-        self.data_for_direction(dir).get_mut(&node).unwrap().settled = true;
+        self.node_data_for_direction(dir)
+            .get_mut(&node)
+            .unwrap()
+            .settled = true;
     }
 
     #[inline(always)]
@@ -438,6 +431,16 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
         RoutingPath::new(forward_path)
     }
 
+    fn add_visited_node(&mut self, dir: SearchDirection, node: usize) {
+        let debug_visited_nodes = match dir {
+            SearchDirection::Forward => &mut self.debug_forward_visited_nodes,
+            SearchDirection::Backward => &mut self.debug_backward_visited_nodes,
+        }
+        .get_or_insert_with(Vec::new);
+
+        debug_visited_nodes.push(node);
+    }
+
     fn debug_info(&self, graph: &impl Graph) -> ShortestPathDebugInfo {
         ShortestPathDebugInfo {
             forward_visited_nodes: self
@@ -508,11 +511,13 @@ impl<H: AStarHeuristic> ShortestPathAlgorithm for BidirectionalAStar<H> {
                 };
             }
 
-            // Get the current heap for the active direction
-            let maybe_item = match active_direction {
-                SearchDirection::Forward => self.forward_heap.pop(),
-                SearchDirection::Backward => self.backward_heap.pop(),
+            let (heap, opposite_heap) = match active_direction {
+                SearchDirection::Forward => (&mut self.forward_heap, &mut self.backward_heap),
+                SearchDirection::Backward => (&mut self.backward_heap, &mut self.forward_heap),
             };
+
+            // Get the current heap for the active direction
+            let maybe_item = heap.pop();
 
             // If there's nothing to process in this direction, skip
             if maybe_item.is_none() {
@@ -520,19 +525,37 @@ impl<H: AStarHeuristic> ShortestPathAlgorithm for BidirectionalAStar<H> {
             }
 
             let HeapItem {
-                node_id, g_score, ..
+                node_id,
+                g_score,
+                f_score,
             } = maybe_item.unwrap();
 
             // If we already found a path and the min f_score is higher
             // than our best path, we can stop the search in this direction
-            if g_score > self.best_path_weight {
+            if g_score > self.best_path_weight || f_score >= self.best_path_weight {
                 continue;
             }
 
-            let target = match active_direction {
-                SearchDirection::Forward => end,
-                SearchDirection::Backward => start,
+            let opposite_direction_min_f_score =
+                opposite_heap.peek().map(|item| item.f_score).unwrap_or(0);
+
+            let (target, opposite_direction_target) = match active_direction {
+                SearchDirection::Forward => (end, start),
+                SearchDirection::Backward => (start, end),
             };
+
+            let opposite_direction_h =
+                self.heuristic
+                    .estimate(graph, node_id, opposite_direction_target);
+
+            // Strategy from "Yet another bidirectional algorithm for shortest paths"
+            // Wim Pijls, Henk Post
+            // https://repub.eur.nl/pub/16100/ei2009-10.pdf
+            if g_score + opposite_direction_min_f_score - opposite_direction_h
+                >= self.best_path_weight
+            {
+                continue;
+            }
 
             self.process_node(graph, weighting, active_direction, node_id, g_score, target);
 
@@ -545,23 +568,17 @@ impl<H: AStarHeuristic> ShortestPathAlgorithm for BidirectionalAStar<H> {
 
             // Check if we can terminate early
             if self.best_meeting_node != INVALID_NODE {
-                // Check if there's any chance to find a better path using g_scores
-                // Get minimum g_score from forward heap
-                let min_forward_g = self
+                let min_forward_f = self
                     .forward_heap
                     .peek()
-                    .map_or(MAX_WEIGHT, |item| item.g_score);
+                    .map_or(MAX_WEIGHT, |item| item.f_score);
 
-                // Get minimum g_score from backward heap
-                let min_backward_g = self
+                let min_backward_f = self
                     .backward_heap
                     .peek()
-                    .map_or(MAX_WEIGHT, |item| item.g_score);
+                    .map_or(MAX_WEIGHT, |item| item.f_score);
 
-                // If the sum of minimum g_scores from both frontiers
-                // is >= our best path, we can terminate
-                if min_forward_g + min_backward_g >= self.best_path_weight {
-                    // No better path is possible
+                if max(min_forward_f, min_backward_f) >= self.best_path_weight {
                     break;
                 }
             }
