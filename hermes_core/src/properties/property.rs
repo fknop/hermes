@@ -13,14 +13,13 @@ pub enum Property {
     OsmId,
 }
 
-// TODO: fix ToString -> Display
-impl ToString for Property {
-    fn to_string(&self) -> String {
+impl std::fmt::Display for Property {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            Property::MaxSpeed => "maxspeed".to_string(),
-            Property::AverageSpeed(vehicle_type) => format!("{}_average_speed", vehicle_type),
-            Property::VehicleAccess(vehicle_type) => format!("{}_vehicle_access", vehicle_type),
-            Property::OsmId => "osm_id".to_string(),
+            Property::MaxSpeed => write!(f, "maxspeed"),
+            Property::AverageSpeed(vehicle_type) => write!(f, "{}_average_speed", vehicle_type),
+            Property::VehicleAccess(vehicle_type) => write!(f, "{}_vehicle_access", vehicle_type),
+            Property::OsmId => write!(f, "osm_id"),
         }
     }
 }

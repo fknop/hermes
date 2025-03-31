@@ -1,5 +1,4 @@
 use rstar::{AABB, Envelope, PointDistance, RTreeObject};
-use std::f64::consts::PI;
 
 use crate::{
     constants::EARTH_RADIUS_METERS,

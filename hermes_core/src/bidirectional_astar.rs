@@ -283,14 +283,7 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
 
             let edge_direction = match dir {
                 SearchDirection::Forward => graph.edge_direction(edge_id, node_id),
-                SearchDirection::Backward => {
-                    // Reverse the direction for backward search
-                    if graph.edge_direction(edge_id, node_id) == EdgeDirection::Forward {
-                        EdgeDirection::Backward
-                    } else {
-                        EdgeDirection::Forward
-                    }
-                }
+                SearchDirection::Backward => graph.edge_direction(edge_id, node_id).opposite(),
             };
 
             let edge_weight = weighting.calc_edge_weight(edge, edge_direction);
@@ -401,8 +394,8 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
         &mut self,
         graph: &impl Graph,
         weighting: &dyn Weighting,
-        start: usize,
-        end: usize,
+        _start: usize,
+        _end: usize,
     ) -> RoutingPath {
         // If no path was found
         if self.best_meeting_node == INVALID_NODE {

@@ -104,67 +104,35 @@ impl OsmReader {
 
     /// First pass reads the ways, stores each node
     fn handle_element_first_pass(&mut self, reader: &mut OsmioReader) {
-        reader
-            .ways()
-            .filter(|way| OsmReader::accept_way(way))
-            .for_each(|way| {
-                let way_node_count = way.num_nodes();
+        reader.ways().filter(OsmReader::accept_way).for_each(|way| {
+            let way_node_count = way.num_nodes();
 
-                for (index, node) in way.nodes().iter().enumerate() {
-                    let is_start_or_end = index == 0 || index == way_node_count - 1;
+            for (index, node) in way.nodes().iter().enumerate() {
+                let is_start_or_end = index == 0 || index == way_node_count - 1;
 
-                    self.update_node_type(
-                        *node,
-                        if is_start_or_end {
-                            OsmNodeType::End
-                        } else {
-                            OsmNodeType::Geometry
-                        },
-                    );
-                }
+                self.update_node_type(
+                    *node,
+                    if is_start_or_end {
+                        OsmNodeType::End
+                    } else {
+                        OsmNodeType::Geometry
+                    },
+                );
+            }
 
-                self.accepted_ways += 1;
+            self.accepted_ways += 1;
 
-                if self.accepted_ways % 50000 == 0 {
-                    println!("Preprocessed {} ways", self.accepted_ways);
-                }
-            });
+            if self.accepted_ways % 50000 == 0 {
+                println!("Preprocessed {} ways", self.accepted_ways);
+            }
+        });
 
         println!("Preprocessed {} ways", self.accepted_ways);
-
-        // match element {
-        //     Element::Way(way) if OsmReader::accept_way(&way) => {
-        //         let way_node_count = way.refs().len();
-
-        //         for (index, node) in way.refs().enumerate() {
-        //             let is_start_or_end = index == 0 || index == way_node_count - 1;
-
-        //             if node == 4597819068 {
-        //                 println!("Add node {}", node);
-        //             }
-        //             self.update_node_type(
-        //                 node,
-        //                 if is_start_or_end {
-        //                     OsmNodeType::End
-        //                 } else {
-        //                     OsmNodeType::Geometry
-        //                 },
-        //             );
-        //         }
-
-        //         self.accepted_ways += 1;
-
-        //         if self.accepted_ways % 10000 == 0 {
-        //             println!("Preprocessed {} ways", self.accepted_ways);
-        //         }
-        //     }
-        //     _ => {}
-        // }
     }
 
     fn handle_element_second_pass<F>(&mut self, reader: &mut OsmioReader, mut handle_edge: F)
     where
-        F: FnMut(OsmWaySegment) -> (),
+        F: FnMut(OsmWaySegment),
     {
         reader
             .objects()
@@ -183,7 +151,7 @@ impl OsmReader {
                     }
                 }
                 StringOSMObj::Way(raw_way) if OsmReader::accept_way(&raw_way) => {
-                    let mut way = OsmWay {
+                    let way = OsmWay {
                         osm_id: raw_way.id() as usize,
                         tags: raw_way
                             .tags()
@@ -194,22 +162,22 @@ impl OsmReader {
                     let mut properties = EdgePropertyMap::new();
 
                     // TODO: move somewhere else
-                    handle_way(&mut way, &mut properties, Property::MaxSpeed);
+                    handle_way(&way, &mut properties, Property::MaxSpeed);
                     handle_way(
-                        &mut way,
+                        &way,
                         &mut properties,
                         Property::VehicleAccess("car".to_string()),
                     );
                     handle_way(
-                        &mut way,
+                        &way,
                         &mut properties,
                         Property::AverageSpeed("car".to_string()),
                     );
-                    handle_way(&mut way, &mut properties, Property::OsmId);
+                    handle_way(&way, &mut properties, Property::OsmId);
 
                     let nodes = raw_way.nodes();
 
-                    let segments = self.split_way(&nodes);
+                    let segments = self.split_way(nodes);
 
                     for segment in segments {
                         if !self.is_routing_node(segment[0]) {
@@ -270,100 +238,6 @@ impl OsmReader {
                 }
                 _ => (),
             });
-
-        // match element {
-        //     Element::Relation(_) => {
-        //         // Process relation data
-        //         // println!("Relation ID: {}", relation.id());
-        //     }
-        //     Element::DenseNode(node) => {
-        //         self.add_node(
-        //             node.id(),
-        //             GeoPoint {
-        //                 lat: node.lat(),
-        //                 lon: node.lon(),
-        //             },
-        //             node.tags()
-        //                 .map(|tag| (tag.0.to_owned(), tag.1.to_owned()))
-        //                 .collect(),
-        //         );
-        //     }
-        //     Element::Node(node) => self.add_node(
-        //         node.id(),
-        //         GeoPoint {
-        //             lat: node.lat(),
-        //             lon: node.lon(),
-        //         },
-        //         node.tags()
-        //             .map(|tag| (tag.0.to_owned(), tag.1.to_owned()))
-        //             .collect(),
-        //     ),
-        //     Element::Way(raw_way) if OsmReader::accept_way(&raw_way) => {
-        //         let mut way = OsmWay {
-        //             osm_id: raw_way.id() as usize,
-        //             tags: raw_way
-        //                 .tags()
-        //                 .map(|tag| (tag.0.to_owned(), tag.1.to_owned()))
-        //                 .collect(),
-        //         };
-
-        //         let mut properties = EdgePropertyMap::new();
-
-        //         // TODO: move somewhere else
-        //         handle_way(&mut way, &mut properties, Property::MaxSpeed);
-        //         handle_way(
-        //             &mut way,
-        //             &mut properties,
-        //             Property::VehicleAccess("car".to_string()),
-        //         );
-        //         handle_way(&mut way, &mut properties, Property::OsmId);
-
-        //         let nodes: Vec<i64> = raw_way
-        //             .refs()
-        //             .filter(|osm_id| self.osm_node_id_to_node_id.contains_key(osm_id))
-        //             .collect();
-        //         let segments = self.split_way(&nodes);
-
-        //         for segment in segments {
-        //             let start_node = self.osm_node_id_to_node_id[&segment[0]];
-        //             let end_node = self.osm_node_id_to_node_id[&segment[segment.len() - 1]];
-
-        //             let geometry: Vec<GeoPoint> = segment
-        //                 .iter()
-        //                 .map(|osm_node_id| {
-        //                     let node_id = self.osm_node_id_to_node_id[osm_node_id];
-        //                     if self.is_routing_node(*osm_node_id) {
-        //                         self.routing_nodes[node_id].coordinates
-        //                     } else if self.is_geometry_node(*osm_node_id) {
-        //                         self.geometry_nodes[node_id].coordinates
-        //                     } else {
-        //                         panic!(
-        //                             "Unknown node type osm_node_id={}, node_id={}",
-        //                             osm_node_id, node_id
-        //                         );
-        //                     }
-        //                 })
-        //                 .collect();
-
-        //             handle_edge(OsmWaySegment {
-        //                 start_node,
-        //                 end_node,
-        //                 geometry,
-        //                 properties: properties.clone(),
-        //             });
-
-        //             self.processed_segments += 1;
-
-        //             if self.processed_segments % 10000 == 0 {
-        //                 println!("Processed {} segments", self.processed_segments)
-        //             }
-        //         }
-
-        //         // TODO: Split ways at JUNCTION nodes
-        //         //
-        //     }
-        //     _ => {}
-        // }
     }
 
     fn split_way<'a>(&self, node_osm_ids: &'a [i64]) -> Vec<&'a [i64]> {
@@ -451,10 +325,10 @@ impl OsmReader {
     }
 
     fn is_geometry_node(&self, osm_id: i64) -> bool {
-        match self.osm_node_id_to_node_type.get(&osm_id) {
-            Some(OsmNodeType::Geometry) => true,
-            _ => false,
-        }
+        matches!(
+            self.osm_node_id_to_node_type.get(&osm_id),
+            Some(OsmNodeType::Geometry)
+        )
     }
 
     fn read_osm<F: for<'a> FnMut(&mut osmio::pbf::PBFReader<BufReader<File>>)>(
@@ -462,7 +336,7 @@ impl OsmReader {
         mut handler: F,
     ) {
         let mut reader = osmio::read_pbf(file_path)
-            .expect(format!("Failed to read OSM file: {:?}", file_path).as_str());
+            .unwrap_or_else(|_| panic!("Failed to read OSM file: {:?}", file_path));
 
         handler(&mut reader);
 
@@ -474,7 +348,7 @@ impl OsmReader {
 
     pub fn parse_osm_file<F>(&mut self, file_path: &str, mut handle_edge: F)
     where
-        F: FnMut(OsmWaySegment) -> (),
+        F: FnMut(OsmWaySegment),
     {
         println!("Starting first OSM parsing pass");
         OsmReader::read_osm(file_path, |reader| self.handle_element_first_pass(reader));
