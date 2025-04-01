@@ -9,8 +9,13 @@ const BRUSSELS_COORDINATES = {
   longitude: 4.34878,
 }
 
+const PARIS_COORDINATES = {
+  latitude: 48.864716,
+  longitude: 2.349014,
+}
+
 const initialViewState = {
-  ...BRUSSELS_COORDINATES,
+  ...PARIS_COORDINATES,
   zoom: 14,
 }
 

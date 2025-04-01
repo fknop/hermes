@@ -53,12 +53,12 @@ impl TagParser for CarAverageSpeedParser {
     fn handle_way(way: &OsmWay, properties: &mut EdgePropertyMap) {
         let car_average_speed = CarAverageSpeedParser::parse_average_speed(way);
         properties.insert_u8(
-            Property::AverageSpeed(String::from("car")),
+            Property::CarAverageSpeed,
             EdgeDirection::Forward,
             car_average_speed,
         );
         properties.insert_u8(
-            Property::AverageSpeed(String::from("car")),
+            Property::CarAverageSpeed,
             EdgeDirection::Backward,
             car_average_speed,
         );

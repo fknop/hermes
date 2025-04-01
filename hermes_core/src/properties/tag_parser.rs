@@ -14,13 +14,12 @@ pub trait TagParser {
 pub fn handle_way(way: &OsmWay, properties: &mut EdgePropertyMap, property: Property) {
     match property {
         Property::MaxSpeed => MaxSpeedParser::handle_way(way, properties),
-        Property::VehicleAccess(vehicle) if vehicle == "car" => {
+        Property::CarVehicleAccess => {
             CarAccessParser::handle_way(way, properties);
         }
-        Property::AverageSpeed(vehicle) if vehicle == "car" => {
+        Property::CarAverageSpeed => {
             CarAverageSpeedParser::handle_way(way, properties);
         }
         Property::OsmId => OsmIdParser::handle_way(way, properties),
-        _ => panic!("Property does not have tag parser"),
     }
 }

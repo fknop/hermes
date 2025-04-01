@@ -27,16 +27,14 @@ impl CarWeighting {
     fn speed(edge: &GraphEdge, direction: EdgeDirection) -> u8 {
         let access = edge
             .properties
-            .get_bool(Property::VehicleAccess("car".to_string()), direction)
+            .get_bool(Property::CarVehicleAccess, direction)
             .unwrap_or(false);
 
         if !access {
             return 0;
         }
 
-        let speed = edge
-            .properties
-            .get_u8(Property::AverageSpeed("car".to_string()), direction);
+        let speed = edge.properties.get_u8(Property::CarAverageSpeed, direction);
 
         speed.unwrap_or(0)
     }

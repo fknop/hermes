@@ -8,8 +8,8 @@
 )]
 pub enum Property {
     MaxSpeed,
-    AverageSpeed(String),
-    VehicleAccess(String),
+    CarAverageSpeed,
+    CarVehicleAccess,
     OsmId,
 }
 
@@ -17,8 +17,8 @@ impl std::fmt::Display for Property {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             Property::MaxSpeed => write!(f, "maxspeed"),
-            Property::AverageSpeed(vehicle_type) => write!(f, "{}_average_speed", vehicle_type),
-            Property::VehicleAccess(vehicle_type) => write!(f, "{}_vehicle_access", vehicle_type),
+            Property::CarAverageSpeed => write!(f, "car_average_speed"),
+            Property::CarVehicleAccess => write!(f, "car_vehicle_access"),
             Property::OsmId => write!(f, "osm_id"),
         }
     }

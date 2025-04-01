@@ -7,8 +7,7 @@ edition = "2024"
 geo = "0.30.0"
 geo-types = "0.7.15"
 intmap = "3.1.0"
-osmio = "0.14.0"
-osmpbf = "0.3.4"
-rkyv = "0.8.10"
+osmpbfreader = "0.17.0"
+rkyv = { version = "0.8.10", features = ["pointer_width_64"] }
 rstar = "0.12.2"
 serde = { version = "1.0.219", features = ["derive"] }

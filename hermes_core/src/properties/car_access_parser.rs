@@ -1,8 +1,8 @@
 use crate::edge_direction::EdgeDirection;
 use crate::osm::osm_reader::OsmWay;
-use crate::properties::property::Property::VehicleAccess;
 use crate::properties::tag_parser::TagParser;
 
+use super::property::Property;
 use super::property_map::EdgePropertyMap;
 
 pub static HIGHWAY_VALUES: [&str; 16] = [
@@ -65,12 +65,11 @@ fn is_roundabout(way: &OsmWay) -> bool {
 // https://wiki.openstreetmap.org/wiki/Tag:highway%3Dservice
 impl TagParser for CarAccessParser {
     fn handle_way(way: &OsmWay, properties: &mut EdgePropertyMap) {
-        let vehicle_key = "car";
         if let WayAccess::Way = car_access(way) {
             if is_oneway(way) || is_roundabout(way) {
                 if is_forward_oneway(way) {
                     properties.insert_bool(
-                        VehicleAccess(vehicle_key.to_string()),
+                        Property::CarVehicleAccess,
                         EdgeDirection::Forward,
                         true,
                     );
@@ -78,34 +77,18 @@ impl TagParser for CarAccessParser {
 
                 if is_backward_oneway(way) {
                     properties.insert_bool(
-                        VehicleAccess(vehicle_key.to_string()),
+                        Property::CarVehicleAccess,
                         EdgeDirection::Backward,
                         true,
                     );
                 }
             } else {
-                properties.insert_bool(
-                    VehicleAccess(vehicle_key.to_string()),
-                    EdgeDirection::Forward,
-                    true,
-                );
-                properties.insert_bool(
-                    VehicleAccess(vehicle_key.to_string()),
-                    EdgeDirection::Backward,
-                    true,
-                );
+                properties.insert_bool(Property::CarVehicleAccess, EdgeDirection::Forward, true);
+                properties.insert_bool(Property::CarVehicleAccess, EdgeDirection::Backward, true);
             }
         } else {
-            properties.insert_bool(
-                VehicleAccess(vehicle_key.to_string()),
-                EdgeDirection::Forward,
-                false,
-            );
-            properties.insert_bool(
-                VehicleAccess(vehicle_key.to_string()),
-                EdgeDirection::Backward,
-                false,
-            );
+            properties.insert_bool(Property::CarVehicleAccess, EdgeDirection::Forward, false);
+            properties.insert_bool(Property::CarVehicleAccess, EdgeDirection::Backward, false);
         }
     }
 }

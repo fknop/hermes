@@ -6,7 +6,6 @@ import { GeocoderProps } from '@mapbox/search-js-react/dist/components/Geocoder'
 
 const options = {
   language: 'en',
-  country: 'BE',
 }
 
 // https://docs.mapbox.com/mapbox-search-js/api/web/theming/#theme
