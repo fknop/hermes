@@ -7,7 +7,7 @@ use super::property_map::EdgePropertyMap;
 pub struct OsmIdParser;
 
 impl TagParser for OsmIdParser {
-    fn handle_way(way: &OsmWay, properties: &mut EdgePropertyMap) {
+    fn parse_way(way: &OsmWay, properties: &mut EdgePropertyMap) {
         let osm_id = way.osm_id();
         properties.insert_usize(Property::OsmId, osm_id);
     }

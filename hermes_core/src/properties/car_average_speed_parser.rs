@@ -50,7 +50,7 @@ impl CarAverageSpeedParser {
 }
 
 impl TagParser for CarAverageSpeedParser {
-    fn handle_way(way: &OsmWay, properties: &mut EdgePropertyMap) {
+    fn parse_way(way: &OsmWay, properties: &mut EdgePropertyMap) {
         let car_average_speed = CarAverageSpeedParser::parse_average_speed(way);
         properties.insert_u8(
             Property::CarAverageSpeed,

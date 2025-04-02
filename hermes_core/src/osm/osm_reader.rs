@@ -1,7 +1,7 @@
 use crate::geopoint::GeoPoint;
 use crate::properties::property::Property;
 use crate::properties::property_map::EdgePropertyMap;
-use crate::properties::tag_parser::handle_way;
+use crate::properties::tag_parser::parse_way_tags;
 
 use osmpbfreader::{NodeId, OsmObj, OsmPbfReader};
 use std::{collections::HashMap, fs::File, path::Path};
@@ -156,10 +156,10 @@ impl OsmReader {
                     let mut properties = EdgePropertyMap::new();
 
                     // TODO: move somewhere else
-                    handle_way(&way, &mut properties, Property::MaxSpeed);
-                    handle_way(&way, &mut properties, Property::CarVehicleAccess);
-                    handle_way(&way, &mut properties, Property::CarAverageSpeed);
-                    handle_way(&way, &mut properties, Property::OsmId);
+                    parse_way_tags(&way, &mut properties, Property::MaxSpeed);
+                    parse_way_tags(&way, &mut properties, Property::CarVehicleAccess);
+                    parse_way_tags(&way, &mut properties, Property::CarAverageSpeed);
+                    parse_way_tags(&way, &mut properties, Property::OsmId);
 
                     let nodes: Vec<i64> = raw_way
                         .nodes
@@ -171,19 +171,14 @@ impl OsmReader {
 
                     for segment in segments {
                         if !self.is_routing_node(segment[0]) {
-                            println!(
-                                "FIRST: node {} is not a routing node, geometry: {}",
-                                segment[0],
-                                self.is_geometry_node(segment[0])
-                            );
+                            panic!("First node {} is not a routing node", segment[0])
                         }
 
                         if !self.is_routing_node(segment[segment.len() - 1]) {
-                            println!(
-                                "LAST: node {} is not a routing node geometry: {}",
-                                segment[segment.len() - 1],
-                                self.is_geometry_node(segment[segment.len() - 1])
-                            );
+                            panic!(
+                                "Last node {} is not a routing node",
+                                segment[segment.len() - 1]
+                            )
                         }
 
                         let start_node = self.osm_node_id_to_node_id[&segment[0]];
@@ -222,14 +217,12 @@ impl OsmReader {
                             println!("Processed {} segments", self.processed_segments)
                         }
                     }
-
-                    // TODO: Split ways at JUNCTION nodes
-                    //
                 }
                 _ => (),
             });
     }
 
+    /// This splits the segments at junction nodes
     fn split_way<'a>(&self, node_osm_ids: &'a [i64]) -> Vec<&'a [i64]> {
         let mut start: usize = 0;
 

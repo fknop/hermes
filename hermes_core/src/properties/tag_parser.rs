@@ -8,18 +8,18 @@ use super::car_average_speed_parser::CarAverageSpeedParser;
 use super::property_map::EdgePropertyMap;
 
 pub trait TagParser {
-    fn handle_way(way: &OsmWay, properties: &mut EdgePropertyMap);
+    fn parse_way(way: &OsmWay, properties: &mut EdgePropertyMap);
 }
 
-pub fn handle_way(way: &OsmWay, properties: &mut EdgePropertyMap, property: Property) {
+pub fn parse_way_tags(way: &OsmWay, properties: &mut EdgePropertyMap, property: Property) {
     match property {
-        Property::MaxSpeed => MaxSpeedParser::handle_way(way, properties),
+        Property::MaxSpeed => MaxSpeedParser::parse_way(way, properties),
         Property::CarVehicleAccess => {
-            CarAccessParser::handle_way(way, properties);
+            CarAccessParser::parse_way(way, properties);
         }
         Property::CarAverageSpeed => {
-            CarAverageSpeedParser::handle_way(way, properties);
+            CarAverageSpeedParser::parse_way(way, properties);
         }
-        Property::OsmId => OsmIdParser::handle_way(way, properties),
+        Property::OsmId => OsmIdParser::parse_way(way, properties),
     }
 }

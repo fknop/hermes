@@ -1,4 +1,5 @@
 mod astar;
+mod astar_heuristic;
 pub mod base_graph;
 mod bidirectional_astar;
 mod constants;

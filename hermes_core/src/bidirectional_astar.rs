@@ -1,3 +1,4 @@
+use crate::astar_heuristic::AStarHeuristic;
 use crate::constants::{INVALID_EDGE, INVALID_NODE, MAX_WEIGHT};
 use crate::edge_direction::EdgeDirection;
 use crate::geopoint::GeoPoint;
@@ -72,10 +73,6 @@ impl NodeData {
 enum SearchDirection {
     Forward,
     Backward,
-}
-
-pub trait AStarHeuristic {
-    fn estimate(&self, graph: &impl Graph, from: usize, to: usize) -> Weight;
 }
 
 pub struct HaversineHeuristic;
@@ -393,7 +390,7 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
     fn build_path(
         &mut self,
         graph: &impl Graph,
-        weighting: &dyn Weighting,
+        weighting: &impl Weighting,
         _start: usize,
         _end: usize,
     ) -> RoutingPath {
@@ -450,7 +447,7 @@ impl<H: AStarHeuristic> ShortestPathAlgorithm for BidirectionalAStar<H> {
     fn calc_path(
         &mut self,
         graph: &impl Graph,
-        weighting: &dyn Weighting,
+        weighting: &impl Weighting,
         start: usize,
         end: usize,
         options: Option<ShortestPathOptions>,

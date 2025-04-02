@@ -1,23 +1,17 @@
 // This below comes from osmio
 
-/// How many nanodegrees are represented by each unit in [`Lat::inner()`].
-/// We use the same internal precision as OpenStreetMap.org, 100 nanodegrees.
-pub const COORD_PRECISION_NANOS: i32 = 100;
-
-/// Number of internal units (as returned from [`Lat::inner`]) in one degree.
-///
-/// See [`COORD_PRECISION_NANOS`].
-pub const COORD_SCALE_FACTOR: f64 = (1_000_000_000 / COORD_PRECISION_NANOS) as f64;
+// One µ is 10^-6, a decimicro is 10^-7
+pub const DECIMICRO_SCALE_FACTOR: f64 = 10_000_000.0;
 
 #[derive(PartialEq, Copy, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
 pub struct Degrees(i32);
 
 impl Degrees {
     pub fn degrees(&self) -> f64 {
-        self.0 as f64 / COORD_SCALE_FACTOR
+        self.0 as f64 / DECIMICRO_SCALE_FACTOR
     }
 
-    pub fn nanos(&self) -> i32 {
+    pub fn decimicros(&self) -> i32 {
         self.0
     }
 }
@@ -37,7 +31,7 @@ impl From<i32> for Degrees {
 impl TryFrom<f64> for Degrees {
     type Error = ParseDegreesError;
     fn try_from(val: f64) -> Result<Degrees, Self::Error> {
-        match (val * COORD_SCALE_FACTOR).round() {
+        match (val * DECIMICRO_SCALE_FACTOR).round() {
             x if x > (i32::MAX as f64) => Err(ParseDegreesError::TooLarge(x)),
             x if x < (i32::MIN as f64) => Err(ParseDegreesError::TooSmall(x)),
             x => Ok(Self(x as i32)),

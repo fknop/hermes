@@ -20,7 +20,7 @@ impl MaxSpeedParser {
 
 // https://wiki.openstreetmap.org/wiki/Key:maxspeed
 impl TagParser for MaxSpeedParser {
-    fn handle_way(way: &OsmWay, properties: &mut EdgePropertyMap) {
+    fn parse_way(way: &OsmWay, properties: &mut EdgePropertyMap) {
         if let Some(max_speed) = MaxSpeedParser::parse_max_speed(way) {
             properties.insert_u8(Property::MaxSpeed, EdgeDirection::Forward, max_speed);
             properties.insert_u8(Property::MaxSpeed, EdgeDirection::Backward, max_speed);

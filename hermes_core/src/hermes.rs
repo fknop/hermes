@@ -18,7 +18,8 @@ pub struct Hermes {
     graph: BaseGraph,
     index: LocationIndex,
     // TODO: Sync + Send, I don't know what I'm doing here
-    profiles: HashMap<String, Box<dyn Weighting + Sync + Send>>,
+    // profiles: HashMap<String, Box<dyn Weighting + Sync + Send>>,
+    car_weighting: CarWeighting,
 }
 
 const GRAPH_FILE_NAME: &str = "graph.bin";
@@ -39,14 +40,14 @@ impl Hermes {
             BaseGraph::from_file(graph_file.into_os_string().into_string().unwrap().as_str());
         let location_index = LocationIndex::build_from_graph(&graph);
 
-        let mut profiles: HashMap<String, Box<dyn Weighting + Sync + Send>> = HashMap::new();
+        // let mut profiles: HashMap<String, Box<dyn Weighting + Sync + Send>> = HashMap::new();
         // Add default profile
-        profiles.insert("car".to_string(), Box::from(CarWeighting::new()));
+        // profiles.insert("car".to_string(), Box::from(CarWeighting::new()));
 
         Hermes {
             graph,
             index: location_index,
-            profiles,
+            car_weighting: CarWeighting::new(), // profiles,
         }
     }
 
@@ -61,7 +62,7 @@ impl Hermes {
         Hermes {
             graph,
             index,
-            profiles,
+            car_weighting: CarWeighting::new(), // profiles,
         }
     }
 
@@ -74,13 +75,10 @@ impl Hermes {
     }
 
     pub fn route(&self, request: RoutingRequest) -> Result<ShortestPathResult, String> {
-        let profile = self.profiles.get(&request.profile);
-
-        if profile.is_none() {
-            return Err(format!("No profile found for {}", request.profile));
-        }
-
-        let weighting = profile.unwrap().as_ref();
+        let weighting = match request.profile.as_str() {
+            "car" => &self.car_weighting,
+            _ => return Err(String::from("No profile found")),
+        };
 
         let start_snap_stop_watch = Stopwatch::new("snap/start");
         let start_snap = self
@@ -136,11 +134,9 @@ impl Hermes {
     }
 
     pub fn closest_edge(&self, profile: String, coordinates: GeoPoint) -> Option<usize> {
-        let weighting = self.profiles.get(&profile)?;
-
         let snap = self
             .index
-            .snap(self.graph(), weighting.as_ref(), &coordinates)?;
+            .snap(self.graph(), &self.car_weighting, &coordinates)?;
         Some(snap.edge_id)
     }
 }

@@ -18,7 +18,7 @@ pub trait ShortestPathAlgorithm {
     fn calc_path(
         &mut self,
         graph: &impl Graph,
-        weighting: &dyn Weighting,
+        weighting: &impl Weighting,
         start: usize,
         end: usize,
         options: Option<ShortestPathOptions>,

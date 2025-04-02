@@ -28,11 +28,11 @@ impl GeoPoint {
     }
 
     pub fn lon_nano(&self) -> i32 {
-        self.lon.nanos()
+        self.lon.decimicros()
     }
 
     pub fn lat_nano(&self) -> i32 {
-        self.lat.nanos()
+        self.lat.decimicros()
     }
 
     pub fn lon(&self) -> f64 {

@@ -64,7 +64,7 @@ fn is_roundabout(way: &OsmWay) -> bool {
 
 // https://wiki.openstreetmap.org/wiki/Tag:highway%3Dservice
 impl TagParser for CarAccessParser {
-    fn handle_way(way: &OsmWay, properties: &mut EdgePropertyMap) {
+    fn parse_way(way: &OsmWay, properties: &mut EdgePropertyMap) {
         if let WayAccess::Way = car_access(way) {
             if is_oneway(way) || is_roundabout(way) {
                 if is_forward_oneway(way) {
