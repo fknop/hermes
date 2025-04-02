@@ -1,16 +1,17 @@
-use crate::astar_heuristic::AStarHeuristic;
 use crate::constants::{INVALID_EDGE, INVALID_NODE, MAX_WEIGHT};
 use crate::edge_direction::EdgeDirection;
 use crate::geopoint::GeoPoint;
 use crate::graph::Graph;
-use crate::routing_path::{RoutingPath, RoutingPathItem};
-use crate::shortest_path_algorithm::{
-    ShortestPathAlgorithm, ShortestPathDebugInfo, ShortestPathOptions, ShortestPathResult,
-};
+use crate::routing::astar_heuristic::AStarHeuristic;
 use crate::stopwatch::Stopwatch;
 use crate::weighting::{Weight, Weighting};
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
+
+use super::routing_path::{RoutingPath, RoutingPathLeg};
+use super::shortest_path_algorithm::{
+    ShortestPathAlgorithm, ShortestPathDebugInfo, ShortestPathOptions, ShortestPathResult,
+};
 
 /// https://en.wikipedia.org/wiki/A*_search_algorithm
 
@@ -160,7 +161,7 @@ impl<H: AStarHeuristic> AStar<H> {
         _start: usize,
         end: usize,
     ) -> RoutingPath {
-        let mut path: Vec<RoutingPathItem> = Vec::with_capacity(32);
+        let mut path: Vec<RoutingPathLeg> = Vec::with_capacity(32);
 
         let mut node = end;
 
@@ -182,7 +183,7 @@ impl<H: AStarHeuristic> AStar<H> {
             let distance = edge.distance();
             let time = weighting.calc_edge_ms(edge, direction);
 
-            path.push(RoutingPathItem::new(distance, time, geometry));
+            path.push(RoutingPathLeg::new(distance, time, geometry));
             node = node_data.parent;
             node_data = self.node_data(node);
         }

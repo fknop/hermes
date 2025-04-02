@@ -1,4 +1,6 @@
-use crate::{geopoint::GeoPoint, graph::Graph, routing_path::RoutingPath, weighting::Weighting};
+use crate::{geopoint::GeoPoint, graph::Graph, weighting::Weighting};
+
+use super::routing_path::RoutingPath;
 
 pub struct ShortestPathOptions {
     pub include_debug_info: Option<bool>,

@@ -1,4 +1,5 @@
-use crate::{astar::AStar, astar_heuristic::AStarHeuristic, graph::Graph, weighting::Weight};
+use super::{astar::AStar, astar_heuristic::AStarHeuristic};
+use crate::{graph::Graph, weighting::Weight};
 
 pub struct DijkstraHeuristic;
 

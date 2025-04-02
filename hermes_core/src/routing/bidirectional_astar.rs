@@ -1,16 +1,18 @@
-use crate::astar_heuristic::AStarHeuristic;
 use crate::constants::{INVALID_EDGE, INVALID_NODE, MAX_WEIGHT};
 use crate::edge_direction::EdgeDirection;
 use crate::geopoint::GeoPoint;
 use crate::graph::Graph;
-use crate::routing_path::{RoutingPath, RoutingPathItem};
-use crate::shortest_path_algorithm::{
-    ShortestPathAlgorithm, ShortestPathDebugInfo, ShortestPathOptions, ShortestPathResult,
-};
+
 use crate::stopwatch::Stopwatch;
 use crate::weighting::{Weight, Weighting};
 use std::cmp::{Ordering, max};
 use std::collections::{BinaryHeap, HashMap};
+
+use super::astar_heuristic::AStarHeuristic;
+use super::routing_path::{RoutingPath, RoutingPathLeg};
+use super::shortest_path_algorithm::{
+    ShortestPathAlgorithm, ShortestPathDebugInfo, ShortestPathOptions, ShortestPathResult,
+};
 
 /// Bidirectional A* search algorithm
 /// Implement strategies from "Yet another bidirectional algorithm for shortest paths"
@@ -316,8 +318,8 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
         graph: &impl Graph,
         weighting: &dyn Weighting,
         node: usize,
-    ) -> Vec<RoutingPathItem> {
-        let mut path: Vec<RoutingPathItem> = Vec::with_capacity(32);
+    ) -> Vec<RoutingPathLeg> {
+        let mut path: Vec<RoutingPathLeg> = Vec::with_capacity(32);
         let mut current_node = node;
 
         while let Some(node_data) = self.forward_data.get(&current_node) {
@@ -339,7 +341,7 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
             let distance = edge.distance();
             let time = weighting.calc_edge_ms(edge, direction);
 
-            path.push(RoutingPathItem::new(distance, time, geometry));
+            path.push(RoutingPathLeg::new(distance, time, geometry));
             current_node = parent;
         }
 
@@ -352,8 +354,8 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
         graph: &impl Graph,
         weighting: &dyn Weighting,
         node: usize,
-    ) -> Vec<RoutingPathItem> {
-        let mut path: Vec<RoutingPathItem> = Vec::with_capacity(32);
+    ) -> Vec<RoutingPathLeg> {
+        let mut path: Vec<RoutingPathLeg> = Vec::with_capacity(32);
 
         // Start with the first outgoing edge from the meeting node
         let mut current_node = node;
@@ -380,7 +382,7 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
             let distance = edge.distance();
             let time = weighting.calc_edge_ms(edge, direction);
 
-            path.push(RoutingPathItem::new(distance, time, geometry));
+            path.push(RoutingPathLeg::new(distance, time, geometry));
             current_node = parent;
         }
 

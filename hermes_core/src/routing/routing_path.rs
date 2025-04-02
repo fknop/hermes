@@ -1,15 +1,15 @@
-
 use crate::{
     distance::{Distance, Meters},
     geopoint::GeoPoint,
 };
-pub struct RoutingPathItem {
+
+pub struct RoutingPathLeg {
     distance: Distance<Meters>,
     time: usize,
     points: Vec<GeoPoint>,
 }
 
-impl RoutingPathItem {
+impl RoutingPathLeg {
     pub fn distance(&self) -> Distance<Meters> {
         self.distance
     }
@@ -23,9 +23,9 @@ impl RoutingPathItem {
     }
 }
 
-impl RoutingPathItem {
-    pub fn new(distance: Distance<Meters>, time: usize, points: Vec<GeoPoint>) -> RoutingPathItem {
-        RoutingPathItem {
+impl RoutingPathLeg {
+    pub fn new(distance: Distance<Meters>, time: usize, points: Vec<GeoPoint>) -> RoutingPathLeg {
+        RoutingPathLeg {
             points,
             distance,
             time,
@@ -34,15 +34,15 @@ impl RoutingPathItem {
 }
 
 pub struct RoutingPath {
-    items: Vec<RoutingPathItem>,
+    legs: Vec<RoutingPathLeg>,
 }
 
 impl RoutingPath {
-    pub fn new(items: Vec<RoutingPathItem>) -> RoutingPath {
-        RoutingPath { items }
+    pub fn new(legs: Vec<RoutingPathLeg>) -> RoutingPath {
+        RoutingPath { legs }
     }
 
-    pub fn legs(&self) -> &[RoutingPathItem] {
-        &self.items
+    pub fn legs(&self) -> &[RoutingPathLeg] {
+        &self.legs
     }
 }
