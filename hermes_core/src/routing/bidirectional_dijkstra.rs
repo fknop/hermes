@@ -7,6 +7,7 @@ use crate::stopwatch::Stopwatch;
 use crate::weighting::{Weight, Weighting};
 use std::cmp::{Ordering, max};
 use std::collections::{BinaryHeap, HashMap};
+use std::ops::{Index, IndexMut};
 
 use super::astar_heuristic::AStarHeuristic;
 use super::routing_path::{RoutingPath, RoutingPathLeg};
@@ -14,11 +15,6 @@ use super::search_direction::SearchDirection;
 use super::shortest_path_algorithm::{
     ShortestPathAlgorithm, ShortestPathDebugInfo, ShortestPathOptions, ShortestPathResult,
 };
-
-/// Bidirectional A* search algorithm
-/// Implement strategies from "Yet another bidirectional algorithm for shortest paths"
-/// Wim Pijls, Henk Post
-/// https://repub.eur.nl/pub/16100/ei2009-10.pdf
 
 #[derive(Eq, Copy, Clone, Debug)]
 struct HeapItem {
@@ -50,16 +46,16 @@ impl Ord for HeapItem {
     }
 }
 
-struct NodeData {
+pub(crate) struct NodeDataEntry {
     settled: bool,
     weight: Weight,
     parent: usize,
     edge_id: usize, // Edge ID from parent to current node
 }
 
-impl NodeData {
+impl NodeDataEntry {
     fn new() -> Self {
-        NodeData {
+        NodeDataEntry {
             settled: false,
             weight: MAX_WEIGHT,
             parent: INVALID_NODE,
@@ -68,21 +64,81 @@ impl NodeData {
     }
 }
 
-pub struct BidirectionalDijkstra<'a, G: Graph, W: Weighting> {
+pub(crate) trait NodeData {
+    fn clear(&mut self);
+    fn get(&self, index: usize) -> Option<&NodeDataEntry>;
+    fn get_mut(&mut self, index: usize) -> Option<&mut NodeDataEntry>;
+}
+
+pub(crate) struct HashMapNodeData {
+    data: HashMap<usize, NodeDataEntry>,
+}
+
+impl HashMapNodeData {
+    fn with_capacity(capacity_hint: usize) -> Self {
+        HashMapNodeData {
+            data: HashMap::with_capacity(capacity_hint),
+        }
+    }
+}
+
+impl NodeData for HashMapNodeData {
+    fn clear(&mut self) {
+        self.data.clear();
+    }
+
+    fn get(&self, index: usize) -> Option<&NodeDataEntry> {
+        self.data.get(&index)
+    }
+
+    fn get_mut(&mut self, index: usize) -> Option<&mut NodeDataEntry> {
+        Some(self.data.entry(index).or_insert_with(NodeDataEntry::new))
+    }
+}
+
+pub(crate) struct VectorNodeData {
+    data: Vec<NodeDataEntry>,
+}
+
+impl NodeData for VectorNodeData {
+    fn clear(&mut self) {
+        self.data.fill_with(NodeDataEntry::new);
+    }
+
+    #[inline(always)]
+    fn get(&self, index: usize) -> Option<&NodeDataEntry> {
+        self.data.get(index)
+    }
+
+    #[inline(always)]
+    fn get_mut(&mut self, index: usize) -> Option<&mut NodeDataEntry> {
+        self.data.get_mut(index)
+    }
+}
+
+impl VectorNodeData {
+    fn with_capacity(capacity_hint: usize) -> Self {
+        let mut data = Vec::with_capacity(capacity_hint);
+        data.resize_with(capacity_hint, NodeDataEntry::new);
+        VectorNodeData { data }
+    }
+}
+
+pub(crate) struct BidirectionalDijkstra<'a, G: Graph, W: Weighting, ND: NodeData> {
     graph: &'a G,
     weighting: &'a W,
 
     // Forward search (from start node)
     forward_current_node: Option<usize>,
     forward_heap: BinaryHeap<HeapItem>,
-    forward_data: HashMap<usize, NodeData>,
+    forward_data: ND,
 
     debug_forward_visited_nodes: Option<Vec<usize>>,
 
     // Backward search (from target node)
     backward_current_node: Option<usize>,
     backward_heap: BinaryHeap<HeapItem>,
-    backward_data: HashMap<usize, NodeData>,
+    backward_data: ND,
 
     debug_backward_visited_nodes: Option<Vec<usize>>,
 
@@ -94,17 +150,41 @@ pub struct BidirectionalDijkstra<'a, G: Graph, W: Weighting> {
     nodes_visited: usize,
 }
 
-pub struct BidirectionalDijkstraOptions {
-    pub reverse: bool,
+impl<'a, G: Graph, W: Weighting> BidirectionalDijkstra<'a, G, W, VectorNodeData> {
+    pub fn with_capacity(graph: &'a G, weighting: &'a W, capacity_hint: usize) -> Self {
+        // Allocate data structures for both search directions
+        let forward_data = VectorNodeData::with_capacity(capacity_hint);
+        let forward_heap: BinaryHeap<HeapItem> = BinaryHeap::with_capacity(capacity_hint / 2);
+
+        let backward_data = VectorNodeData::with_capacity(capacity_hint);
+        let backward_heap: BinaryHeap<HeapItem> = BinaryHeap::with_capacity(capacity_hint / 2);
+
+        BidirectionalDijkstra {
+            graph,
+            weighting,
+            forward_current_node: None,
+            forward_data,
+            forward_heap,
+            backward_current_node: None,
+            backward_data,
+            backward_heap,
+            best_meeting_node: INVALID_NODE,
+            best_path_weight: MAX_WEIGHT,
+            // heuristic,
+            debug_forward_visited_nodes: None,
+            debug_backward_visited_nodes: None,
+            nodes_visited: 0,
+        }
+    }
 }
 
-impl<'a, G: Graph, W: Weighting> BidirectionalDijkstra<'a, G, W> {
+impl<'a, G: Graph, W: Weighting> BidirectionalDijkstra<'a, G, W, HashMapNodeData> {
     pub fn new(graph: &'a G, weighting: &'a W) -> Self {
         // Allocate data structures for both search directions
-        let forward_data = HashMap::with_capacity(50000);
+        let forward_data = HashMapNodeData::with_capacity(50000);
         let forward_heap: BinaryHeap<HeapItem> = BinaryHeap::with_capacity(50000);
 
-        let backward_data = HashMap::with_capacity(50000);
+        let backward_data = HashMapNodeData::with_capacity(50000);
         let backward_heap: BinaryHeap<HeapItem> = BinaryHeap::with_capacity(50000);
 
         BidirectionalDijkstra {
@@ -124,11 +204,28 @@ impl<'a, G: Graph, W: Weighting> BidirectionalDijkstra<'a, G, W> {
             nodes_visited: 0,
         }
     }
+}
 
+impl<'a, G: Graph, W: Weighting, N: NodeData> BidirectionalDijkstra<'a, G, W, N> {
     pub fn current_node(&self, dir: SearchDirection) -> Option<usize> {
         match dir {
             SearchDirection::Forward => self.forward_current_node,
             SearchDirection::Backward => self.backward_current_node,
+        }
+    }
+
+    pub fn node_weight(&self, node: usize, dir: SearchDirection) -> Weight {
+        match dir {
+            SearchDirection::Forward => self
+                .forward_data
+                .get(node)
+                .map(|entry| entry.weight)
+                .unwrap_or(MAX_WEIGHT),
+            SearchDirection::Backward => self
+                .backward_data
+                .get(node)
+                .map(|entry| entry.weight)
+                .unwrap_or(MAX_WEIGHT),
         }
     }
 
@@ -155,7 +252,7 @@ impl<'a, G: Graph, W: Weighting> BidirectionalDijkstra<'a, G, W> {
         self.init_node(end, SearchDirection::Backward);
     }
 
-    fn node_data_for_direction(&mut self, dir: SearchDirection) -> &mut HashMap<usize, NodeData> {
+    fn node_data_for_direction(&mut self, dir: SearchDirection) -> &mut N {
         match dir {
             SearchDirection::Forward => &mut self.forward_data,
             SearchDirection::Backward => &mut self.backward_data,
@@ -177,35 +274,23 @@ impl<'a, G: Graph, W: Weighting> BidirectionalDijkstra<'a, G, W> {
         parent: usize,
         edge_id: usize,
     ) {
-        let data = self.node_data_for_direction(dir);
-        if let Some(node_data) = data.get_mut(&node) {
-            node_data.weight = weight;
-            node_data.settled = false;
-            node_data.parent = parent;
-            node_data.edge_id = edge_id;
-        } else {
-            data.insert(
-                node,
-                NodeData {
-                    weight,
-                    settled: false,
-                    edge_id,
-                    parent,
-                },
-            );
+        if let Some(entry) = self.node_data_for_direction(dir).get_mut(node) {
+            entry.weight = weight;
+            entry.parent = parent;
+            entry.edge_id = edge_id;
+            entry.settled = false
         }
     }
 
-    fn node_data(&mut self, dir: SearchDirection, node: usize) -> &NodeData {
+    fn node_data(&mut self, dir: SearchDirection, node: usize) -> &NodeDataEntry {
         let data = self.node_data_for_direction(dir);
-        data.entry(node).or_insert_with(NodeData::new)
+        data.get_mut(node).unwrap()
     }
 
     fn set_settled(&mut self, dir: SearchDirection, node: usize) {
-        self.node_data_for_direction(dir)
-            .get_mut(&node)
-            .unwrap()
-            .settled = true;
+        if let Some(entry) = self.node_data_for_direction(dir).get_mut(node) {
+            entry.settled = true
+        }
     }
 
     #[inline(always)]
@@ -293,7 +378,7 @@ impl<'a, G: Graph, W: Weighting> BidirectionalDijkstra<'a, G, W> {
         let mut path: Vec<RoutingPathLeg> = Vec::with_capacity(32);
         let mut current_node = node;
 
-        while let Some(node_data) = self.forward_data.get(&current_node) {
+        while let Some(node_data) = self.forward_data.get(current_node) {
             if node_data.parent == INVALID_NODE {
                 break;
             }
@@ -331,7 +416,7 @@ impl<'a, G: Graph, W: Weighting> BidirectionalDijkstra<'a, G, W> {
         // Start with the first outgoing edge from the meeting node
         let mut current_node = node;
 
-        while let Some(node_data) = self.backward_data.get(&current_node) {
+        while let Some(node_data) = self.backward_data.get(current_node) {
             if node_data.parent == INVALID_NODE {
                 break;
             }

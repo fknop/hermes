@@ -9,6 +9,7 @@ use crate::geopoint::GeoPoint;
 use crate::graph::Graph;
 use crate::osm::osm_reader::OsmReader;
 use crate::properties::property_map::EdgePropertyMap;
+use crate::storage::{read_bytes, write_bytes};
 
 #[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
 pub struct GraphEdge {
@@ -69,14 +70,6 @@ pub struct BaseGraph {
     adjacency_list: Vec<Vec<usize>>,
 }
 
-fn read_bytes(path: &str) -> Vec<u8> {
-    let file = File::open(path).expect("Cannot open file");
-    let mut reader = BufReader::new(file);
-    let mut buffer = Vec::new();
-    reader.read_to_end(&mut buffer).unwrap();
-    buffer
-}
-
 fn from_bytes(bytes: &[u8]) -> BaseGraph {
     let graph = rkyv::from_bytes::<BaseGraph, rkyv::rancor::Error>(bytes).unwrap();
     println!("Deserialized graph from buffer");
@@ -100,13 +93,7 @@ impl BaseGraph {
 
     pub fn save_to_file(&self, path: &str) {
         let bytes = rkyv::to_bytes::<rkyv::rancor::Error>(self).expect("to_bytes failed");
-        let file = File::create(path).expect("failed to create file");
-        let mut writer = BufWriter::new(file);
-
-        writer
-            .write_all(&bytes[..])
-            .expect("failed to write buffer");
-        writer.flush().expect("failed to flush buffer");
+        write_bytes(&bytes[..], path);
     }
 
     pub fn from_file(path: &str) -> BaseGraph {

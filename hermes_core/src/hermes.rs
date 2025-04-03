@@ -1,6 +1,7 @@
 use crate::base_graph::BaseGraph;
 use crate::geopoint::GeoPoint;
 use crate::graph::Graph;
+use crate::landmarks::landmarks_data::LandmarksData;
 use crate::landmarks::landmarks_preparation::LandmarksPreparation;
 use crate::location_index::LocationIndex;
 use crate::query_graph::QueryGraph;
@@ -13,9 +14,8 @@ use crate::routing::shortest_path_algorithm::{
     ShortestPathAlgorithm, ShortestPathOptions, ShortestPathResult,
 };
 use crate::stopwatch::Stopwatch;
+use crate::storage::binary_file_path;
 use crate::weighting::{CarWeighting, Weighting};
-use std::collections::HashMap;
-use std::path::Path;
 
 pub struct Hermes {
     graph: BaseGraph,
@@ -23,25 +23,27 @@ pub struct Hermes {
     // TODO: Sync + Send, I don't know what I'm doing here
     // profiles: HashMap<String, Box<dyn Weighting + Sync + Send>>,
     car_weighting: CarWeighting,
+
+    lm: LandmarksData,
 }
 
 const GRAPH_FILE_NAME: &str = "graph.bin";
+const LANDMARKS_FILE_NAME: &str = "lm.bin";
 
 impl Hermes {
     pub fn save(&self, dir_path: &str) {
-        let directory = Path::new(dir_path);
-        let graph_file = directory.join(GRAPH_FILE_NAME);
+        self.graph
+            .save_to_file(binary_file_path(dir_path, GRAPH_FILE_NAME).as_str());
 
-        self.graph()
-            .save_to_file(graph_file.into_os_string().into_string().unwrap().as_str());
+        self.lm
+            .save_to_file(binary_file_path(dir_path, LANDMARKS_FILE_NAME).as_str());
     }
 
     pub fn from_directory(dir_path: &str) -> Hermes {
-        let directory = Path::new(dir_path);
-        let graph_file = directory.join(GRAPH_FILE_NAME);
-        let graph =
-            BaseGraph::from_file(graph_file.into_os_string().into_string().unwrap().as_str());
+        let graph = BaseGraph::from_file(binary_file_path(dir_path, GRAPH_FILE_NAME).as_str());
         let location_index = LocationIndex::build_from_graph(&graph);
+
+        let lm = LandmarksData::from_file(binary_file_path(dir_path, LANDMARKS_FILE_NAME).as_str());
 
         // let mut profiles: HashMap<String, Box<dyn Weighting + Sync + Send>> = HashMap::new();
         // Add default profile
@@ -51,21 +53,28 @@ impl Hermes {
             graph,
             index: location_index,
             car_weighting: CarWeighting::new(), // profiles,
+            lm,
         }
     }
 
     pub fn from_osm_file(file_path: &str) -> Hermes {
         let graph = BaseGraph::from_osm_file(file_path);
-        let index = LocationIndex::build_from_graph(&graph);
 
-        let mut profiles: HashMap<String, Box<dyn Weighting + Sync + Send>> = HashMap::new();
-        // Add default profile
-        profiles.insert("car".to_string(), Box::from(CarWeighting::new()));
+        // let mut profiles: HashMap<String, Box<dyn Weighting + Sync + Send>> = HashMap::new();
+        // // Add default profile
+        // profiles.insert("car".to_string(), Box::from(CarWeighting::new()));
+
+        let weighting = CarWeighting::new();
+        let lm_preparation = LandmarksPreparation::new(&graph, &weighting);
+        let lm = lm_preparation.create_landmarks(16);
+
+        let index = LocationIndex::build_from_graph(&graph);
 
         Hermes {
             graph,
             index,
-            car_weighting: CarWeighting::new(), // profiles,
+            car_weighting: weighting, // profiles,
+            lm,
         }
     }
 

@@ -15,4 +15,5 @@ mod query_graph;
 pub mod routing;
 mod snap;
 mod stopwatch;
+mod storage;
 pub mod weighting;
