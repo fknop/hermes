@@ -1,5 +1,7 @@
 use crate::base_graph::BaseGraph;
 use crate::geopoint::GeoPoint;
+use crate::graph::Graph;
+use crate::landmarks::landmarks_preparation::LandmarksPreparation;
 use crate::location_index::LocationIndex;
 use crate::query_graph::QueryGraph;
 use crate::routing::astar::AStar;
@@ -132,6 +134,16 @@ impl Hermes {
                 bdirastar.calc_path(&query_graph, weighting, start, end, Some(options))
             }
         }
+    }
+
+    pub fn create_landmarks(&self) -> Vec<GeoPoint> {
+        let lm_preparation = LandmarksPreparation::new(self.graph(), &self.car_weighting);
+
+        let landmarks = lm_preparation.find_landmarks(10);
+        landmarks
+            .iter()
+            .map(|node| *self.graph.node_geometry(*node))
+            .collect()
     }
 
     pub fn closest_edge(&self, profile: String, coordinates: GeoPoint) -> Option<usize> {

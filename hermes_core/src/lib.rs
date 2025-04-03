@@ -7,6 +7,7 @@ mod geometry;
 pub mod geopoint;
 pub mod graph;
 pub mod hermes;
+mod landmarks;
 pub mod location_index;
 pub mod osm;
 mod properties;
