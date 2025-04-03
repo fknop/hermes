@@ -1,11 +1,12 @@
 use crate::{
     distance::{Distance, Meters},
     geopoint::GeoPoint,
+    weighting::DurationMs,
 };
 
 pub struct RoutingPathLeg {
     distance: Distance<Meters>,
-    time: usize,
+    time: DurationMs,
     points: Vec<GeoPoint>,
 }
 
@@ -14,7 +15,7 @@ impl RoutingPathLeg {
         self.distance
     }
 
-    pub fn time(&self) -> usize {
+    pub fn time(&self) -> DurationMs {
         self.time
     }
 
@@ -24,7 +25,11 @@ impl RoutingPathLeg {
 }
 
 impl RoutingPathLeg {
-    pub fn new(distance: Distance<Meters>, time: usize, points: Vec<GeoPoint>) -> RoutingPathLeg {
+    pub fn new(
+        distance: Distance<Meters>,
+        time: DurationMs,
+        points: Vec<GeoPoint>,
+    ) -> RoutingPathLeg {
         RoutingPathLeg {
             points,
             distance,

@@ -5,7 +5,8 @@ use crate::constants::MAX_WEIGHT;
 use crate::edge_direction::EdgeDirection;
 use crate::properties::property::Property;
 
-pub type Weight = usize;
+pub type Weight = u32;
+pub type DurationMs = u32;
 
 pub trait Weighting {
     fn can_access_edge(&self, edge: &GraphEdge) -> bool {
@@ -14,7 +15,7 @@ pub trait Weighting {
     }
 
     fn calc_edge_weight(&self, edge: &GraphEdge, direction: EdgeDirection) -> Weight;
-    fn calc_edge_ms(&self, edge: &GraphEdge, direction: EdgeDirection) -> usize;
+    fn calc_edge_ms(&self, edge: &GraphEdge, direction: EdgeDirection) -> DurationMs;
 }
 
 #[derive(Default)]
@@ -51,18 +52,18 @@ impl Weighting for CarWeighting {
         }
 
         let distance_costs = edge.distance().value() * DISTANCE_INFLUENCE;
-        ((ms as f64 / 1000.0) + distance_costs).round() as usize
+        ((ms as f64 / 1000.0) + distance_costs).round() as Weight
     }
 
-    fn calc_edge_ms(&self, edge: &GraphEdge, direction: EdgeDirection) -> usize {
+    fn calc_edge_ms(&self, edge: &GraphEdge, direction: EdgeDirection) -> DurationMs {
         let speed = Self::speed(edge, direction);
         if speed == 0 {
-            return usize::MAX;
+            return u32::MAX;
         }
 
         let speed_meters_per_second = (speed as f64) / 3.6;
         let ms: f64 = (edge.distance().value() / speed_meters_per_second) * 1000.0;
 
-        ms.round() as usize
+        ms.round() as DurationMs
     }
 }
