@@ -16,4 +16,5 @@ pub mod routing;
 mod snap;
 mod stopwatch;
 mod storage;
+mod test_graph_utils;
 pub mod weighting;

@@ -14,7 +14,7 @@ use crate::routing::routing_request::{RoutingAlgorithm, RoutingRequest};
 use crate::routing::shortest_path_algorithm::{CalcPath, CalcPathOptions, CalcPathResult};
 use crate::stopwatch::Stopwatch;
 use crate::storage::binary_file_path;
-use crate::weighting::{CarWeighting, Weighting};
+use crate::weighting::CarWeighting;
 
 pub struct Hermes {
     graph: BaseGraph,

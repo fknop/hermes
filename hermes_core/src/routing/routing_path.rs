@@ -40,11 +40,27 @@ impl RoutingPathLeg {
 
 pub struct RoutingPath {
     legs: Vec<RoutingPathLeg>,
+    distance: Distance<Meters>,
+    time: DurationMs,
 }
 
 impl RoutingPath {
     pub fn new(legs: Vec<RoutingPathLeg>) -> RoutingPath {
-        RoutingPath { legs }
+        let distance = legs.iter().map(|leg| leg.distance()).sum();
+        let time = legs.iter().map(|leg| leg.time()).sum();
+        RoutingPath {
+            legs,
+            distance,
+            time,
+        }
+    }
+
+    pub fn distance(&self) -> Distance<Meters> {
+        self.distance
+    }
+
+    pub fn time(&self) -> DurationMs {
+        self.time
     }
 
     pub fn legs(&self) -> &[RoutingPathLeg] {

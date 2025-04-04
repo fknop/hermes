@@ -1,6 +1,7 @@
 use std::{
     cmp::Ordering,
     fmt,
+    iter::Sum,
     marker::PhantomData,
     ops::{Add, Div, Sub},
 };
@@ -14,6 +15,15 @@ pub trait DistanceUnit: Copy + Eq {
 pub struct Distance<T: DistanceUnit> {
     nm: i64,
     unit: PhantomData<T>,
+}
+
+impl From<Distance<Kilometers>> for Distance<Meters> {
+    fn from(distance: Distance<Kilometers>) -> Distance<Meters> {
+        Distance {
+            nm: distance.nm,
+            unit: PhantomData,
+        }
+    }
 }
 
 macro_rules! create_distance_unit {
@@ -128,6 +138,19 @@ where
     }
 }
 
+impl<T1, T2> Sum<Distance<T2>> for Distance<T1>
+where
+    T1: DistanceUnit,
+    T2: DistanceUnit,
+{
+    fn sum<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = Distance<T2>>,
+    {
+        iter.fold(Distance::from(0), |acc, x| acc + x)
+    }
+}
+
 impl<T1, T2> Add<Distance<T2>> for Distance<T1>
 where
     T1: DistanceUnit,
@@ -176,6 +199,13 @@ macro_rules! meters {
     };
 }
 
+macro_rules! kilometers {
+    ($num:expr) => {
+        crate::distance::Distance::<crate::distance::Kilometers>::from($num)
+    };
+}
+
+pub(crate) use kilometers;
 pub(crate) use meters;
 
 #[cfg(test)]
@@ -190,5 +220,20 @@ mod tests {
     #[test]
     fn value() {
         assert_eq!(meters!(100).value(), 100.0);
+    }
+
+    #[test]
+    fn should_sum_distances() {
+        assert_eq!(
+            vec![meters!(10), meters!(20)]
+                .into_iter()
+                .sum::<Distance<Meters>>(),
+            meters!(30)
+        );
+    }
+
+    #[test]
+    fn different_units() {
+        assert_eq!(meters!(100) + kilometers!(1), meters!(1100));
     }
 }

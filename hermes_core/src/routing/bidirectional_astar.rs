@@ -587,3 +587,56 @@ impl BidirectionalAStar<HaversineHeuristic> {
         Self::with_heuristic(graph, HaversineHeuristic)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        distance::{kilometers, meters},
+        routing::shortest_path_algorithm::CalcPath,
+        test_graph_utils::test_graph::{RomaniaGraphCity, TestGraph, TestWeighting},
+    };
+
+    use super::*;
+
+    #[test]
+    fn test_calc_path() {
+        let graph = TestGraph::create_romania_graph();
+
+        let mut dijkstra = BidirectionalAStar::new(&graph);
+        let weighting = TestWeighting;
+
+        let result = dijkstra.calc_path(
+            &graph,
+            &weighting,
+            RomaniaGraphCity::Oradea.into(),
+            RomaniaGraphCity::Bucharest.into(),
+            None,
+        );
+
+        assert!(result.is_ok());
+
+        let path = result.unwrap().path;
+        assert_eq!(path.distance(), kilometers!(429))
+    }
+
+    #[test]
+    fn test_calc_path_2() {
+        let graph = TestGraph::create_romania_graph();
+
+        let mut dijkstra = BidirectionalAStar::new(&graph);
+        let weighting = TestWeighting;
+
+        let result = dijkstra.calc_path(
+            &graph,
+            &weighting,
+            RomaniaGraphCity::Iasi.into(),
+            RomaniaGraphCity::Timisoara.into(),
+            None,
+        );
+
+        assert!(result.is_ok());
+
+        let path = result.unwrap().path;
+        assert_eq!(path.distance(), kilometers!(855))
+    }
+}

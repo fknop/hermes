@@ -1,6 +1,4 @@
 use std::cmp::max;
-use std::fs::File;
-use std::io::{BufReader, BufWriter, Read, Write};
 
 use crate::distance::{Distance, Meters};
 use crate::edge_direction::EdgeDirection;
@@ -66,8 +64,8 @@ impl GraphEdge {
 pub struct BaseGraph {
     nodes: usize,
     edges: Vec<GraphEdge>,
-    geometry: Vec<Vec<GeoPoint>>,
     adjacency_list: Vec<Vec<usize>>,
+    geometry: Vec<Vec<GeoPoint>>,
 }
 
 fn from_bytes(bytes: &[u8]) -> BaseGraph {
