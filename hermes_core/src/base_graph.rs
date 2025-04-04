@@ -149,6 +149,10 @@ impl BaseGraph {
 impl Graph for BaseGraph {
     type EdgeIterator<'a> = std::iter::Copied<std::slice::Iter<'a, usize>>;
 
+    fn is_virtual_node(&self, node: usize) -> bool {
+        false
+    }
+
     fn node_edges_iter(&self, node: usize) -> Self::EdgeIterator<'_> {
         self.adjacency_list[node].iter().copied()
     }

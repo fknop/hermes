@@ -12,6 +12,7 @@ enum RoutingAlgorithm {
   Dijkstra = 'Dijkstra',
   Astar = 'Astar',
   BidirectionalAstar = 'BidirectionalAstar',
+  Landmarks = 'Landmarks',
 }
 
 export default function App() {

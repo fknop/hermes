@@ -7,21 +7,15 @@ use crate::stopwatch::Stopwatch;
 use crate::weighting::{Weight, Weighting};
 use std::cmp::{Ordering, max};
 use std::collections::{BinaryHeap, HashMap};
-use std::ops::{Index, IndexMut};
 
-use super::astar_heuristic::AStarHeuristic;
 use super::routing_path::{RoutingPath, RoutingPathLeg};
 use super::search_direction::SearchDirection;
-use super::shortest_path_algorithm::{
-    ShortestPathAlgorithm, ShortestPathDebugInfo, ShortestPathOptions, ShortestPathResult,
-};
+use super::shortest_path_algorithm::{ShortestPathAlgorithm, ShortestPathDebugInfo};
 
 #[derive(Eq, Copy, Clone, Debug)]
-struct HeapItem {
-    node_id: usize,
-
-    /// g_score is the current cheapest weight from start/end to node "node_id"
-    weight: Weight,
+pub struct HeapItem {
+    pub node_id: usize,
+    pub weight: Weight,
 }
 
 impl PartialEq for HeapItem {
@@ -124,7 +118,14 @@ impl VectorNodeData {
     }
 }
 
-pub(crate) struct BidirectionalDijkstra<'a, G: Graph, W: Weighting, ND: NodeData> {
+type StopCondition<'a> = Box<dyn Fn(Option<usize>, Option<usize>) -> bool + 'a>;
+
+pub(crate) struct BidirectionalDijkstra<'a, G, W, ND>
+where
+    G: Graph,
+    W: Weighting,
+    ND: NodeData,
+{
     graph: &'a G,
     weighting: &'a W,
 
@@ -148,10 +149,16 @@ pub(crate) struct BidirectionalDijkstra<'a, G: Graph, W: Weighting, ND: NodeData
     // heuristic: H,
     //
     nodes_visited: usize,
+
+    stop_condition: Option<StopCondition<'a>>,
 }
 
-impl<'a, G: Graph, W: Weighting> BidirectionalDijkstra<'a, G, W, VectorNodeData> {
-    pub fn with_capacity(graph: &'a G, weighting: &'a W, capacity_hint: usize) -> Self {
+impl<'a, G, W> BidirectionalDijkstra<'a, G, W, VectorNodeData>
+where
+    G: Graph,
+    W: Weighting,
+{
+    pub fn with_full_capacity(graph: &'a G, weighting: &'a W, capacity_hint: usize) -> Self {
         // Allocate data structures for both search directions
         let forward_data = VectorNodeData::with_capacity(capacity_hint);
         let forward_heap: BinaryHeap<HeapItem> = BinaryHeap::with_capacity(capacity_hint / 2);
@@ -174,18 +181,27 @@ impl<'a, G: Graph, W: Weighting> BidirectionalDijkstra<'a, G, W, VectorNodeData>
             debug_forward_visited_nodes: None,
             debug_backward_visited_nodes: None,
             nodes_visited: 0,
+            stop_condition: None,
         }
     }
 }
 
-impl<'a, G: Graph, W: Weighting> BidirectionalDijkstra<'a, G, W, HashMapNodeData> {
-    pub fn new(graph: &'a G, weighting: &'a W) -> Self {
-        // Allocate data structures for both search directions
-        let forward_data = HashMapNodeData::with_capacity(50000);
-        let forward_heap: BinaryHeap<HeapItem> = BinaryHeap::with_capacity(50000);
+impl<'a, G, W> BidirectionalDijkstra<'a, G, W, HashMapNodeData>
+where
+    G: Graph,
+    W: Weighting,
+{
+    pub fn set_stop_condition(&mut self, stop_condition: StopCondition<'a>) {
+        self.stop_condition = Some(stop_condition);
+    }
 
-        let backward_data = HashMapNodeData::with_capacity(50000);
-        let backward_heap: BinaryHeap<HeapItem> = BinaryHeap::with_capacity(50000);
+    pub fn with_capacity(graph: &'a G, weighting: &'a W, capacity_hint: usize) -> Self {
+        // Allocate data structures for both search directions
+        let forward_data = HashMapNodeData::with_capacity(capacity_hint);
+        let forward_heap: BinaryHeap<HeapItem> = BinaryHeap::with_capacity(capacity_hint / 2);
+
+        let backward_data = HashMapNodeData::with_capacity(capacity_hint);
+        let backward_heap: BinaryHeap<HeapItem> = BinaryHeap::with_capacity(capacity_hint / 2);
 
         BidirectionalDijkstra {
             graph,
@@ -202,11 +218,17 @@ impl<'a, G: Graph, W: Weighting> BidirectionalDijkstra<'a, G, W, HashMapNodeData
             debug_forward_visited_nodes: None,
             debug_backward_visited_nodes: None,
             nodes_visited: 0,
+            stop_condition: None,
         }
     }
 }
 
-impl<'a, G: Graph, W: Weighting, N: NodeData> BidirectionalDijkstra<'a, G, W, N> {
+impl<'a, G, W, N> BidirectionalDijkstra<'a, G, W, N>
+where
+    G: Graph,
+    W: Weighting,
+    N: NodeData,
+{
     pub fn current_node(&self, dir: SearchDirection) -> Option<usize> {
         match dir {
             SearchDirection::Forward => self.forward_current_node,
@@ -499,8 +521,15 @@ impl<'a, G: Graph, W: Weighting, N: NodeData> BidirectionalDijkstra<'a, G, W, N>
                 .collect(),
         }
     }
+}
 
-    pub fn run(&mut self) {
+impl<G, W, N> ShortestPathAlgorithm for BidirectionalDijkstra<'_, G, W, N>
+where
+    G: Graph,
+    W: Weighting,
+    N: NodeData,
+{
+    fn run(&mut self) {
         let stopwatch = Stopwatch::new("bidirectional_dijkstra/calc_path");
 
         let include_debug_info: bool = false; // TODO
@@ -562,20 +591,8 @@ impl<'a, G: Graph, W: Weighting, N: NodeData> BidirectionalDijkstra<'a, G, W, N>
             self.nodes_visited += 1;
 
             // Check if we can terminate early
-            if self.best_meeting_node != INVALID_NODE {
-                let min_forward_f = self
-                    .forward_heap
-                    .peek()
-                    .map_or(MAX_WEIGHT, |item| item.weight);
-
-                let min_backward_f = self
-                    .backward_heap
-                    .peek()
-                    .map_or(MAX_WEIGHT, |item| item.weight);
-
-                if max(min_forward_f, min_backward_f) >= self.best_path_weight {
-                    break;
-                }
+            if self.finished() {
+                break;
             }
         }
 
@@ -585,5 +602,29 @@ impl<'a, G: Graph, W: Weighting, N: NodeData> BidirectionalDijkstra<'a, G, W, N>
         );
 
         stopwatch.report();
+    }
+
+    fn finished(&self) -> bool {
+        if let Some(ref stop_condition) = self.stop_condition {
+            if stop_condition(
+                self.current_node(SearchDirection::Forward),
+                self.current_node(SearchDirection::Backward),
+            ) {
+                return true;
+            }
+        }
+
+        if self.best_meeting_node != INVALID_NODE {
+            let min_forward_entry = self.forward_heap.peek();
+            let min_backward_entry = self.backward_heap.peek();
+            let min_forward_weight = min_forward_entry.map_or(MAX_WEIGHT, |item| item.weight);
+            let min_backward_weight = min_backward_entry.map_or(MAX_WEIGHT, |item| item.weight);
+
+            if min_forward_weight + min_backward_weight >= self.best_path_weight {
+                return true;
+            }
+        }
+
+        false
     }
 }

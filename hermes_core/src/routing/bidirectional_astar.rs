@@ -12,7 +12,7 @@ use super::astar_heuristic::AStarHeuristic;
 use super::routing_path::{RoutingPath, RoutingPathLeg};
 use super::search_direction::SearchDirection;
 use super::shortest_path_algorithm::{
-    ShortestPathAlgorithm, ShortestPathDebugInfo, ShortestPathOptions, ShortestPathResult,
+    CalcPath, CalcPathOptions, CalcPathResult, ShortestPathDebugInfo,
 };
 
 /// Bidirectional A* search algorithm
@@ -440,15 +440,15 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
     }
 }
 
-impl<H: AStarHeuristic> ShortestPathAlgorithm for BidirectionalAStar<H> {
+impl<H: AStarHeuristic> CalcPath for BidirectionalAStar<H> {
     fn calc_path(
         &mut self,
         graph: &impl Graph,
         weighting: &impl Weighting,
         start: usize,
         end: usize,
-        options: Option<ShortestPathOptions>,
-    ) -> Result<ShortestPathResult, String> {
+        options: Option<CalcPathOptions>,
+    ) -> Result<CalcPathResult, String> {
         let stopwatch = Stopwatch::new("bidirectional_astar/calc_path");
 
         if start == INVALID_NODE {
@@ -578,7 +578,7 @@ impl<H: AStarHeuristic> ShortestPathAlgorithm for BidirectionalAStar<H> {
 
         let path = self.build_path(graph, weighting, start, end);
 
-        Ok(ShortestPathResult { path, debug })
+        Ok(CalcPathResult { path, debug })
     }
 }
 

@@ -127,10 +127,6 @@ impl<'a> QueryGraph<'a> {
         edge_id >= self.base_graph.edge_count()
     }
 
-    fn is_virtual_node(&self, node_id: usize) -> bool {
-        node_id >= self.base_graph.node_count()
-    }
-
     // Assumes node_id is a virtual node
     fn virtual_node_id(&self, node_id: usize) -> usize {
         node_id - self.base_graph.node_count()
@@ -152,6 +148,10 @@ impl Graph for QueryGraph<'_> {
         = QueryGraphEdgeIterator<'b>
     where
         Self: 'b;
+
+    fn is_virtual_node(&self, node_id: usize) -> bool {
+        node_id >= self.base_graph.node_count()
+    }
 
     fn edge_count(&self) -> usize {
         self.base_graph.edge_count() + self.virtual_edges.len()

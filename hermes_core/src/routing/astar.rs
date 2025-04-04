@@ -10,7 +10,7 @@ use std::collections::{BinaryHeap, HashMap};
 
 use super::routing_path::{RoutingPath, RoutingPathLeg};
 use super::shortest_path_algorithm::{
-    ShortestPathAlgorithm, ShortestPathDebugInfo, ShortestPathOptions, ShortestPathResult,
+    CalcPath, CalcPathOptions, CalcPathResult, ShortestPathDebugInfo,
 };
 
 /// https://en.wikipedia.org/wiki/A*_search_algorithm
@@ -213,15 +213,15 @@ impl<H: AStarHeuristic> AStar<H> {
     }
 }
 
-impl<H: AStarHeuristic> ShortestPathAlgorithm for AStar<H> {
+impl<H: AStarHeuristic> CalcPath for AStar<H> {
     fn calc_path(
         &mut self,
         graph: &impl Graph,
         weighting: &impl Weighting,
         start: usize,
         end: usize,
-        options: Option<ShortestPathOptions>,
-    ) -> Result<ShortestPathResult, String> {
+        options: Option<CalcPathOptions>,
+    ) -> Result<CalcPathResult, String> {
         let stopwatch = Stopwatch::new("astar/calc_path");
         if start == INVALID_NODE {
             return Err(String::from("AStar: start node is invalid"));
@@ -309,7 +309,7 @@ impl<H: AStarHeuristic> ShortestPathAlgorithm for AStar<H> {
 
         let path = self.build_path(graph, weighting, start, end);
 
-        Ok(ShortestPathResult {
+        Ok(CalcPathResult {
             path,
             debug: if include_debug_info {
                 Some(self.debug_info(graph))

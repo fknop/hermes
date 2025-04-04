@@ -7,6 +7,7 @@ pub enum RoutingAlgorithm {
     Dijkstra,
     Astar,
     BidirectionalAstar,
+    Landmarks,
 }
 
 pub struct RoutingRequestOptions {

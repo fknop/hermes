@@ -2,7 +2,7 @@ use crate::{geopoint::GeoPoint, graph::Graph, weighting::Weighting};
 
 use super::routing_path::RoutingPath;
 
-pub struct ShortestPathOptions {
+pub struct CalcPathOptions {
     pub include_debug_info: Option<bool>,
 }
 
@@ -11,18 +11,23 @@ pub struct ShortestPathDebugInfo {
     pub backward_visited_nodes: Vec<GeoPoint>,
 }
 
-pub struct ShortestPathResult {
+pub struct CalcPathResult {
     pub path: RoutingPath,
     pub debug: Option<ShortestPathDebugInfo>,
 }
 
-pub trait ShortestPathAlgorithm {
+pub trait CalcPath {
     fn calc_path(
         &mut self,
         graph: &impl Graph,
         weighting: &impl Weighting,
         start: usize,
         end: usize,
-        options: Option<ShortestPathOptions>,
-    ) -> Result<ShortestPathResult, String>;
+        options: Option<CalcPathOptions>,
+    ) -> Result<CalcPathResult, String>;
+}
+
+pub trait ShortestPathAlgorithm {
+    fn run(&mut self);
+    fn finished(&self) -> bool;
 }

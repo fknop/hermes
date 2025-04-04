@@ -7,6 +7,7 @@ pub trait Graph {
 
     fn edge_count(&self) -> usize;
     fn node_count(&self) -> usize;
+    fn is_virtual_node(&self, node: usize) -> bool;
 
     // fn node_edges(&self, node_id: usize) -> &[usize];
     fn node_edges_iter(&self, node_id: usize) -> Self::EdgeIterator<'_>;

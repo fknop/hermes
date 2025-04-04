@@ -1,6 +1,7 @@
 use crate::base_graph::BaseGraph;
 use crate::geopoint::GeoPoint;
 use crate::graph::Graph;
+use crate::landmarks::landmarks_astar::LandmarksAstar;
 use crate::landmarks::landmarks_data::LandmarksData;
 use crate::landmarks::landmarks_preparation::LandmarksPreparation;
 use crate::location_index::LocationIndex;
@@ -10,9 +11,7 @@ use crate::routing::bidirectional_astar::BidirectionalAStar;
 use crate::routing::dijkstra::Dijkstra;
 use crate::routing::routing_request::{RoutingAlgorithm, RoutingRequest};
 
-use crate::routing::shortest_path_algorithm::{
-    ShortestPathAlgorithm, ShortestPathOptions, ShortestPathResult,
-};
+use crate::routing::shortest_path_algorithm::{CalcPath, CalcPathOptions, CalcPathResult};
 use crate::stopwatch::Stopwatch;
 use crate::storage::binary_file_path;
 use crate::weighting::{CarWeighting, Weighting};
@@ -86,7 +85,7 @@ impl Hermes {
         &self.index
     }
 
-    pub fn route(&self, request: RoutingRequest) -> Result<ShortestPathResult, String> {
+    pub fn route(&self, request: RoutingRequest) -> Result<CalcPathResult, String> {
         let weighting = match request.profile.as_str() {
             "car" => &self.car_weighting,
             _ => return Err(String::from("No profile found")),
@@ -121,7 +120,7 @@ impl Hermes {
         let end = snaps[1].closest_node();
 
         let request_options = request.options.as_ref();
-        let options = ShortestPathOptions {
+        let options = CalcPathOptions {
             include_debug_info: request_options.and_then(|options| options.include_debug_info),
         };
 
@@ -138,6 +137,13 @@ impl Hermes {
                 let mut bdirastar = BidirectionalAStar::new(&query_graph);
                 bdirastar.calc_path(&query_graph, weighting, start, end, Some(options))
             }
+
+            Some(RoutingAlgorithm::Landmarks) => {
+                let mut landmarks_astar =
+                    LandmarksAstar::new(&query_graph, weighting, &self.lm, start, end);
+                landmarks_astar.calc_path(&query_graph, weighting, start, end, Some(options))
+            }
+
             None => {
                 let mut bdirastar = BidirectionalAStar::new(&query_graph);
                 bdirastar.calc_path(&query_graph, weighting, start, end, Some(options))

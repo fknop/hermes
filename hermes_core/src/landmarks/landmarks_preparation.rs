@@ -1,7 +1,10 @@
 use crate::{
     base_graph::BaseGraph,
     graph::Graph,
-    routing::{bidirectional_dijkstra::BidirectionalDijkstra, search_direction::SearchDirection},
+    routing::{
+        bidirectional_dijkstra::BidirectionalDijkstra, search_direction::SearchDirection,
+        shortest_path_algorithm::ShortestPathAlgorithm,
+    },
     weighting::{Weight, Weighting},
 };
 
@@ -33,7 +36,7 @@ impl<'a, W: Weighting> LandmarksPreparation<'a, W> {
         let mut weight_from_landmark: Vec<Weight> = Vec::with_capacity(self.graph.node_count());
         let mut weight_to_landmark: Vec<Weight> = Vec::with_capacity(self.graph.node_count());
 
-        let mut landmark_search = BidirectionalDijkstra::with_capacity(
+        let mut landmark_search = BidirectionalDijkstra::with_full_capacity(
             self.graph,
             self.weighting,
             self.graph.node_count(),
@@ -54,7 +57,7 @@ impl<'a, W: Weighting> LandmarksPreparation<'a, W> {
         landmark_search.run();
 
         for node in 0..self.graph.node_count() {
-            weight_to_landmark.push(landmark_search.node_weight(node, SearchDirection::Forward));
+            weight_to_landmark.push(landmark_search.node_weight(node, SearchDirection::Backward));
         }
 
         Landmark::new(node_id, weight_from_landmark, weight_to_landmark)
@@ -63,7 +66,7 @@ impl<'a, W: Weighting> LandmarksPreparation<'a, W> {
     pub fn find_landmarks(&self, landmarks_count: usize) -> Vec<usize> {
         let mut landmarks: Vec<usize> = Vec::new();
 
-        let mut landmark_search = BidirectionalDijkstra::with_capacity(
+        let mut landmark_search = BidirectionalDijkstra::with_full_capacity(
             self.graph,
             self.weighting,
             self.graph.node_count(),
