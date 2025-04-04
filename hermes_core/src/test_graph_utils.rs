@@ -5,10 +5,11 @@ pub mod test_graph {
 
     use crate::{
         base_graph::GraphEdge,
-        distance::{Distance, Kilometers, Meters, kilometers},
+        distance::{Distance, Kilometers, Meters},
         edge_direction::EdgeDirection,
         geopoint::GeoPoint,
         graph::Graph,
+        kilometers,
         properties::property_map::EdgePropertyMap,
         weighting::{DurationMs, Weight, Weighting},
     };

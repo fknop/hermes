@@ -329,7 +329,7 @@ impl AStar<HaversineHeuristic> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        distance::{kilometers, meters},
+        kilometers,
         routing::shortest_path_algorithm::CalcPath,
         test_graph_utils::test_graph::{RomaniaGraphCity, TestGraph, TestWeighting},
     };

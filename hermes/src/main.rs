@@ -1,6 +1,4 @@
-use std::fs;
 
-use geojson::{Feature, Value};
 use hermes_core::hermes::Hermes;
 
 fn main() {

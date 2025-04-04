@@ -3,7 +3,8 @@ use rstar::{AABB, Envelope, PointDistance, RTreeObject};
 use crate::{
     constants::EARTH_RADIUS_METERS,
     degrees::Degrees,
-    distance::{Distance, Meters, meters},
+    distance::{Distance, Meters},
+    meters,
 };
 
 #[derive(PartialEq, Copy, Clone, Debug, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]

@@ -5,7 +5,7 @@ use crate::graph::Graph;
 
 use crate::stopwatch::Stopwatch;
 use crate::weighting::{Weight, Weighting};
-use std::cmp::{Ordering, max};
+use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
 
 use super::routing_path::{RoutingPath, RoutingPathLeg};

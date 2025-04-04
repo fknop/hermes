@@ -1,6 +1,7 @@
 use crate::{
-    distance::{Distance, Meters, meters},
+    distance::{Distance, Meters},
     geopoint::GeoPoint,
+    meters,
 };
 
 pub fn compute_geometry_distance(geometry: &[GeoPoint]) -> Distance<Meters> {
