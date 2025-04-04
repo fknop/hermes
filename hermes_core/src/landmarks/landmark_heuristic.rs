@@ -154,28 +154,16 @@ where
             let landmark_to_end: i64 =
                 (self.lm.weight_from_landmark(i, end) + end_weight_to_real_node) as i64;
 
-            // Triangle inequality: landmark_to_end + landmark_from_start >= weight(start, end)
-            // weight > landmark_to_end - landmark_from_start
-            // let lm_lower_bound = if reverse {
-            //     if end_to_landmark > landmark_to_start {
-            //         end_to_landmark - landmark_to_start
-            //     } else {
-            //         landmark_to_start - end_to_landmark
-            //     }
-            // } else {
-            //     if landmark_to_end > start_to_landmark {
-            //         landmark_to_end - start_to_landmark
-            //     } else {
-            //         start_to_landmark - landmark_to_end
-            //     }
-            // };
-            //
+            // Triangle inequality
+            // S = start, E = end, L = landmark
+            // a) d(S, E) + d(E, L) > d(S, L) <=> d(S, E) > d(S, L) - d(E, L)
+            // b) d(L, S) + d(S, E) > d(L, E) <=> d(S, E) > d(L, E) - d(L, S)
+            // c) -d(S, E) <= -d(S, L) + d(E, L) <=> d(S, L) - d(E, L) < d(S, E)
 
-            // TODO: I'm not sure I get this mathematically yet
-            // This was inspired by GH
             let mut a = start_to_landmark - end_to_landmark;
             let mut b = landmark_to_end - landmark_to_start;
 
+            // TODO: I'm not sure I get this mathematically yet
             if reverse {
                 a *= -1;
                 b *= -1;
