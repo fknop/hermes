@@ -1,9 +1,9 @@
 use crate::base_graph::BaseGraph;
 use crate::geopoint::GeoPoint;
 use crate::graph::Graph;
-use crate::landmarks::landmarks_astar::LandmarksAstar;
-use crate::landmarks::landmarks_data::LandmarksData;
-use crate::landmarks::landmarks_preparation::LandmarksPreparation;
+use crate::landmarks::lm_bidirectional_astar::LMBidirectionalAstar;
+use crate::landmarks::lm_data::LMData;
+use crate::landmarks::lm_preparation::LMPreparation;
 use crate::location_index::LocationIndex;
 use crate::query_graph::QueryGraph;
 use crate::routing::astar::AStar;
@@ -23,7 +23,7 @@ pub struct Hermes {
     // profiles: HashMap<String, Box<dyn Weighting + Sync + Send>>,
     car_weighting: CarWeighting,
 
-    lm: LandmarksData,
+    lm: LMData,
 }
 
 const GRAPH_FILE_NAME: &str = "graph.bin";
@@ -44,7 +44,7 @@ impl Hermes {
         let graph = BaseGraph::from_file(binary_file_path(dir_path, GRAPH_FILE_NAME).as_str());
         let location_index = LocationIndex::build_from_graph(&graph);
 
-        let lm = LandmarksData::from_file(binary_file_path(dir_path, LANDMARKS_FILE_NAME).as_str());
+        let lm = LMData::from_file(binary_file_path(dir_path, LANDMARKS_FILE_NAME).as_str());
 
         // let mut profiles: HashMap<String, Box<dyn Weighting + Sync + Send>> = HashMap::new();
         // Add default profile
@@ -66,7 +66,7 @@ impl Hermes {
         // profiles.insert("car".to_string(), Box::from(CarWeighting::new()));
 
         let weighting = CarWeighting::new();
-        let lm_preparation = LandmarksPreparation::new(&graph, &weighting);
+        let lm_preparation = LMPreparation::new(&graph, &weighting);
         let lm = lm_preparation.create_landmarks(16);
 
         let index = LocationIndex::build_from_graph(&graph);
@@ -141,8 +141,13 @@ impl Hermes {
             }
 
             Some(RoutingAlgorithm::Landmarks) => {
-                let mut landmarks_astar =
-                    LandmarksAstar::from_landmarks(&query_graph, weighting, &self.lm, start, end);
+                let mut landmarks_astar = LMBidirectionalAstar::from_landmarks(
+                    &query_graph,
+                    weighting,
+                    &self.lm,
+                    start,
+                    end,
+                );
                 landmarks_astar.calc_path(&query_graph, weighting, start, end, Some(options))
             }
 
@@ -154,7 +159,7 @@ impl Hermes {
     }
 
     pub fn create_landmarks(&self) -> Vec<GeoPoint> {
-        let lm_preparation = LandmarksPreparation::new(self.graph(), &self.car_weighting);
+        let lm_preparation = LMPreparation::new(self.graph(), &self.car_weighting);
 
         let landmarks = lm_preparation.find_landmarks(10);
         landmarks

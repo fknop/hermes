@@ -273,11 +273,6 @@ where
         self.update_node_data(dir, node_id, 0, INVALID_NODE, INVALID_EDGE);
     }
 
-    fn init(&mut self, start: usize, end: usize) {
-        self.init_node(start, SearchDirection::Forward);
-        self.init_node(end, SearchDirection::Backward);
-    }
-
     fn node_data_for_direction(&mut self, dir: SearchDirection) -> &mut N {
         match dir {
             SearchDirection::Forward => &mut self.forward_data,

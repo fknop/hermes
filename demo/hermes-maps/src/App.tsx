@@ -5,6 +5,8 @@ import { useState } from 'react'
 import { Source } from 'react-map-gl/mapbox'
 import { PolylineLayer } from './PolylineLayer.tsx'
 import { MultiPointLayer } from './MultiPointLayer.tsx'
+import { Checkbox } from './components/Checkbox.tsx'
+import { RadioButton } from './components/RadioButton.tsx'
 
 type GeoPoint = { lat: number; lon: number }
 
@@ -52,7 +54,14 @@ export default function App() {
     })
   }
 
-  console.log(routeData)
+  const routeFeature = routeData?.features.find(
+    (feature) => feature.id === 'route'
+  )
+
+  const time = routeFeature?.properties?.['time']
+  const distance = routeFeature?.properties?.['distance']
+
+  console.log({ time, distance })
 
   return (
     <div className="h-screen w-screen">
@@ -92,15 +101,15 @@ export default function App() {
 
             <PolylineLayer
               id="route"
-              featureId="polyline"
+              featureId="route"
               color="blue"
               sourceId="geojson"
             />
           </Source>
         )}
 
-        <div className="pointer-events-auto z-50 absolute top-4 left-4 bg-zinc-100 rounded shadow-xs border border-zinc-300 min-w-96">
-          <div className="flex flex-col gap-2.5 px-3 py-3">
+        <div className="pointer-events-auto z-50 absolute top-0 left-0 bottom-0 bg-white  drop-shadow-xs border-r-2 border-zinc-900/20 min-w-96">
+          <div className="flex flex-col gap-2.5 px-6 py-6">
             <div>
               <AddressSearch
                 color="blue"
@@ -129,8 +138,7 @@ export default function App() {
             </div>
 
             <label className="flex flex-row items-center gap-2">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={includeDebugInfo}
                 onChange={(event) => {
                   setIncludeDebugInfo(event.target.checked)
@@ -142,9 +150,8 @@ export default function App() {
             {Object.values(RoutingAlgorithm).map((algorithm) => {
               return (
                 <label className="flex flex-row items-center gap-2">
-                  <input
+                  <RadioButton
                     checked={selectedAlgorithm == algorithm}
-                    type="radio"
                     name="algorithm"
                     value={algorithm}
                     onChange={(event) => {

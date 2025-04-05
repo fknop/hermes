@@ -52,7 +52,7 @@ impl Weighting for CarWeighting {
         }
 
         let distance_costs = edge.distance().value() * DISTANCE_INFLUENCE;
-        ((ms as f64 / 1000.0) + distance_costs).round() as Weight
+        (ms as f64 + distance_costs).round() as Weight
     }
 
     fn calc_edge_ms(&self, edge: &GraphEdge, direction: EdgeDirection) -> DurationMs {

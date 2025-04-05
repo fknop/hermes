@@ -5,6 +5,7 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use geojson::Value::{LineString, MultiPoint};
+use geojson::feature::Id;
 use geojson::{Feature, FeatureCollection, GeoJson, Geometry, JsonValue};
 use hermes_core::geopoint::GeoPoint;
 use hermes_core::routing::routing_request::{
@@ -72,17 +73,20 @@ pub async fn route_handler(
                 .collect();
 
             let mut properties = serde_json::Map::new();
+            properties.insert(String::from("id"), JsonValue::from(String::from("route")));
+
             properties.insert(
-                String::from("id"),
-                JsonValue::String(String::from("polyline")),
+                String::from("distance"),
+                JsonValue::from(result.path.distance().value()),
             );
 
+            properties.insert(String::from("time"), JsonValue::from(result.path.time()));
+
             let feature = Feature {
-                bbox: None,
                 properties: Some(properties),
-                foreign_members: None,
-                id: None,
+                id: Some(Id::String(String::from("route"))),
                 geometry: Some(Geometry::new(LineString(points))),
+                ..Default::default()
             };
 
             features.push(feature);
