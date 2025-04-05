@@ -223,7 +223,7 @@ where
     }
 }
 
-impl<'a, G, W, N> BidirectionalDijkstra<'a, G, W, N>
+impl<G, W, N> BidirectionalDijkstra<'_, G, W, N>
 where
     G: Graph,
     W: Weighting,
@@ -600,7 +600,7 @@ where
             }
 
             if let Some(ref stop_condition) = stop_condition {
-                if stop_condition(&self) {
+                if stop_condition(self) {
                     break;
                 }
             }
