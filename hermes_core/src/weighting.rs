@@ -1,7 +1,7 @@
 use std::f64;
 
 use crate::base_graph::GraphEdge;
-use crate::constants::MAX_WEIGHT;
+use crate::constants::{DISTANCE_INFLUENCE, MAX_WEIGHT};
 use crate::edge_direction::EdgeDirection;
 use crate::properties::property::Property;
 
@@ -40,8 +40,6 @@ impl CarWeighting {
         speed.unwrap_or(0)
     }
 }
-
-const DISTANCE_INFLUENCE: f64 = 70.0;
 
 impl Weighting for CarWeighting {
     fn calc_edge_weight(&self, edge: &GraphEdge, direction: EdgeDirection) -> Weight {

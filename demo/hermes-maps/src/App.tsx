@@ -1,22 +1,22 @@
-import { Map } from './Map.tsx'
-import { AddressSearch } from './AddressSearch.tsx'
-import { useFetch } from './hooks/useFetch.ts'
+import {
+  ArrowsUpDownIcon,
+  ArrowTurnDownRightIcon,
+} from '@heroicons/react/16/solid'
 import { useCallback, useEffect, useState } from 'react'
 import { Source } from 'react-map-gl/mapbox'
-import { PolylineLayer } from './PolylineLayer.tsx'
+import { Map } from './Map.tsx'
 import { MultiPointLayer } from './MultiPointLayer.tsx'
+import { PolylineLayer } from './PolylineLayer.tsx'
+import { AddressAutocomplete } from './components/AddressAutocomplete.tsx'
+import { Button } from './components/Button.tsx'
 import { Checkbox } from './components/Checkbox.tsx'
 import { RadioButton } from './components/RadioButton.tsx'
-import { Button } from './components/Button.tsx'
-import { ArrowTurnDownRightIcon } from '@heroicons/react/16/solid'
-import { useCssVariableValue } from './hooks/useCssVariableValue.ts'
-import { useDurationFormatter } from './hooks/useDurationFormatter.ts'
 import { useDistanceFormatter } from './hooks/useDistanceFormatter.ts'
-import { AddressAutocomplete } from './components/AddressAutocomplete.tsx'
-import { ArrowsUpDownIcon } from '@heroicons/react/16/solid'
+import { useDurationFormatter } from './hooks/useDurationFormatter.ts'
+import { useFetch } from './hooks/useFetch.ts'
 import { isNil } from './utils/isNil.ts'
-
-type GeoPoint = { lat: number; lon: number }
+import { MapContextMenu, MapMenuItem } from './components/MapContextMenu.tsx'
+import { GeoPoint } from './GeoPoint.ts'
 
 enum RoutingAlgorithm {
   Dijkstra = 'Dijkstra',
@@ -84,30 +84,11 @@ export default function App() {
 
   const time = routeFeature?.properties?.['time']
   const distance = routeFeature?.properties?.['distance']
-
-  console.log({ time, distance })
+  const nodesVisited = routeFeature?.properties?.['nodes']
 
   return (
     <div className="h-screen w-screen">
-      <Map
-      // onClick={async (event) => {
-      //   const { lat, lng } = event.lngLat
-
-      //   if (event.originalEvent.button === 0) {
-      //     const start = { lat, lon: lng }
-      //     setStart(start)
-      //     if (end) {
-      //       computeRoute({ start, end })
-      //     }
-      //   } else if (event.originalEvent.button === 1) {
-      //     const end = { lat, lon: lng }
-      //     setEnd(end)
-      //     if (start) {
-      //       computeRoute({ start, end })
-      //     }
-      //   }
-      // }}
-      >
+      <Map>
         {routeData && (
           <Source type="geojson" data={routeData} id="geojson">
             <MultiPointLayer
@@ -131,6 +112,31 @@ export default function App() {
             />
           </Source>
         )}
+
+        <MapContextMenu>
+          <MapMenuItem
+            onSelect={({ coordinates }) => {
+              console.log(coordinates)
+              setStart({
+                address: `${coordinates.lat},${coordinates.lon}`,
+                coordinates,
+              })
+            }}
+          >
+            From here
+          </MapMenuItem>
+          <MapMenuItem
+            onSelect={({ coordinates }) => {
+              setEnd({
+                address: `${coordinates.lat},${coordinates.lon}`,
+                coordinates,
+              })
+            }}
+          >
+            To here
+          </MapMenuItem>
+          <MapMenuItem>Query graph</MapMenuItem>
+        </MapContextMenu>
       </Map>
 
       <div className="pointer-events-auto z-10 absolute top-0 left-0 bottom-0 bg-white  drop-shadow-xs border-r-2 border-zinc-900/20 min-w-96">
@@ -213,6 +219,7 @@ export default function App() {
 
         {time && <div>{formatDuration(time / 1000)}</div>}
         {distance && <div>{formatDistance(distance)}</div>}
+        {nodesVisited && <div>Nodes visited: {nodesVisited}</div>}
       </div>
     </div>
   )

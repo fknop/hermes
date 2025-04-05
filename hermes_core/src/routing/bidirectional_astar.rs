@@ -1,4 +1,4 @@
-use crate::constants::{INVALID_EDGE, INVALID_NODE, MAX_WEIGHT};
+use crate::constants::{DISTANCE_INFLUENCE, INVALID_EDGE, INVALID_NODE, MAX_WEIGHT};
 use crate::edge_direction::EdgeDirection;
 use crate::geopoint::GeoPoint;
 use crate::graph::Graph;
@@ -85,7 +85,7 @@ impl AStarHeuristic for HaversineHeuristic {
         let speed_kmh = 150.0;
         let speed_ms = speed_kmh / 3.6;
 
-        (distance * 70.0 + ((distance / speed_ms) * 1000.0).round()) as Weight
+        (distance * DISTANCE_INFLUENCE + ((distance / speed_ms) * 1000.0).round()) as Weight
     }
 }
 
@@ -578,7 +578,11 @@ impl<H: AStarHeuristic> CalcPath for BidirectionalAStar<H> {
 
         let path = self.build_path(graph, weighting, start, end);
 
-        Ok(CalcPathResult { path, debug })
+        Ok(CalcPathResult {
+            path,
+            debug,
+            nodes_visited,
+        })
     }
 }
 

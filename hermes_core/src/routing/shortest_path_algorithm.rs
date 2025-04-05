@@ -13,6 +13,7 @@ pub struct ShortestPathDebugInfo {
 
 pub struct CalcPathResult {
     pub path: RoutingPath,
+    pub nodes_visited: usize,
     pub debug: Option<ShortestPathDebugInfo>,
 }
 

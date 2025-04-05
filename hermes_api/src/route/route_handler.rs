@@ -81,6 +81,7 @@ pub async fn route_handler(
             );
 
             properties.insert(String::from("time"), JsonValue::from(result.path.time()));
+            properties.insert(String::from("nodes"), JsonValue::from(result.nodes_visited));
 
             let feature = Feature {
                 properties: Some(properties),
