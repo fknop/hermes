@@ -7,6 +7,11 @@ import { PolylineLayer } from './PolylineLayer.tsx'
 import { MultiPointLayer } from './MultiPointLayer.tsx'
 import { Checkbox } from './components/Checkbox.tsx'
 import { RadioButton } from './components/RadioButton.tsx'
+import { Button } from './components/Button.tsx'
+import { ArrowTurnDownRightIcon } from '@heroicons/react/24/solid'
+import { useCssVariableValue } from './hooks/useCssVariableValue.ts'
+import { useDurationFormatter } from './hooks/useDurationFormatter.ts'
+import { useDistanceFormatter } from './hooks/useDistanceFormatter.ts'
 
 type GeoPoint = { lat: number; lon: number }
 
@@ -29,6 +34,8 @@ export default function App() {
     }
   >('/route')
 
+  const formatDuration = useDurationFormatter()
+  const formatDistance = useDistanceFormatter()
   const [selectedAlgorithm, setSelectedAlgorithm] = useState<RoutingAlgorithm>(
     RoutingAlgorithm.BidirectionalAstar
   )
@@ -102,82 +109,84 @@ export default function App() {
             <PolylineLayer
               id="route"
               featureId="route"
-              color="blue"
+              color="#1d293d"
               sourceId="geojson"
             />
           </Source>
         )}
+      </Map>
 
-        <div className="pointer-events-auto z-50 absolute top-0 left-0 bottom-0 bg-white  drop-shadow-xs border-r-2 border-zinc-900/20 min-w-96">
-          <div className="flex flex-col gap-2.5 px-6 py-6">
-            <div>
-              <AddressSearch
-                color="blue"
-                onRetrieve={async (response) => {
-                  const [lon, lat] = response.geometry.coordinates
-                  const start = { lon, lat }
-                  setStart(start)
-                  if (end) {
-                    computeRoute({ start, end })
-                  }
-                }}
-              />
-            </div>
-            <div>
-              <AddressSearch
-                color="red"
-                onRetrieve={async (response) => {
-                  const [lon, lat] = response.geometry.coordinates
-                  const end = { lon, lat }
-                  setEnd(end)
-                  if (start) {
-                    computeRoute({ start, end })
-                  }
-                }}
-              />
-            </div>
-
-            <label className="flex flex-row items-center gap-2">
-              <Checkbox
-                checked={includeDebugInfo}
-                onChange={(event) => {
-                  setIncludeDebugInfo(event.target.checked)
-                }}
-              />
-              Include debug info
-            </label>
-
-            {Object.values(RoutingAlgorithm).map((algorithm) => {
-              return (
-                <label className="flex flex-row items-center gap-2">
-                  <RadioButton
-                    checked={selectedAlgorithm == algorithm}
-                    name="algorithm"
-                    value={algorithm}
-                    onChange={(event) => {
-                      setSelectedAlgorithm(
-                        event.target.value as RoutingAlgorithm
-                      )
-                    }}
-                  />
-                  {algorithm}
-                </label>
-              )
-            })}
-
-            <button
-              type="button"
-              onClick={() => {
-                if (start && end) {
+      <div className="pointer-events-auto z-0 absolute top-0 left-0 bottom-0 bg-white  drop-shadow-xs border-r-2 border-zinc-900/20 min-w-96">
+        <div className="flex flex-col gap-2.5 px-6 py-6">
+          <div>
+            <AddressSearch
+              color="blue"
+              onRetrieve={async (response) => {
+                const [lon, lat] = response.geometry.coordinates
+                const start = { lon, lat }
+                setStart(start)
+                if (end) {
                   computeRoute({ start, end })
                 }
               }}
-            >
-              Route
-            </button>
+            />
           </div>
+          <div>
+            <AddressSearch
+              color="red"
+              onRetrieve={async (response) => {
+                const [lon, lat] = response.geometry.coordinates
+                const end = { lon, lat }
+                setEnd(end)
+                if (start) {
+                  computeRoute({ start, end })
+                }
+              }}
+            />
+          </div>
+
+          <label className="flex flex-row items-center gap-2">
+            <Checkbox
+              checked={includeDebugInfo}
+              onChange={(event) => {
+                setIncludeDebugInfo(event.target.checked)
+              }}
+            />
+            Include debug info
+          </label>
+
+          {Object.values(RoutingAlgorithm).map((algorithm) => {
+            return (
+              <label className="flex flex-row items-center gap-2">
+                <RadioButton
+                  checked={selectedAlgorithm == algorithm}
+                  name="algorithm"
+                  value={algorithm}
+                  onChange={(event) => {
+                    setSelectedAlgorithm(event.target.value as RoutingAlgorithm)
+                  }}
+                />
+                {algorithm}
+              </label>
+            )
+          })}
+
+          <Button
+            variant="primary"
+            icon={ArrowTurnDownRightIcon}
+            onClick={() => {
+              if (start && end) {
+                computeRoute({ start, end })
+              }
+            }}
+          >
+            Route
+          </Button>
         </div>
-      </Map>
+
+        {time && <div>{formatDuration(time / 1000)}</div>}
+        {distance && <div>{formatDistance(distance)}</div>}
+      </div>
     </div>
   )
 }

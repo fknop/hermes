@@ -80,7 +80,7 @@ impl AStarHeuristic for HaversineHeuristic {
         let speed_kmh = 120.0;
         let speed_ms = speed_kmh / 3.6;
 
-        (distance * 0.7 + ((distance / speed_ms) * 1000.0).round()) as Weight
+        (distance * 70.0 + ((distance / speed_ms) * 1000.0).round()) as Weight
     }
 }
 

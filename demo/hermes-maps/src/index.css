@@ -1,2 +1,12 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap');
+
 @import 'tailwindcss';
 @plugin "@tailwindcss/forms";
+
+@theme {
+  --color-primary: var(--color-slate-800);
+  --color-primary-hover: var(--color-slate-700);
+  --color-primary-active: var(--color-slate-600);
+
+  --font-display: 'Noto Sans', sans-serif;
+}

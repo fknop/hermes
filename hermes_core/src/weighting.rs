@@ -41,7 +41,7 @@ impl CarWeighting {
     }
 }
 
-const DISTANCE_INFLUENCE: f64 = 0.7;
+const DISTANCE_INFLUENCE: f64 = 70.0;
 
 impl Weighting for CarWeighting {
     fn calc_edge_weight(&self, edge: &GraphEdge, direction: EdgeDirection) -> Weight {

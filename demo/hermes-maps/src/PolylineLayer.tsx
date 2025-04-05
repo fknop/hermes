@@ -2,9 +2,12 @@ import { LineLayer } from 'mapbox-gl'
 import { Layer } from 'react-map-gl/mapbox'
 
 const layerStyle: Partial<LineLayer> = {
+  layout: {
+    'line-cap': 'round',
+    'line-join': 'round',
+  },
   paint: {
     'line-width': 4,
-    'line-color': 'red',
   },
 }
 
