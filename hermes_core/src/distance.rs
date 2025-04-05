@@ -196,14 +196,14 @@ where
 #[macro_export]
 macro_rules! meters {
     ($num:expr) => {
-        crate::distance::Distance::<crate::distance::Meters>::from($num)
+        $crate::distance::Distance::<$crate::distance::Meters>::from($num)
     };
 }
 
 #[macro_export]
 macro_rules! kilometers {
     ($num:expr) => {
-        crate::distance::Distance::<crate::distance::Kilometers>::from($num)
+        $crate::distance::Distance::<$crate::distance::Kilometers>::from($num)
     };
 }
 

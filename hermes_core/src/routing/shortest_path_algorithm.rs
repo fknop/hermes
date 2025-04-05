@@ -28,6 +28,6 @@ pub trait CalcPath {
 }
 
 pub trait ShortestPathAlgorithm {
-    fn run(&mut self);
+    fn run(&mut self, stop_condition: Option<fn(&Self) -> bool>);
     fn finished(&self) -> bool;
 }

@@ -44,7 +44,7 @@ impl<'a, W: Weighting> LandmarksPreparation<'a, W> {
 
         // Compute weights from landmark by using a forward search starting from the landmark
         landmark_search.init_node(node_id, SearchDirection::Forward);
-        landmark_search.run();
+        landmark_search.run(None);
 
         for node in 0..self.graph.node_count() {
             weight_from_landmark.push(landmark_search.node_weight(node, SearchDirection::Forward));
@@ -54,7 +54,7 @@ impl<'a, W: Weighting> LandmarksPreparation<'a, W> {
 
         // Compute weights to landmark by using a backward search starting from the landmark
         landmark_search.init_node(node_id, SearchDirection::Backward);
-        landmark_search.run();
+        landmark_search.run(None);
 
         for node in 0..self.graph.node_count() {
             weight_to_landmark.push(landmark_search.node_weight(node, SearchDirection::Backward));
@@ -85,7 +85,7 @@ impl<'a, W: Weighting> LandmarksPreparation<'a, W> {
                 landmark_search.init_node(*node, SearchDirection::Forward);
             }
 
-            landmark_search.run();
+            landmark_search.run(None);
 
             let result = landmark_search.current_node(SearchDirection::Forward);
 

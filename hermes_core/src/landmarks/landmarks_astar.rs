@@ -4,7 +4,7 @@ use super::{landmark_heuristic::LandmarkHeuristic, landmarks_data::LandmarksData
 
 pub struct LandmarksAstar;
 impl LandmarksAstar {
-    pub fn new<'a>(
+    pub fn from_landmarks<'a>(
         graph: &'a impl Graph,
         weighting: &'a impl Weighting,
         lm: &'a LandmarksData,

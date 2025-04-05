@@ -89,9 +89,9 @@ impl BaseGraph {
         }
     }
 
-    pub fn save_to_file(&self, path: &str) {
+    pub fn save_to_file(&self, path: &str) -> Result<(), std::io::Error> {
         let bytes = rkyv::to_bytes::<rkyv::rancor::Error>(self).expect("to_bytes failed");
-        write_bytes(&bytes[..], path);
+        write_bytes(&bytes[..], path)
     }
 
     pub fn from_file(path: &str) -> BaseGraph {
@@ -147,7 +147,7 @@ impl BaseGraph {
 impl Graph for BaseGraph {
     type EdgeIterator<'a> = std::iter::Copied<std::slice::Iter<'a, usize>>;
 
-    fn is_virtual_node(&self, node: usize) -> bool {
+    fn is_virtual_node(&self, _: usize) -> bool {
         false
     }
 

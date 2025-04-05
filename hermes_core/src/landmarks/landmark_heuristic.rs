@@ -65,17 +65,20 @@ where
     fn insert_closest_real_node(&mut self, virtual_node_id: usize) {
         let mut algo = BidirectionalDijkstra::with_capacity(self.graph, self.weighting, 2);
         algo.init_node(virtual_node_id, SearchDirection::Forward);
-        algo.set_stop_condition(Box::from(
-            |current_fwd_node: Option<usize>, _: Option<usize>| {
-                if let Some(current_fwd_node) = current_fwd_node {
-                    !self.graph.is_virtual_node(current_fwd_node)
-                } else {
-                    true
-                }
-            },
-        ));
+        // algo.set_stop_condition(Box::new(
+        //     |current_fwd_node: Option<usize>, _: Option<usize>| match current_fwd_node {
+        //         Some(current_fwd_node) => !self.graph.is_virtual_node(current_fwd_node),
+        //         None => true,
+        //     },
+        // ));
 
-        algo.run();
+        algo.run(Some(|algo| {
+            match algo.current_node(SearchDirection::Forward) {
+                Some(current_fwd_node) => !algo.graph().is_virtual_node(current_fwd_node),
+                None => true,
+            }
+        }));
+
         let closest_node = algo.current_node(SearchDirection::Forward);
 
         if let Some(closest_node) = closest_node {
@@ -107,7 +110,7 @@ where
         let mut end: usize = maybe_virtual_end;
         let mut end_weight_to_real_node = 0;
 
-        let reverse = maybe_virtual_end == self.start_node;
+        let backward = maybe_virtual_end == self.start_node;
 
         // Handle virtual nodes
         if graph.is_virtual_node(maybe_virtual_start) {
@@ -142,6 +145,8 @@ where
         }
 
         let mut lower_bound: Weight = 0;
+
+        // TODO: pick active landmarks
         for i in 0..self.lm.num_landmarks() {
             let start_to_landmark: i64 =
                 (self.lm.weight_to_landmark(i, start) + start_weight_to_real_node) as i64;
@@ -158,13 +163,16 @@ where
             // S = start, E = end, L = landmark
             // a) d(S, E) + d(E, L) > d(S, L) <=> d(S, E) > d(S, L) - d(E, L)
             // b) d(L, S) + d(S, E) > d(L, E) <=> d(S, E) > d(L, E) - d(L, S)
-            // c) -d(S, E) <= -d(S, L) + d(E, L) <=> d(S, L) - d(E, L) < d(S, E)
 
             let mut a = start_to_landmark - end_to_landmark;
             let mut b = landmark_to_end - landmark_to_start;
 
-            // TODO: I'm not sure I get this mathematically yet
-            if reverse {
+            // In the backward search, E is actually the S node of the forward search
+            // So we want to know d(E, S) and not d(S, E).
+            // c) d(E, S) > d(E, L) - d(S, L) * -1 <=> d(E, S) > d(S, L) - d(E, L)
+            // d) d(E, S) > d(L, S) - d(L, E) * -1 <=> d(E, S) > d(L, E) - d(L, S)
+
+            if backward {
                 a *= -1;
                 b *= -1;
             }

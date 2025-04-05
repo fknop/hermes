@@ -229,6 +229,10 @@ where
     W: Weighting,
     N: NodeData,
 {
+    pub fn graph(&self) -> &G {
+        self.graph
+    }
+
     pub fn current_node(&self, dir: SearchDirection) -> Option<usize> {
         match dir {
             SearchDirection::Forward => self.forward_current_node,
@@ -529,7 +533,7 @@ where
     W: Weighting,
     N: NodeData,
 {
-    fn run(&mut self) {
+    fn run(&mut self, stop_condition: Option<fn(&Self) -> bool>) {
         let stopwatch = Stopwatch::new("bidirectional_dijkstra/calc_path");
 
         let include_debug_info: bool = false; // TODO
@@ -594,6 +598,12 @@ where
             if self.finished() {
                 break;
             }
+
+            if let Some(ref stop_condition) = stop_condition {
+                if stop_condition(&self) {
+                    break;
+                }
+            }
         }
 
         println!(
@@ -605,15 +615,6 @@ where
     }
 
     fn finished(&self) -> bool {
-        if let Some(ref stop_condition) = self.stop_condition {
-            if stop_condition(
-                self.current_node(SearchDirection::Forward),
-                self.current_node(SearchDirection::Backward),
-            ) {
-                return true;
-            }
-        }
-
         if self.best_meeting_node != INVALID_NODE {
             let min_forward_entry = self.forward_heap.peek();
             let min_backward_entry = self.backward_heap.peek();

@@ -39,9 +39,9 @@ impl LandmarksData {
         data
     }
 
-    pub fn save_to_file(&self, path: &str) {
+    pub fn save_to_file(&self, path: &str) -> Result<(), std::io::Error> {
         let bytes = rkyv::to_bytes::<rkyv::rancor::Error>(self).expect("to_bytes failed");
-        write_bytes(&bytes[..], path);
+        write_bytes(&bytes[..], path)
     }
 
     pub fn new(landmarks: Vec<Landmark>) -> Self {

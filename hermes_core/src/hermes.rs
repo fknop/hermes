@@ -30,12 +30,14 @@ const GRAPH_FILE_NAME: &str = "graph.bin";
 const LANDMARKS_FILE_NAME: &str = "lm.bin";
 
 impl Hermes {
-    pub fn save(&self, dir_path: &str) {
+    pub fn save(&self, dir_path: &str) -> Result<(), std::io::Error> {
         self.graph
-            .save_to_file(binary_file_path(dir_path, GRAPH_FILE_NAME).as_str());
+            .save_to_file(binary_file_path(dir_path, GRAPH_FILE_NAME).as_str())?;
 
         self.lm
-            .save_to_file(binary_file_path(dir_path, LANDMARKS_FILE_NAME).as_str());
+            .save_to_file(binary_file_path(dir_path, LANDMARKS_FILE_NAME).as_str())?;
+
+        Ok(())
     }
 
     pub fn from_directory(dir_path: &str) -> Hermes {
@@ -140,7 +142,7 @@ impl Hermes {
 
             Some(RoutingAlgorithm::Landmarks) => {
                 let mut landmarks_astar =
-                    LandmarksAstar::new(&query_graph, weighting, &self.lm, start, end);
+                    LandmarksAstar::from_landmarks(&query_graph, weighting, &self.lm, start, end);
                 landmarks_astar.calc_path(&query_graph, weighting, start, end, Some(options))
             }
 
