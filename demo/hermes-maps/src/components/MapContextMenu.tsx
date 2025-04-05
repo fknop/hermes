@@ -49,7 +49,7 @@ export function MapMenuItem({
     <button
       {...props}
       className={clsx(
-        'px-2 py-0.5 rounded',
+        'px-2 py-0.5 rounded text-sm',
         'flex flex-row justify-start',
         'focus:bg-slate-100 focus:outline-primary-active focus-visible:outline-primary-active'
       )}
@@ -184,7 +184,8 @@ export const MapContextMenu = forwardRef<HTMLButtonElement, MenuProps>(
                   'border border-slate-900/25',
                   'flex flex-col justify-start',
                   'bg-white',
-                  'outline:none focus:outline-none'
+                  'outline:none focus:outline-none',
+                  'min-w-36'
                 )}
                 ref={refs.setFloating}
                 style={floatingStyles}

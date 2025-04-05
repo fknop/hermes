@@ -17,6 +17,9 @@ import { useFetch } from './hooks/useFetch.ts'
 import { isNil } from './utils/isNil.ts'
 import { MapContextMenu, MapMenuItem } from './components/MapContextMenu.tsx'
 import { GeoPoint } from './GeoPoint.ts'
+import { MapMarker } from './components/Marker.tsx'
+import { MapPinIcon } from '@heroicons/react/16/solid'
+import { MagnifyingGlassIcon } from '@heroicons/react/16/solid'
 
 enum RoutingAlgorithm {
   Dijkstra = 'Dijkstra',
@@ -94,13 +97,13 @@ export default function App() {
             <MultiPointLayer
               id="forward_visited_nodes"
               featureId="forward_visited_nodes"
-              color="green"
+              color="#00a6f4"
               sourceId="geojson"
             />
             <MultiPointLayer
               id="backward_visited_nodes"
               featureId="backward_visited_nodes"
-              color="red"
+              color="#ff6467"
               sourceId="geojson"
             />
 
@@ -113,6 +116,19 @@ export default function App() {
           </Source>
         )}
 
+        {start && (
+          <MapMarker
+            color="var(--color-sky-800)"
+            coordinates={start.coordinates}
+          />
+        )}
+        {end && (
+          <MapMarker
+            color="var(--color-orange-800)"
+            coordinates={end.coordinates}
+          />
+        )}
+
         <MapContextMenu>
           <MapMenuItem
             onSelect={({ coordinates }) => {
@@ -123,7 +139,10 @@ export default function App() {
               })
             }}
           >
-            From here
+            <span className="flex items-center gap-1 whitespace-nowrap">
+              <MapPinIcon className="size-5 text-sky-800" />
+              <span>From here</span>
+            </span>
           </MapMenuItem>
           <MapMenuItem
             onSelect={({ coordinates }) => {
@@ -133,9 +152,17 @@ export default function App() {
               })
             }}
           >
-            To here
+            <span className="inline-flex items-center gap-1 whitespace-nowrap">
+              <MapPinIcon className="size-5 text-orange-800" />
+              <span>To here</span>
+            </span>
           </MapMenuItem>
-          <MapMenuItem>Query graph</MapMenuItem>
+          <MapMenuItem>
+            <span className="inline-flex items-center gap-1 whitespace-nowrap">
+              <MagnifyingGlassIcon className="size-5" />
+              <span>Query graph</span>
+            </span>
+          </MapMenuItem>
         </MapContextMenu>
       </Map>
 
