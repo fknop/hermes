@@ -1,17 +1,20 @@
 import { Map } from './Map.tsx'
 import { AddressSearch } from './AddressSearch.tsx'
 import { useFetch } from './hooks/useFetch.ts'
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Source } from 'react-map-gl/mapbox'
 import { PolylineLayer } from './PolylineLayer.tsx'
 import { MultiPointLayer } from './MultiPointLayer.tsx'
 import { Checkbox } from './components/Checkbox.tsx'
 import { RadioButton } from './components/RadioButton.tsx'
 import { Button } from './components/Button.tsx'
-import { ArrowTurnDownRightIcon } from '@heroicons/react/24/solid'
+import { ArrowTurnDownRightIcon } from '@heroicons/react/16/solid'
 import { useCssVariableValue } from './hooks/useCssVariableValue.ts'
 import { useDurationFormatter } from './hooks/useDurationFormatter.ts'
 import { useDistanceFormatter } from './hooks/useDistanceFormatter.ts'
+import { AddressAutocomplete } from './components/AddressAutocomplete.tsx'
+import { ArrowsUpDownIcon } from '@heroicons/react/16/solid'
+import { isNil } from './utils/isNil.ts'
 
 type GeoPoint = { lat: number; lon: number }
 
@@ -20,6 +23,11 @@ enum RoutingAlgorithm {
   Astar = 'Astar',
   BidirectionalAstar = 'BidirectionalAstar',
   Landmarks = 'Landmarks',
+}
+
+type Address = {
+  coordinates: GeoPoint
+  address: string
 }
 
 export default function App() {
@@ -42,24 +50,33 @@ export default function App() {
 
   const [includeDebugInfo, setIncludeDebugInfo] = useState(true)
 
-  const [start, setStart] = useState<GeoPoint | null>(null)
-  const [end, setEnd] = useState<GeoPoint | null>(null)
+  const [start, setStart] = useState<Address | null>(null)
+  const [end, setEnd] = useState<Address | null>(null)
 
-  const computeRoute = ({ start, end }: { start: GeoPoint; end: GeoPoint }) => {
-    if (!start || !end) {
-      return
+  const computeRoute = useCallback(
+    ({ start, end }: { start: Address; end: Address }) => {
+      if (!start || !end) {
+        return
+      }
+
+      void routeRequest({
+        method: 'POST',
+        body: {
+          start: start.coordinates,
+          end: end.coordinates,
+          include_debug_info: includeDebugInfo,
+          algorithm: selectedAlgorithm,
+        },
+      })
+    },
+    [routeRequest, includeDebugInfo, selectedAlgorithm]
+  )
+
+  useEffect(() => {
+    if (!isNil(start) && !isNil(end)) {
+      computeRoute({ start, end })
     }
-
-    void routeRequest({
-      method: 'POST',
-      body: {
-        start,
-        end,
-        include_debug_info: includeDebugInfo,
-        algorithm: selectedAlgorithm,
-      },
-    })
-  }
+  }, [start, end])
 
   const routeFeature = routeData?.features.find(
     (feature) => feature.id === 'route'
@@ -116,33 +133,41 @@ export default function App() {
         )}
       </Map>
 
-      <div className="pointer-events-auto z-0 absolute top-0 left-0 bottom-0 bg-white  drop-shadow-xs border-r-2 border-zinc-900/20 min-w-96">
+      <div className="pointer-events-auto z-10 absolute top-0 left-0 bottom-0 bg-white  drop-shadow-xs border-r-2 border-zinc-900/20 min-w-96">
         <div className="flex flex-col gap-2.5 px-6 py-6">
-          <div>
-            <AddressSearch
-              color="blue"
-              onRetrieve={async (response) => {
-                const [lon, lat] = response.geometry.coordinates
-                const start = { lon, lat }
-                setStart(start)
-                if (end) {
-                  computeRoute({ start, end })
-                }
+          <div className="flex flex-row gap-6 items-center">
+            <div className="flex flex-1 flex-col gap-3">
+              <AddressAutocomplete
+                value={start?.address ?? ''}
+                onRetrieve={async (response) => {
+                  const [lon, lat] = response.features[0].geometry.coordinates
+                  setStart({
+                    coordinates: { lat, lon },
+                    address: response.features[0].properties.full_address,
+                  })
+                }}
+              />
+              <AddressAutocomplete
+                value={end?.address ?? ''}
+                onRetrieve={async (response) => {
+                  const [lon, lat] = response.features[0].geometry.coordinates
+                  setEnd({
+                    coordinates: { lat, lon },
+                    address: response.features[0].properties.full_address,
+                  })
+                }}
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setStart(end)
+                setEnd(start)
               }}
-            />
-          </div>
-          <div>
-            <AddressSearch
-              color="red"
-              onRetrieve={async (response) => {
-                const [lon, lat] = response.geometry.coordinates
-                const end = { lon, lat }
-                setEnd(end)
-                if (start) {
-                  computeRoute({ start, end })
-                }
-              }}
-            />
+            >
+              <ArrowsUpDownIcon className="size-5 text-primary" />
+            </button>
           </div>
 
           <label className="flex flex-row items-center gap-2">
@@ -171,17 +196,19 @@ export default function App() {
             )
           })}
 
-          <Button
-            variant="primary"
-            icon={ArrowTurnDownRightIcon}
-            onClick={() => {
-              if (start && end) {
-                computeRoute({ start, end })
-              }
-            }}
-          >
-            Route
-          </Button>
+          <div>
+            <Button
+              variant="primary"
+              icon={ArrowTurnDownRightIcon}
+              onClick={() => {
+                if (start && end) {
+                  computeRoute({ start, end })
+                }
+              }}
+            >
+              Route
+            </Button>
+          </div>
         </div>
 
         {time && <div>{formatDuration(time / 1000)}</div>}

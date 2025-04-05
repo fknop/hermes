@@ -25,8 +25,8 @@ type ButtonProps = {
 function getCommonClassNames() {
   return clsx(
     'flex items-center justify-center gap-3',
-    'rounded',
-    'font-medium',
+    'rounded-lg',
+    'font-semibold',
     'shadow-sm',
     'focus-visible:outline',
     'focus-visible:outline-2',
@@ -81,7 +81,11 @@ export function Button({
       disabled={disabled}
       {...props}
     >
-      {Icon && <Icon className="w-4 h-4" />}
+      {Icon && (
+        <span className="inline-flex justify-center items-center p-0.5 bg-slate-200 rounded-full">
+          <Icon className="size-3.5 text-primary" />
+        </span>
+      )}
       {children}
     </button>
   )

@@ -1,8 +1,11 @@
 {
   "version": "4",
   "specifiers": {
+    "npm:@floating-ui/react@~0.27.6": "0.27.6_react@19.0.0_react-dom@19.0.0__react@19.0.0",
     "npm:@heroicons/react@^2.2.0": "2.2.0_react@19.0.0",
+    "npm:@mapbox/search-js-core@1": "1.0.0",
     "npm:@mapbox/search-js-react@1": "1.0.0_react@19.0.0_react-dom@19.0.0__react@19.0.0_mapbox-gl@3.10.0",
+    "npm:@radix-ui/react-slot@^1.1.2": "1.1.2_@types+react@19.0.10_react@19.0.0",
     "npm:@tailwindcss/forms@~0.5.10": "0.5.10_tailwindcss@4.0.14",
     "npm:@tailwindcss/vite@^4.0.14": "4.0.14_vite@6.2.2__lightningcss@1.29.2_lightningcss@1.29.2",
     "npm:@types/geojson@^7946.0.16": "7946.0.16",
@@ -242,11 +245,45 @@
     "@floating-ui/core@0.7.3": {
       "integrity": "sha512-buc8BXHmG9l82+OQXOFU3Kr2XQx9ys01U/Q9HMIrZ300iLc8HLMgh7dcCqgYzAzf4BkoQvDcXf5Y+CuEZ5JBYg=="
     },
+    "@floating-ui/core@1.6.9": {
+      "integrity": "sha512-uMXCuQ3BItDUbAMhIXw7UPXRfAlOAvZzdK9BWpE60MCn+Svt3aLn9jsPTi/WNGlRUu2uI0v5S7JiIUsbsvh3fw==",
+      "dependencies": [
+        "@floating-ui/utils"
+      ]
+    },
     "@floating-ui/dom@0.5.4": {
       "integrity": "sha512-419BMceRLq0RrmTSDxn8hf9R3VCJv2K9PUfugh5JyEFmdjzDo+e8U5EdR8nzKq8Yj1htzLm3b6eQEEam3/rrtg==",
       "dependencies": [
-        "@floating-ui/core"
+        "@floating-ui/core@0.7.3"
       ]
+    },
+    "@floating-ui/dom@1.6.13": {
+      "integrity": "sha512-umqzocjDgNRGTuO7Q8CU32dkHkECqI8ZdMZ5Swb6QAM0t5rnlrN3lGo1hdpscRd3WS8T6DKYK4ephgIH9iRh3w==",
+      "dependencies": [
+        "@floating-ui/core@1.6.9",
+        "@floating-ui/utils"
+      ]
+    },
+    "@floating-ui/react-dom@2.1.2_react@19.0.0_react-dom@19.0.0__react@19.0.0": {
+      "integrity": "sha512-06okr5cgPzMNBy+Ycse2A6udMi4bqwW/zgBF/rwjcNqWkyr82Mcg8b0vjX8OJpZFy/FKjJmw6wV7t44kK6kW7A==",
+      "dependencies": [
+        "@floating-ui/dom@1.6.13",
+        "react",
+        "react-dom"
+      ]
+    },
+    "@floating-ui/react@0.27.6_react@19.0.0_react-dom@19.0.0__react@19.0.0": {
+      "integrity": "sha512-9GLOPbW8jTeboR2ar9uMMUDUZjpTLscUvOjNvRw2EgppgoLHLUh/P/OW9evULosnvDjhYf2Gwk/gMOP9KvXD2A==",
+      "dependencies": [
+        "@floating-ui/react-dom",
+        "@floating-ui/utils",
+        "react",
+        "react-dom",
+        "tabbable@6.2.0"
+      ]
+    },
+    "@floating-ui/utils@0.2.9": {
+      "integrity": "sha512-MDWhGtE+eHw5JW7lq4qhc5yRLS11ERl1c7Z6Xd0a58DozHES6EnNNwUWbMiG4J9Cgj053Bhk8zvlhFYKVhULwg=="
     },
     "@heroicons/react@2.2.0_react@19.0.0": {
       "integrity": "sha512-LMcepvRaS9LYHJGsF0zzmgKCUim/X3N/DQKc4jepAXJ7l8QxJ1PmxJzqplF2Z3FE4PqBAIGyJAQ/w4B5dsqbtQ==",
@@ -307,7 +344,7 @@
     "@mapbox/search-js-web@1.0.0_mapbox-gl@3.10.0": {
       "integrity": "sha512-dBUYAU00S0hXJOtVi8B2E58aLgSoUYjjwVAm1T0w+rw+zSZepvc32skEZ87P1ASZ3Ts6CP6S52xTT0NPsuW/MQ==",
       "dependencies": [
-        "@floating-ui/dom",
+        "@floating-ui/dom@0.5.4",
         "@mapbox/search-js-core",
         "@mapbox/sphericalmercator",
         "focus-trap",
@@ -368,6 +405,21 @@
     },
     "@oxlint/win32-x64@0.16.0": {
       "integrity": "sha512-0Lb599lav9THJRiUYkNugueq98VliinY92yzv5u2NDiIsq5aqqHIjmpJ8L051zCEhyzcbw8KBRV3FofqnroJTA=="
+    },
+    "@radix-ui/react-compose-refs@1.1.1_@types+react@19.0.10_react@19.0.0": {
+      "integrity": "sha512-Y9VzoRDSJtgFMUCoiZBDVo084VQ5hfpXxVE+NgkdNsjiDBByiImMZKKhxMwCbdHvhlENG6a833CbFkOQvTricw==",
+      "dependencies": [
+        "@types/react@19.0.10",
+        "react"
+      ]
+    },
+    "@radix-ui/react-slot@1.1.2_@types+react@19.0.10_react@19.0.0": {
+      "integrity": "sha512-YAKxaiGsSQJ38VzKH86/BPRC4rh+b1Jpa+JneA5LRE7skmLPNAyeG8kPJj/oo4STLvlrs8vkf/iYyc3A5stYCQ==",
+      "dependencies": [
+        "@radix-ui/react-compose-refs",
+        "@types/react@19.0.10",
+        "react"
+      ]
     },
     "@rollup/rollup-android-arm-eabi@4.36.0": {
       "integrity": "sha512-jgrXjjcEwN6XpZXL0HUeOVGfjXhPyxAbbhD0BlXUB+abTOpbPiN5Wb3kOT7yb+uEtATNYF5x5gIfwutmuBA26w=="
@@ -750,7 +802,7 @@
     "focus-trap@6.9.4": {
       "integrity": "sha512-v2NTsZe2FF59Y+sDykKY+XjqZ0cPfhq/hikWVL88BqLivnNiEffAsac6rP6H45ff9wG9LL5ToiDqrLEP9GX9mw==",
       "dependencies": [
-        "tabbable"
+        "tabbable@5.3.3"
       ]
     },
     "fsevents@2.3.3": {
@@ -1091,6 +1143,9 @@
     "tabbable@5.3.3": {
       "integrity": "sha512-QD9qKY3StfbZqWOPLp0++pOrAVb/HbUi5xCc8cUo4XjP19808oaMiDzn0leBY5mCespIBM0CIZePzZjgzR83kA=="
     },
+    "tabbable@6.2.0": {
+      "integrity": "sha512-Cat63mxsVJlzYvN51JmVXIgNoUokrIaT2zLclCXjRd8boZ0004U4KCs/sToJ75C6sdlByWxpYnb5Boif1VSFew=="
+    },
     "tailwindcss@4.0.14": {
       "integrity": "sha512-92YT2dpt671tFiHH/e1ok9D987N9fHD5VWoly1CdPD/Cd1HMglvZwP3nx2yTj2lbXDAHt8QssZkxTLCCTNL+xw=="
     },
@@ -1163,8 +1218,11 @@
   "workspace": {
     "packageJson": {
       "dependencies": [
+        "npm:@floating-ui/react@~0.27.6",
         "npm:@heroicons/react@^2.2.0",
+        "npm:@mapbox/search-js-core@1",
         "npm:@mapbox/search-js-react@1",
+        "npm:@radix-ui/react-slot@^1.1.2",
         "npm:@tailwindcss/forms@~0.5.10",
         "npm:@tailwindcss/vite@^4.0.14",
         "npm:@types/geojson@^7946.0.16",

@@ -15,7 +15,7 @@ const PARIS_COORDINATES = {
 }
 
 const initialViewState = {
-  ...PARIS_COORDINATES,
+  ...BRUSSELS_COORDINATES,
   zoom: 14,
 }
 
