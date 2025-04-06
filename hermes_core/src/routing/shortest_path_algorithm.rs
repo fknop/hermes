@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::{geopoint::GeoPoint, graph::Graph, weighting::Weighting};
 
 use super::routing_path::RoutingPath;
@@ -14,6 +16,7 @@ pub struct ShortestPathDebugInfo {
 pub struct CalcPathResult {
     pub path: RoutingPath,
     pub nodes_visited: usize,
+    pub duration: Duration,
     pub debug: Option<ShortestPathDebugInfo>,
 }
 

@@ -82,7 +82,7 @@ impl AStarHeuristic for HaversineHeuristic {
             .haversine_distance(end_coordinates)
             .value();
 
-        let speed_kmh = 150.0;
+        let speed_kmh = 120.0;
         let speed_ms = speed_kmh / 3.6;
 
         (distance * DISTANCE_INFLUENCE + ((distance / speed_ms) * 1000.0).round()) as Weight
@@ -561,13 +561,10 @@ impl<H: AStarHeuristic> CalcPath for BidirectionalAStar<H> {
             }
         }
 
-        println!("BidirectionalAStar iterations: {}", iterations);
         println!("BidirectionalAStar nodes visited: {}", nodes_visited);
-        println!(
-            "BidirectionalAStar best path weight: {}",
-            self.best_path_weight
-        );
 
+        let path = self.build_path(graph, weighting, start, end);
+        let duration = stopwatch.elapsed();
         stopwatch.report();
 
         let debug = if include_debug_info {
@@ -576,11 +573,10 @@ impl<H: AStarHeuristic> CalcPath for BidirectionalAStar<H> {
             None
         };
 
-        let path = self.build_path(graph, weighting, start, end);
-
         Ok(CalcPathResult {
             path,
             debug,
+            duration,
             nodes_visited,
         })
     }

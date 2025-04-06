@@ -302,16 +302,16 @@ impl<H: AStarHeuristic> CalcPath for AStar<H> {
             }
         }
 
-        println!("AStar iterations: {}", iterations);
         println!("AStar nodes visited: {}", nodes_visited);
 
-        stopwatch.report();
-
         let path = self.build_path(graph, weighting, start, end);
+        let duration = stopwatch.elapsed();
+        stopwatch.report();
 
         Ok(CalcPathResult {
             path,
             nodes_visited,
+            duration,
             debug: if include_debug_info {
                 Some(self.debug_info(graph))
             } else {

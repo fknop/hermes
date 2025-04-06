@@ -38,13 +38,13 @@ pub fn split_geometry<'a>(
 }
 
 pub fn create_virtual_geometries(
-    points: &[GeoPoint],
+    geometry: &[GeoPoint],
     point: &GeoPoint,
 ) -> (Vec<GeoPoint>, Vec<GeoPoint>) {
     let mut first_geometry = Vec::new();
     let mut second_geometry = Vec::new();
 
-    let (first_segment, second_segment) = split_geometry(points, point);
+    let (first_segment, second_segment) = split_geometry(geometry, point);
 
     first_geometry.extend_from_slice(first_segment);
     first_geometry.push(*point);
@@ -52,6 +52,38 @@ pub fn create_virtual_geometries(
     second_geometry.push(*point);
     second_geometry.extend_from_slice(second_segment);
     (first_geometry, second_geometry)
+}
+
+pub fn create_virtual_geometry_between_points(
+    geometry: &[GeoPoint],
+    points: (&GeoPoint, &GeoPoint),
+) -> Vec<GeoPoint> {
+    let first_index = closest_point_index(geometry, points.0);
+    let second_index = closest_point_index(geometry, points.1);
+    // let mut virtual_geometry = Vec::new();
+
+    let mut sorted_points = vec![points.0, points.1];
+
+    sorted_points.sort_by(|a, b| {
+        a.haversine_distance(&geometry[0])
+            .cmp(&b.haversine_distance(&geometry[0]))
+    });
+
+    sorted_points.into_iter().cloned().collect::<Vec<_>>()
+
+    // if let (Some(first_index), Some(second_index)) = (first_index, second_index) {
+    //     if first_index <= second_index {
+    //         virtual_geometry.push(*points.0);
+    //         // virtual_geometry.extend_from_slice(&geometry[first_index..=second_index]);
+    //         virtual_geometry.push(*points.1);
+    //     } else {
+    //         virtual_geometry.push(*points.1);
+    //         // virtual_geometry.extend_from_slice(&geometry[second_index..=first_index]);
+    //         virtual_geometry.push(*points.0);
+    //     }
+    // }
+
+    // virtual_geometry
 }
 
 pub fn generate_intermediate_points_on_line(

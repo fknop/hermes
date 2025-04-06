@@ -3,9 +3,13 @@ use std::collections::HashMap;
 use crate::{
     base_graph::{BaseGraph, GraphEdge},
     edge_direction::EdgeDirection,
-    geometry::{compute_geometry_distance, create_virtual_geometries},
+    geometry::{
+        compute_geometry_distance, create_virtual_geometries,
+        create_virtual_geometry_between_points,
+    },
     geopoint::GeoPoint,
     graph::Graph,
+    properties::property_map::EdgePropertyMap,
     snap::Snap,
 };
 
@@ -45,6 +49,8 @@ impl<'a> QueryGraph<'a> {
         for snap in snaps.iter_mut() {
             query_graph.add_edges_from_snap(snap)
         }
+
+        query_graph.add_virtual_edges_between_snaps(snaps);
 
         query_graph
     }
@@ -111,6 +117,60 @@ impl<'a> QueryGraph<'a> {
             .push(vec![virtual_edge_id_1, virtual_edge_id_2]);
 
         self.virtual_nodes += 1;
+    }
+
+    /// If the snaps are on the same edge, we need to create a virtual edge between them
+    fn add_virtual_edges_between_snaps(&mut self, snaps: &[Snap]) {
+        for i in 0..snaps.len() {
+            for j in i + 1..snaps.len() {
+                let snap_i = &snaps[i];
+                let snap_j = &snaps[j];
+
+                if snap_i.edge_id == snap_j.edge_id {
+                    let snap_i_node = snap_i.closest_node();
+                    let snap_j_node = snap_j.closest_node();
+
+                    // We only need to create an edge if they are both virtual nodes, otherwise, the edge was alraedy created
+                    if !self.is_virtual_node(snap_i_node) || !self.is_virtual_node(snap_j_node) {
+                        continue;
+                    }
+
+                    let edge = self.base_graph.edge(snap_i.edge_id);
+                    let geometry = self.edge_geometry(snap_i.edge_id);
+                    let virtual_geometry = create_virtual_geometry_between_points(
+                        geometry,
+                        (&snap_i.coordinates, &snap_j.coordinates),
+                    );
+
+                    let (start_node, end_node) = if virtual_geometry[0] == snap_i.coordinates {
+                        (snap_i_node, snap_j_node)
+                    } else {
+                        (snap_j_node, snap_i_node)
+                    };
+
+                    let virtual_edge_id = self.base_graph.edge_count() + self.virtual_edges.len();
+
+                    // Add the new edge
+                    self.virtual_edges.push(GraphEdge::new(
+                        virtual_edge_id,
+                        start_node,
+                        end_node,
+                        compute_geometry_distance(&virtual_geometry),
+                        edge.properties.clone(),
+                    ));
+
+                    // Add the geometry for the new edge
+                    self.virtual_edge_geometry.push(virtual_geometry);
+
+                    // Add the edge to the adjacency list of both virtual nodes
+                    let start_virtual_node_id = self.virtual_node_id(start_node);
+                    let end_virtual_node_id = self.virtual_node_id(end_node);
+
+                    self.virtual_adjacency_list[start_virtual_node_id].push(virtual_edge_id);
+                    self.virtual_adjacency_list[end_virtual_node_id].push(virtual_edge_id);
+                }
+            }
+        }
     }
 
     fn add_virtual_edge_for_existing_node(&mut self, edge_id: usize, node_id: usize) {

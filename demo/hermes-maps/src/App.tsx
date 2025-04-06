@@ -20,6 +20,8 @@ import { GeoPoint } from './GeoPoint.ts'
 import { MapMarker } from './components/Marker.tsx'
 import { MapPinIcon } from '@heroicons/react/16/solid'
 import { MagnifyingGlassIcon } from '@heroicons/react/16/solid'
+import { Label } from './components/Label.tsx'
+import { RouteResult } from './components/RouteResult.tsx'
 
 enum RoutingAlgorithm {
   Dijkstra = 'Dijkstra',
@@ -88,6 +90,7 @@ export default function App() {
   const time = routeFeature?.properties?.['time']
   const distance = routeFeature?.properties?.['distance']
   const nodesVisited = routeFeature?.properties?.['nodes']
+  const duration = routeFeature?.properties?.['duration']
 
   return (
     <div className="h-screen w-screen">
@@ -203,7 +206,7 @@ export default function App() {
             </button>
           </div>
 
-          <label className="flex flex-row items-center gap-2">
+          <Label>
             <Checkbox
               checked={includeDebugInfo}
               onChange={(event) => {
@@ -211,11 +214,11 @@ export default function App() {
               }}
             />
             Include debug info
-          </label>
+          </Label>
 
           {Object.values(RoutingAlgorithm).map((algorithm) => {
             return (
-              <label className="flex flex-row items-center gap-2">
+              <Label>
                 <RadioButton
                   checked={selectedAlgorithm == algorithm}
                   name="algorithm"
@@ -225,13 +228,14 @@ export default function App() {
                   }}
                 />
                 {algorithm}
-              </label>
+              </Label>
             )
           })}
 
           <div>
             <Button
               variant="primary"
+              size="small"
               icon={ArrowTurnDownRightIcon}
               onClick={() => {
                 if (start && end) {
@@ -244,9 +248,17 @@ export default function App() {
           </div>
         </div>
 
-        {time && <div>{formatDuration(time / 1000)}</div>}
-        {distance && <div>{formatDistance(distance)}</div>}
-        {nodesVisited && <div>Nodes visited: {nodesVisited}</div>}
+        {!isNil(time) &&
+          !isNil(distance) &&
+          !isNil(nodesVisited) &&
+          !isNil(duration) && (
+            <RouteResult
+              time={time}
+              distance={distance}
+              nodesVisited={nodesVisited}
+              duration={duration}
+            />
+          )}
       </div>
     </div>
   )

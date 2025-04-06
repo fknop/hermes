@@ -16,7 +16,7 @@ type ButtonProps = {
 
 function getCommonClassNames() {
   return clsx(
-    'flex items-center justify-center gap-3',
+    'flex items-center justify-center',
     'rounded-lg',
     'font-semibold',
     'shadow-sm',
@@ -41,9 +41,9 @@ function getVariantClassNames(
 function getSizeClassNames(size: ButtonSize) {
   switch (size) {
     case 'small':
-      return clsx('px-2 py-1 text-xs')
+      return clsx('px-2 py-1 text-xs gap-2')
     case 'normal':
-      return clsx('px-4 py-2 text-sm')
+      return clsx('px-4 py-2 text-sm gap-3')
     default:
       return ''
   }
@@ -74,8 +74,8 @@ export function Button({
       {...props}
     >
       {Icon && (
-        <span className="inline-flex justify-center items-center p-0.5 bg-slate-200 rounded-full">
-          <Icon className="size-3.5 text-primary" />
+        <span className="inline-flex justify-center items-center p-px bg-slate-200 rounded-full">
+          <Icon className="size-3 text-primary" />
         </span>
       )}
       {children}

@@ -18,7 +18,17 @@ export function MultiPointLayer({
       type="circle"
       filter={['==', ['get', 'id'], featureId]}
       paint={{
-        'circle-radius': 1,
+        'circle-radius': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          5,
+          0.5,
+          10,
+          1,
+          15,
+          2.5,
+        ],
         'circle-color': color,
       }}
     />
