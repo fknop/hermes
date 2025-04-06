@@ -1,6 +1,6 @@
 use crate::{edge_direction::EdgeDirection, properties::property::Property};
 
-#[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Debug)]
+#[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Debug, Default)]
 struct SmallMap<T>(Vec<(Property, T)>);
 impl<T> SmallMap<T> {
     fn new() -> Self {
@@ -15,90 +15,69 @@ impl<T> SmallMap<T> {
     }
 }
 
-#[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Debug)]
+#[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Debug, Default)]
+struct DirectionalMap<T> {
+    forward: SmallMap<T>,
+    backward: SmallMap<T>,
+}
+
+impl<T: Copy> DirectionalMap<T> {
+    fn new() -> Self {
+        DirectionalMap {
+            forward: SmallMap::new(),
+            backward: SmallMap::new(),
+        }
+    }
+
+    fn get(&self, property: Property, direction: EdgeDirection) -> Option<&T> {
+        match direction {
+            EdgeDirection::Forward => self.forward.get(&property),
+            EdgeDirection::Backward => self.backward.get(&property),
+        }
+    }
+
+    pub fn insert(&mut self, property: Property, direction: EdgeDirection, value: T) -> Option<T> {
+        match direction {
+            EdgeDirection::Forward => self.forward.insert(property, value),
+            EdgeDirection::Backward => self.backward.insert(property, value),
+        }
+
+        Some(value)
+    }
+}
+
+#[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Debug, Default)]
 pub struct EdgePropertyMap {
-    backward_bool_values: SmallMap<bool>,
-    forward_bool_values: SmallMap<bool>,
-    forward_u8_values: SmallMap<u8>,
-    backward_u8_values: SmallMap<u8>,
+    f32_values: DirectionalMap<f32>,
+    bool_values: DirectionalMap<bool>,
+    u8_values: DirectionalMap<u8>,
     usize_values: SmallMap<usize>,
 }
 
+macro_rules! define_directional_access_functions {
+    ($type:ty, $field:ident) => {
+        paste::paste! {
+            pub fn [<get_ $type>](&self, property: Property, direction: EdgeDirection) -> Option<$type> {
+                self.$field.get(property, direction).cloned()
+            }
+
+            pub fn [<insert_ $type>](&mut self, property: Property, direction: EdgeDirection, value: $type) {
+                self.$field.insert(property, direction, value);
+            }
+        }
+    };
+}
+
 impl EdgePropertyMap {
-    pub fn new() -> EdgePropertyMap {
-        EdgePropertyMap {
-            forward_u8_values: SmallMap::new(),
-            backward_u8_values: SmallMap::new(),
-            forward_bool_values: SmallMap::new(),
-            backward_bool_values: SmallMap::new(),
-            usize_values: SmallMap::new(),
-        }
-    }
-
-    pub fn as_reversed(&self) -> EdgePropertyMap {
-        EdgePropertyMap {
-            forward_u8_values: self.backward_u8_values.clone(),
-            backward_u8_values: self.forward_u8_values.clone(),
-            forward_bool_values: self.backward_bool_values.clone(),
-            backward_bool_values: self.forward_bool_values.clone(),
-            usize_values: self.usize_values.clone(),
-        }
-    }
-
-    pub fn get_u8(&self, property: Property, direction: EdgeDirection) -> Option<u8> {
-        match direction {
-            EdgeDirection::Forward => self.forward_u8_values.get(&property).cloned(),
-            EdgeDirection::Backward => self.backward_u8_values.get(&property).cloned(),
-        }
-    }
-
-    pub fn get_bool(&self, property: Property, direction: EdgeDirection) -> Option<bool> {
-        match direction {
-            EdgeDirection::Forward => self.forward_bool_values.get(&property).cloned(),
-            EdgeDirection::Backward => self.backward_bool_values.get(&property).cloned(),
-        }
-    }
-
     pub fn get_usize(&self, property: Property) -> Option<usize> {
         self.usize_values.get(&property).cloned()
     }
 
-    pub fn insert_u8(
-        &mut self,
-        property: Property,
-        direction: EdgeDirection,
-        value: u8,
-    ) -> Option<u8> {
-        match direction {
-            EdgeDirection::Forward => self.forward_u8_values.insert(property, value),
-            EdgeDirection::Backward => self.backward_u8_values.insert(property, value),
-        }
-
-        Some(value)
-    }
-    pub fn insert_bool(
-        &mut self,
-        property: Property,
-        direction: EdgeDirection,
-        value: bool,
-    ) -> Option<bool> {
-        match direction {
-            EdgeDirection::Forward => self.forward_bool_values.insert(property, value),
-            EdgeDirection::Backward => self.backward_bool_values.insert(property, value),
-        }
-
-        Some(value)
-    }
-
-    pub fn insert_usize(&mut self, property: Property, value: usize) -> Option<usize> {
+    pub fn insert_usize(&mut self, property: Property, value: usize) {
         self.usize_values.insert(property, value);
-
-        Some(value)
     }
-}
 
-impl Default for EdgePropertyMap {
-    fn default() -> Self {
-        Self::new()
-    }
+    define_directional_access_functions!(f32, f32_values);
+    define_directional_access_functions!(u8, u8_values);
+    define_directional_access_functions!(bool, bool_values);
 }

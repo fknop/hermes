@@ -224,7 +224,7 @@ pub mod test_graph {
                 start_node,
                 end_node,
                 distance.into(),
-                EdgePropertyMap::new(),
+                EdgePropertyMap::default(),
             ));
 
             // self.geometry.push(geometry);

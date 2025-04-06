@@ -37,13 +37,14 @@ impl CarAverageSpeedParser {
         }
     }
 
-    fn parse_average_speed(way: &OsmWay) -> u8 {
+    fn parse_average_speed(way: &OsmWay) -> f32 {
         let max_speed = MaxSpeedParser::parse_max_speed(way);
 
         match max_speed {
             Some(max_speed) => max_speed,
             None => {
                 CarAverageSpeedParser::default_speed_for_highway(way.tag("highway").unwrap_or(""))
+                    as f32
             }
         }
     }
@@ -52,12 +53,12 @@ impl CarAverageSpeedParser {
 impl TagParser for CarAverageSpeedParser {
     fn parse_way(way: &OsmWay, properties: &mut EdgePropertyMap) {
         let car_average_speed = CarAverageSpeedParser::parse_average_speed(way);
-        properties.insert_u8(
+        properties.insert_f32(
             Property::CarAverageSpeed,
             EdgeDirection::Forward,
             car_average_speed,
         );
-        properties.insert_u8(
+        properties.insert_f32(
             Property::CarAverageSpeed,
             EdgeDirection::Backward,
             car_average_speed,

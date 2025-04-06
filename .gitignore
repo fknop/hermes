@@ -4,3 +4,4 @@ data/geojson
 data/*.bin
 data/osm/belgium-latest.osm.pbf
 data/osm/france-latest.osm.pbf
+data/osm/united-kingdom-latest.osm.pbf

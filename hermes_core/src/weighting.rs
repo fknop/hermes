@@ -25,19 +25,19 @@ impl CarWeighting {
     pub fn new() -> Self {
         CarWeighting
     }
-    fn speed(edge: &GraphEdge, direction: EdgeDirection) -> u8 {
+    fn speed(edge: &GraphEdge, direction: EdgeDirection) -> f32 {
         let access = edge
             .properties
             .get_bool(Property::CarVehicleAccess, direction)
             .unwrap_or(false);
 
         if !access {
-            return 0;
+            return 0.0;
         }
 
-        let speed = edge.properties.get_u8(Property::CarAverageSpeed, direction);
-
-        speed.unwrap_or(0)
+        edge.properties
+            .get_f32(Property::CarAverageSpeed, direction)
+            .unwrap_or(0.0)
     }
 }
 
@@ -55,12 +55,12 @@ impl Weighting for CarWeighting {
 
     fn calc_edge_ms(&self, edge: &GraphEdge, direction: EdgeDirection) -> DurationMs {
         let speed = Self::speed(edge, direction);
-        if speed == 0 {
+        if speed == 0.0 {
             return u32::MAX;
         }
 
-        let speed_meters_per_second = (speed as f64) / 3.6;
-        let ms: f64 = (edge.distance().value() / speed_meters_per_second) * 1000.0;
+        let speed_meters_per_second = speed as f64 / 3.6;
+        let ms = (edge.distance().value() / speed_meters_per_second) * 1000.0;
 
         ms.round() as DurationMs
     }

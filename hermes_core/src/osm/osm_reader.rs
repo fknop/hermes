@@ -153,7 +153,7 @@ impl OsmReader {
                         tags: &raw_way.tags,
                     };
 
-                    let mut properties = EdgePropertyMap::new();
+                    let mut properties = EdgePropertyMap::default();
 
                     // TODO: move somewhere else
                     parse_way_tags(&way, &mut properties, Property::MaxSpeed);
