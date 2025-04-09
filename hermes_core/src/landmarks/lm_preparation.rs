@@ -1,3 +1,5 @@
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+
 use crate::{
     base_graph::BaseGraph,
     graph::Graph,
@@ -15,19 +17,18 @@ pub(crate) struct LMPreparation<'a, W: Weighting> {
     weighting: &'a W,
 }
 
-impl<'a, W: Weighting> LMPreparation<'a, W> {
+impl<'a, W: Weighting + Send + Sync> LMPreparation<'a, W> {
     pub fn new(graph: &'a BaseGraph, weighting: &'a W) -> Self {
         Self { graph, weighting }
     }
 
     pub fn create_landmarks(&self, num_landmarks: usize) -> LMData {
         let landmarks_ids = self.find_landmarks(num_landmarks);
-        let mut landmarks = Vec::with_capacity(num_landmarks);
 
-        for node_id in landmarks_ids {
-            let landmark = self.create_landmark(node_id);
-            landmarks.push(landmark);
-        }
+        let landmarks: Vec<Landmark> = landmarks_ids
+            .par_iter()
+            .map(|&node_id| self.create_landmark(node_id))
+            .collect();
 
         LMData::new(landmarks)
     }

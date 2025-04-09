@@ -9,6 +9,7 @@ geo-types = "0.7.15"
 intmap = "3.1.0"
 osmpbfreader = "0.17.0"
 paste = "1.0.15"
+rayon = "1.10.0"
 rkyv = { version = "0.8.10", features = ["pointer_width_64"] }
 rstar = "0.12.2"
 serde = { version = "1.0.219", features = ["derive"] }

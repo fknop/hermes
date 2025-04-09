@@ -470,6 +470,7 @@ dependencies = [
  "intmap",
  "osmpbfreader",
  "paste",
+ "rayon",
  "rkyv",
  "rstar",
  "serde",

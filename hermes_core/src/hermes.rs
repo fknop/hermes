@@ -67,7 +67,7 @@ impl Hermes {
 
         let weighting = CarWeighting::new();
         let lm_preparation = LMPreparation::new(&graph, &weighting);
-        let lm = lm_preparation.create_landmarks(16);
+        let lm = lm_preparation.create_landmarks(10);
 
         let index = LocationIndex::build_from_graph(&graph);
 
