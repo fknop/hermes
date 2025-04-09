@@ -1,12 +1,21 @@
+use std::fs::File;
+use std::io::{BufReader, BufWriter};
+
 use crate::base_graph::BaseGraph;
 use crate::geopoint::GeoPoint;
 use crate::graph::Graph;
 use crate::snap::Snap;
+use crate::stopwatch::{self, Stopwatch};
+use crate::storage::write_bytes;
 use crate::weighting::Weighting;
+use bincode::serde::EncodeError;
 use geo::HaversineClosestPoint;
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use rstar::primitives::GeomWithData;
 use rstar::{AABB, PointDistance, RTree, RTreeObject};
+use serde::{Deserialize, Serialize};
 
+#[derive(Serialize, Deserialize)]
 struct IndexedLine(geo::LineString);
 
 impl IndexedLine {
@@ -36,6 +45,7 @@ impl PointDistance for IndexedLine {
     }
 }
 
+#[derive(Serialize, Deserialize)]
 struct IndexedData {
     edge_id: usize,
 }
@@ -58,8 +68,7 @@ pub struct LocationIndex {
 
 impl LocationIndex {
     pub fn build_from_graph(graph: &BaseGraph) -> LocationIndex {
-        println!("Building location index");
-
+        let stopwatch = Stopwatch::new("build_location_index");
         let tree: RTree<LocationIndexObject> = RTree::bulk_load(
             (0..graph.edge_count())
                 .map(|edge_id| {
@@ -70,8 +79,32 @@ impl LocationIndex {
                 .collect(),
         );
 
-        println!("Finished building location index");
+        stopwatch.report();
 
+        LocationIndex { tree }
+    }
+
+    pub fn save_to_file(&self, path: &str) -> Result<usize, bincode::error::EncodeError> {
+        let stopwatch = Stopwatch::new("location_index/save_to_file");
+        let mut file = File::create(path).expect("failed to create file");
+        let mut writer = BufWriter::new(&mut file);
+        let result = bincode::serde::encode_into_std_write(
+            &self.tree,
+            &mut writer,
+            bincode::config::standard(),
+        );
+        stopwatch.report();
+        result
+    }
+
+    pub fn load_from_file(path: &str) -> Self {
+        let stopwatch = Stopwatch::new("location_index/load_from_file");
+        let mut file = File::open(path).expect("failed to open file");
+        let mut reader = BufReader::new(&mut file);
+        let result: Result<RTree<LocationIndexObject>, bincode::error::DecodeError> =
+            bincode::serde::decode_from_std_read(&mut reader, bincode::config::standard());
+        let tree = result.unwrap();
+        stopwatch.report();
         LocationIndex { tree }
     }
 

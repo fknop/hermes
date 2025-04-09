@@ -1,11 +1,8 @@
 use crate::{edge_direction::EdgeDirection, properties::property::Property};
 
 #[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Debug, Default)]
-struct SmallMap<T>(Vec<(Property, T)>);
-impl<T> SmallMap<T> {
-    fn new() -> Self {
-        SmallMap(Vec::new())
-    }
+struct VectorMap<T>(Vec<(Property, T)>);
+impl<T> VectorMap<T> {
     fn get(&self, property: &Property) -> Option<&T> {
         self.0.iter().find(|(p, _)| p == property).map(|(_, v)| v)
     }
@@ -17,18 +14,11 @@ impl<T> SmallMap<T> {
 
 #[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Debug, Default)]
 struct DirectionalMap<T> {
-    forward: SmallMap<T>,
-    backward: SmallMap<T>,
+    forward: VectorMap<T>,
+    backward: VectorMap<T>,
 }
 
 impl<T: Copy> DirectionalMap<T> {
-    fn new() -> Self {
-        DirectionalMap {
-            forward: SmallMap::new(),
-            backward: SmallMap::new(),
-        }
-    }
-
     fn get(&self, property: Property, direction: EdgeDirection) -> Option<&T> {
         match direction {
             EdgeDirection::Forward => self.forward.get(&property),
@@ -51,7 +41,7 @@ pub struct EdgePropertyMap {
     f32_values: DirectionalMap<f32>,
     bool_values: DirectionalMap<bool>,
     u8_values: DirectionalMap<u8>,
-    usize_values: SmallMap<usize>,
+    usize_values: VectorMap<usize>,
 }
 
 macro_rules! define_directional_access_functions {

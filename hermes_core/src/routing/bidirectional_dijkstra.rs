@@ -1,3 +1,5 @@
+use fxhash::{FxBuildHasher, FxHashMap};
+
 use crate::constants::{INVALID_EDGE, INVALID_NODE, MAX_WEIGHT};
 use crate::edge_direction::EdgeDirection;
 use crate::geopoint::GeoPoint;
@@ -65,13 +67,13 @@ pub(crate) trait NodeData {
 }
 
 pub(crate) struct HashMapNodeData {
-    data: HashMap<usize, NodeDataEntry>,
+    data: FxHashMap<usize, NodeDataEntry>,
 }
 
 impl HashMapNodeData {
     fn with_capacity(capacity_hint: usize) -> Self {
         HashMapNodeData {
-            data: HashMap::with_capacity(capacity_hint),
+            data: HashMap::with_capacity_and_hasher(capacity_hint, FxBuildHasher::default()),
         }
     }
 }

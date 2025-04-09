@@ -1,3 +1,5 @@
+use fxhash::FxHashMap;
+
 use crate::constants::{DISTANCE_INFLUENCE, INVALID_EDGE, INVALID_NODE, MAX_WEIGHT};
 use crate::edge_direction::EdgeDirection;
 use crate::geopoint::GeoPoint;
@@ -87,7 +89,7 @@ impl AStarHeuristic for HaversineHeuristic {
 pub struct AStar<H: AStarHeuristic> {
     heap: BinaryHeap<HeapItem>,
     // Use a HashMap instead of a vector. Creating a vector with a capacity of the entire nodes of the planet is not scalable.
-    data: HashMap<usize, NodeData>,
+    data: FxHashMap<usize, NodeData>,
 
     debug_visited_nodes: Option<Vec<usize>>,
 
@@ -97,7 +99,7 @@ pub struct AStar<H: AStarHeuristic> {
 impl<H: AStarHeuristic> AStar<H> {
     pub fn with_heuristic(_graph: &impl Graph, heuristic: H) -> AStar<H> {
         // TODO: better estimate the capacity to allocate
-        let data = HashMap::with_capacity(10000);
+        let data = FxHashMap::default();
         let heap: BinaryHeap<HeapItem> = BinaryHeap::with_capacity(1024);
         AStar {
             data,

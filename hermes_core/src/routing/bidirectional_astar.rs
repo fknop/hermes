@@ -1,3 +1,5 @@
+use fxhash::{FxBuildHasher, FxHashMap};
+
 use crate::constants::{DISTANCE_INFLUENCE, INVALID_EDGE, INVALID_NODE, MAX_WEIGHT};
 use crate::edge_direction::EdgeDirection;
 use crate::geopoint::GeoPoint;
@@ -92,13 +94,13 @@ impl AStarHeuristic for HaversineHeuristic {
 pub struct BidirectionalAStar<H: AStarHeuristic> {
     // Forward search (from start node)
     forward_heap: BinaryHeap<HeapItem>,
-    forward_data: HashMap<usize, NodeData>,
+    forward_data: FxHashMap<usize, NodeData>,
 
     debug_forward_visited_nodes: Option<Vec<usize>>,
 
     // Backward search (from target node)
     backward_heap: BinaryHeap<HeapItem>,
-    backward_data: HashMap<usize, NodeData>,
+    backward_data: FxHashMap<usize, NodeData>,
 
     debug_backward_visited_nodes: Option<Vec<usize>>,
 
@@ -112,11 +114,11 @@ pub struct BidirectionalAStar<H: AStarHeuristic> {
 impl<H: AStarHeuristic> BidirectionalAStar<H> {
     pub fn with_heuristic(_graph: &impl Graph, heuristic: H) -> BidirectionalAStar<H> {
         // Allocate data structures for both search directions
-        let forward_data = HashMap::with_capacity(50000);
-        let forward_heap: BinaryHeap<HeapItem> = BinaryHeap::with_capacity(50000);
+        let forward_data = HashMap::with_capacity_and_hasher(20000, FxBuildHasher::default());
+        let forward_heap: BinaryHeap<HeapItem> = BinaryHeap::with_capacity(20000);
 
-        let backward_data = HashMap::with_capacity(50000);
-        let backward_heap: BinaryHeap<HeapItem> = BinaryHeap::with_capacity(50000);
+        let backward_data = HashMap::with_capacity_and_hasher(20000, FxBuildHasher::default());
+        let backward_heap: BinaryHeap<HeapItem> = BinaryHeap::with_capacity(20000);
 
         BidirectionalAStar {
             forward_data,
@@ -163,7 +165,7 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
         );
     }
 
-    fn node_data_for_direction(&mut self, dir: SearchDirection) -> &mut HashMap<usize, NodeData> {
+    fn node_data_for_direction(&mut self, dir: SearchDirection) -> &mut FxHashMap<usize, NodeData> {
         match dir {
             SearchDirection::Forward => &mut self.forward_data,
             SearchDirection::Backward => &mut self.backward_data,

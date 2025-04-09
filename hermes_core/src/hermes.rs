@@ -28,6 +28,7 @@ pub struct Hermes {
 
 const GRAPH_FILE_NAME: &str = "graph.bin";
 const LANDMARKS_FILE_NAME: &str = "lm.bin";
+const LOCATION_INDEX_FILE_NAME: &str = "location_index.bin";
 
 impl Hermes {
     pub fn save(&self, dir_path: &str) -> Result<(), std::io::Error> {
@@ -37,12 +38,17 @@ impl Hermes {
         self.lm
             .save_to_file(binary_file_path(dir_path, LANDMARKS_FILE_NAME).as_str())?;
 
+        self.index
+            .save_to_file(binary_file_path(dir_path, LOCATION_INDEX_FILE_NAME).as_str());
+
         Ok(())
     }
 
     pub fn from_directory(dir_path: &str) -> Hermes {
         let graph = BaseGraph::from_file(binary_file_path(dir_path, GRAPH_FILE_NAME).as_str());
-        let location_index = LocationIndex::build_from_graph(&graph);
+        let location_index = LocationIndex::load_from_file(
+            binary_file_path(dir_path, LOCATION_INDEX_FILE_NAME).as_str(),
+        );
 
         let lm = LMData::from_file(binary_file_path(dir_path, LANDMARKS_FILE_NAME).as_str());
 

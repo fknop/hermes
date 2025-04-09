@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use fxhash::FxHashMap;
+
 use crate::{
     base_graph::{BaseGraph, GraphEdge},
     edge_direction::EdgeDirection,
@@ -32,7 +34,7 @@ pub(crate) struct QueryGraph<'a> {
     virtual_adjacency_list: Vec<Vec<usize>>,
 
     // New edges for existing nodes in the base graph
-    virtual_adjacency_list_existing_nodes: HashMap<usize, Vec<usize>>,
+    virtual_adjacency_list_existing_nodes: FxHashMap<usize, Vec<usize>>,
 }
 
 impl<'a> QueryGraph<'a> {
@@ -43,7 +45,7 @@ impl<'a> QueryGraph<'a> {
             virtual_edge_geometry: Vec::new(),
             virtual_edges: Vec::new(),
             virtual_adjacency_list: Vec::new(),
-            virtual_adjacency_list_existing_nodes: HashMap::new(),
+            virtual_adjacency_list_existing_nodes: FxHashMap::default(),
         };
 
         for snap in snaps.iter_mut() {

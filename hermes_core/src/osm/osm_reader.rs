@@ -3,6 +3,7 @@ use crate::properties::property::Property;
 use crate::properties::property_map::EdgePropertyMap;
 use crate::properties::tag_parser::parse_way_tags;
 
+use fxhash::FxHashMap;
 use osmpbfreader::{NodeId, OsmObj, OsmPbfReader};
 use std::{collections::HashMap, fs::File, path::Path};
 
@@ -53,8 +54,8 @@ pub struct OsmReader {
     processed_segments: usize,
     routing_nodes: Vec<OsmNode>,
     geometry_nodes: Vec<OsmNode>,
-    osm_node_id_to_node_type: HashMap<i64, OsmNodeType>,
-    osm_node_id_to_node_id: HashMap<i64, usize>,
+    osm_node_id_to_node_type: FxHashMap<i64, OsmNodeType>,
+    osm_node_id_to_node_id: FxHashMap<i64, usize>,
 }
 
 impl OsmReader {

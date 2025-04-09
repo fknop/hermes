@@ -10,7 +10,7 @@ pub mod hermes;
 mod landmarks;
 pub mod location_index;
 pub mod osm;
-mod properties;
+pub mod properties;
 mod query_graph;
 pub mod routing;
 mod snap;
