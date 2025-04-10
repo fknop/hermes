@@ -5,6 +5,7 @@ use crate::edge_direction::EdgeDirection;
 use crate::geopoint::GeoPoint;
 use crate::graph::Graph;
 
+use crate::graph_edge::GraphEdge;
 use crate::stopwatch::Stopwatch;
 use crate::weighting::{Weight, Weighting};
 use std::cmp::{Ordering, max};
@@ -228,10 +229,10 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
         self.node_data(dir, node).weight
     }
 
-    fn process_node(
+    fn process_node<G: Graph>(
         &mut self,
-        graph: &impl Graph,
-        weighting: &dyn Weighting,
+        graph: &G,
+        weighting: &dyn Weighting<G>,
         dir: SearchDirection,
         node_id: usize,
         g_score: Weight,
@@ -310,10 +311,10 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
         self.set_settled(dir, node_id);
     }
 
-    fn build_forward_path(
+    fn build_forward_path<G: Graph>(
         &mut self,
-        graph: &impl Graph,
-        weighting: &dyn Weighting,
+        graph: &G,
+        weighting: &dyn Weighting<G>,
         node: usize,
     ) -> Vec<RoutingPathLeg> {
         let mut path: Vec<RoutingPathLeg> = Vec::with_capacity(32);
@@ -346,10 +347,10 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
         path
     }
 
-    fn build_backward_path(
+    fn build_backward_path<G: Graph>(
         &mut self,
-        graph: &impl Graph,
-        weighting: &dyn Weighting,
+        graph: &G,
+        weighting: &dyn Weighting<G>,
         node: usize,
     ) -> Vec<RoutingPathLeg> {
         let mut path: Vec<RoutingPathLeg> = Vec::with_capacity(32);
@@ -386,10 +387,10 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
         path
     }
 
-    fn build_path(
+    fn build_path<G: Graph>(
         &mut self,
-        graph: &impl Graph,
-        weighting: &impl Weighting,
+        graph: &G,
+        weighting: &impl Weighting<G>,
         _start: usize,
         _end: usize,
     ) -> RoutingPath {
@@ -443,10 +444,10 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
 }
 
 impl<H: AStarHeuristic> CalcPath for BidirectionalAStar<H> {
-    fn calc_path(
+    fn calc_path<G: Graph>(
         &mut self,
-        graph: &impl Graph,
-        weighting: &impl Weighting,
+        graph: &G,
+        weighting: &impl Weighting<G>,
         start: usize,
         end: usize,
         options: Option<CalcPathOptions>,

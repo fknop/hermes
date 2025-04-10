@@ -1,10 +1,12 @@
 use fxhash::{FxBuildHasher, FxHashMap};
 
+use crate::base_graph::BaseGraphEdge;
 use crate::constants::{INVALID_EDGE, INVALID_NODE, MAX_WEIGHT};
 use crate::edge_direction::EdgeDirection;
 use crate::geopoint::GeoPoint;
 use crate::graph::Graph;
 
+use crate::graph_edge::GraphEdge;
 use crate::stopwatch::Stopwatch;
 use crate::weighting::{Weight, Weighting};
 use std::cmp::Ordering;
@@ -125,7 +127,7 @@ type StopCondition<'a> = Box<dyn Fn(Option<usize>, Option<usize>) -> bool + 'a>;
 pub(crate) struct BidirectionalDijkstra<'a, G, W, ND>
 where
     G: Graph,
-    W: Weighting,
+    W: Weighting<G>,
     ND: NodeData,
 {
     graph: &'a G,
@@ -158,7 +160,7 @@ where
 impl<'a, G, W> BidirectionalDijkstra<'a, G, W, VectorNodeData>
 where
     G: Graph,
-    W: Weighting,
+    W: Weighting<G>,
 {
     pub fn with_full_capacity(graph: &'a G, weighting: &'a W, capacity_hint: usize) -> Self {
         // Allocate data structures for both search directions
@@ -191,7 +193,7 @@ where
 impl<'a, G, W> BidirectionalDijkstra<'a, G, W, HashMapNodeData>
 where
     G: Graph,
-    W: Weighting,
+    W: Weighting<G>,
 {
     pub fn set_stop_condition(&mut self, stop_condition: StopCondition<'a>) {
         self.stop_condition = Some(stop_condition);
@@ -228,7 +230,7 @@ where
 impl<G, W, N> BidirectionalDijkstra<'_, G, W, N>
 where
     G: Graph,
-    W: Weighting,
+    W: Weighting<G>,
     N: NodeData,
 {
     pub fn graph(&self) -> &G {
@@ -394,8 +396,8 @@ where
 
     fn build_forward_path(
         &mut self,
-        graph: &impl Graph,
-        weighting: &dyn Weighting,
+        graph: &G,
+        weighting: &dyn Weighting<G>,
         node: usize,
     ) -> Vec<RoutingPathLeg> {
         let mut path: Vec<RoutingPathLeg> = Vec::with_capacity(32);
@@ -430,8 +432,8 @@ where
 
     fn build_backward_path(
         &mut self,
-        graph: &impl Graph,
-        weighting: &dyn Weighting,
+        graph: &G,
+        weighting: &dyn Weighting<G>,
         node: usize,
     ) -> Vec<RoutingPathLeg> {
         let mut path: Vec<RoutingPathLeg> = Vec::with_capacity(32);
@@ -470,8 +472,8 @@ where
 
     fn build_path(
         &mut self,
-        graph: &impl Graph,
-        weighting: &impl Weighting,
+        graph: &G,
+        weighting: &impl Weighting<G>,
         _start: usize,
         _end: usize,
     ) -> RoutingPath {
@@ -527,7 +529,7 @@ where
 impl<G, W, N> ShortestPathAlgorithm for BidirectionalDijkstra<'_, G, W, N>
 where
     G: Graph,
-    W: Weighting,
+    W: Weighting<G>,
     N: NodeData,
 {
     fn run(&mut self, stop_condition: Option<fn(&Self) -> bool>) {

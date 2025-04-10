@@ -108,10 +108,10 @@ impl LocationIndex {
         LocationIndex { tree }
     }
 
-    pub fn snap(
+    pub fn snap<G: Graph>(
         &self,
-        graph: &BaseGraph,
-        weighting: &dyn Weighting,
+        graph: &G,
+        weighting: &impl Weighting<G>,
         coordinates: &GeoPoint,
     ) -> Option<Snap> {
         self.tree

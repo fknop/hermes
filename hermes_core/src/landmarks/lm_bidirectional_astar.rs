@@ -4,13 +4,13 @@ use super::{lm_astar_heuristic::LMAstarHeuristic, lm_data::LMData};
 
 pub struct LMBidirectionalAstar;
 impl LMBidirectionalAstar {
-    pub fn from_landmarks<'a>(
-        graph: &'a impl Graph,
-        weighting: &'a impl Weighting,
+    pub fn from_landmarks<'a, G: Graph>(
+        graph: &'a G,
+        weighting: &'a impl Weighting<G>,
         lm: &'a LMData,
         start: usize,
         end: usize,
-    ) -> BidirectionalAStar<LMAstarHeuristic<'a, impl Graph, impl Weighting>> {
+    ) -> BidirectionalAStar<LMAstarHeuristic<'a, G, impl Weighting<G>>> {
         let heuristic = LMAstarHeuristic::new(graph, weighting, lm, start, end);
         BidirectionalAStar::with_heuristic(graph, heuristic)
     }

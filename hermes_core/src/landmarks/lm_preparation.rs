@@ -12,12 +12,12 @@ use crate::{
 
 use super::lm_data::{LMData, Landmark};
 
-pub(crate) struct LMPreparation<'a, W: Weighting> {
+pub(crate) struct LMPreparation<'a, W: Weighting<BaseGraph>> {
     graph: &'a BaseGraph,
     weighting: &'a W,
 }
 
-impl<'a, W: Weighting + Send + Sync> LMPreparation<'a, W> {
+impl<'a, W: Weighting<BaseGraph> + Send + Sync> LMPreparation<'a, W> {
     pub fn new(graph: &'a BaseGraph, weighting: &'a W) -> Self {
         Self { graph, weighting }
     }

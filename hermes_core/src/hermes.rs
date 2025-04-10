@@ -1,4 +1,5 @@
 use crate::base_graph::BaseGraph;
+use crate::error::ImportError;
 use crate::geopoint::GeoPoint;
 use crate::graph::Graph;
 use crate::landmarks::lm_bidirectional_astar::LMBidirectionalAstar;
@@ -14,15 +15,14 @@ use crate::routing::routing_request::{RoutingAlgorithm, RoutingRequest};
 use crate::routing::shortest_path_algorithm::{CalcPath, CalcPathOptions, CalcPathResult};
 use crate::stopwatch::Stopwatch;
 use crate::storage::binary_file_path;
-use crate::weighting::CarWeighting;
+use crate::weighting::{CarWeighting, Weighting};
 
 pub struct Hermes {
     graph: BaseGraph,
     index: LocationIndex,
     // TODO: Sync + Send, I don't know what I'm doing here
     // profiles: HashMap<String, Box<dyn Weighting + Sync + Send>>,
-    car_weighting: CarWeighting,
-
+    // car_weighting: CarWeighting<QueryGraph<'a>>,
     lm: LMData,
 }
 
@@ -31,15 +31,18 @@ const LANDMARKS_FILE_NAME: &str = "lm.bin";
 const LOCATION_INDEX_FILE_NAME: &str = "location_index.bin";
 
 impl Hermes {
-    pub fn save(&self, dir_path: &str) -> Result<(), std::io::Error> {
+    pub fn save(&self, dir_path: &str) -> Result<(), ImportError> {
         self.graph
-            .save_to_file(binary_file_path(dir_path, GRAPH_FILE_NAME).as_str())?;
+            .save_to_file(binary_file_path(dir_path, GRAPH_FILE_NAME).as_str())
+            .map_err(ImportError::SaveGraph)?;
 
         self.lm
-            .save_to_file(binary_file_path(dir_path, LANDMARKS_FILE_NAME).as_str())?;
+            .save_to_file(binary_file_path(dir_path, LANDMARKS_FILE_NAME).as_str())
+            .map_err(ImportError::SaveLandmarks)?;
 
         self.index
-            .save_to_file(binary_file_path(dir_path, LOCATION_INDEX_FILE_NAME).as_str());
+            .save_to_file(binary_file_path(dir_path, LOCATION_INDEX_FILE_NAME).as_str())
+            .map_err(ImportError::SaveLocationIndex)?;
 
         Ok(())
     }
@@ -59,7 +62,6 @@ impl Hermes {
         Hermes {
             graph,
             index: location_index,
-            car_weighting: CarWeighting::new(), // profiles,
             lm,
         }
     }
@@ -77,12 +79,7 @@ impl Hermes {
 
         let index = LocationIndex::build_from_graph(&graph);
 
-        Hermes {
-            graph,
-            index,
-            car_weighting: weighting, // profiles,
-            lm,
-        }
+        Hermes { graph, index, lm }
     }
 
     pub fn graph(&self) -> &BaseGraph {
@@ -94,15 +91,12 @@ impl Hermes {
     }
 
     pub fn route(&self, request: RoutingRequest) -> Result<CalcPathResult, String> {
-        let weighting = match request.profile.as_str() {
-            "car" => &self.car_weighting,
-            _ => return Err(String::from("No profile found")),
-        };
+        let base_graph_weighting = self.create_weighting(&request.profile);
 
         let start_snap_stop_watch = Stopwatch::new("snap/start");
         let start_snap = self
             .index()
-            .snap(&self.graph, weighting, &request.start)
+            .snap(&self.graph, &base_graph_weighting, &request.start)
             .expect("no way to avenue closest way");
 
         start_snap_stop_watch.report();
@@ -111,7 +105,7 @@ impl Hermes {
 
         let end_snap = self
             .index()
-            .snap(&self.graph, weighting, &request.end)
+            .snap(&self.graph, &base_graph_weighting, &request.end)
             .expect("no way to rue des palais way");
 
         end_snap_stop_watch.report();
@@ -134,50 +128,45 @@ impl Hermes {
 
         match request_options.and_then(|options| options.algorithm) {
             Some(RoutingAlgorithm::Dijkstra) => {
+                let weighting = self.create_weighting(&request.profile);
                 let mut dijkstra = Dijkstra::new(&query_graph);
-                dijkstra.calc_path(&query_graph, weighting, start, end, Some(options))
+                dijkstra.calc_path(&query_graph, &weighting, start, end, Some(options))
             }
             Some(RoutingAlgorithm::Astar) => {
+                let weighting = self.create_weighting(&request.profile);
                 let mut astar = AStar::new(&query_graph);
-                astar.calc_path(&query_graph, weighting, start, end, Some(options))
+                astar.calc_path(&query_graph, &weighting, start, end, Some(options))
             }
             Some(RoutingAlgorithm::BidirectionalAstar) => {
+                let weighting = self.create_weighting(&request.profile);
                 let mut bdirastar = BidirectionalAStar::new(&query_graph);
-                bdirastar.calc_path(&query_graph, weighting, start, end, Some(options))
+                bdirastar.calc_path(&query_graph, &weighting, start, end, Some(options))
             }
 
             Some(RoutingAlgorithm::Landmarks) => {
+                let weighting = self.create_weighting(&request.profile);
                 let mut landmarks_astar = LMBidirectionalAstar::from_landmarks(
                     &query_graph,
-                    weighting,
+                    &weighting,
                     &self.lm,
                     start,
                     end,
                 );
-                landmarks_astar.calc_path(&query_graph, weighting, start, end, Some(options))
+                landmarks_astar.calc_path(&query_graph, &weighting, start, end, Some(options))
             }
 
             None => {
+                let weighting = self.create_weighting(&request.profile);
                 let mut bdirastar = BidirectionalAStar::new(&query_graph);
-                bdirastar.calc_path(&query_graph, weighting, start, end, Some(options))
+                bdirastar.calc_path(&query_graph, &weighting, start, end, Some(options))
             }
         }
     }
 
-    pub fn create_landmarks(&self) -> Vec<GeoPoint> {
-        let lm_preparation = LMPreparation::new(self.graph(), &self.car_weighting);
-
-        let landmarks = lm_preparation.find_landmarks(10);
-        landmarks
-            .iter()
-            .map(|node| *self.graph.node_geometry(*node))
-            .collect()
-    }
-
-    pub fn closest_edge(&self, profile: String, coordinates: GeoPoint) -> Option<usize> {
-        let snap = self
-            .index
-            .snap(self.graph(), &self.car_weighting, &coordinates)?;
-        Some(snap.edge_id)
+    fn create_weighting<G: Graph>(&self, profile: &str) -> impl Weighting<G> {
+        match profile {
+            "car" => CarWeighting::new(),
+            _ => panic!("No profile found"),
+        }
     }
 }

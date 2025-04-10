@@ -5,28 +5,56 @@ use crate::edge_direction::EdgeDirection;
 use crate::geometry::compute_geometry_distance;
 use crate::geopoint::GeoPoint;
 use crate::graph::Graph;
+use crate::graph_edge::GraphEdge;
 use crate::osm::osm_reader::OsmReader;
 use crate::properties::property_map::EdgePropertyMap;
 use crate::storage::{read_bytes, write_bytes};
+use crate::types::{EdgeId, NodeId};
 
 #[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
-pub struct GraphEdge {
-    id: usize,
-    start_node: usize,
-    end_node: usize,
+pub struct BaseGraphEdge {
+    id: EdgeId,
+    start_node: NodeId,
+    end_node: NodeId,
     distance: Distance<Meters>,
-    pub properties: EdgePropertyMap,
+    properties: EdgePropertyMap,
 }
 
-impl GraphEdge {
+impl GraphEdge for BaseGraphEdge {
+    fn distance(&self) -> Distance<Meters> {
+        self.distance
+    }
+
+    fn start_node(&self) -> NodeId {
+        self.start_node
+    }
+
+    fn end_node(&self) -> NodeId {
+        self.end_node
+    }
+
+    fn adj_node(&self, node: NodeId) -> NodeId {
+        if self.start_node == node {
+            self.end_node
+        } else {
+            self.start_node
+        }
+    }
+
+    fn properties(&self) -> &EdgePropertyMap {
+        &self.properties
+    }
+}
+
+impl BaseGraphEdge {
     pub fn new(
-        id: usize,
-        start_node: usize,
-        end_node: usize,
+        id: EdgeId,
+        start_node: NodeId,
+        end_node: NodeId,
         distance: Distance<Meters>,
         properties: EdgePropertyMap,
     ) -> Self {
-        GraphEdge {
+        BaseGraphEdge {
             id,
             start_node,
             end_node,
@@ -35,36 +63,16 @@ impl GraphEdge {
         }
     }
 
-    pub fn id(&self) -> usize {
+    pub fn id(&self) -> EdgeId {
         self.id
-    }
-
-    pub fn distance(&self) -> Distance<Meters> {
-        self.distance
-    }
-
-    pub fn start_node(&self) -> usize {
-        self.start_node
-    }
-
-    pub fn end_node(&self) -> usize {
-        self.end_node
-    }
-
-    pub fn adj_node(&self, node: usize) -> usize {
-        if self.start_node == node {
-            self.end_node
-        } else {
-            self.start_node
-        }
     }
 }
 
 #[derive(Default, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
 pub struct BaseGraph {
     nodes: usize,
-    edges: Vec<GraphEdge>,
-    adjacency_list: Vec<Vec<usize>>,
+    edges: Vec<BaseGraphEdge>,
+    adjacency_list: Vec<Vec<EdgeId>>,
     geometry: Vec<Vec<GeoPoint>>,
 }
 
@@ -75,7 +83,7 @@ fn from_bytes(bytes: &[u8]) -> BaseGraph {
 }
 
 impl BaseGraph {
-    fn add_node(&mut self, node_id: usize) {
+    fn add_node(&mut self, node_id: NodeId) {
         self.nodes = max(self.nodes, node_id + 1);
 
         if self.nodes > self.adjacency_list.len() {
@@ -119,19 +127,19 @@ impl BaseGraph {
         graph
     }
 
-    pub fn node_edges(&self, node: usize) -> &[usize] {
+    pub fn node_edges(&self, node: NodeId) -> &[EdgeId] {
         &self.adjacency_list[node]
     }
 
     fn add_edge(
         &mut self,
-        from_node: usize,
-        to_node: usize,
+        from_node: NodeId,
+        to_node: NodeId,
         properties: EdgePropertyMap,
         geometry: Vec<GeoPoint>,
     ) {
         let edge_id = self.edges.len();
-        self.edges.push(GraphEdge {
+        self.edges.push(BaseGraphEdge {
             id: edge_id,
             start_node: from_node,
             end_node: to_node,
@@ -147,23 +155,25 @@ impl BaseGraph {
 impl Graph for BaseGraph {
     type EdgeIterator<'a> = std::iter::Copied<std::slice::Iter<'a, usize>>;
 
-    fn is_virtual_node(&self, _: usize) -> bool {
+    type Edge = BaseGraphEdge;
+
+    fn is_virtual_node(&self, _: NodeId) -> bool {
         false
     }
 
-    fn node_edges_iter(&self, node: usize) -> Self::EdgeIterator<'_> {
+    fn node_edges_iter(&self, node: NodeId) -> Self::EdgeIterator<'_> {
         self.adjacency_list[node].iter().copied()
     }
 
-    fn edge(&self, edge: usize) -> &GraphEdge {
+    fn edge(&self, edge: EdgeId) -> &BaseGraphEdge {
         &self.edges[edge]
     }
 
-    fn edge_geometry(&self, edge: usize) -> &[GeoPoint] {
+    fn edge_geometry(&self, edge: EdgeId) -> &[GeoPoint] {
         &self.geometry[edge][..]
     }
 
-    fn node_geometry(&self, node_id: usize) -> &GeoPoint {
+    fn node_geometry(&self, node_id: NodeId) -> &GeoPoint {
         let first_edge_id = self.adjacency_list[node_id][0];
         let edge_geometry = &self.geometry[first_edge_id];
         let edge_direction = self.edge_direction(first_edge_id, node_id);
@@ -181,7 +191,7 @@ impl Graph for BaseGraph {
         self.nodes
     }
 
-    fn edge_direction(&self, edge_id: usize, start: usize) -> EdgeDirection {
+    fn edge_direction(&self, edge_id: EdgeId, start: NodeId) -> EdgeDirection {
         let edge = &self.edges[edge_id];
 
         if edge.start_node == start {

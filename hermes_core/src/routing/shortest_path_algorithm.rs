@@ -21,10 +21,10 @@ pub struct CalcPathResult {
 }
 
 pub trait CalcPath {
-    fn calc_path(
+    fn calc_path<G: Graph>(
         &mut self,
-        graph: &impl Graph,
-        weighting: &impl Weighting,
+        graph: &G,
+        weighting: &impl Weighting<G>,
         start: usize,
         end: usize,
         options: Option<CalcPathOptions>,

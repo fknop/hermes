@@ -15,7 +15,7 @@ use super::lm_data::LMData;
 pub struct LMAstarHeuristic<'a, G, W>
 where
     G: Graph,
-    W: Weighting,
+    W: Weighting<G>,
 {
     lm: &'a LMData,
     fallback_heuristic: HaversineHeuristic,
@@ -31,7 +31,7 @@ where
 impl<'a, G, W> LMAstarHeuristic<'a, G, W>
 where
     G: Graph,
-    W: Weighting,
+    W: Weighting<G>,
 {
     pub fn new(graph: &'a G, weighting: &'a W, lm: &'a LMData, start: usize, end: usize) -> Self {
         let mut heuristic = Self {
@@ -84,7 +84,7 @@ where
 impl<G, W> AStarHeuristic for LMAstarHeuristic<'_, G, W>
 where
     G: Graph,
-    W: Weighting,
+    W: Weighting<G>,
 {
     fn estimate(
         &self,

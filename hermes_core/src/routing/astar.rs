@@ -4,6 +4,7 @@ use crate::constants::{DISTANCE_INFLUENCE, INVALID_EDGE, INVALID_NODE, MAX_WEIGH
 use crate::edge_direction::EdgeDirection;
 use crate::geopoint::GeoPoint;
 use crate::graph::Graph;
+use crate::graph_edge::GraphEdge;
 use crate::routing::astar_heuristic::AStarHeuristic;
 use crate::stopwatch::Stopwatch;
 use crate::weighting::{Weight, Weighting};
@@ -156,10 +157,10 @@ impl<H: AStarHeuristic> AStar<H> {
         self.node_data(node).weight
     }
 
-    fn build_path(
+    fn build_path<G: Graph>(
         &mut self,
-        graph: &impl Graph,
-        weighting: &impl Weighting,
+        graph: &G,
+        weighting: &impl Weighting<G>,
         _start: usize,
         end: usize,
     ) -> RoutingPath {
@@ -216,10 +217,10 @@ impl<H: AStarHeuristic> AStar<H> {
 }
 
 impl<H: AStarHeuristic> CalcPath for AStar<H> {
-    fn calc_path(
+    fn calc_path<G: Graph>(
         &mut self,
-        graph: &impl Graph,
-        weighting: &impl Weighting,
+        graph: &G,
+        weighting: &impl Weighting<G>,
         start: usize,
         end: usize,
         options: Option<CalcPathOptions>,

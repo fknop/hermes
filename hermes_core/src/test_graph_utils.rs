@@ -4,19 +4,20 @@ pub mod test_graph {
     use std::cmp;
 
     use crate::{
-        base_graph::GraphEdge,
+        base_graph::BaseGraphEdge,
         distance::{Distance, Kilometers, Meters},
         edge_direction::EdgeDirection,
         geopoint::GeoPoint,
         graph::Graph,
+        graph_edge::GraphEdge,
         kilometers,
         properties::property_map::EdgePropertyMap,
-        weighting::{DurationMs, Weight, Weighting},
+        weighting::{Milliseconds, Weight, Weighting},
     };
 
     pub struct TestGraph {
         nodes: usize,
-        edges: Vec<GraphEdge>,
+        edges: Vec<BaseGraphEdge>,
         adjacency_list: Vec<Vec<usize>>,
 
         mock_geopoint: GeoPoint,
@@ -219,7 +220,7 @@ pub mod test_graph {
             self.add_node(start_node);
             self.add_node(end_node);
             let edge_id = self.edges.len();
-            self.edges.push(GraphEdge::new(
+            self.edges.push(BaseGraphEdge::new(
                 edge_id,
                 start_node,
                 end_node,
@@ -235,6 +236,7 @@ pub mod test_graph {
 
     impl Graph for TestGraph {
         type EdgeIterator<'a> = std::iter::Copied<std::slice::Iter<'a, usize>>;
+        type Edge = BaseGraphEdge;
 
         fn edge_count(&self) -> usize {
             self.edges.len()
@@ -252,7 +254,7 @@ pub mod test_graph {
             self.adjacency_list[node].iter().copied()
         }
 
-        fn edge(&self, edge: usize) -> &GraphEdge {
+        fn edge(&self, edge: usize) -> &BaseGraphEdge {
             &self.edges[edge]
         }
 
@@ -284,18 +286,18 @@ pub mod test_graph {
 
     pub struct TestWeighting;
 
-    impl Weighting for TestWeighting {
-        fn calc_edge_weight(&self, edge: &GraphEdge, _: EdgeDirection) -> Weight {
+    impl Weighting<TestGraph> for TestWeighting {
+        fn calc_edge_weight(&self, edge: &BaseGraphEdge, _: EdgeDirection) -> Weight {
             edge.distance().value() as Weight
         }
 
-        fn calc_edge_ms(&self, edge: &GraphEdge, _: EdgeDirection) -> DurationMs {
+        fn calc_edge_ms(&self, edge: &BaseGraphEdge, _: EdgeDirection) -> Milliseconds {
             let speed_kmh = 120.0;
             let speed_ms = speed_kmh / 3.6;
 
             let distance = edge.distance().value();
 
-            (distance / speed_ms).round() as DurationMs
+            (distance / speed_ms).round() as Milliseconds
         }
     }
 }

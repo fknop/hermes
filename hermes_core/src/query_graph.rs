@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use fxhash::FxHashMap;
 
 use crate::{
-    base_graph::{BaseGraph, GraphEdge},
+    base_graph::{BaseGraph, BaseGraphEdge},
     edge_direction::EdgeDirection,
     geometry::{
         compute_geometry_distance, create_virtual_geometries,
@@ -11,8 +11,10 @@ use crate::{
     },
     geopoint::GeoPoint,
     graph::Graph,
+    graph_edge::GraphEdge,
     properties::property_map::EdgePropertyMap,
     snap::Snap,
+    types::{EdgeId, NodeId},
 };
 
 /// A dynamic graph that extends a base graph with virtual nodes and edges
@@ -27,14 +29,14 @@ pub(crate) struct QueryGraph<'a> {
     base_graph: &'a BaseGraph,
 
     virtual_nodes: usize,
-    virtual_edges: Vec<GraphEdge>,
+    virtual_edges: Vec<BaseGraphEdge>,
     virtual_edge_geometry: Vec<Vec<GeoPoint>>,
 
     // New edges for new "virtual" nodes
-    virtual_adjacency_list: Vec<Vec<usize>>,
+    virtual_adjacency_list: Vec<Vec<EdgeId>>,
 
     // New edges for existing nodes in the base graph
-    virtual_adjacency_list_existing_nodes: FxHashMap<usize, Vec<usize>>,
+    virtual_adjacency_list_existing_nodes: FxHashMap<NodeId, Vec<EdgeId>>,
 }
 
 impl<'a> QueryGraph<'a> {
@@ -93,23 +95,23 @@ impl<'a> QueryGraph<'a> {
         let virtual_edge_id_1 = self.base_graph.edge_count() + self.virtual_edges.len();
         let virtual_edge_id_2 = virtual_edge_id_1 + 1;
 
-        self.virtual_edges.push(GraphEdge::new(
+        self.virtual_edges.push(BaseGraphEdge::new(
             virtual_edge_id_1,
             edge_start_node,
             virtual_node,
             compute_geometry_distance(&virtual_geometry_1),
-            edge.properties.clone(),
+            edge.properties().clone(),
         ));
 
         self.add_virtual_edge_for_existing_node(virtual_edge_id_1, edge_start_node);
         self.virtual_edge_geometry.push(virtual_geometry_1);
 
-        self.virtual_edges.push(GraphEdge::new(
+        self.virtual_edges.push(BaseGraphEdge::new(
             virtual_edge_id_2,
             virtual_node,
             edge_end_node,
             compute_geometry_distance(&virtual_geometry_2),
-            edge.properties.clone(),
+            edge.properties().clone(),
         ));
 
         self.add_virtual_edge_for_existing_node(virtual_edge_id_2, edge_end_node);
@@ -153,12 +155,12 @@ impl<'a> QueryGraph<'a> {
                     let virtual_edge_id = self.base_graph.edge_count() + self.virtual_edges.len();
 
                     // Add the new edge
-                    self.virtual_edges.push(GraphEdge::new(
+                    self.virtual_edges.push(BaseGraphEdge::new(
                         virtual_edge_id,
                         start_node,
                         end_node,
                         compute_geometry_distance(&virtual_geometry),
-                        edge.properties.clone(),
+                        edge.properties().clone(),
                     ));
 
                     // Add the geometry for the new edge
@@ -200,7 +202,7 @@ impl<'a> QueryGraph<'a> {
     }
 
     // Assumes edge_id is a virtual edge
-    fn virtual_edge(&self, edge_id: usize) -> &GraphEdge {
+    fn virtual_edge(&self, edge_id: usize) -> &BaseGraphEdge {
         &self.virtual_edges[self.virtual_edge_id(edge_id)]
     }
 }
@@ -210,6 +212,8 @@ impl Graph for QueryGraph<'_> {
         = QueryGraphEdgeIterator<'b>
     where
         Self: 'b;
+
+    type Edge = BaseGraphEdge;
 
     fn is_virtual_node(&self, node_id: usize) -> bool {
         node_id >= self.base_graph.node_count()
@@ -240,7 +244,7 @@ impl Graph for QueryGraph<'_> {
         }
     }
 
-    fn edge(&self, edge_id: usize) -> &GraphEdge {
+    fn edge(&self, edge_id: usize) -> &BaseGraphEdge {
         if self.is_virtual_edge(edge_id) {
             self.virtual_edge(edge_id)
         } else {

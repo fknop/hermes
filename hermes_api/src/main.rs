@@ -1,9 +1,7 @@
-mod debug;
 mod error;
 mod route;
 mod state;
 
-use crate::debug::closest::debug_closest_handler;
 use crate::route::route_handler::route_handler;
 use crate::state::AppState;
 use axum::http::Method;
@@ -27,7 +25,6 @@ async fn main() {
 
     let app = Router::new()
         .route("/route", post(route_handler))
-        .route("/debug/closest", get(debug_closest_handler))
         .layer(ServiceBuilder::new().layer(cors_layer))
         .with_state(app_state);
 
