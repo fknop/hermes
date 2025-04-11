@@ -12,20 +12,7 @@ use crate::{
     weighting::{Milliseconds, Weight, Weighting},
 };
 
-struct Shortcut {
-    from: NodeId,
-    to: NodeId,
-
-    /// Skipped edge from the "from" node to the contracted node
-    from_edge: EdgeId,
-
-    /// Skipped edge from the contracted node to the "to" node
-    to_edge: EdgeId,
-
-    distance: Distance<Meters>,
-    time: Milliseconds,
-    weight: Weight,
-}
+use super::shortcut::Shortcut;
 
 pub enum CHPreparationGraphEdge<'a> {
     Shortcut(Shortcut),
@@ -65,24 +52,31 @@ impl GraphEdge for CHPreparationGraphEdge<'_> {
 }
 
 pub struct CHPreparationGraph<'a> {
-    graph: &'a BaseGraph,
-
+    base_graph: &'a BaseGraph,
+    edges: Vec<CHPreparationGraphEdge<'a>>,
     overlay: GraphOverlay<'a, CHPreparationGraphEdge<'a>>,
 }
 
 impl<'a> CHPreparationGraph<'a> {
-    fn new(graph: &'a BaseGraph) -> Self {
+    pub fn new(graph: &'a BaseGraph) -> Self {
+        let edges = graph
+            .edges()
+            .iter()
+            .map(|edge| CHPreparationGraphEdge::Edge(edge))
+            .collect();
+
         CHPreparationGraph {
-            graph,
+            edges,
+            base_graph: graph,
             overlay: GraphOverlay::new(graph),
         }
     }
 
-    fn disconnect_node(&mut self, node_id: NodeId) {
+    pub fn disconnect_node(&mut self, node_id: NodeId) {
         self.overlay.remove_node(node_id);
     }
 
-    fn add_shortcut(&mut self, shortcut: Shortcut) {
+    pub fn add_shortcut(&mut self, shortcut: Shortcut) {
         let Shortcut { from, to, .. } = shortcut;
         self.overlay
             .add_edge(CHPreparationGraphEdge::Shortcut(shortcut), from, to);
@@ -97,39 +91,54 @@ impl<'a> Graph for CHPreparationGraph<'a> {
         Self: 'b;
 
     fn edge_count(&self) -> usize {
-        todo!()
+        self.overlay.edge_count()
     }
 
     fn node_count(&self) -> usize {
-        todo!()
+        self.overlay.node_count()
     }
 
     fn is_virtual_node(&self, node: usize) -> bool {
-        todo!()
+        self.overlay.is_virtual_node(node)
     }
 
     fn node_edges_iter(&self, node_id: usize) -> Self::EdgeIterator<'_> {
-        todo!()
+        self.overlay.node_edges_iter(node_id)
     }
 
     fn edge(&self, edge_id: usize) -> &Self::Edge {
-        todo!()
+        if self.overlay.is_virtual_edge(edge_id) {
+            self.overlay.virtual_edge(edge_id)
+        } else {
+            &self.edges[edge_id]
+        }
     }
 
     fn edge_geometry(&self, edge_id: usize) -> &[crate::geopoint::GeoPoint] {
-        todo!()
+        unimplemented!()
     }
 
     fn node_geometry(&self, node_id: usize) -> &crate::geopoint::GeoPoint {
-        todo!()
+        unimplemented!()
     }
 
-    fn edge_direction(
-        &self,
-        edge_id: usize,
-        start_node_id: usize,
-    ) -> crate::edge_direction::EdgeDirection {
-        todo!()
+    fn edge_direction(&self, edge_id: EdgeId, start: NodeId) -> EdgeDirection {
+        if self.overlay.is_virtual_edge(edge_id) {
+            let edge = self.overlay.virtual_edge(edge_id);
+
+            if edge.start_node() == start {
+                return EdgeDirection::Forward;
+            } else if edge.end_node() == start {
+                return EdgeDirection::Backward;
+            }
+
+            panic!(
+                "Node {} is neither the start nor the end of edge {}",
+                start, edge_id
+            )
+        } else {
+            self.base_graph.edge_direction(edge_id, start)
+        }
     }
 }
 
@@ -151,7 +160,7 @@ where
     }
 }
 
-impl<'a, W> Weighting<CHPreparationGraph<'a>> for PreparationGraphWeighting<'a, W>
+impl<W> Weighting<CHPreparationGraph<'_>> for PreparationGraphWeighting<'_, W>
 where
     W: Weighting<BaseGraph>,
 {

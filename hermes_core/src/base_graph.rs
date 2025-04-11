@@ -83,6 +83,10 @@ fn from_bytes(bytes: &[u8]) -> BaseGraph {
 }
 
 impl BaseGraph {
+    pub fn edges(&self) -> &[BaseGraphEdge] {
+        &self.edges
+    }
+
     fn add_node(&mut self, node_id: NodeId) {
         self.nodes = max(self.nodes, node_id + 1);
 

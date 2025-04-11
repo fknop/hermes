@@ -33,6 +33,14 @@ impl<'a, E> GraphOverlay<'a, E> {
         }
     }
 
+    pub fn edge_count(&self) -> usize {
+        self.base_graph.edge_count() + self.virtual_edges.len()
+    }
+
+    pub fn node_count(&self) -> usize {
+        self.base_graph.node_count() + self.virtual_nodes
+    }
+
     pub fn add_edge(&mut self, edge: E, from: NodeId, to: NodeId) {
         let edge_id = self.base_graph.edge_count() + self.virtual_edges.len();
         self.virtual_edges.push(edge);
@@ -79,11 +87,11 @@ impl<'a, E> GraphOverlay<'a, E> {
         }
     }
 
-    fn is_virtual_node(&self, node_id: usize) -> bool {
+    pub fn is_virtual_node(&self, node_id: usize) -> bool {
         node_id >= self.base_graph.node_count()
     }
 
-    fn is_virtual_edge(&self, edge_id: usize) -> bool {
+    pub fn is_virtual_edge(&self, edge_id: usize) -> bool {
         edge_id >= self.base_graph.edge_count()
     }
 
@@ -98,11 +106,11 @@ impl<'a, E> GraphOverlay<'a, E> {
     }
 
     // Assumes edge_id is a virtual edge
-    fn virtual_edge(&self, edge_id: usize) -> &E {
+    pub fn virtual_edge(&self, edge_id: usize) -> &E {
         &self.virtual_edges[self.virtual_edge_id(edge_id)]
     }
 
-    fn node_edges_iter(&self, node_id: usize) -> GraphOverlayIterator<'_> {
+    pub fn node_edges_iter(&self, node_id: usize) -> GraphOverlayIterator<'_> {
         if self.is_virtual_node(node_id) {
             GraphOverlayIterator::new(
                 &[],

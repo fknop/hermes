@@ -77,8 +77,8 @@ impl<'a> WitnessSearch<'a> {
     }
 }
 
-impl WitnessSearch<'_> {
-    fn init(&mut self, graph: &CHPreparationGraph, start_node: NodeId, avoid_node: NodeId) {
+impl<'a> WitnessSearch<'a> {
+    pub fn init(&mut self, start_node: NodeId, avoid_node: NodeId) {
         self.heap.clear();
         self.data.clear();
 
@@ -128,13 +128,11 @@ impl WitnessSearch<'_> {
 
     pub fn find_max_weight(
         &mut self,
-        base_weighting: &impl Weighting<BaseGraph>,
+        weighting: &impl Weighting<CHPreparationGraph<'a>>,
         target: NodeId,
         max_weight: Weight,
         max_settled_nodes: usize,
     ) -> Weight {
-        let weighting = PreparationGraphWeighting::new(base_weighting);
-
         while let Some(HeapItem { weight, node_id }) = self.heap.pop() {
             if self.settled_nodes >= max_settled_nodes {
                 break;

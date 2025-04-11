@@ -5,49 +5,40 @@ use crate::{
     weighting::{Milliseconds, Weight},
 };
 
+use super::shortcut::Shortcut;
+
+pub struct CHEdge {
+    from: NodeId,
+    to: NodeId,
+    distance: Distance<Meters>,
+    time: Milliseconds,
+    weight: Weight,
+}
+
 pub enum CHGraphEdge {
-    Shortcut {
-        from: NodeId,
-        to: NodeId,
-
-        /// Skipped edge from the "from" node to the contracted node
-        from_edge: EdgeId,
-
-        /// Skipped edge from the contracted node to the "to" node
-        to_edge: EdgeId,
-
-        distance: Distance<Meters>,
-        time: Milliseconds,
-        weight: Weight,
-    },
-    Edge {
-        from: NodeId,
-        to: NodeId,
-        distance: Distance<Meters>,
-        time: Milliseconds,
-        weight: Weight,
-    },
+    Shortcut(Shortcut),
+    Edge(CHEdge),
 }
 
 impl GraphEdge for CHGraphEdge {
     fn start_node(&self) -> NodeId {
         match self {
-            CHGraphEdge::Shortcut { from, .. } => *from,
-            CHGraphEdge::Edge { from, .. } => *from,
+            CHGraphEdge::Shortcut(shortcut) => shortcut.from,
+            CHGraphEdge::Edge(edge) => edge.from,
         }
     }
 
     fn end_node(&self) -> NodeId {
         match self {
-            CHGraphEdge::Shortcut { to, .. } => *to,
-            CHGraphEdge::Edge { to, .. } => *to,
+            CHGraphEdge::Shortcut(shortcut) => shortcut.to,
+            CHGraphEdge::Edge(edge) => edge.to,
         }
     }
 
     fn distance(&self) -> Distance<Meters> {
         match self {
-            CHGraphEdge::Shortcut { distance, .. } => *distance,
-            CHGraphEdge::Edge { distance, .. } => *distance,
+            CHGraphEdge::Shortcut(shortcut) => shortcut.distance,
+            CHGraphEdge::Edge(edge) => edge.distance,
         }
     }
 
@@ -63,3 +54,5 @@ pub struct CHGraph {
     adjacency_list_forward: Vec<Vec<EdgeId>>,
     adjacency_list_backward: Vec<Vec<EdgeId>>,
 }
+
+impl CHGraph {}
