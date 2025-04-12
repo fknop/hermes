@@ -1,4 +1,5 @@
 use crate::base_graph::BaseGraph;
+use crate::ch;
 use crate::error::ImportError;
 use crate::geopoint::GeoPoint;
 use crate::graph::Graph;
@@ -58,6 +59,9 @@ impl Hermes {
         // let mut profiles: HashMap<String, Box<dyn Weighting + Sync + Send>> = HashMap::new();
         // Add default profile
         // profiles.insert("car".to_string(), Box::from(CarWeighting::new()));
+
+        let car_weighting = CarWeighting::new();
+        let ch_graph = ch::ch_graph_builder::build_ch_graph(&graph, &car_weighting);
 
         Hermes {
             graph,

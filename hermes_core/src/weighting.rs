@@ -1,7 +1,6 @@
 use std::f64;
 
-use crate::base_graph::BaseGraphEdge;
-use crate::constants::{DISTANCE_INFLUENCE, MAX_WEIGHT};
+use crate::constants::{DISTANCE_INFLUENCE, MAX_DURATION, MAX_WEIGHT};
 use crate::edge_direction::EdgeDirection;
 use crate::graph::Graph;
 use crate::graph_edge::GraphEdge;
@@ -54,7 +53,7 @@ impl<G: Graph> Weighting<G> for CarWeighting<G> {
     fn calc_edge_weight(&self, edge: &G::Edge, direction: EdgeDirection) -> Weight {
         let ms = self.calc_edge_ms(edge, direction);
 
-        if ms == MAX_WEIGHT {
+        if ms == MAX_DURATION {
             return MAX_WEIGHT;
         }
 
@@ -65,7 +64,7 @@ impl<G: Graph> Weighting<G> for CarWeighting<G> {
     fn calc_edge_ms(&self, edge: &G::Edge, direction: EdgeDirection) -> Milliseconds {
         let speed = Self::speed(edge, direction);
         if speed == 0.0 {
-            return u32::MAX;
+            return MAX_DURATION;
         }
 
         let speed_meters_per_second = speed as f64 / 3.6;

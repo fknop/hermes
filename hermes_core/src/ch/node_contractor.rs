@@ -1,11 +1,4 @@
-use crate::{
-    constants::MAX_WEIGHT,
-    edge_direction::EdgeDirection,
-    graph::Graph,
-    graph_edge::GraphEdge,
-    types::{EdgeId, NodeId},
-    weighting::Weighting,
-};
+use crate::{graph::Graph, graph_edge::GraphEdge, types::NodeId, weighting::Weighting};
 
 use super::{
     preparation_graph::CHPreparationGraph, shortcut::Shortcut, witness_search::WitnessSearch,
@@ -13,11 +6,19 @@ use super::{
 
 pub fn contract_node<'a>(
     graph: &mut CHPreparationGraph<'a>,
-    witness_search: &mut WitnessSearch<'a>,
+    witness_search: &mut WitnessSearch,
     weighting: &impl Weighting<CHPreparationGraph<'a>>,
     node: NodeId,
 ) {
     let shortcuts = find_shortcuts(graph, witness_search, weighting, node);
+
+    if shortcuts.len() > graph.incoming_edges(node).len() * graph.outgoing_edges(node).len() {
+        println!(
+            "More shortcuts added than edges in the graph ? {}, {}",
+            shortcuts.len(),
+            graph.incoming_edges(node).len() * graph.outgoing_edges(node).len()
+        )
+    }
 
     for shortcut in shortcuts {
         graph.add_shortcut(shortcut);
@@ -28,104 +29,81 @@ pub fn contract_node<'a>(
 
 pub fn calc_priority<'a>(
     graph: &mut CHPreparationGraph<'a>,
-    witness_search: &mut WitnessSearch<'a>,
+    witness_search: &mut WitnessSearch,
     weighting: &impl Weighting<CHPreparationGraph<'a>>,
+    rank: usize,
     node: NodeId,
-) -> i16 {
+) -> i32 {
     let shortcuts = find_shortcuts(graph, witness_search, weighting, node);
 
-    let incoming_edges = graph
-        .node_edges_iter(node)
-        .filter(|edge_id| filter_incoming_edge(graph, weighting, edge_id, node))
-        .count();
-
-    let outgoing_edges = graph
-        .node_edges_iter(node)
-        .filter(|edge_id| filter_outgoing_edge(graph, weighting, edge_id, node))
-        .count();
+    let incoming_edges = graph.incoming_edges(node).len();
+    let outgoing_edges = graph.outgoing_edges(node).len();
 
     let edges = incoming_edges + outgoing_edges;
-    shortcuts.len() as i16 - edges as i16
+
+    // Isolated node
+    if edges == 0 {
+        return i32::MIN;
+    }
+
+    let edge_difference = (shortcuts.len() as f32 + 1.0) / (edges as f32 + 1.0);
+    let priority = (rank as f32 * 10.0) + (edge_difference * 100.0);
+    (priority * 1000.0).round() as i32
 }
 
 pub fn find_shortcuts<'a>(
     graph: &mut CHPreparationGraph<'a>,
-    witness_search: &mut WitnessSearch<'a>,
+    witness_search: &mut WitnessSearch,
     weighting: &impl Weighting<CHPreparationGraph<'a>>,
     node: NodeId,
 ) -> Vec<Shortcut> {
     let mut shortcuts = Vec::new();
-    for incoming_edge_id in graph
-        .node_edges_iter(node)
-        .filter(|edge_id| filter_incoming_edge(graph, weighting, edge_id, node))
-    {
-        let incoming_edge = graph.edge(incoming_edge_id);
+    for incoming_edge_id in graph.incoming_edges(node) {
+        let incoming_edge = graph.edge(*incoming_edge_id);
         let incoming_edge_adj_node = incoming_edge.adj_node(node);
+        let incoming_direction = graph.edge_direction(*incoming_edge_id, incoming_edge_adj_node);
 
         witness_search.init(incoming_edge_adj_node, node);
 
-        for outgoing_edge_id in graph
-            .node_edges_iter(node)
-            .filter(|edge_id| filter_outgoing_edge(graph, weighting, edge_id, node))
-        {
+        for outgoing_edge_id in graph.outgoing_edges(node) {
             // We ignore the same edge, no shortcut is needed
-            if incoming_edge_id == outgoing_edge_id {
+            if *incoming_edge_id == *outgoing_edge_id {
                 continue;
             }
 
-            let outgoing_edge = graph.edge(outgoing_edge_id);
+            let outgoing_edge = graph.edge(*outgoing_edge_id);
             let outgoing_edge_adj_node = outgoing_edge.adj_node(node);
+            let outgoing_direction = graph.edge_direction(*outgoing_edge_id, node);
 
-            let weight = weighting.calc_edge_weight(incoming_edge, EdgeDirection::Backward)
-                + weighting.calc_edge_weight(outgoing_edge, EdgeDirection::Forward);
+            let weight = weighting.calc_edge_weight(incoming_edge, incoming_direction)
+                + weighting.calc_edge_weight(outgoing_edge, outgoing_direction);
 
             // TODO: max weight
             // TODO: max settled nodes
-            let witness_search_weight =
-                witness_search.find_max_weight(weighting, outgoing_edge_adj_node, MAX_WEIGHT, 200);
+            let witness_search_weight = witness_search.find_max_weight(
+                graph,
+                weighting,
+                outgoing_edge_adj_node,
+                weight,
+                100,
+            );
 
             if witness_search_weight <= weight {
                 continue;
             }
 
             shortcuts.push(Shortcut {
-                from: incoming_edge_adj_node,
-                to: outgoing_edge_adj_node,
-                incoming_edge: incoming_edge_id,
-                outgoing_edge: outgoing_edge_id,
+                start: incoming_edge_adj_node,
+                end: outgoing_edge_adj_node,
+                incoming_edge: *incoming_edge_id,
+                outgoing_edge: *outgoing_edge_id,
                 distance: outgoing_edge.distance() + incoming_edge.distance(),
-                time: weighting.calc_edge_ms(incoming_edge, EdgeDirection::Backward)
-                    + weighting.calc_edge_ms(outgoing_edge, EdgeDirection::Forward),
+                time: weighting.calc_edge_ms(incoming_edge, incoming_direction)
+                    + weighting.calc_edge_ms(outgoing_edge, outgoing_direction),
                 weight,
             });
         }
     }
 
     shortcuts
-}
-
-/// Filter incoming edge edge_id to the node
-fn filter_incoming_edge<'a>(
-    graph: &CHPreparationGraph<'a>,
-    weighting: &impl Weighting<CHPreparationGraph<'a>>,
-    edge_id: &EdgeId,
-    node: NodeId,
-) -> bool {
-    let edge_direction = graph.edge_direction(*edge_id, node);
-    let edge = graph.edge(*edge_id);
-    let weight = weighting.calc_edge_weight(edge, edge_direction.opposite());
-    weight != MAX_WEIGHT
-}
-
-/// Filter outgoing edge edge_id to the node
-fn filter_outgoing_edge<'a>(
-    graph: &CHPreparationGraph<'a>,
-    weighting: &impl Weighting<CHPreparationGraph<'a>>,
-    edge_id: &EdgeId,
-    node: NodeId,
-) -> bool {
-    let edge_direction = graph.edge_direction(*edge_id, node);
-    let edge = graph.edge(*edge_id);
-    let weight = weighting.calc_edge_weight(edge, edge_direction);
-    weight != MAX_WEIGHT
 }

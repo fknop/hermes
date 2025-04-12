@@ -9,7 +9,6 @@ mod geometry;
 pub mod geopoint;
 pub mod graph;
 mod graph_edge;
-mod graph_overlay;
 pub mod hermes;
 mod landmarks;
 pub mod location_index;

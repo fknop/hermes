@@ -4,9 +4,10 @@ use crate::{
     weighting::{Milliseconds, Weight},
 };
 
+#[derive(Debug, Clone)]
 pub struct Shortcut {
-    pub from: NodeId,
-    pub to: NodeId,
+    pub start: NodeId,
+    pub end: NodeId,
 
     /// Skipped edge incoming to the contracted node
     pub incoming_edge: EdgeId,

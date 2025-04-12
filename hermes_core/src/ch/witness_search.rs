@@ -3,7 +3,6 @@ use std::{cmp::Ordering, collections::BinaryHeap};
 use fxhash::FxHashMap;
 
 use crate::{
-    base_graph::BaseGraph,
     constants::{INVALID_NODE, MAX_WEIGHT},
     graph::Graph,
     graph_edge::GraphEdge,
@@ -55,19 +54,17 @@ impl NodeData {
     }
 }
 
-pub struct WitnessSearch<'a> {
+pub struct WitnessSearch {
     heap: BinaryHeap<HeapItem>,
-    graph: &'a CHPreparationGraph<'a>,
     data: FxHashMap<NodeId, NodeData>,
     start_node: NodeId,
     avoid_node: NodeId,
     settled_nodes: usize,
 }
 
-impl<'a> WitnessSearch<'a> {
-    pub fn new(graph: &'a CHPreparationGraph) -> Self {
+impl WitnessSearch {
+    pub fn new() -> Self {
         WitnessSearch {
-            graph,
             heap: BinaryHeap::default(),
             data: FxHashMap::default(),
             settled_nodes: 0,
@@ -75,9 +72,6 @@ impl<'a> WitnessSearch<'a> {
             start_node: INVALID_NODE,
         }
     }
-}
-
-impl<'a> WitnessSearch<'a> {
     pub fn init(&mut self, start_node: NodeId, avoid_node: NodeId) {
         self.heap.clear();
         self.data.clear();
@@ -126,13 +120,22 @@ impl<'a> WitnessSearch<'a> {
         self.node_data(node).weight
     }
 
-    pub fn find_max_weight(
+    pub fn find_max_weight<'a>(
         &mut self,
+        graph: &CHPreparationGraph<'a>,
         weighting: &impl Weighting<CHPreparationGraph<'a>>,
         target: NodeId,
         max_weight: Weight,
         max_settled_nodes: usize,
     ) -> Weight {
+        if self.start_node == target {
+            return 0;
+        }
+
+        if self.is_settled(target) {
+            return self.current_shortest_weight(target);
+        }
+
         while let Some(HeapItem { weight, node_id }) = self.heap.pop() {
             if self.settled_nodes >= max_settled_nodes {
                 break;
@@ -146,12 +149,9 @@ impl<'a> WitnessSearch<'a> {
                 continue;
             }
 
-            if weight > self.current_shortest_weight(target) {
-                continue;
-            }
-
-            for edge_id in self.graph.node_edges_iter(node_id) {
-                let edge = self.graph.edge(edge_id);
+            let mut found = false;
+            for edge_id in graph.outgoing_edges(node_id) {
+                let edge = graph.edge(*edge_id);
 
                 let adj_node = edge.adj_node(node_id);
 
@@ -163,7 +163,7 @@ impl<'a> WitnessSearch<'a> {
                     continue;
                 }
 
-                let direction = self.graph.edge_direction(edge_id, node_id);
+                let direction = graph.edge_direction(*edge_id, node_id);
 
                 let edge_weight = weighting.calc_edge_weight(edge, direction);
 
@@ -179,11 +179,15 @@ impl<'a> WitnessSearch<'a> {
                         weight: next_weight,
                         node_id: adj_node,
                     });
+                    if adj_node == target && next_weight < max_weight {
+                        found = true;
+                    }
                 }
             }
 
+            self.settled_nodes += 1;
             self.set_settled(node_id);
-            if node_id == target {
+            if node_id == target || found {
                 break;
             }
         }
