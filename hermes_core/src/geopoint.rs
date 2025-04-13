@@ -1,4 +1,5 @@
 use rstar::{AABB, Envelope, PointDistance, RTreeObject};
+use serde::Deserialize;
 
 use crate::{
     constants::EARTH_RADIUS_METERS,
@@ -7,7 +8,9 @@ use crate::{
     meters,
 };
 
-#[derive(PartialEq, Copy, Clone, Debug, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[derive(
+    PartialEq, Copy, Clone, Debug, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Deserialize,
+)]
 pub struct GeoPoint {
     lat: Degrees,
     lon: Degrees,

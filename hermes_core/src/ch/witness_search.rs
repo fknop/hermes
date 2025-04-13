@@ -120,7 +120,7 @@ impl WitnessSearch {
         self.node_data(node).weight
     }
 
-    pub fn find_max_weight<'a>(
+    pub fn compute_weight_upperbound<'a>(
         &mut self,
         graph: &CHPreparationGraph<'a>,
         weighting: &impl Weighting<CHPreparationGraph<'a>>,
@@ -141,7 +141,7 @@ impl WitnessSearch {
                 break;
             }
 
-            if weight > max_weight {
+            if weight >= max_weight {
                 break;
             }
 
@@ -150,6 +150,7 @@ impl WitnessSearch {
             }
 
             let mut found = false;
+
             for edge_id in graph.outgoing_edges(node_id) {
                 let edge = graph.edge(*edge_id);
 
@@ -175,12 +176,14 @@ impl WitnessSearch {
 
                 if next_weight < self.current_shortest_weight(adj_node) {
                     self.update_node_data(adj_node, next_weight);
+
                     self.heap.push(HeapItem {
                         weight: next_weight,
                         node_id: adj_node,
                     });
-                    if adj_node == target && next_weight < max_weight {
+                    if adj_node == target && next_weight <= max_weight {
                         found = true;
+                        break;
                     }
                 }
             }

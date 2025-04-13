@@ -24,14 +24,14 @@ pub enum CHPreparationGraphEdge<'a> {
 impl GraphEdge for CHPreparationGraphEdge<'_> {
     fn start_node(&self) -> NodeId {
         match self {
-            CHPreparationGraphEdge::Shortcut(Shortcut { start: from, .. }) => *from,
+            CHPreparationGraphEdge::Shortcut(Shortcut { start, .. }) => *start,
             CHPreparationGraphEdge::Edge(base_edge) => base_edge.start_node(),
         }
     }
 
     fn end_node(&self) -> NodeId {
         match self {
-            CHPreparationGraphEdge::Shortcut(Shortcut { end: to, .. }) => *to,
+            CHPreparationGraphEdge::Shortcut(Shortcut { end, .. }) => *end,
             CHPreparationGraphEdge::Edge(base_edge) => base_edge.end_node(),
         }
     }
@@ -147,7 +147,7 @@ impl<'a> CHPreparationGraph<'a> {
         self.edges.push(CHPreparationGraphEdge::Shortcut(shortcut));
     }
 
-    fn is_shortcut(&self, edge_id: EdgeId) -> bool {
+    pub fn is_shortcut(&self, edge_id: EdgeId) -> bool {
         edge_id >= self.base_graph.edge_count()
     }
 

@@ -10,15 +10,7 @@ pub fn contract_node<'a>(
     weighting: &impl Weighting<CHPreparationGraph<'a>>,
     node: NodeId,
 ) {
-    let shortcuts = find_shortcuts(graph, witness_search, weighting, node);
-
-    if shortcuts.len() > graph.incoming_edges(node).len() * graph.outgoing_edges(node).len() {
-        println!(
-            "More shortcuts added than edges in the graph ? {}, {}",
-            shortcuts.len(),
-            graph.incoming_edges(node).len() * graph.outgoing_edges(node).len()
-        )
-    }
+    let shortcuts = find_shortcuts(graph, witness_search, weighting, node, 250);
 
     for shortcut in shortcuts {
         graph.add_shortcut(shortcut);
@@ -34,7 +26,7 @@ pub fn calc_priority<'a>(
     rank: usize,
     node: NodeId,
 ) -> i32 {
-    let shortcuts = find_shortcuts(graph, witness_search, weighting, node);
+    let shortcuts = find_shortcuts(graph, witness_search, weighting, node, 250);
 
     let incoming_edges = graph.incoming_edges(node).len();
     let outgoing_edges = graph.outgoing_edges(node).len();
@@ -46,22 +38,27 @@ pub fn calc_priority<'a>(
         return i32::MIN;
     }
 
-    let edge_difference = (shortcuts.len() as f32 + 1.0) / (edges as f32 + 1.0);
+    let edge_difference = (shortcuts.len() as f32) / (edges as f32);
     let priority = (rank as f32 * 10.0) + (edge_difference * 100.0);
     (priority * 1000.0).round() as i32
 }
 
-pub fn find_shortcuts<'a>(
+fn find_shortcuts<'a>(
     graph: &mut CHPreparationGraph<'a>,
     witness_search: &mut WitnessSearch,
     weighting: &impl Weighting<CHPreparationGraph<'a>>,
     node: NodeId,
+    max_settled_nodes: usize,
 ) -> Vec<Shortcut> {
     let mut shortcuts = Vec::new();
     for incoming_edge_id in graph.incoming_edges(node) {
         let incoming_edge = graph.edge(*incoming_edge_id);
         let incoming_edge_adj_node = incoming_edge.adj_node(node);
         let incoming_direction = graph.edge_direction(*incoming_edge_id, incoming_edge_adj_node);
+
+        if incoming_edge_adj_node == node {
+            continue;
+        }
 
         witness_search.init(incoming_edge_adj_node, node);
 
@@ -73,19 +70,23 @@ pub fn find_shortcuts<'a>(
 
             let outgoing_edge = graph.edge(*outgoing_edge_id);
             let outgoing_edge_adj_node = outgoing_edge.adj_node(node);
+
+            if outgoing_edge_adj_node == node {
+                continue;
+            }
+
             let outgoing_direction = graph.edge_direction(*outgoing_edge_id, node);
 
             let weight = weighting.calc_edge_weight(incoming_edge, incoming_direction)
                 + weighting.calc_edge_weight(outgoing_edge, outgoing_direction);
 
-            // TODO: max weight
             // TODO: max settled nodes
-            let witness_search_weight = witness_search.find_max_weight(
+            let witness_search_weight = witness_search.compute_weight_upperbound(
                 graph,
                 weighting,
                 outgoing_edge_adj_node,
                 weight,
-                100,
+                max_settled_nodes,
             );
 
             if witness_search_weight <= weight {

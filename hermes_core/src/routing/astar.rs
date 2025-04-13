@@ -240,7 +240,6 @@ impl<H: AStarHeuristic> CalcPath for AStar<H> {
 
         self.init(graph, start, end);
 
-        let mut iterations = 0;
         let mut nodes_visited = 0;
 
         while let Some(HeapItem {
@@ -299,7 +298,6 @@ impl<H: AStarHeuristic> CalcPath for AStar<H> {
             nodes_visited += 1;
 
             self.set_settled(node_id);
-            iterations += 1;
             if node_id == end {
                 break;
             }

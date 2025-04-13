@@ -471,7 +471,6 @@ impl<H: AStarHeuristic> CalcPath for BidirectionalAStar<H> {
         self.best_meeting_node = INVALID_NODE;
         self.best_path_weight = MAX_WEIGHT;
 
-        let mut iterations = 0;
         let mut nodes_visited = 0;
         let mut active_direction = SearchDirection::Forward;
 
@@ -544,7 +543,6 @@ impl<H: AStarHeuristic> CalcPath for BidirectionalAStar<H> {
             }
 
             nodes_visited += 1;
-            iterations += 1;
 
             // Check if we can terminate early
             if self.best_meeting_node != INVALID_NODE {

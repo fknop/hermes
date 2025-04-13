@@ -1,9 +1,13 @@
 // This below comes from osmio
 
+use serde::Deserialize;
+
 // One µ is 10^-6, a decimicro is 10^-7
 pub const DECIMICRO_SCALE_FACTOR: f64 = 10_000_000.0;
 
-#[derive(PartialEq, Copy, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[derive(
+    PartialEq, Copy, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Deserialize,
+)]
 pub struct Degrees(i32);
 
 impl Degrees {
