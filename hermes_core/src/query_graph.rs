@@ -1,4 +1,3 @@
-
 use fxhash::FxHashMap;
 
 use crate::{
@@ -9,7 +8,7 @@ use crate::{
         create_virtual_geometry_between_points,
     },
     geopoint::GeoPoint,
-    graph::Graph,
+    graph::{Graph, UndirectedEdgeAccess},
     graph_edge::GraphEdge,
     snap::Snap,
     types::{EdgeId, NodeId},
@@ -206,11 +205,6 @@ impl<'a> QueryGraph<'a> {
 }
 
 impl Graph for QueryGraph<'_> {
-    type EdgeIterator<'b>
-        = QueryGraphEdgeIterator<'b>
-    where
-        Self: 'b;
-
     type Edge = BaseGraphEdge;
 
     fn is_virtual_node(&self, node_id: usize) -> bool {
@@ -223,23 +217,6 @@ impl Graph for QueryGraph<'_> {
 
     fn node_count(&self) -> usize {
         self.base_graph.node_count() + self.virtual_nodes
-    }
-
-    fn node_edges_iter(&self, node_id: usize) -> Self::EdgeIterator<'_> {
-        if self.is_virtual_node(node_id) {
-            QueryGraphEdgeIterator::new(
-                &[],
-                &self.virtual_adjacency_list[self.virtual_node_id(node_id)],
-            )
-        } else {
-            let virtual_edges = self.virtual_adjacency_list_existing_nodes.get(&node_id);
-            let base_edges = self.base_graph.node_edges(node_id);
-
-            match virtual_edges {
-                Some(virtual_edges) => QueryGraphEdgeIterator::new(base_edges, virtual_edges),
-                None => QueryGraphEdgeIterator::new(base_edges, &[]),
-            }
-        }
     }
 
     fn edge(&self, edge_id: usize) -> &BaseGraphEdge {
@@ -289,6 +266,29 @@ impl Graph for QueryGraph<'_> {
             )
         } else {
             self.base_graph.edge_direction(edge_id, start_node_id)
+        }
+    }
+}
+
+impl UndirectedEdgeAccess for QueryGraph<'_> {
+    type EdgeIterator<'b>
+        = QueryGraphEdgeIterator<'b>
+    where
+        Self: 'b;
+    fn node_edges_iter(&self, node_id: usize) -> Self::EdgeIterator<'_> {
+        if self.is_virtual_node(node_id) {
+            QueryGraphEdgeIterator::new(
+                &[],
+                &self.virtual_adjacency_list[self.virtual_node_id(node_id)],
+            )
+        } else {
+            let virtual_edges = self.virtual_adjacency_list_existing_nodes.get(&node_id);
+            let base_edges = self.base_graph.node_edges(node_id);
+
+            match virtual_edges {
+                Some(virtual_edges) => QueryGraphEdgeIterator::new(base_edges, virtual_edges),
+                None => QueryGraphEdgeIterator::new(base_edges, &[]),
+            }
         }
     }
 }

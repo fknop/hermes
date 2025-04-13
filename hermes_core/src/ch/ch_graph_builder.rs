@@ -1,8 +1,12 @@
 use std::cmp;
 
 use crate::{
-    base_graph::BaseGraph, ch::priority_queue::PriorityQueue,
-    graph::Graph, graph_edge::GraphEdge, types::NodeId, weighting::Weighting,
+    base_graph::BaseGraph,
+    ch::priority_queue::PriorityQueue,
+    graph::{Graph, UndirectedEdgeAccess},
+    graph_edge::GraphEdge,
+    types::NodeId,
+    weighting::Weighting,
 };
 
 use super::{
@@ -11,29 +15,6 @@ use super::{
     preparation_graph::{CHPreparationGraph, CHPreparationGraphEdge, PreparationGraphWeighting},
     witness_search::WitnessSearch,
 };
-
-// struct CHGraphBuilder {
-//     ch_graph: CHGraph,
-//     preparation_graph: CHGraph,
-// }
-
-// #[derive(Eq, PartialEq)]
-// struct NodeWithPriority {
-//     node_id: NodeId,
-//     priority: i32,
-// }
-
-// impl PartialOrd for NodeWithPriority {
-//     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-//         Some(self.cmp(other))
-//     }
-// }
-
-// impl Ord for NodeWithPriority {
-//     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-//         other.priority.cmp(&self.priority)
-//     }
-// }
 
 pub fn build_ch_graph<W>(base_graph: &BaseGraph, weighting: &W) -> CHGraph
 where

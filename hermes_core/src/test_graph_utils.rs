@@ -8,7 +8,7 @@ pub mod test_graph {
         distance::{Distance, Kilometers, Meters},
         edge_direction::EdgeDirection,
         geopoint::GeoPoint,
-        graph::Graph,
+        graph::{Graph, UndirectedEdgeAccess},
         graph_edge::GraphEdge,
         kilometers,
         properties::property_map::EdgePropertyMap,
@@ -234,8 +234,15 @@ pub mod test_graph {
         }
     }
 
-    impl Graph for TestGraph {
+    impl UndirectedEdgeAccess for TestGraph {
         type EdgeIterator<'a> = std::iter::Copied<std::slice::Iter<'a, usize>>;
+
+        fn node_edges_iter(&self, node: usize) -> Self::EdgeIterator<'_> {
+            self.adjacency_list[node].iter().copied()
+        }
+    }
+
+    impl Graph for TestGraph {
         type Edge = BaseGraphEdge;
 
         fn edge_count(&self) -> usize {
@@ -248,10 +255,6 @@ pub mod test_graph {
 
         fn is_virtual_node(&self, _: usize) -> bool {
             false
-        }
-
-        fn node_edges_iter(&self, node: usize) -> Self::EdgeIterator<'_> {
-            self.adjacency_list[node].iter().copied()
         }
 
         fn edge(&self, edge: usize) -> &BaseGraphEdge {

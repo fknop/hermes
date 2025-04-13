@@ -3,7 +3,7 @@ use fxhash::{FxBuildHasher, FxHashMap};
 use crate::constants::{DISTANCE_INFLUENCE, INVALID_EDGE, INVALID_NODE, MAX_WEIGHT};
 use crate::edge_direction::EdgeDirection;
 use crate::geopoint::GeoPoint;
-use crate::graph::Graph;
+use crate::graph::{Graph, UndirectedEdgeAccess};
 
 use crate::graph_edge::GraphEdge;
 use crate::stopwatch::Stopwatch;
@@ -229,7 +229,7 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
         self.node_data(dir, node).weight
     }
 
-    fn process_node<G: Graph>(
+    fn process_node<G: Graph + UndirectedEdgeAccess>(
         &mut self,
         graph: &G,
         weighting: &dyn Weighting<G>,
@@ -444,7 +444,7 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
 }
 
 impl<H: AStarHeuristic> CalcPath for BidirectionalAStar<H> {
-    fn calc_path<G: Graph>(
+    fn calc_path<G: Graph + UndirectedEdgeAccess>(
         &mut self,
         graph: &G,
         weighting: &impl Weighting<G>,

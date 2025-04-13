@@ -3,7 +3,7 @@ use fxhash::FxHashMap;
 use crate::constants::{DISTANCE_INFLUENCE, INVALID_EDGE, INVALID_NODE, MAX_WEIGHT};
 use crate::edge_direction::EdgeDirection;
 use crate::geopoint::GeoPoint;
-use crate::graph::Graph;
+use crate::graph::{Graph, UndirectedEdgeAccess};
 use crate::graph_edge::GraphEdge;
 use crate::routing::astar_heuristic::AStarHeuristic;
 use crate::stopwatch::Stopwatch;
@@ -217,14 +217,17 @@ impl<H: AStarHeuristic> AStar<H> {
 }
 
 impl<H: AStarHeuristic> CalcPath for AStar<H> {
-    fn calc_path<G: Graph>(
+    fn calc_path<G>(
         &mut self,
         graph: &G,
         weighting: &impl Weighting<G>,
         start: usize,
         end: usize,
         options: Option<CalcPathOptions>,
-    ) -> Result<CalcPathResult, String> {
+    ) -> Result<CalcPathResult, String>
+    where
+        G: Graph + UndirectedEdgeAccess,
+    {
         let stopwatch = Stopwatch::new("astar/calc_path");
         if start == INVALID_NODE {
             return Err(String::from("AStar: start node is invalid"));

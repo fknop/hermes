@@ -1,4 +1,3 @@
-
 use fxhash::FxHashSet;
 
 use crate::{
@@ -6,7 +5,7 @@ use crate::{
     constants::MAX_WEIGHT,
     distance::{Distance, Meters},
     edge_direction::EdgeDirection,
-    graph::Graph,
+    graph::{Graph, UndirectedEdgeAccess},
     graph_edge::GraphEdge,
     properties::property_map::EdgePropertyMap,
     types::{EdgeId, NodeId},
@@ -161,10 +160,6 @@ impl<'a> CHPreparationGraph<'a> {
 
 impl<'a> Graph for CHPreparationGraph<'a> {
     type Edge = CHPreparationGraphEdge<'a>;
-    type EdgeIterator<'b>
-        = GraphOverlayIterator<'b>
-    where
-        Self: 'b;
 
     fn edge_count(&self) -> usize {
         self.edges.len()
@@ -174,34 +169,20 @@ impl<'a> Graph for CHPreparationGraph<'a> {
         self.base_graph.node_count()
     }
 
-    fn is_virtual_node(&self, node: usize) -> bool {
+    fn is_virtual_node(&self, _: usize) -> bool {
         false
-    }
-
-    fn node_edges_iter(&self, node_id: usize) -> Self::EdgeIterator<'_> {
-        let incoming_edges = &self.incoming_edges[node_id];
-        let outgoing_edges = &self.outgoing_edges[node_id];
-
-        if incoming_edges.len() + outgoing_edges.len() > 1000 {
-            println!(
-                "More than 500 edges? {}",
-                incoming_edges.len() + outgoing_edges.len()
-            )
-        }
-
-        GraphOverlayIterator::new(&incoming_edges[..], &outgoing_edges[..])
     }
 
     fn edge(&self, edge_id: usize) -> &Self::Edge {
         &self.edges[edge_id]
     }
 
-    fn edge_geometry(&self, edge_id: usize) -> &[crate::geopoint::GeoPoint] {
+    fn edge_geometry(&self, _: usize) -> &[crate::geopoint::GeoPoint] {
         unimplemented!()
     }
 
     fn node_geometry(&self, node_id: usize) -> &crate::geopoint::GeoPoint {
-        unimplemented!()
+        self.base_graph.node_geometry(node_id)
     }
 
     fn edge_direction(&self, edge_id: EdgeId, start: NodeId) -> EdgeDirection {
@@ -221,6 +202,20 @@ impl<'a> Graph for CHPreparationGraph<'a> {
         } else {
             self.base_graph.edge_direction(edge_id, start)
         }
+    }
+}
+
+impl UndirectedEdgeAccess for CHPreparationGraph<'_> {
+    type EdgeIterator<'b>
+        = GraphOverlayIterator<'b>
+    where
+        Self: 'b;
+
+    fn node_edges_iter(&self, node_id: usize) -> Self::EdgeIterator<'_> {
+        let incoming_edges = &self.incoming_edges[node_id];
+        let outgoing_edges = &self.outgoing_edges[node_id];
+
+        GraphOverlayIterator::new(&incoming_edges[..], &outgoing_edges[..])
     }
 }
 

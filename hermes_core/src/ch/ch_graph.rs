@@ -2,6 +2,7 @@ use crate::{
     base_graph::BaseGraph,
     constants::{INVALID_EDGE, INVALID_NODE, MAX_DURATION, MAX_WEIGHT},
     distance::{Distance, Meters},
+    edge_direction::EdgeDirection,
     graph::Graph,
     graph_edge::GraphEdge,
     meters,
@@ -97,6 +98,17 @@ impl CHGraph {
         }
     }
 
+    // TODO: haven't really looked into it yet, if it's correct or not
+    pub fn unfold(&self, edge: &CHGraphEdge, edges: &mut Vec<EdgeId>) {
+        match edge {
+            CHGraphEdge::Shortcut(shortcut) => {
+                self.unfold(&self.edges[shortcut.incoming_edge], edges);
+                self.unfold(&self.edges[shortcut.outgoing_edge], edges);
+            }
+            CHGraphEdge::Edge(e) => edges.push(e.edge_id),
+        }
+    }
+
     pub fn add_edge(&mut self, edge: CHBaseEdge) {
         if edge.forward_weight != MAX_WEIGHT {
             self.outgoing_edges[edge.start].push(edge.edge_id);
@@ -118,5 +130,42 @@ impl CHGraph {
         self.incoming_edges[shortcut.end].push(edge_id);
 
         self.edges.push(CHGraphEdge::Shortcut(shortcut));
+    }
+}
+
+impl Graph for CHGraph {
+    type Edge = CHGraphEdge;
+
+    fn edge_count(&self) -> usize {
+        self.edges.len()
+    }
+
+    fn node_count(&self) -> usize {
+        self.nodes
+    }
+
+    fn is_virtual_node(&self, node: usize) -> bool {
+        false
+    }
+
+    fn edge(&self, edge_id: EdgeId) -> &Self::Edge {
+        &self.edges[edge_id]
+    }
+
+    fn edge_geometry(&self, edge_id: EdgeId) -> &[crate::geopoint::GeoPoint] {
+        todo!()
+    }
+
+    fn node_geometry(&self, node_id: NodeId) -> &crate::geopoint::GeoPoint {
+        todo!()
+    }
+
+    fn edge_direction(&self, edge_id: EdgeId, start_node_id: NodeId) -> EdgeDirection {
+        let edge = self.edge(edge_id);
+        if edge.start_node() == start_node_id {
+            EdgeDirection::Forward
+        } else {
+            EdgeDirection::Backward
+        }
     }
 }

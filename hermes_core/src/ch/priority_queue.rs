@@ -1,5 +1,4 @@
 use std::cmp::Ordering;
-use std::vec::IntoIter;
 use thiserror::Error;
 
 const FIRST_ELEMENT_INDEX: usize = 1;
@@ -20,6 +19,8 @@ pub enum PriorityQueueError {
     Full,
     #[error("Element already exists in the priority queue")]
     ElementAlreadyExists,
+    #[error("Element is out of bounds")]
+    OutOfBounds,
 }
 
 impl<P> PriorityQueue<P>
@@ -47,7 +48,7 @@ where
 
     pub fn push(&mut self, id: usize, priority: P) -> Result<usize, PriorityQueueError> {
         if id >= self.max {
-            panic!("ID {} out of bounds, max: {}", id, self.max)
+            return Err(PriorityQueueError::OutOfBounds);
         }
 
         if self.size == self.max {
@@ -173,29 +174,11 @@ where
 
         elements
     }
-
-    pub fn iter(&self) -> PriorityQueueIter<P> {
-        PriorityQueueIter {
-            inner: self.to_vec().into_iter(),
-        }
-    }
-}
-
-pub struct PriorityQueueIter<P> {
-    inner: IntoIter<(usize, P)>,
-}
-
-// Implement Iterator trait
-impl<P> Iterator for PriorityQueueIter<P> {
-    type Item = (usize, P);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.inner.next()
-    }
 }
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
 
     #[test]
@@ -223,10 +206,10 @@ mod tests {
     fn error_duplicate_id() {
         let mut queue = PriorityQueue::<usize>::new(100);
         assert!(queue.push(1, 5).is_ok());
-        assert!(
-            queue.push(1, 5).is_err(),
-            "Element already exists in the priority queue"
-        );
+        assert!(matches!(
+            queue.push(1, 5),
+            Err(PriorityQueueError::ElementAlreadyExists)
+        ));
     }
 
     #[test]
@@ -262,18 +245,17 @@ mod tests {
     }
 
     #[test]
-    fn test_iter() {
+    fn test_to_vec() {
         let mut queue = PriorityQueue::new(5);
         let _ = queue.push(1, 5);
         let _ = queue.push(2, 3);
         let _ = queue.push(3, 4);
 
-        let mut iter = queue.iter();
+        let vec = queue.to_vec();
 
-        assert_eq!(iter.next(), Some((2, 3)));
-        assert_eq!(iter.next(), Some((3, 4)));
-        assert_eq!(iter.next(), Some((1, 5)));
-        assert_eq!(iter.next(), None);
+        assert_eq!(vec[0], (2, 3));
+        assert_eq!(vec[1], (3, 4));
+        assert_eq!(vec[2], (1, 5));
     }
 
     #[test]
@@ -307,10 +289,12 @@ mod tests {
     }
 
     #[test]
-    fn test_push_when_full() {
+    fn test_push_out_of_bounds() {
         let mut queue = PriorityQueue::new(2);
         let _ = queue.push(1, 5);
-        let _ = queue.push(2, 3);
-        assert!(queue.push(3, 4).is_err(), "Priority queue is full");
+        assert!(matches!(
+            queue.push(2, 4),
+            Err(PriorityQueueError::OutOfBounds)
+        ));
     }
 }

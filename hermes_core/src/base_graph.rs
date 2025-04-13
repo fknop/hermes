@@ -4,7 +4,7 @@ use crate::distance::{Distance, Meters};
 use crate::edge_direction::EdgeDirection;
 use crate::geometry::compute_geometry_distance;
 use crate::geopoint::GeoPoint;
-use crate::graph::Graph;
+use crate::graph::{Graph, UndirectedEdgeAccess};
 use crate::graph_edge::GraphEdge;
 use crate::osm::osm_reader::OsmReader;
 use crate::properties::property_map::EdgePropertyMap;
@@ -157,16 +157,10 @@ impl BaseGraph {
 }
 
 impl Graph for BaseGraph {
-    type EdgeIterator<'a> = std::iter::Copied<std::slice::Iter<'a, usize>>;
-
     type Edge = BaseGraphEdge;
 
     fn is_virtual_node(&self, _: NodeId) -> bool {
         false
-    }
-
-    fn node_edges_iter(&self, node: NodeId) -> Self::EdgeIterator<'_> {
-        self.adjacency_list[node].iter().copied()
     }
 
     fn edge(&self, edge: EdgeId) -> &BaseGraphEdge {
@@ -210,5 +204,13 @@ impl Graph for BaseGraph {
             "Node {} is neither the start nor the end of edge {}",
             start, edge_id
         )
+    }
+}
+
+impl UndirectedEdgeAccess for BaseGraph {
+    type EdgeIterator<'a> = std::iter::Copied<std::slice::Iter<'a, usize>>;
+
+    fn node_edges_iter(&self, node: NodeId) -> Self::EdgeIterator<'_> {
+        self.adjacency_list[node].iter().copied()
     }
 }
