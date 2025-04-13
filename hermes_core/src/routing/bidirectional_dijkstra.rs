@@ -1,6 +1,5 @@
 use fxhash::{FxBuildHasher, FxHashMap};
 
-use crate::base_graph::BaseGraphEdge;
 use crate::constants::{INVALID_EDGE, INVALID_NODE, MAX_WEIGHT};
 use crate::edge_direction::EdgeDirection;
 use crate::geopoint::GeoPoint;

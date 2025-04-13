@@ -9,7 +9,7 @@ use crate::routing::astar_heuristic::AStarHeuristic;
 use crate::stopwatch::Stopwatch;
 use crate::weighting::{Weight, Weighting};
 use std::cmp::Ordering;
-use std::collections::{BinaryHeap, HashMap};
+use std::collections::BinaryHeap;
 
 use super::routing_path::{RoutingPath, RoutingPathLeg};
 use super::shortest_path_algorithm::{

@@ -1,7 +1,6 @@
 use crate::base_graph::BaseGraph;
 use crate::ch;
 use crate::error::ImportError;
-use crate::geopoint::GeoPoint;
 use crate::graph::Graph;
 use crate::landmarks::lm_bidirectional_astar::LMBidirectionalAstar;
 use crate::landmarks::lm_data::LMData;

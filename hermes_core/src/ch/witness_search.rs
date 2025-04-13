@@ -10,7 +10,7 @@ use crate::{
     weighting::{Weight, Weighting},
 };
 
-use super::preparation_graph::{CHPreparationGraph, PreparationGraphWeighting};
+use super::preparation_graph::CHPreparationGraph;
 
 #[derive(Eq, Copy, Clone, Debug)]
 struct HeapItem {

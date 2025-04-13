@@ -5,7 +5,7 @@ mod state;
 use crate::route::route_handler::route_handler;
 use crate::state::AppState;
 use axum::http::Method;
-use axum::routing::{get, post};
+use axum::routing::post;
 use axum::{Router, serve};
 use hermes_core::hermes::Hermes;
 use std::sync::Arc;

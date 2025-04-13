@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 
 use fxhash::FxHashMap;
 
@@ -12,7 +11,6 @@ use crate::{
     geopoint::GeoPoint,
     graph::Graph,
     graph_edge::GraphEdge,
-    properties::property_map::EdgePropertyMap,
     snap::Snap,
     types::{EdgeId, NodeId},
 };

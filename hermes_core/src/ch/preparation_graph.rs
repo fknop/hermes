@@ -1,6 +1,5 @@
-use std::hash::BuildHasherDefault;
 
-use fxhash::{FxHashSet, FxHasher};
+use fxhash::FxHashSet;
 
 use crate::{
     base_graph::{BaseGraph, BaseGraphEdge},

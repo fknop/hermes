@@ -1,7 +1,7 @@
-use std::{cmp, collections::BinaryHeap};
+use std::cmp;
 
 use crate::{
-    base_graph::BaseGraph, ch::priority_queue::PriorityQueue, edge_direction::EdgeDirection,
+    base_graph::BaseGraph, ch::priority_queue::PriorityQueue,
     graph::Graph, graph_edge::GraphEdge, types::NodeId, weighting::Weighting,
 };
 

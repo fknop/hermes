@@ -5,7 +5,7 @@ use crate::properties::tag_parser::parse_way_tags;
 
 use fxhash::FxHashMap;
 use osmpbfreader::{NodeId, OsmObj, OsmPbfReader};
-use std::{collections::HashMap, fs::File, path::Path};
+use std::{fs::File, path::Path};
 
 struct OsmNode {
     coordinates: GeoPoint,
