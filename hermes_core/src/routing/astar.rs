@@ -87,7 +87,13 @@ impl AStarHeuristic for HaversineHeuristic {
     }
 }
 
-pub struct AStar<H: AStarHeuristic> {
+pub struct AStar<'a, G, H>
+where
+    G: Graph + UndirectedEdgeAccess + GeometryAccess,
+    H: AStarHeuristic,
+{
+    graph: &'a G,
+
     heap: BinaryHeap<HeapItem>,
     // Use a HashMap instead of a vector. Creating a vector with a capacity of the entire nodes of the planet is not scalable.
     data: FxHashMap<usize, NodeData>,
@@ -97,12 +103,17 @@ pub struct AStar<H: AStarHeuristic> {
     heuristic: H,
 }
 
-impl<H: AStarHeuristic> AStar<H> {
-    pub fn with_heuristic(_graph: &impl Graph, heuristic: H) -> AStar<H> {
+impl<'a, G, H> AStar<'a, G, H>
+where
+    G: Graph + UndirectedEdgeAccess + GeometryAccess,
+    H: AStarHeuristic,
+{
+    pub fn with_heuristic(graph: &G, heuristic: H) -> AStar<G, H> {
         // TODO: better estimate the capacity to allocate
         let data = FxHashMap::default();
         let heap: BinaryHeap<HeapItem> = BinaryHeap::with_capacity(1024);
         AStar {
+            graph,
             data,
             debug_visited_nodes: None,
             heap,
@@ -110,8 +121,8 @@ impl<H: AStarHeuristic> AStar<H> {
         }
     }
 
-    fn init<G: Graph + GeometryAccess>(&mut self, graph: &G, start: usize, end: usize) {
-        let h_score = self.heuristic.estimate(graph, start, end);
+    fn init(&mut self, start: usize, end: usize) {
+        let h_score = self.heuristic.estimate(self.graph, start, end);
         self.heap.push(HeapItem {
             node_id: start,
             g_score: 0,
@@ -157,7 +168,7 @@ impl<H: AStarHeuristic> AStar<H> {
         self.node_data(node).weight
     }
 
-    fn build_path<G: Graph + GeometryAccess>(
+    fn build_path(
         &mut self,
         graph: &G,
         weighting: &impl Weighting<G>,
@@ -201,7 +212,7 @@ impl<H: AStarHeuristic> AStar<H> {
         debug_visited_nodes.push(node);
     }
 
-    fn debug_info<G: Graph + GeometryAccess>(&self, graph: &G) -> ShortestPathDebugInfo {
+    fn debug_info(&self, graph: &G) -> ShortestPathDebugInfo {
         ShortestPathDebugInfo {
             forward_visited_nodes: self
                 .debug_visited_nodes
@@ -216,10 +227,13 @@ impl<H: AStarHeuristic> AStar<H> {
     }
 }
 
-impl<H: AStarHeuristic> CalcPath for AStar<H> {
-    fn calc_path<G>(
+impl<G, H> CalcPath<G> for AStar<'_, G, H>
+where
+    G: Graph + UndirectedEdgeAccess + GeometryAccess,
+    H: AStarHeuristic,
+{
+    fn calc_path(
         &mut self,
-        graph: &G,
         weighting: &impl Weighting<G>,
         start: usize,
         end: usize,
@@ -241,7 +255,7 @@ impl<H: AStarHeuristic> CalcPath for AStar<H> {
             .and_then(|options| options.include_debug_info)
             .unwrap_or(false);
 
-        self.init(graph, start, end);
+        self.init(start, end);
 
         let mut nodes_visited = 0;
 
@@ -263,8 +277,8 @@ impl<H: AStarHeuristic> CalcPath for AStar<H> {
                 continue;
             }
 
-            for edge_id in graph.node_edges_iter(node_id) {
-                let edge = graph.edge(edge_id);
+            for edge_id in self.graph.node_edges_iter(node_id) {
+                let edge = self.graph.edge(edge_id);
 
                 let adj_node = edge.adj_node(node_id);
 
@@ -272,7 +286,7 @@ impl<H: AStarHeuristic> CalcPath for AStar<H> {
                     continue;
                 }
 
-                let direction = graph.edge_direction(edge_id, node_id);
+                let direction = self.graph.edge_direction(edge_id, node_id);
 
                 let edge_weight = weighting.calc_edge_weight(edge, direction);
 
@@ -284,7 +298,7 @@ impl<H: AStarHeuristic> CalcPath for AStar<H> {
 
                 if next_weight < self.current_shortest_weight(adj_node) {
                     self.update_node_data(adj_node, next_weight, node_id, edge_id);
-                    let h_score = self.heuristic.estimate(graph, adj_node, end);
+                    let h_score = self.heuristic.estimate(self.graph, adj_node, end);
 
                     self.heap.push(HeapItem {
                         g_score: next_weight,
@@ -308,7 +322,7 @@ impl<H: AStarHeuristic> CalcPath for AStar<H> {
 
         println!("AStar nodes visited: {}", nodes_visited);
 
-        let path = self.build_path(graph, weighting, start, end);
+        let path = self.build_path(self.graph, weighting, start, end);
         let duration = stopwatch.elapsed();
         stopwatch.report();
 
@@ -317,7 +331,7 @@ impl<H: AStarHeuristic> CalcPath for AStar<H> {
             nodes_visited,
             duration,
             debug: if include_debug_info {
-                Some(self.debug_info(graph))
+                Some(self.debug_info(self.graph))
             } else {
                 None
             },
@@ -325,8 +339,11 @@ impl<H: AStarHeuristic> CalcPath for AStar<H> {
     }
 }
 
-impl AStar<HaversineHeuristic> {
-    pub fn new(graph: &impl Graph) -> AStar<HaversineHeuristic> {
+impl<'a, G> AStar<'a, G, HaversineHeuristic>
+where
+    G: Graph + UndirectedEdgeAccess + GeometryAccess,
+{
+    pub fn new(graph: &'a G) -> AStar<'a, G, HaversineHeuristic> {
         Self::with_heuristic(graph, HaversineHeuristic)
     }
 }
@@ -349,7 +366,6 @@ mod tests {
         let weighting = TestWeighting;
 
         let result = dijkstra.calc_path(
-            &graph,
             &weighting,
             RomaniaGraphCity::Oradea.into(),
             RomaniaGraphCity::Bucharest.into(),
@@ -370,7 +386,6 @@ mod tests {
         let weighting = TestWeighting;
 
         let result = dijkstra.calc_path(
-            &graph,
             &weighting,
             RomaniaGraphCity::Iasi.into(),
             RomaniaGraphCity::Timisoara.into(),

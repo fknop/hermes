@@ -144,7 +144,7 @@ impl Graph for CHGraph {
         self.nodes
     }
 
-    fn is_virtual_node(&self, node: usize) -> bool {
+    fn is_virtual_node(&self, _: NodeId) -> bool {
         false
     }
 

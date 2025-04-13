@@ -14,7 +14,7 @@ impl LMBidirectionalAstar {
         lm: &'a LMData,
         start: usize,
         end: usize,
-    ) -> BidirectionalAStar<LMAstarHeuristic<'a, G, impl Weighting<G>>> {
+    ) -> BidirectionalAStar<'a, G, LMAstarHeuristic<'a, G, impl Weighting<G>>> {
         let heuristic = LMAstarHeuristic::new(graph, weighting, lm, start, end);
         BidirectionalAStar::with_heuristic(graph, heuristic)
     }

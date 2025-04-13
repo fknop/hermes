@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use crate::{
     geopoint::GeoPoint,
-    graph::{GeometryAccess, Graph, UndirectedEdgeAccess},
+    graph::{Graph, UndirectedEdgeAccess},
     weighting::Weighting,
 };
 
@@ -24,10 +24,9 @@ pub struct CalcPathResult {
     pub debug: Option<ShortestPathDebugInfo>,
 }
 
-pub trait CalcPath {
-    fn calc_path<G: Graph + UndirectedEdgeAccess + GeometryAccess>(
+pub trait CalcPath<G: Graph> {
+    fn calc_path(
         &mut self,
-        graph: &G,
         weighting: &impl Weighting<G>,
         start: usize,
         end: usize,

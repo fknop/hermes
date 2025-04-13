@@ -92,7 +92,12 @@ impl AStarHeuristic for HaversineHeuristic {
     }
 }
 
-pub struct BidirectionalAStar<H: AStarHeuristic> {
+pub struct BidirectionalAStar<'a, G, H>
+where
+    G: Graph + UndirectedEdgeAccess + GeometryAccess,
+    H: AStarHeuristic,
+{
+    graph: &'a G,
     // Forward search (from start node)
     forward_heap: BinaryHeap<HeapItem>,
     forward_data: FxHashMap<usize, NodeData>,
@@ -112,8 +117,12 @@ pub struct BidirectionalAStar<H: AStarHeuristic> {
     heuristic: H,
 }
 
-impl<H: AStarHeuristic> BidirectionalAStar<H> {
-    pub fn with_heuristic(_graph: &impl Graph, heuristic: H) -> BidirectionalAStar<H> {
+impl<'a, G, H> BidirectionalAStar<'a, G, H>
+where
+    G: Graph + UndirectedEdgeAccess + GeometryAccess,
+    H: AStarHeuristic,
+{
+    pub fn with_heuristic(graph: &'a G, heuristic: H) -> Self {
         // Allocate data structures for both search directions
         let forward_data = HashMap::with_capacity_and_hasher(20000, FxBuildHasher::default());
         let forward_heap: BinaryHeap<HeapItem> = BinaryHeap::with_capacity(20000);
@@ -122,6 +131,7 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
         let backward_heap: BinaryHeap<HeapItem> = BinaryHeap::with_capacity(20000);
 
         BidirectionalAStar {
+            graph,
             forward_data,
             forward_heap,
             backward_data,
@@ -134,7 +144,7 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
         }
     }
 
-    fn init<G: Graph + GeometryAccess>(&mut self, graph: &G, start: usize, end: usize) {
+    fn init(&mut self, graph: &G, start: usize, end: usize) {
         // Initialize forward search from start
         let forward_h_score = self.heuristic.estimate(graph, start, end);
         self.forward_heap.push(HeapItem {
@@ -229,7 +239,7 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
         self.node_data(dir, node).weight
     }
 
-    fn process_node<G: Graph + UndirectedEdgeAccess + GeometryAccess>(
+    fn process_node(
         &mut self,
         graph: &G,
         weighting: &dyn Weighting<G>,
@@ -311,7 +321,7 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
         self.set_settled(dir, node_id);
     }
 
-    fn build_forward_path<G: Graph + GeometryAccess>(
+    fn build_forward_path(
         &mut self,
         graph: &G,
         weighting: &dyn Weighting<G>,
@@ -347,7 +357,7 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
         path
     }
 
-    fn build_backward_path<G: Graph + GeometryAccess>(
+    fn build_backward_path(
         &mut self,
         graph: &G,
         weighting: &dyn Weighting<G>,
@@ -387,7 +397,7 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
         path
     }
 
-    fn build_path<G: Graph + GeometryAccess>(
+    fn build_path(
         &mut self,
         graph: &G,
         weighting: &impl Weighting<G>,
@@ -421,7 +431,7 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
         debug_visited_nodes.push(node);
     }
 
-    fn debug_info<G: GeometryAccess>(&self, graph: &G) -> ShortestPathDebugInfo {
+    fn debug_info(&self, graph: &G) -> ShortestPathDebugInfo {
         ShortestPathDebugInfo {
             forward_visited_nodes: self
                 .debug_forward_visited_nodes
@@ -443,10 +453,13 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
     }
 }
 
-impl<H: AStarHeuristic> CalcPath for BidirectionalAStar<H> {
-    fn calc_path<G: Graph + UndirectedEdgeAccess + GeometryAccess>(
+impl<G, H> CalcPath<G> for BidirectionalAStar<'_, G, H>
+where
+    G: Graph + UndirectedEdgeAccess + GeometryAccess,
+    H: AStarHeuristic,
+{
+    fn calc_path(
         &mut self,
-        graph: &G,
         weighting: &impl Weighting<G>,
         start: usize,
         end: usize,
@@ -467,7 +480,7 @@ impl<H: AStarHeuristic> CalcPath for BidirectionalAStar<H> {
             .unwrap_or(false);
 
         // Initialize
-        self.init(graph, start, end);
+        self.init(self.graph, start, end);
         self.best_meeting_node = INVALID_NODE;
         self.best_path_weight = MAX_WEIGHT;
 
@@ -525,7 +538,7 @@ impl<H: AStarHeuristic> CalcPath for BidirectionalAStar<H> {
 
             let opposite_direction_h =
                 self.heuristic
-                    .estimate(graph, node_id, opposite_direction_target);
+                    .estimate(self.graph, node_id, opposite_direction_target);
 
             // Strategy from "Yet another bidirectional algorithm for shortest paths"
             // Wim Pijls, Henk Post
@@ -536,7 +549,14 @@ impl<H: AStarHeuristic> CalcPath for BidirectionalAStar<H> {
                 continue;
             }
 
-            self.process_node(graph, weighting, active_direction, node_id, g_score, target);
+            self.process_node(
+                self.graph,
+                weighting,
+                active_direction,
+                node_id,
+                g_score,
+                target,
+            );
 
             if include_debug_info {
                 self.add_visited_node(active_direction, node_id);
@@ -564,12 +584,12 @@ impl<H: AStarHeuristic> CalcPath for BidirectionalAStar<H> {
 
         println!("BidirectionalAStar nodes visited: {}", nodes_visited);
 
-        let path = self.build_path(graph, weighting, start, end);
+        let path = self.build_path(self.graph, weighting, start, end);
         let duration = stopwatch.elapsed();
         stopwatch.report();
 
         let debug = if include_debug_info {
-            Some(self.debug_info(graph))
+            Some(self.debug_info(self.graph))
         } else {
             None
         };
@@ -583,8 +603,11 @@ impl<H: AStarHeuristic> CalcPath for BidirectionalAStar<H> {
     }
 }
 
-impl BidirectionalAStar<HaversineHeuristic> {
-    pub fn new(graph: &impl Graph) -> BidirectionalAStar<HaversineHeuristic> {
+impl<'a, G> BidirectionalAStar<'a, G, HaversineHeuristic>
+where
+    G: Graph + UndirectedEdgeAccess + GeometryAccess,
+{
+    pub fn new(graph: &'a G) -> BidirectionalAStar<'a, G, HaversineHeuristic> {
         Self::with_heuristic(graph, HaversineHeuristic)
     }
 }
@@ -607,7 +630,6 @@ mod tests {
         let weighting = TestWeighting;
 
         let result = dijkstra.calc_path(
-            &graph,
             &weighting,
             RomaniaGraphCity::Oradea.into(),
             RomaniaGraphCity::Bucharest.into(),
@@ -628,7 +650,6 @@ mod tests {
         let weighting = TestWeighting;
 
         let result = dijkstra.calc_path(
-            &graph,
             &weighting,
             RomaniaGraphCity::Iasi.into(),
             RomaniaGraphCity::Timisoara.into(),

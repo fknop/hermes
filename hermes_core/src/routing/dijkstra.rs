@@ -1,5 +1,8 @@
 use super::{astar::AStar, astar_heuristic::AStarHeuristic};
-use crate::{graph::Graph, weighting::Weight};
+use crate::{
+    graph::{GeometryAccess, Graph, UndirectedEdgeAccess},
+    weighting::Weight,
+};
 
 pub struct DijkstraHeuristic;
 
@@ -15,7 +18,10 @@ pub struct Dijkstra;
 /// Dijkstra is simply a variant of AStar with a zero heuristic
 impl Dijkstra {
     #[allow(clippy::new_ret_no_self)]
-    pub fn new(graph: &impl Graph) -> AStar<DijkstraHeuristic> {
+    pub fn new<G>(graph: &G) -> AStar<'_, G, DijkstraHeuristic>
+    where
+        G: Graph + UndirectedEdgeAccess + GeometryAccess,
+    {
         AStar::with_heuristic(graph, DijkstraHeuristic)
     }
 }
@@ -38,7 +44,6 @@ mod tests {
         let weighting = TestWeighting;
 
         let result = dijkstra.calc_path(
-            &graph,
             &weighting,
             RomaniaGraphCity::Oradea.into(),
             RomaniaGraphCity::Bucharest.into(),
@@ -59,7 +64,6 @@ mod tests {
         let weighting = TestWeighting;
 
         let result = dijkstra.calc_path(
-            &graph,
             &weighting,
             RomaniaGraphCity::Iasi.into(),
             RomaniaGraphCity::Timisoara.into(),

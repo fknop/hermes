@@ -133,17 +133,17 @@ impl Hermes {
             Some(RoutingAlgorithm::Dijkstra) => {
                 let weighting = self.create_weighting(&request.profile);
                 let mut dijkstra = Dijkstra::new(&query_graph);
-                dijkstra.calc_path(&query_graph, &weighting, start, end, Some(options))
+                dijkstra.calc_path(&weighting, start, end, Some(options))
             }
             Some(RoutingAlgorithm::Astar) => {
                 let weighting = self.create_weighting(&request.profile);
                 let mut astar = AStar::new(&query_graph);
-                astar.calc_path(&query_graph, &weighting, start, end, Some(options))
+                astar.calc_path(&weighting, start, end, Some(options))
             }
             Some(RoutingAlgorithm::BidirectionalAstar) => {
                 let weighting = self.create_weighting(&request.profile);
                 let mut bdirastar = BidirectionalAStar::new(&query_graph);
-                bdirastar.calc_path(&query_graph, &weighting, start, end, Some(options))
+                bdirastar.calc_path(&weighting, start, end, Some(options))
             }
 
             Some(RoutingAlgorithm::Landmarks) => {
@@ -155,13 +155,13 @@ impl Hermes {
                     start,
                     end,
                 );
-                landmarks_astar.calc_path(&query_graph, &weighting, start, end, Some(options))
+                landmarks_astar.calc_path(&weighting, start, end, Some(options))
             }
 
             None => {
                 let weighting = self.create_weighting(&request.profile);
                 let mut bdirastar = BidirectionalAStar::new(&query_graph);
-                bdirastar.calc_path(&query_graph, &weighting, start, end, Some(options))
+                bdirastar.calc_path(&weighting, start, end, Some(options))
             }
         }
     }

@@ -2,6 +2,7 @@ pub(crate) mod astar;
 pub(crate) mod astar_heuristic;
 pub(crate) mod bidirectional_astar;
 pub(crate) mod bidirectional_dijkstra;
+pub(crate) mod ch_bidirectional_dijkstra;
 pub(crate) mod dijkstra;
 pub mod routing_path;
 pub mod routing_request;
