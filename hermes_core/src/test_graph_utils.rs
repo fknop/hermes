@@ -8,7 +8,7 @@ pub mod test_graph {
         distance::{Distance, Kilometers, Meters},
         edge_direction::EdgeDirection,
         geopoint::GeoPoint,
-        graph::{Graph, UndirectedEdgeAccess},
+        graph::{GeometryAccess, Graph, UndirectedEdgeAccess},
         graph_edge::GraphEdge,
         kilometers,
         properties::property_map::EdgePropertyMap,
@@ -242,6 +242,16 @@ pub mod test_graph {
         }
     }
 
+    impl GeometryAccess for TestGraph {
+        fn edge_geometry(&self, _: usize) -> &[GeoPoint] {
+            &[]
+        }
+
+        fn node_geometry(&self, _node_id: usize) -> &GeoPoint {
+            &self.mock_geopoint
+        }
+    }
+
     impl Graph for TestGraph {
         type Edge = BaseGraphEdge;
 
@@ -259,14 +269,6 @@ pub mod test_graph {
 
         fn edge(&self, edge: usize) -> &BaseGraphEdge {
             &self.edges[edge]
-        }
-
-        fn edge_geometry(&self, _: usize) -> &[GeoPoint] {
-            &[]
-        }
-
-        fn node_geometry(&self, _node_id: usize) -> &GeoPoint {
-            &self.mock_geopoint
         }
 
         fn edge_direction(&self, edge_id: usize, start: usize) -> EdgeDirection {

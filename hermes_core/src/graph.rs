@@ -13,8 +13,6 @@ pub trait Graph {
     fn is_virtual_node(&self, node: usize) -> bool;
 
     fn edge(&self, edge_id: EdgeId) -> &Self::Edge;
-    fn edge_geometry(&self, edge_id: EdgeId) -> &[GeoPoint];
-    fn node_geometry(&self, node_id: NodeId) -> &GeoPoint;
 
     fn edge_direction(&self, edge_id: EdgeId, start_node_id: NodeId) -> EdgeDirection;
 }
@@ -34,4 +32,9 @@ pub trait DirectedEdgeAccess {
 
     fn node_incoming_edges_iter(&self, node_id: NodeId) -> Self::EdgeIterator<'_>;
     fn node_outgoing_edges_iter(&self, node_id: NodeId) -> Self::EdgeIterator<'_>;
+}
+
+pub trait GeometryAccess {
+    fn edge_geometry(&self, edge_id: EdgeId) -> &[GeoPoint];
+    fn node_geometry(&self, node_id: NodeId) -> &GeoPoint;
 }

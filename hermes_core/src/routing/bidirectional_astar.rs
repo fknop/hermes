@@ -3,7 +3,7 @@ use fxhash::{FxBuildHasher, FxHashMap};
 use crate::constants::{DISTANCE_INFLUENCE, INVALID_EDGE, INVALID_NODE, MAX_WEIGHT};
 use crate::edge_direction::EdgeDirection;
 use crate::geopoint::GeoPoint;
-use crate::graph::{Graph, UndirectedEdgeAccess};
+use crate::graph::{GeometryAccess, Graph, UndirectedEdgeAccess};
 
 use crate::graph_edge::GraphEdge;
 use crate::stopwatch::Stopwatch;
@@ -78,7 +78,7 @@ impl NodeData {
 pub struct HaversineHeuristic;
 
 impl AStarHeuristic for HaversineHeuristic {
-    fn estimate(&self, graph: &impl Graph, from: usize, to: usize) -> Weight {
+    fn estimate<G: Graph + GeometryAccess>(&self, graph: &G, from: usize, to: usize) -> Weight {
         let start_coordinates = graph.node_geometry(from);
         let end_coordinates = graph.node_geometry(to);
         let distance = start_coordinates
@@ -134,7 +134,7 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
         }
     }
 
-    fn init(&mut self, graph: &impl Graph, start: usize, end: usize) {
+    fn init<G: Graph + GeometryAccess>(&mut self, graph: &G, start: usize, end: usize) {
         // Initialize forward search from start
         let forward_h_score = self.heuristic.estimate(graph, start, end);
         self.forward_heap.push(HeapItem {
@@ -229,7 +229,7 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
         self.node_data(dir, node).weight
     }
 
-    fn process_node<G: Graph + UndirectedEdgeAccess>(
+    fn process_node<G: Graph + UndirectedEdgeAccess + GeometryAccess>(
         &mut self,
         graph: &G,
         weighting: &dyn Weighting<G>,
@@ -311,7 +311,7 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
         self.set_settled(dir, node_id);
     }
 
-    fn build_forward_path<G: Graph>(
+    fn build_forward_path<G: Graph + GeometryAccess>(
         &mut self,
         graph: &G,
         weighting: &dyn Weighting<G>,
@@ -347,7 +347,7 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
         path
     }
 
-    fn build_backward_path<G: Graph>(
+    fn build_backward_path<G: Graph + GeometryAccess>(
         &mut self,
         graph: &G,
         weighting: &dyn Weighting<G>,
@@ -387,7 +387,7 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
         path
     }
 
-    fn build_path<G: Graph>(
+    fn build_path<G: Graph + GeometryAccess>(
         &mut self,
         graph: &G,
         weighting: &impl Weighting<G>,
@@ -421,7 +421,7 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
         debug_visited_nodes.push(node);
     }
 
-    fn debug_info(&self, graph: &impl Graph) -> ShortestPathDebugInfo {
+    fn debug_info<G: GeometryAccess>(&self, graph: &G) -> ShortestPathDebugInfo {
         ShortestPathDebugInfo {
             forward_visited_nodes: self
                 .debug_forward_visited_nodes
@@ -444,7 +444,7 @@ impl<H: AStarHeuristic> BidirectionalAStar<H> {
 }
 
 impl<H: AStarHeuristic> CalcPath for BidirectionalAStar<H> {
-    fn calc_path<G: Graph + UndirectedEdgeAccess>(
+    fn calc_path<G: Graph + UndirectedEdgeAccess + GeometryAccess>(
         &mut self,
         graph: &G,
         weighting: &impl Weighting<G>,

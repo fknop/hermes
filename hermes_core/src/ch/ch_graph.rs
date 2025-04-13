@@ -152,14 +152,6 @@ impl Graph for CHGraph {
         &self.edges[edge_id]
     }
 
-    fn edge_geometry(&self, edge_id: EdgeId) -> &[crate::geopoint::GeoPoint] {
-        todo!()
-    }
-
-    fn node_geometry(&self, node_id: NodeId) -> &crate::geopoint::GeoPoint {
-        todo!()
-    }
-
     fn edge_direction(&self, edge_id: EdgeId, start_node_id: NodeId) -> EdgeDirection {
         let edge = self.edge(edge_id);
         if edge.start_node() == start_node_id {

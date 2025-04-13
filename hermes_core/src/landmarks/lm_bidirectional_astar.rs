@@ -1,5 +1,5 @@
 use crate::{
-    graph::{Graph, UndirectedEdgeAccess},
+    graph::{GeometryAccess, Graph, UndirectedEdgeAccess},
     routing::bidirectional_astar::BidirectionalAStar,
     weighting::Weighting,
 };
@@ -8,7 +8,7 @@ use super::{lm_astar_heuristic::LMAstarHeuristic, lm_data::LMData};
 
 pub struct LMBidirectionalAstar;
 impl LMBidirectionalAstar {
-    pub fn from_landmarks<'a, G: Graph + UndirectedEdgeAccess>(
+    pub fn from_landmarks<'a, G: Graph + UndirectedEdgeAccess + GeometryAccess>(
         graph: &'a G,
         weighting: &'a impl Weighting<G>,
         lm: &'a LMData,

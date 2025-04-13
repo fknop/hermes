@@ -5,7 +5,7 @@ pub struct DijkstraHeuristic;
 
 impl AStarHeuristic for DijkstraHeuristic {
     #[inline(always)]
-    fn estimate(&self, _graph: &impl Graph, _start: usize, _end: usize) -> Weight {
+    fn estimate<G: Graph>(&self, _graph: &G, _start: usize, _end: usize) -> Weight {
         0
     }
 }

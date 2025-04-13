@@ -3,7 +3,7 @@ use fxhash::FxHashMap;
 use crate::constants::{DISTANCE_INFLUENCE, INVALID_EDGE, INVALID_NODE, MAX_WEIGHT};
 use crate::edge_direction::EdgeDirection;
 use crate::geopoint::GeoPoint;
-use crate::graph::{Graph, UndirectedEdgeAccess};
+use crate::graph::{GeometryAccess, Graph, UndirectedEdgeAccess};
 use crate::graph_edge::GraphEdge;
 use crate::routing::astar_heuristic::AStarHeuristic;
 use crate::stopwatch::Stopwatch;
@@ -73,7 +73,7 @@ impl NodeData {
 pub struct HaversineHeuristic;
 
 impl AStarHeuristic for HaversineHeuristic {
-    fn estimate(&self, graph: &impl Graph, start: usize, end: usize) -> Weight {
+    fn estimate<G: Graph + GeometryAccess>(&self, graph: &G, start: usize, end: usize) -> Weight {
         let start_coordinates = graph.node_geometry(start);
         let end_coordinates = graph.node_geometry(end);
         let distance = start_coordinates
@@ -110,7 +110,7 @@ impl<H: AStarHeuristic> AStar<H> {
         }
     }
 
-    fn init(&mut self, graph: &impl Graph, start: usize, end: usize) {
+    fn init<G: Graph + GeometryAccess>(&mut self, graph: &G, start: usize, end: usize) {
         let h_score = self.heuristic.estimate(graph, start, end);
         self.heap.push(HeapItem {
             node_id: start,
@@ -157,7 +157,7 @@ impl<H: AStarHeuristic> AStar<H> {
         self.node_data(node).weight
     }
 
-    fn build_path<G: Graph>(
+    fn build_path<G: Graph + GeometryAccess>(
         &mut self,
         graph: &G,
         weighting: &impl Weighting<G>,
@@ -201,7 +201,7 @@ impl<H: AStarHeuristic> AStar<H> {
         debug_visited_nodes.push(node);
     }
 
-    fn debug_info(&self, graph: &impl Graph) -> ShortestPathDebugInfo {
+    fn debug_info<G: Graph + GeometryAccess>(&self, graph: &G) -> ShortestPathDebugInfo {
         ShortestPathDebugInfo {
             forward_visited_nodes: self
                 .debug_visited_nodes
@@ -226,7 +226,7 @@ impl<H: AStarHeuristic> CalcPath for AStar<H> {
         options: Option<CalcPathOptions>,
     ) -> Result<CalcPathResult, String>
     where
-        G: Graph + UndirectedEdgeAccess,
+        G: Graph + UndirectedEdgeAccess + GeometryAccess,
     {
         let stopwatch = Stopwatch::new("astar/calc_path");
         if start == INVALID_NODE {

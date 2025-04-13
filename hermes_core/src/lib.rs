@@ -15,6 +15,7 @@ pub mod location_index;
 pub mod osm;
 pub mod properties;
 mod query_graph;
+mod query_graph_overlay;
 pub mod routing;
 mod snap;
 mod stopwatch;

@@ -3,7 +3,7 @@ use std::io::{BufReader, BufWriter};
 
 use crate::base_graph::BaseGraph;
 use crate::geopoint::GeoPoint;
-use crate::graph::Graph;
+use crate::graph::{GeometryAccess, Graph};
 use crate::snap::Snap;
 use crate::stopwatch::Stopwatch;
 use crate::weighting::Weighting;

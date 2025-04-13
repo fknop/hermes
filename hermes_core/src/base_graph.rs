@@ -4,7 +4,7 @@ use crate::distance::{Distance, Meters};
 use crate::edge_direction::EdgeDirection;
 use crate::geometry::compute_geometry_distance;
 use crate::geopoint::GeoPoint;
-use crate::graph::{Graph, UndirectedEdgeAccess};
+use crate::graph::{GeometryAccess, Graph, UndirectedEdgeAccess};
 use crate::graph_edge::GraphEdge;
 use crate::osm::osm_reader::OsmReader;
 use crate::properties::property_map::EdgePropertyMap;
@@ -167,20 +167,6 @@ impl Graph for BaseGraph {
         &self.edges[edge]
     }
 
-    fn edge_geometry(&self, edge: EdgeId) -> &[GeoPoint] {
-        &self.geometry[edge][..]
-    }
-
-    fn node_geometry(&self, node_id: NodeId) -> &GeoPoint {
-        let first_edge_id = self.adjacency_list[node_id][0];
-        let edge_geometry = &self.geometry[first_edge_id];
-        let edge_direction = self.edge_direction(first_edge_id, node_id);
-        match edge_direction {
-            EdgeDirection::Forward => &edge_geometry[0],
-            EdgeDirection::Backward => &edge_geometry[edge_geometry.len() - 1],
-        }
-    }
-
     fn edge_count(&self) -> usize {
         self.edges.len()
     }
@@ -204,6 +190,22 @@ impl Graph for BaseGraph {
             "Node {} is neither the start nor the end of edge {}",
             start, edge_id
         )
+    }
+}
+
+impl GeometryAccess for BaseGraph {
+    fn edge_geometry(&self, edge: EdgeId) -> &[GeoPoint] {
+        &self.geometry[edge][..]
+    }
+
+    fn node_geometry(&self, node_id: NodeId) -> &GeoPoint {
+        let first_edge_id = self.adjacency_list[node_id][0];
+        let edge_geometry = &self.geometry[first_edge_id];
+        let edge_direction = self.edge_direction(first_edge_id, node_id);
+        match edge_direction {
+            EdgeDirection::Forward => &edge_geometry[0],
+            EdgeDirection::Backward => &edge_geometry[edge_geometry.len() - 1],
+        }
     }
 }
 

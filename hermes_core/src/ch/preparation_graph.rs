@@ -177,14 +177,6 @@ impl<'a> Graph for CHPreparationGraph<'a> {
         &self.edges[edge_id]
     }
 
-    fn edge_geometry(&self, _: usize) -> &[crate::geopoint::GeoPoint] {
-        unimplemented!()
-    }
-
-    fn node_geometry(&self, node_id: usize) -> &crate::geopoint::GeoPoint {
-        self.base_graph.node_geometry(node_id)
-    }
-
     fn edge_direction(&self, edge_id: EdgeId, start: NodeId) -> EdgeDirection {
         if self.is_shortcut(edge_id) {
             let edge = &self.edges[edge_id];

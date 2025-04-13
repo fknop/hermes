@@ -1,7 +1,7 @@
 use std::{cmp, collections::HashMap};
 
 use crate::{
-    graph::{Graph, UndirectedEdgeAccess},
+    graph::{GeometryAccess, Graph, UndirectedEdgeAccess},
     routing::{
         astar_heuristic::AStarHeuristic, bidirectional_astar::HaversineHeuristic,
         bidirectional_dijkstra::BidirectionalDijkstra, search_direction::SearchDirection,
@@ -30,7 +30,7 @@ where
 
 impl<'a, G, W> LMAstarHeuristic<'a, G, W>
 where
-    G: Graph + UndirectedEdgeAccess,
+    G: Graph + UndirectedEdgeAccess + GeometryAccess,
     W: Weighting<G>,
 {
     pub fn new(graph: &'a G, weighting: &'a W, lm: &'a LMData, start: usize, end: usize) -> Self {
@@ -83,12 +83,12 @@ where
 
 impl<G, W> AStarHeuristic for LMAstarHeuristic<'_, G, W>
 where
-    G: Graph + UndirectedEdgeAccess,
+    G: Graph + UndirectedEdgeAccess + GeometryAccess,
     W: Weighting<G>,
 {
-    fn estimate(
+    fn estimate<EstimateGraph: Graph + GeometryAccess>(
         &self,
-        graph: &impl Graph,
+        graph: &EstimateGraph,
         maybe_virtual_start: usize,
         maybe_virtual_end: usize,
     ) -> Weight {

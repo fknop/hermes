@@ -3,7 +3,7 @@ use fxhash::{FxBuildHasher, FxHashMap};
 use crate::constants::{INVALID_EDGE, INVALID_NODE, MAX_WEIGHT};
 use crate::edge_direction::EdgeDirection;
 use crate::geopoint::GeoPoint;
-use crate::graph::{Graph, UndirectedEdgeAccess};
+use crate::graph::{GeometryAccess, Graph, UndirectedEdgeAccess};
 
 use crate::graph_edge::GraphEdge;
 use crate::stopwatch::Stopwatch;
@@ -228,7 +228,7 @@ where
 
 impl<G, W, N> BidirectionalDijkstra<'_, G, W, N>
 where
-    G: Graph + UndirectedEdgeAccess,
+    G: Graph + UndirectedEdgeAccess + GeometryAccess,
     W: Weighting<G>,
     N: NodeData,
 {
@@ -503,7 +503,7 @@ where
         debug_visited_nodes.push(node);
     }
 
-    fn debug_info(&self, graph: &impl Graph) -> ShortestPathDebugInfo {
+    fn debug_info(&self, graph: &G) -> ShortestPathDebugInfo {
         ShortestPathDebugInfo {
             forward_visited_nodes: self
                 .debug_forward_visited_nodes
@@ -527,7 +527,7 @@ where
 
 impl<G, W, N> ShortestPathAlgorithm for BidirectionalDijkstra<'_, G, W, N>
 where
-    G: Graph + UndirectedEdgeAccess,
+    G: Graph + UndirectedEdgeAccess + GeometryAccess,
     W: Weighting<G>,
     N: NodeData,
 {
