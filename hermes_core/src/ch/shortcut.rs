@@ -4,7 +4,7 @@ use crate::{
     weighting::{Milliseconds, Weight},
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
 pub struct Shortcut {
     pub start: NodeId,
     pub end: NodeId,

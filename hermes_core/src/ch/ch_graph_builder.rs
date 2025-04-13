@@ -2,7 +2,7 @@ use std::cmp;
 
 use crate::{
     base_graph::BaseGraph,
-    ch::priority_queue::PriorityQueue,
+    ch::{ch_edge::CHBaseEdge, ch_storage::CHStorage, priority_queue::PriorityQueue},
     graph::{Graph, UndirectedEdgeAccess},
     graph_edge::GraphEdge,
     types::NodeId,
@@ -10,17 +10,16 @@ use crate::{
 };
 
 use super::{
-    ch_graph::{CHBaseEdge, CHGraph},
     node_contractor,
     preparation_graph::{CHPreparationGraph, CHPreparationGraphEdge, PreparationGraphWeighting},
     witness_search::WitnessSearch,
 };
 
-pub fn build_ch_graph<W>(base_graph: &BaseGraph, weighting: &W) -> CHGraph
+pub fn build_ch_graph<'a, W>(base_graph: &'a BaseGraph, weighting: &W) -> CHStorage
 where
     W: Weighting<BaseGraph>,
 {
-    let mut ch_graph = CHGraph::new(base_graph);
+    let mut ch_graph = CHStorage::new(base_graph);
     let mut preparation_graph = CHPreparationGraph::new(base_graph, weighting);
     let preparation_weighting = PreparationGraphWeighting::new(weighting);
     let mut witness_search = WitnessSearch::new();

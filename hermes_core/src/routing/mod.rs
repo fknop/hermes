@@ -5,6 +5,7 @@ pub(crate) mod bidirectional_dijkstra;
 pub(crate) mod ch_bidirectional_dijkstra;
 pub(crate) mod dijkstra;
 pub mod routing_path;
+pub(crate) mod routing_path_builder;
 pub mod routing_request;
 pub(crate) mod search_direction;
 pub(crate) mod shortest_path_algorithm;

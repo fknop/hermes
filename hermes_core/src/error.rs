@@ -8,4 +8,6 @@ pub enum ImportError {
     SaveLandmarks(std::io::Error),
     #[error("Failed to save location index file")]
     SaveLocationIndex(bincode::error::EncodeError),
+    #[error("Failed to save CH Graph")]
+    SaveCHGraph(std::io::Error),
 }

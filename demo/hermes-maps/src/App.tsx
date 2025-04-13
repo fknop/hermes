@@ -28,6 +28,7 @@ enum RoutingAlgorithm {
   Astar = 'Astar',
   BidirectionalAstar = 'BidirectionalAstar',
   Landmarks = 'Landmarks',
+  ContractionHierarchies = 'ContractionHierarchies',
 }
 
 type Address = {

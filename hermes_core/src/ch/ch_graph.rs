@@ -3,145 +3,39 @@ use crate::{
     constants::{INVALID_EDGE, INVALID_NODE, MAX_DURATION, MAX_WEIGHT},
     distance::{Distance, Meters},
     edge_direction::EdgeDirection,
-    graph::Graph,
+    geopoint::GeoPoint,
+    graph::{DirectedEdgeAccess, GeometryAccess, Graph, UnfoldEdge},
     graph_edge::GraphEdge,
     meters,
     types::{EdgeId, NodeId},
     weighting::{Milliseconds, Weight},
 };
 
-use super::shortcut::Shortcut;
+use super::{ch_edge::CHGraphEdge, ch_storage::CHStorage, shortcut::Shortcut};
 
-#[derive(Clone)]
-pub struct CHBaseEdge {
-    pub edge_id: EdgeId,
-    pub start: NodeId,
-    pub end: NodeId,
-
-    pub distance: Distance<Meters>,
-    pub forward_time: Milliseconds,
-    pub backward_time: Milliseconds,
-    pub forward_weight: Weight,
-    pub backward_weight: Weight,
+pub struct CHGraph<'a> {
+    storage: &'a CHStorage,
+    base_graph: &'a BaseGraph,
 }
 
-#[derive(Clone)]
-pub enum CHGraphEdge {
-    Shortcut(Shortcut),
-    Edge(CHBaseEdge),
-}
-
-impl GraphEdge for CHGraphEdge {
-    fn start_node(&self) -> NodeId {
-        match self {
-            CHGraphEdge::Shortcut(shortcut) => shortcut.start,
-            CHGraphEdge::Edge(edge) => edge.start,
-        }
-    }
-
-    fn end_node(&self) -> NodeId {
-        match self {
-            CHGraphEdge::Shortcut(shortcut) => shortcut.end,
-            CHGraphEdge::Edge(edge) => edge.end,
-        }
-    }
-
-    fn distance(&self) -> Distance<Meters> {
-        match self {
-            CHGraphEdge::Shortcut(shortcut) => shortcut.distance,
-            CHGraphEdge::Edge(edge) => edge.distance,
-        }
-    }
-
-    fn properties(&self) -> &crate::properties::property_map::EdgePropertyMap {
-        unimplemented!("This function is not supported for CHGraphEdge")
-    }
-}
-
-pub struct CHGraph {
-    nodes: usize,
-    edges: Vec<CHGraphEdge>,
-    ranks: Vec<usize>,
-
-    /// For each node, a list the incoming edges into this node
-    incoming_edges: Vec<Vec<EdgeId>>,
-
-    /// For each node, a list the outgoing edges from this node
-    outgoing_edges: Vec<Vec<EdgeId>>,
-}
-
-impl CHGraph {
-    pub fn new(base_graph: &BaseGraph) -> Self {
-        let edges = vec![
-            CHGraphEdge::Edge(CHBaseEdge {
-                edge_id: INVALID_EDGE,
-                start: INVALID_NODE,
-                end: INVALID_NODE,
-                forward_weight: MAX_WEIGHT,
-                backward_weight: MAX_WEIGHT,
-                backward_time: MAX_DURATION,
-                forward_time: MAX_DURATION,
-                distance: meters!(0)
-            });
-            base_graph.edge_count()
-        ];
-        let ranks = vec![0; base_graph.node_count()];
-        let incoming_edges = vec![Vec::new(); base_graph.node_count()];
-        let outgoing_edges = vec![Vec::new(); base_graph.node_count()];
-
+impl<'a> CHGraph<'a> {
+    pub fn new(storage: &'a CHStorage, base_graph: &'a BaseGraph) -> Self {
         Self {
-            nodes: base_graph.node_count(),
-            edges,
-            ranks,
-            incoming_edges,
-            outgoing_edges,
+            storage,
+            base_graph,
         }
-    }
-
-    // TODO: haven't really looked into it yet, if it's correct or not
-    pub fn unfold(&self, edge: &CHGraphEdge, edges: &mut Vec<EdgeId>) {
-        match edge {
-            CHGraphEdge::Shortcut(shortcut) => {
-                self.unfold(&self.edges[shortcut.incoming_edge], edges);
-                self.unfold(&self.edges[shortcut.outgoing_edge], edges);
-            }
-            CHGraphEdge::Edge(e) => edges.push(e.edge_id),
-        }
-    }
-
-    pub fn add_edge(&mut self, edge: CHBaseEdge) {
-        if edge.forward_weight != MAX_WEIGHT {
-            self.outgoing_edges[edge.start].push(edge.edge_id);
-            self.incoming_edges[edge.end].push(edge.edge_id);
-        }
-
-        if edge.backward_weight != MAX_WEIGHT {
-            self.incoming_edges[edge.start].push(edge.edge_id);
-            self.outgoing_edges[edge.end].push(edge.edge_id);
-        }
-
-        let edge_id = edge.edge_id;
-        self.edges[edge_id] = CHGraphEdge::Edge(edge);
-    }
-
-    pub fn add_shortcut(&mut self, shortcut: Shortcut) {
-        let edge_id = self.edges.len();
-        self.outgoing_edges[shortcut.start].push(edge_id);
-        self.incoming_edges[shortcut.end].push(edge_id);
-
-        self.edges.push(CHGraphEdge::Shortcut(shortcut));
     }
 }
 
-impl Graph for CHGraph {
+impl Graph for CHGraph<'_> {
     type Edge = CHGraphEdge;
 
     fn edge_count(&self) -> usize {
-        self.edges.len()
+        self.storage.edge_count()
     }
 
     fn node_count(&self) -> usize {
-        self.nodes
+        self.storage.nodes_count()
     }
 
     fn is_virtual_node(&self, _: NodeId) -> bool {
@@ -149,7 +43,7 @@ impl Graph for CHGraph {
     }
 
     fn edge(&self, edge_id: EdgeId) -> &Self::Edge {
-        &self.edges[edge_id]
+        self.storage.edge(edge_id)
     }
 
     fn edge_direction(&self, edge_id: EdgeId, start_node_id: NodeId) -> EdgeDirection {
@@ -159,5 +53,46 @@ impl Graph for CHGraph {
         } else {
             EdgeDirection::Backward
         }
+    }
+}
+
+impl DirectedEdgeAccess for CHGraph<'_> {
+    type EdgeIterator<'a>
+        = std::iter::Copied<std::slice::Iter<'a, usize>>
+    where
+        Self: 'a;
+
+    fn node_incoming_edges_iter(&self, node_id: NodeId) -> Self::EdgeIterator<'_> {
+        self.storage.incoming_edges(node_id).iter().copied()
+    }
+
+    fn node_outgoing_edges_iter(&self, node_id: NodeId) -> Self::EdgeIterator<'_> {
+        self.storage.outgoing_edges(node_id).iter().copied()
+    }
+}
+
+impl UnfoldEdge for CHGraph<'_> {
+    // TODO: haven't really looked into it yet, if it's correct or not
+    fn unfold_edge(&self, edge: EdgeId, edges: &mut Vec<EdgeId>) {
+        match &self.edge(edge) {
+            CHGraphEdge::Shortcut(shortcut) => {
+                self.unfold_edge(shortcut.incoming_edge, edges);
+                self.unfold_edge(shortcut.outgoing_edge, edges);
+            }
+            CHGraphEdge::Edge(e) => edges.push(e.edge_id),
+        }
+    }
+}
+
+impl GeometryAccess for CHGraph<'_> {
+    fn edge_geometry(&self, edge: EdgeId) -> &[GeoPoint] {
+        match &self.edge(edge) {
+            CHGraphEdge::Edge(base_edge) => self.base_graph.edge_geometry(base_edge.edge_id),
+            CHGraphEdge::Shortcut(_) => &[],
+        }
+    }
+
+    fn node_geometry(&self, node_id: NodeId) -> &GeoPoint {
+        self.base_graph.node_geometry(node_id)
     }
 }

@@ -46,7 +46,7 @@ impl<'a, G: Graph> QueryGraphOverlay<'a, G> {
     pub fn connect_edge(&mut self, edge_id: usize, node_id: NodeId) {
         if self.is_virtual_node(node_id) {
             let virtual_node_id = self.virtual_node_id(node_id);
-            if virtual_node_id > self.virtual_adjacency_list.len() - 1 {
+            if virtual_node_id + 1 > self.virtual_adjacency_list.len() {
                 self.virtual_adjacency_list
                     .resize(virtual_node_id + 1, vec![]);
             }

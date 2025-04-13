@@ -1,7 +1,11 @@
-use crate::base_graph::BaseGraph;
+use crate::base_graph::{self, BaseGraph};
 use crate::ch;
+use crate::ch::ch_graph::CHGraph;
+use crate::ch::ch_storage::CHStorage;
+use crate::ch::ch_weighting::CHWeighting;
 use crate::error::ImportError;
 use crate::graph::Graph;
+use crate::graph_edge::GraphEdge;
 use crate::landmarks::lm_bidirectional_astar::LMBidirectionalAstar;
 use crate::landmarks::lm_data::LMData;
 use crate::landmarks::lm_preparation::LMPreparation;
@@ -9,6 +13,7 @@ use crate::location_index::LocationIndex;
 use crate::query_graph::QueryGraph;
 use crate::routing::astar::AStar;
 use crate::routing::bidirectional_astar::BidirectionalAStar;
+use crate::routing::ch_bidirectional_dijkstra::CHBidirectionalDijkstra;
 use crate::routing::dijkstra::Dijkstra;
 use crate::routing::routing_request::{RoutingAlgorithm, RoutingRequest};
 
@@ -24,11 +29,13 @@ pub struct Hermes {
     // profiles: HashMap<String, Box<dyn Weighting + Sync + Send>>,
     // car_weighting: CarWeighting<QueryGraph<'a>>,
     lm: LMData,
+    ch_storage: Option<CHStorage>,
 }
 
 const GRAPH_FILE_NAME: &str = "graph.bin";
 const LANDMARKS_FILE_NAME: &str = "lm.bin";
 const LOCATION_INDEX_FILE_NAME: &str = "location_index.bin";
+const CH_GRAPH_FILE_NAME: &str = "ch_graph.bin";
 
 impl Hermes {
     pub fn save(&self, dir_path: &str) -> Result<(), ImportError> {
@@ -43,6 +50,12 @@ impl Hermes {
         self.index
             .save_to_file(binary_file_path(dir_path, LOCATION_INDEX_FILE_NAME).as_str())
             .map_err(ImportError::SaveLocationIndex)?;
+
+        if let Some(ch_storage) = &self.ch_storage {
+            ch_storage
+                .save_to_file(binary_file_path(dir_path, CH_GRAPH_FILE_NAME).as_str())
+                .map_err(ImportError::SaveCHGraph)?;
+        }
 
         Ok(())
     }
@@ -59,13 +72,14 @@ impl Hermes {
         // Add default profile
         // profiles.insert("car".to_string(), Box::from(CarWeighting::new()));
 
-        let car_weighting = CarWeighting::new();
-        let ch_graph = ch::ch_graph_builder::build_ch_graph(&graph, &car_weighting);
+        let ch_storage =
+            CHStorage::from_file(binary_file_path(dir_path, CH_GRAPH_FILE_NAME).as_str());
 
         Hermes {
             graph,
             index: location_index,
             lm,
+            ch_storage: Some(ch_storage),
         }
     }
 
@@ -81,8 +95,14 @@ impl Hermes {
         let lm = lm_preparation.create_landmarks(10);
 
         let index = LocationIndex::build_from_graph(&graph);
+        let ch_storage = ch::ch_graph_builder::build_ch_graph(&graph, &weighting);
 
-        Hermes { graph, index, lm }
+        Hermes {
+            graph,
+            index,
+            lm,
+            ch_storage: Some(ch_storage),
+        }
     }
 
     pub fn graph(&self) -> &BaseGraph {
@@ -157,6 +177,20 @@ impl Hermes {
                 );
                 landmarks_astar.calc_path(&weighting, start, end, Some(options))
             }
+
+            Some(RoutingAlgorithm::ContractionHierarchies) => match &self.ch_storage {
+                Some(ch_storage) => {
+                    let weighting = CHWeighting::new();
+                    let ch_graph = CHGraph::new(ch_storage, &self.graph);
+                    let mut ch_bidirectional_dijkstra = CHBidirectionalDijkstra::new(&ch_graph);
+
+                    let s = self.graph.edge(snaps[0].edge_id).start_node();
+                    let e = self.graph.edge(snaps[1].edge_id).end_node();
+
+                    ch_bidirectional_dijkstra.calc_path(&weighting, s, e, Some(options))
+                }
+                None => return Err(String::from("CH Graph not found")),
+            },
 
             None => {
                 let weighting = self.create_weighting(&request.profile);

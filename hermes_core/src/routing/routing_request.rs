@@ -8,6 +8,7 @@ pub enum RoutingAlgorithm {
     Astar,
     BidirectionalAstar,
     Landmarks,
+    ContractionHierarchies,
 }
 
 pub struct RoutingRequestOptions {

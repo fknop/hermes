@@ -38,3 +38,7 @@ pub trait GeometryAccess {
     fn edge_geometry(&self, edge_id: EdgeId) -> &[GeoPoint];
     fn node_geometry(&self, node_id: NodeId) -> &GeoPoint;
 }
+
+pub trait UnfoldEdge {
+    fn unfold_edge(&self, edge_id: EdgeId, edges: &mut Vec<EdgeId>);
+}
