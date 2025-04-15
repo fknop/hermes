@@ -72,14 +72,13 @@ impl DirectedEdgeAccess for CHGraph<'_> {
 }
 
 impl UnfoldEdge for CHGraph<'_> {
-    // TODO: haven't really looked into it yet, if it's correct or not
     fn unfold_edge(&self, edge: EdgeId, edges: &mut Vec<EdgeId>) {
         match &self.edge(edge) {
             CHGraphEdge::Shortcut(shortcut) => {
                 self.unfold_edge(shortcut.incoming_edge, edges);
                 self.unfold_edge(shortcut.outgoing_edge, edges);
             }
-            CHGraphEdge::Edge(e) => edges.push(e.edge_id),
+            CHGraphEdge::Edge(e) => edges.push(e.id),
         }
     }
 }
@@ -87,8 +86,10 @@ impl UnfoldEdge for CHGraph<'_> {
 impl GeometryAccess for CHGraph<'_> {
     fn edge_geometry(&self, edge: EdgeId) -> &[GeoPoint] {
         match &self.edge(edge) {
-            CHGraphEdge::Edge(base_edge) => self.base_graph.edge_geometry(base_edge.edge_id),
-            CHGraphEdge::Shortcut(_) => &[],
+            CHGraphEdge::Edge(base_edge) => self.base_graph.edge_geometry(base_edge.id),
+            CHGraphEdge::Shortcut(_) => {
+                panic!("Shortcut don't have geometry, unfold them first")
+            }
         }
     }
 

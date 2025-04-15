@@ -12,7 +12,7 @@ use crate::{
     weighting::{Milliseconds, Weight, Weighting},
 };
 
-use super::shortcut::Shortcut;
+use super::shortcut::{PreparationShortcut, Shortcut};
 
 pub enum CHPreparationGraphEdge<'a> {
     Shortcut(Shortcut),
@@ -128,7 +128,7 @@ impl<'a> CHPreparationGraph<'a> {
         }
     }
 
-    pub fn add_shortcut(&mut self, shortcut: Shortcut) {
+    pub fn add_shortcut(&mut self, shortcut: PreparationShortcut) {
         let outgoing_edges_for_start = &self.outgoing_edges[shortcut.start];
 
         // Duplicate shortcut, don't add it
@@ -142,7 +142,16 @@ impl<'a> CHPreparationGraph<'a> {
         self.incoming_edges[shortcut.end].push(edge_id);
         self.outgoing_edges[shortcut.start].push(edge_id);
 
-        self.edges.push(CHPreparationGraphEdge::Shortcut(shortcut));
+        self.edges.push(CHPreparationGraphEdge::Shortcut(Shortcut {
+            id: edge_id,
+            start: shortcut.start,
+            end: shortcut.end,
+            weight: shortcut.weight,
+            time: shortcut.time,
+            distance: shortcut.distance,
+            incoming_edge: shortcut.incoming_edge,
+            outgoing_edge: shortcut.outgoing_edge,
+        }));
     }
 
     pub fn is_shortcut(&self, edge_id: EdgeId) -> bool {
@@ -199,7 +208,7 @@ impl<'a> Graph for CHPreparationGraph<'a> {
 
 impl UndirectedEdgeAccess for CHPreparationGraph<'_> {
     type EdgeIterator<'b>
-        = GraphOverlayIterator<'b>
+        = PreparationGraphEdgeIterator<'b>
     where
         Self: 'b;
 
@@ -207,7 +216,7 @@ impl UndirectedEdgeAccess for CHPreparationGraph<'_> {
         let incoming_edges = &self.incoming_edges[node_id];
         let outgoing_edges = &self.outgoing_edges[node_id];
 
-        GraphOverlayIterator::new(&incoming_edges[..], &outgoing_edges[..])
+        PreparationGraphEdgeIterator::new(&incoming_edges[..], &outgoing_edges[..])
     }
 }
 
@@ -259,16 +268,16 @@ where
     }
 }
 
-pub struct GraphOverlayIterator<'a> {
+pub struct PreparationGraphEdgeIterator<'a> {
     incoming_edges: &'a [EdgeId],
     outgoing_edges: &'a [EdgeId],
     seen: FxHashSet<EdgeId>,
     index: usize,
 }
 
-impl<'a> GraphOverlayIterator<'a> {
+impl<'a> PreparationGraphEdgeIterator<'a> {
     fn new(incoming_edges: &'a [EdgeId], outgoing_edges: &'a [EdgeId]) -> Self {
-        GraphOverlayIterator {
+        PreparationGraphEdgeIterator {
             incoming_edges,
             outgoing_edges,
             index: 0,
@@ -277,7 +286,7 @@ impl<'a> GraphOverlayIterator<'a> {
     }
 }
 
-impl Iterator for GraphOverlayIterator<'_> {
+impl Iterator for PreparationGraphEdgeIterator<'_> {
     type Item = EdgeId;
 
     fn next(&mut self) -> Option<Self::Item> {

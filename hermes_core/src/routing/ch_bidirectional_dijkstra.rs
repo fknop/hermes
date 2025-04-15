@@ -5,6 +5,8 @@ use crate::edge_direction::EdgeDirection;
 use crate::graph::{DirectedEdgeAccess, GeometryAccess, Graph, UnfoldEdge};
 
 use crate::graph_edge::GraphEdge;
+use crate::landmarks::lm_astar_heuristic::LMAstarHeuristic;
+use crate::landmarks::lm_data::LMData;
 use crate::stopwatch::Stopwatch;
 use crate::types::EdgeId;
 use crate::weighting::{Weight, Weighting};
@@ -338,17 +340,19 @@ where
 
             let mut edge_ids = vec![];
             graph.unfold_edge(node_data.edge_id, &mut edge_ids);
+            edge_ids.reverse();
 
-            let mut parent = node_data.parent;
+            // let mut parent = node_data.parent;
             for edge_id in edge_ids {
                 let edge = graph.edge(edge_id);
-                let direction = graph.edge_direction(edge_id, parent);
+                let adj_node = edge.adj_node(current_node);
+                let direction = graph.edge_direction(edge_id, adj_node);
 
                 path.push((edge_id, direction));
-                parent = edge.adj_node(parent);
+                current_node = adj_node;
             }
 
-            current_node = parent;
+            current_node = node_data.parent;
         }
 
         path.reverse();
@@ -369,17 +373,16 @@ where
             let mut edge_ids = vec![];
             graph.unfold_edge(node_data.edge_id, &mut edge_ids);
 
-            let mut parent = node_data.parent;
             for edge_id in edge_ids {
                 let edge = graph.edge(edge_id);
-                // For backward search, we need to reverse the direction
+                let adj_node = edge.adj_node(current_node);
                 let direction = graph.edge_direction(edge_id, current_node);
 
                 path.push((edge_id, direction));
-                parent = edge.adj_node(parent);
+                current_node = adj_node;
             }
 
-            current_node = parent;
+            current_node = node_data.parent;
         }
 
         path
@@ -397,11 +400,17 @@ where
             return RoutingPath::new(Vec::new());
         }
 
+        println!("start building path");
+
         // Get the forward path (start to meeting point)
         let mut forward_path = self.build_forward_path(graph, self.best_meeting_node);
 
+        println!("build_forward_path");
+
         // Get the backward path (meeting point to end) and append to forward path
         let backward_path = self.build_backward_path(graph, self.best_meeting_node);
+
+        println!("build_backward_path");
 
         // Combine the two paths
         forward_path.extend(backward_path);
@@ -564,15 +573,18 @@ where
                     .peek()
                     .map_or(MAX_WEIGHT, |item| item.f_score);
 
-                if max(min_forward_f, min_backward_f) >= self.best_path_weight {
+                if min_forward_f + min_backward_f >= self.best_path_weight {
                     break;
                 }
             }
         }
 
-        println!("BidirectionalAStar nodes visited: {}", nodes_visited);
+        println!("CHBidirectionalAStar nodes visited: {}", nodes_visited);
 
         let path = self.build_path(self.graph, weighting, start, end);
+
+        println!("Build path");
+
         let duration = stopwatch.elapsed();
         stopwatch.report();
 

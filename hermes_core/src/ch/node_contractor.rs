@@ -1,8 +1,12 @@
-use crate::{graph::Graph, graph_edge::GraphEdge, types::NodeId, weighting::Weighting};
-
-use super::{
-    preparation_graph::CHPreparationGraph, shortcut::Shortcut, witness_search::WitnessSearch,
+use crate::{
+    ch::{preparation_graph, shortcut::PreparationShortcut},
+    graph::Graph,
+    graph_edge::GraphEdge,
+    types::NodeId,
+    weighting::Weighting,
 };
+
+use super::{preparation_graph::CHPreparationGraph, witness_search::WitnessSearch};
 
 pub fn contract_node<'a>(
     graph: &mut CHPreparationGraph<'a>,
@@ -49,12 +53,15 @@ fn find_shortcuts<'a>(
     weighting: &impl Weighting<CHPreparationGraph<'a>>,
     node: NodeId,
     max_settled_nodes: usize,
-) -> Vec<Shortcut> {
+) -> Vec<PreparationShortcut> {
     let mut shortcuts = Vec::new();
-    for incoming_edge_id in graph.incoming_edges(node) {
-        let incoming_edge = graph.edge(*incoming_edge_id);
+    for &incoming_edge_id in graph.incoming_edges(node) {
+        let incoming_edge = graph.edge(incoming_edge_id);
+
+        assert!(incoming_edge.start_node() == node || incoming_edge.end_node() == node);
+
         let incoming_edge_adj_node = incoming_edge.adj_node(node);
-        let incoming_direction = graph.edge_direction(*incoming_edge_id, incoming_edge_adj_node);
+        let incoming_direction = graph.edge_direction(incoming_edge_id, incoming_edge_adj_node);
 
         if incoming_edge_adj_node == node {
             continue;
@@ -62,25 +69,27 @@ fn find_shortcuts<'a>(
 
         witness_search.init(incoming_edge_adj_node, node);
 
-        for outgoing_edge_id in graph.outgoing_edges(node) {
+        for &outgoing_edge_id in graph.outgoing_edges(node) {
             // We ignore the same edge, no shortcut is needed
-            if *incoming_edge_id == *outgoing_edge_id {
+            if incoming_edge_id == outgoing_edge_id {
                 continue;
             }
 
-            let outgoing_edge = graph.edge(*outgoing_edge_id);
+            let outgoing_edge = graph.edge(outgoing_edge_id);
+
+            assert!(outgoing_edge.start_node() == node || outgoing_edge.end_node() == node);
+
             let outgoing_edge_adj_node = outgoing_edge.adj_node(node);
 
             if outgoing_edge_adj_node == node {
                 continue;
             }
 
-            let outgoing_direction = graph.edge_direction(*outgoing_edge_id, node);
+            let outgoing_direction = graph.edge_direction(outgoing_edge_id, node);
 
             let weight = weighting.calc_edge_weight(incoming_edge, incoming_direction)
                 + weighting.calc_edge_weight(outgoing_edge, outgoing_direction);
 
-            // TODO: max settled nodes
             let witness_search_weight = witness_search.compute_weight_upperbound(
                 graph,
                 weighting,
@@ -93,11 +102,11 @@ fn find_shortcuts<'a>(
                 continue;
             }
 
-            shortcuts.push(Shortcut {
+            shortcuts.push(PreparationShortcut {
                 start: incoming_edge_adj_node,
                 end: outgoing_edge_adj_node,
-                incoming_edge: *incoming_edge_id,
-                outgoing_edge: *outgoing_edge_id,
+                incoming_edge: incoming_edge_id,
+                outgoing_edge: outgoing_edge_id,
                 distance: outgoing_edge.distance() + incoming_edge.distance(),
                 time: weighting.calc_edge_ms(incoming_edge, incoming_direction)
                     + weighting.calc_edge_ms(outgoing_edge, outgoing_direction),

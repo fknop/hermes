@@ -2,6 +2,7 @@ use crate::{
     base_graph::BaseGraph,
     constants::{INVALID_EDGE, INVALID_NODE, MAX_DURATION, MAX_WEIGHT},
     graph::Graph,
+    graph_edge::GraphEdge,
     meters,
     storage::{read_bytes, write_bytes},
     types::{EdgeId, NodeId},
@@ -42,7 +43,7 @@ impl CHStorage {
     pub fn new(base_graph: &BaseGraph) -> Self {
         let edges = vec![
             CHGraphEdge::Edge(CHBaseEdge {
-                edge_id: INVALID_EDGE,
+                id: INVALID_EDGE,
                 start: INVALID_NODE,
                 end: INVALID_NODE,
                 forward_weight: MAX_WEIGHT,
@@ -67,25 +68,41 @@ impl CHStorage {
 
     pub fn add_edge(&mut self, edge: CHBaseEdge) {
         if edge.forward_weight != MAX_WEIGHT {
-            self.outgoing_edges[edge.start].push(edge.edge_id);
-            self.incoming_edges[edge.end].push(edge.edge_id);
+            self.outgoing_edges[edge.start].push(edge.id);
+            self.incoming_edges[edge.end].push(edge.id);
         }
 
         if edge.backward_weight != MAX_WEIGHT {
-            self.incoming_edges[edge.start].push(edge.edge_id);
-            self.outgoing_edges[edge.end].push(edge.edge_id);
+            self.incoming_edges[edge.start].push(edge.id);
+            self.outgoing_edges[edge.end].push(edge.id);
         }
 
-        let edge_id = edge.edge_id;
+        let edge_id = edge.id;
         self.edges[edge_id] = CHGraphEdge::Edge(edge);
     }
 
     pub fn add_shortcut(&mut self, shortcut: Shortcut) {
-        let edge_id = self.edges.len();
+        let edge_id = shortcut.id;
         self.outgoing_edges[shortcut.start].push(edge_id);
         self.incoming_edges[shortcut.end].push(edge_id);
 
-        self.edges.push(CHGraphEdge::Shortcut(shortcut));
+        if shortcut.id + 1 > self.edges.len() {
+            self.edges.resize(
+                shortcut.id + 1,
+                CHGraphEdge::Shortcut(Shortcut {
+                    id: INVALID_EDGE,
+                    start: INVALID_NODE,
+                    end: INVALID_NODE,
+                    weight: MAX_WEIGHT,
+                    time: MAX_DURATION,
+                    distance: meters!(0),
+                    incoming_edge: INVALID_EDGE,
+                    outgoing_edge: INVALID_EDGE,
+                }),
+            );
+        }
+
+        self.edges[edge_id] = CHGraphEdge::Shortcut(shortcut);
     }
 
     pub fn nodes_count(&self) -> usize {
@@ -106,5 +123,66 @@ impl CHStorage {
 
     pub fn outgoing_edges(&self, node_id: NodeId) -> &[EdgeId] {
         &self.outgoing_edges[node_id]
+    }
+
+    fn unfold_edge(&self, edge: EdgeId, edges: &mut Vec<EdgeId>) {
+        match &self.edge(edge) {
+            CHGraphEdge::Shortcut(shortcut) => {
+                self.unfold_edge(shortcut.incoming_edge, edges);
+                self.unfold_edge(shortcut.outgoing_edge, edges);
+            }
+            CHGraphEdge::Edge(e) => edges.push(e.id),
+        }
+    }
+
+    pub fn check(&self) {
+        for (index, edge) in self.edges.iter().enumerate() {
+            match edge {
+                CHGraphEdge::Edge(edge) => {
+                    if edge.start != INVALID_NODE {
+                        assert!(edge.start < self.nodes);
+                    }
+                    if edge.end != INVALID_NODE {
+                        assert!(edge.end < self.nodes);
+                    }
+                }
+                CHGraphEdge::Shortcut(shortcut) => {
+                    let mut edge_parts = vec![];
+                    self.unfold_edge(index, &mut edge_parts);
+
+                    // println!("EdgeParts: {:?}", edge_parts);
+
+                    // let edges = edge_parts
+                    //     .iter()
+                    //     .map(|&part| &self.edges[part])
+                    //     .collect::<Vec<_>>();
+
+                    // println!("edges: {:?}", edges);
+
+                    for (i, &part) in edge_parts.iter().enumerate() {
+                        let next_part = edge_parts.get(i + 1);
+                        if let Some(&next) = next_part {
+                            let a = self.edges[part].start_node();
+                            let b = self.edges[part].end_node();
+
+                            let c = self.edges[next].start_node();
+                            let d = self.edges[next].end_node();
+
+                            if !(a == c || a == d || b == c || b == d) {
+                                println!("EdgeParts: {:?}", edge_parts);
+
+                                let edges = edge_parts
+                                    .iter()
+                                    .map(|&part| &self.edges[part])
+                                    .collect::<Vec<_>>();
+
+                                println!("edges: {:?}", edges);
+                            }
+                            assert!(a == c || a == d || b == c || b == d);
+                        }
+                    }
+                }
+            }
+        }
     }
 }

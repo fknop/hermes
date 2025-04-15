@@ -4,8 +4,25 @@ use crate::{
     weighting::{Milliseconds, Weight},
 };
 
+#[derive(Debug, Clone)]
+pub struct PreparationShortcut {
+    pub start: NodeId,
+    pub end: NodeId,
+
+    /// Skipped edge incoming to the contracted node
+    pub incoming_edge: EdgeId,
+
+    /// Skipped edge outgoing from the contracted node
+    pub outgoing_edge: EdgeId,
+
+    pub distance: Distance<Meters>,
+    pub time: Milliseconds,
+    pub weight: Weight,
+}
+
 #[derive(Debug, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
 pub struct Shortcut {
+    pub id: EdgeId,
     pub start: NodeId,
     pub end: NodeId,
 

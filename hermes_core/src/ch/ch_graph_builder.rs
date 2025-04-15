@@ -3,6 +3,7 @@ use std::cmp;
 use crate::{
     base_graph::BaseGraph,
     ch::{ch_edge::CHBaseEdge, ch_storage::CHStorage, priority_queue::PriorityQueue},
+    edge_direction::EdgeDirection,
     graph::{Graph, UndirectedEdgeAccess},
     graph_edge::GraphEdge,
     types::NodeId,
@@ -62,36 +63,6 @@ where
             println!("Remaining nodes {}", priority_queue.len());
         }
 
-        let n = preparation_graph.outgoing_edges(node_id).len()
-            * preparation_graph.incoming_edges(node_id).len();
-
-        if priority_queue.len() < 100 {
-            println!(
-                "N {} - incoming {} - outgoing {}",
-                n,
-                preparation_graph.incoming_edges(node_id).len(),
-                preparation_graph.outgoing_edges(node_id).len()
-            );
-
-            println!("added shortcuts {}", added_shortcuts);
-            println!(
-                "incoming shortcuts {}",
-                preparation_graph
-                    .incoming_edges(node_id)
-                    .iter()
-                    .filter(|edge_id| preparation_graph.is_shortcut(**edge_id))
-                    .count()
-            );
-            println!(
-                "outgoing shortcuts {}",
-                preparation_graph
-                    .outgoing_edges(node_id)
-                    .iter()
-                    .filter(|edge_id| preparation_graph.is_shortcut(**edge_id))
-                    .count()
-            );
-        }
-
         if priority != i32::MIN {
             if let Some((_, least_priority)) = priority_queue.peek() {
                 let recomputed_priority = node_contractor::calc_priority(
@@ -123,25 +94,26 @@ where
 
             ranks[adj_node] = cmp::max(ranks[adj_node], ranks[node_id] + 1);
 
-            let direction = preparation_graph.edge_direction(edge_id, node_id);
+            // let direction = preparation_graph.edge_direction(edge_id, node_id);
 
             // TODO: loop over incoming/outgoing edges
             match edge {
                 CHPreparationGraphEdge::Edge(base_edge) => {
                     // TODO: make sure directions are correct
                     // From start to end
-                    let forward_weight = weighting.calc_edge_weight(base_edge, direction);
-                    let forward_time = weighting.calc_edge_ms(base_edge, direction);
+                    let forward_weight =
+                        weighting.calc_edge_weight(base_edge, EdgeDirection::Forward);
+                    let forward_time = weighting.calc_edge_ms(base_edge, EdgeDirection::Forward);
 
                     // From end to start
                     let backward_weight =
-                        weighting.calc_edge_weight(base_edge, direction.opposite());
-                    let backward_time = weighting.calc_edge_ms(base_edge, direction.opposite());
+                        weighting.calc_edge_weight(base_edge, EdgeDirection::Backward);
+                    let backward_time = weighting.calc_edge_ms(base_edge, EdgeDirection::Backward);
 
                     ch_graph.add_edge(CHBaseEdge {
-                        edge_id: base_edge.id(),
-                        start: node_id,
-                        end: adj_node,
+                        id: base_edge.id(),
+                        start: edge.start_node(),
+                        end: edge.end_node(),
                         distance: base_edge.distance(),
                         forward_time,
                         backward_time,
@@ -219,6 +191,8 @@ where
         added_shortcuts,
         base_graph.edge_count()
     );
+
+    ch_graph.check();
 
     ch_graph
 }

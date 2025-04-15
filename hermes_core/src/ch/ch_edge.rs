@@ -7,9 +7,9 @@ use crate::{
 
 use super::shortcut::Shortcut;
 
-#[derive(Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[derive(Debug, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
 pub struct CHBaseEdge {
-    pub edge_id: EdgeId,
+    pub id: EdgeId,
     pub start: NodeId,
     pub end: NodeId,
 
@@ -20,7 +20,7 @@ pub struct CHBaseEdge {
     pub backward_weight: Weight,
 }
 
-#[derive(Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[derive(Debug, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
 pub enum CHGraphEdge {
     Shortcut(Shortcut),
     Edge(CHBaseEdge),

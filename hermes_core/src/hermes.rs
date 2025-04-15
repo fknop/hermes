@@ -13,7 +13,7 @@ use crate::location_index::LocationIndex;
 use crate::query_graph::QueryGraph;
 use crate::routing::astar::AStar;
 use crate::routing::bidirectional_astar::BidirectionalAStar;
-use crate::routing::ch_bidirectional_dijkstra::CHBidirectionalDijkstra;
+use crate::routing::ch_bidirectional_dijkstra::{CHBidirectionalAStar, CHBidirectionalDijkstra};
 use crate::routing::dijkstra::Dijkstra;
 use crate::routing::routing_request::{RoutingAlgorithm, RoutingRequest};
 
@@ -182,7 +182,7 @@ impl Hermes {
                 Some(ch_storage) => {
                     let weighting = CHWeighting::new();
                     let ch_graph = CHGraph::new(ch_storage, &self.graph);
-                    let mut ch_bidirectional_dijkstra = CHBidirectionalDijkstra::new(&ch_graph);
+                    let mut ch_bidirectional_dijkstra = CHBidirectionalAStar::new(&ch_graph);
 
                     let s = self.graph.edge(snaps[0].edge_id).start_node();
                     let e = self.graph.edge(snaps[1].edge_id).end_node();
