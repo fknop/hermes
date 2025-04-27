@@ -40,9 +40,12 @@ impl Ord for HeapItem {
     }
 }
 
+type HopLimit = u16;
+
 struct NodeData {
     settled: bool,
     weight: Weight,
+    hops: HopLimit,
 }
 
 impl NodeData {
@@ -50,6 +53,7 @@ impl NodeData {
         NodeData {
             settled: false,
             weight: MAX_WEIGHT,
+            hops: 0,
         }
     }
 }
@@ -83,20 +87,22 @@ impl WitnessSearch {
             node_id: start_node,
             weight: 0,
         });
-        self.update_node_data(start_node, 0);
+        self.update_node_data(start_node, 0, 0);
         self.settled_nodes = 0;
     }
 
-    fn update_node_data(&mut self, node: usize, weight: Weight) {
+    fn update_node_data(&mut self, node: usize, weight: Weight, hops: HopLimit) {
         if let Some(data) = self.data.get_mut(&node) {
             data.weight = weight;
             data.settled = false;
+            data.hops = hops;
         } else {
             self.data.insert(
                 node,
                 NodeData {
                     weight,
                     settled: false,
+                    hops,
                 },
             );
         }
@@ -127,6 +133,7 @@ impl WitnessSearch {
         target: NodeId,
         max_weight: Weight,
         max_settled_nodes: usize,
+        max_hops: HopLimit,
     ) -> Weight {
         if self.start_node == target {
             return 0;
@@ -151,6 +158,8 @@ impl WitnessSearch {
 
             let mut found = false;
 
+            let current_hops = self.node_data(node_id).hops;
+
             for edge_id in graph.outgoing_edges(node_id) {
                 let edge = graph.edge(*edge_id);
 
@@ -172,10 +181,15 @@ impl WitnessSearch {
                     continue;
                 }
 
+                let next_hops = current_hops + 1;
+                // if next_hops > max_hops {
+                //     continue;
+                // }
+
                 let next_weight = weight + edge_weight;
 
                 if next_weight < self.current_shortest_weight(adj_node) {
-                    self.update_node_data(adj_node, next_weight);
+                    self.update_node_data(adj_node, next_weight, next_hops);
 
                     self.heap.push(HeapItem {
                         weight: next_weight,

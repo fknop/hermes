@@ -1,4 +1,5 @@
 use crate::{
+    constants::MAX_WEIGHT,
     edge_direction::EdgeDirection,
     weighting::{Milliseconds, Weight, Weighting},
 };
@@ -20,7 +21,10 @@ impl Weighting<CHGraph<'_>> for CHWeighting {
                 EdgeDirection::Forward => edge.forward_weight,
                 EdgeDirection::Backward => edge.backward_weight,
             },
-            CHGraphEdge::Shortcut(shortcut) => shortcut.weight,
+            CHGraphEdge::Shortcut(shortcut) => match direction {
+                EdgeDirection::Forward => shortcut.weight,
+                EdgeDirection::Backward => MAX_WEIGHT,
+            },
         }
     }
 

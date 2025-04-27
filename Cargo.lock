@@ -628,6 +628,7 @@ dependencies = [
  "fxhash",
  "geo",
  "geo-types",
+ "geojson",
  "intmap",
  "osmpbfreader",
  "paste",

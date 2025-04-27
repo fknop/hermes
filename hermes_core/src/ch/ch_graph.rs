@@ -1,17 +1,15 @@
+use fxhash::FxHashSet;
+
 use crate::{
     base_graph::BaseGraph,
-    constants::{INVALID_EDGE, INVALID_NODE, MAX_DURATION, MAX_WEIGHT},
-    distance::{Distance, Meters},
     edge_direction::EdgeDirection,
     geopoint::GeoPoint,
-    graph::{DirectedEdgeAccess, GeometryAccess, Graph, UnfoldEdge},
+    graph::{DirectedEdgeAccess, GeometryAccess, Graph, UndirectedEdgeAccess, UnfoldEdge},
     graph_edge::GraphEdge,
-    meters,
     types::{EdgeId, NodeId},
-    weighting::{Milliseconds, Weight},
 };
 
-use super::{ch_edge::CHGraphEdge, ch_storage::CHStorage, shortcut::Shortcut};
+use super::{ch_edge::CHGraphEdge, ch_storage::CHStorage};
 
 pub struct CHGraph<'a> {
     storage: &'a CHStorage,
@@ -95,5 +93,71 @@ impl GeometryAccess for CHGraph<'_> {
 
     fn node_geometry(&self, node_id: NodeId) -> &GeoPoint {
         self.base_graph.node_geometry(node_id)
+    }
+}
+
+impl UndirectedEdgeAccess for CHGraph<'_> {
+    type EdgeIterator<'b>
+        = CHUndirectedEdgeIterator<'b>
+    where
+        Self: 'b;
+
+    fn node_edges_iter(&self, node_id: usize) -> Self::EdgeIterator<'_> {
+        let incoming_edges = &self.storage.incoming_edges(node_id);
+        let outgoing_edges = &self.storage.outgoing_edges(node_id);
+
+        CHUndirectedEdgeIterator::new(&incoming_edges[..], &outgoing_edges[..])
+    }
+}
+
+pub struct CHUndirectedEdgeIterator<'a> {
+    incoming_edges: &'a [EdgeId],
+    outgoing_edges: &'a [EdgeId],
+    seen: FxHashSet<EdgeId>,
+    index: usize,
+}
+
+impl<'a> CHUndirectedEdgeIterator<'a> {
+    fn new(incoming_edges: &'a [EdgeId], outgoing_edges: &'a [EdgeId]) -> Self {
+        CHUndirectedEdgeIterator {
+            incoming_edges,
+            outgoing_edges,
+            index: 0,
+            seen: FxHashSet::default(),
+        }
+    }
+}
+
+impl Iterator for CHUndirectedEdgeIterator<'_> {
+    type Item = EdgeId;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while self.index < self.outgoing_edges.len() {
+            let edge = self.outgoing_edges[self.index];
+            self.index += 1;
+
+            if self.seen.contains(&edge) {
+                continue;
+            } else {
+                self.seen.insert(edge);
+            }
+
+            return Some(edge);
+        }
+
+        while self.index - self.outgoing_edges.len() < self.incoming_edges.len() {
+            let edge = self.incoming_edges[self.index - self.outgoing_edges.len()];
+            self.index += 1;
+
+            if self.seen.contains(&edge) {
+                continue;
+            } else {
+                self.seen.insert(edge);
+            }
+
+            return Some(edge);
+        }
+
+        None
     }
 }

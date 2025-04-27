@@ -105,6 +105,16 @@ impl CHStorage {
         self.edges[edge_id] = CHGraphEdge::Shortcut(shortcut);
     }
 
+    pub fn shortcuts(&self) -> Vec<&Shortcut> {
+        self.edges
+            .iter()
+            .filter_map(|edge| match edge {
+                CHGraphEdge::Shortcut(shortcut) => Some(shortcut),
+                _ => None,
+            })
+            .collect()
+    }
+
     pub fn nodes_count(&self) -> usize {
         self.nodes
     }
@@ -146,18 +156,9 @@ impl CHStorage {
                         assert!(edge.end < self.nodes);
                     }
                 }
-                CHGraphEdge::Shortcut(shortcut) => {
+                CHGraphEdge::Shortcut(_) => {
                     let mut edge_parts = vec![];
                     self.unfold_edge(index, &mut edge_parts);
-
-                    // println!("EdgeParts: {:?}", edge_parts);
-
-                    // let edges = edge_parts
-                    //     .iter()
-                    //     .map(|&part| &self.edges[part])
-                    //     .collect::<Vec<_>>();
-
-                    // println!("edges: {:?}", edges);
 
                     for (i, &part) in edge_parts.iter().enumerate() {
                         let next_part = edge_parts.get(i + 1);
@@ -168,16 +169,6 @@ impl CHStorage {
                             let c = self.edges[next].start_node();
                             let d = self.edges[next].end_node();
 
-                            if !(a == c || a == d || b == c || b == d) {
-                                println!("EdgeParts: {:?}", edge_parts);
-
-                                let edges = edge_parts
-                                    .iter()
-                                    .map(|&part| &self.edges[part])
-                                    .collect::<Vec<_>>();
-
-                                println!("edges: {:?}", edges);
-                            }
                             assert!(a == c || a == d || b == c || b == d);
                         }
                     }

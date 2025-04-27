@@ -1,10 +1,16 @@
+use std::fs::File;
+use std::io::{BufWriter, Write};
+
+use geojson::GeoJson;
+
 use crate::base_graph::{self, BaseGraph};
 use crate::ch;
 use crate::ch::ch_graph::CHGraph;
+use crate::ch::ch_graph_builder::CHGraphBuilder;
 use crate::ch::ch_storage::CHStorage;
 use crate::ch::ch_weighting::CHWeighting;
 use crate::error::ImportError;
-use crate::graph::Graph;
+use crate::graph::{GeometryAccess, Graph};
 use crate::graph_edge::GraphEdge;
 use crate::landmarks::lm_bidirectional_astar::LMBidirectionalAstar;
 use crate::landmarks::lm_data::LMData;
@@ -13,7 +19,9 @@ use crate::location_index::LocationIndex;
 use crate::query_graph::QueryGraph;
 use crate::routing::astar::AStar;
 use crate::routing::bidirectional_astar::BidirectionalAStar;
-use crate::routing::ch_bidirectional_dijkstra::{CHBidirectionalAStar, CHBidirectionalDijkstra};
+use crate::routing::ch_bidirectional_dijkstra::{
+    CHBidirectionalAStar, CHBidirectionalDijkstra, CHLMAstar,
+};
 use crate::routing::dijkstra::Dijkstra;
 use crate::routing::routing_request::{RoutingAlgorithm, RoutingRequest};
 
@@ -95,7 +103,9 @@ impl Hermes {
         let lm = lm_preparation.create_landmarks(10);
 
         let index = LocationIndex::build_from_graph(&graph);
-        let ch_storage = ch::ch_graph_builder::build_ch_graph(&graph, &weighting);
+
+        let ch_builder = CHGraphBuilder::from_base_graph(&graph);
+        let ch_storage = ch_builder.build(&weighting);
 
         Hermes {
             graph,
@@ -182,7 +192,8 @@ impl Hermes {
                 Some(ch_storage) => {
                     let weighting = CHWeighting::new();
                     let ch_graph = CHGraph::new(ch_storage, &self.graph);
-                    let mut ch_bidirectional_dijkstra = CHBidirectionalAStar::new(&ch_graph);
+                    let mut ch_bidirectional_dijkstra =
+                        CHLMAstar::from_landmarks(&ch_graph, &weighting, &self.lm, start, end);
 
                     let s = self.graph.edge(snaps[0].edge_id).start_node();
                     let e = self.graph.edge(snaps[1].edge_id).end_node();

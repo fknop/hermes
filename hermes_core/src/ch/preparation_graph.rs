@@ -58,6 +58,7 @@ pub struct CHPreparationGraph<'a> {
     // New edges for new "virtual" nodes
     incoming_edges: Vec<Vec<EdgeId>>,
     outgoing_edges: Vec<Vec<EdgeId>>,
+    mean_degree: f64,
 }
 
 impl<'a> CHPreparationGraph<'a> {
@@ -71,6 +72,9 @@ impl<'a> CHPreparationGraph<'a> {
         let mut incoming_edges = vec![vec![]; graph.node_count()];
         let mut outgoing_edges = vec![vec![]; graph.node_count()];
 
+        let mut relevant_nodes = FxHashSet::default();
+        let mut edge_count = 0;
+
         for edge in graph.edges() {
             let start_node = edge.start_node();
             let end_node = edge.end_node();
@@ -81,6 +85,7 @@ impl<'a> CHPreparationGraph<'a> {
             if forward_weight != MAX_WEIGHT {
                 outgoing_edges[start_node].push(edge.id());
                 incoming_edges[end_node].push(edge.id());
+                edge_count += 1;
             }
 
             // From end to start
@@ -89,6 +94,12 @@ impl<'a> CHPreparationGraph<'a> {
             if backward_weight != MAX_WEIGHT {
                 incoming_edges[start_node].push(edge.id());
                 outgoing_edges[end_node].push(edge.id());
+                edge_count += 1;
+            }
+
+            if forward_weight != MAX_WEIGHT || backward_weight != MAX_WEIGHT {
+                relevant_nodes.insert(start_node);
+                relevant_nodes.insert(end_node);
             }
         }
 
@@ -97,7 +108,16 @@ impl<'a> CHPreparationGraph<'a> {
             base_graph: graph,
             incoming_edges,
             outgoing_edges,
+            mean_degree: edge_count as f64 / relevant_nodes.len() as f64,
         }
+    }
+
+    pub fn mean_degree(&self) -> f64 {
+        self.mean_degree
+    }
+
+    pub fn node_degree(&self, node_id: NodeId) -> usize {
+        self.incoming_edges[node_id].len() + self.outgoing_edges[node_id].len()
     }
 
     fn remove_edge(&mut self, edge_id: EdgeId) {
@@ -123,19 +143,18 @@ impl<'a> CHPreparationGraph<'a> {
             all_edges.extend(edges);
         }
 
+        let degree = all_edges.len();
+
+        if degree > 0 {
+            self.mean_degree = (self.mean_degree * 2.0 + degree as f64) / 3.0;
+        }
+
         for edge_id in all_edges {
             self.remove_edge(edge_id);
         }
     }
 
     pub fn add_shortcut(&mut self, shortcut: PreparationShortcut) {
-        let outgoing_edges_for_start = &self.outgoing_edges[shortcut.start];
-
-        // Duplicate shortcut, don't add it
-        if outgoing_edges_for_start.contains(&shortcut.end) {
-            return;
-        }
-
         // Only accepts directed edges for now
         let edge_id = self.edges.len();
 
@@ -222,14 +241,14 @@ impl UndirectedEdgeAccess for CHPreparationGraph<'_> {
 
 pub struct PreparationGraphWeighting<'a, W>
 where
-    W: Weighting<BaseGraph>,
+    W: Weighting<BaseGraph> + Send + Sync,
 {
     base_graph_weighting: &'a W,
 }
 
 impl<'a, W> PreparationGraphWeighting<'a, W>
 where
-    W: Weighting<BaseGraph>,
+    W: Weighting<BaseGraph> + Send + Sync,
 {
     pub fn new(base_graph_weighting: &'a W) -> Self {
         Self {
@@ -240,7 +259,7 @@ where
 
 impl<W> Weighting<CHPreparationGraph<'_>> for PreparationGraphWeighting<'_, W>
 where
-    W: Weighting<BaseGraph>,
+    W: Weighting<BaseGraph> + Send + Sync,
 {
     fn calc_edge_weight(&self, edge: &CHPreparationGraphEdge, direction: EdgeDirection) -> Weight {
         match edge {

@@ -1,14 +1,15 @@
 use fxhash::{FxBuildHasher, FxHashMap};
 
+use crate::ch::ch_graph::CHGraph;
 use crate::constants::{DISTANCE_INFLUENCE, INVALID_EDGE, INVALID_NODE, MAX_WEIGHT};
 use crate::edge_direction::EdgeDirection;
-use crate::graph::{DirectedEdgeAccess, GeometryAccess, Graph, UnfoldEdge};
+use crate::graph::{DirectedEdgeAccess, GeometryAccess, Graph, UndirectedEdgeAccess, UnfoldEdge};
 
 use crate::graph_edge::GraphEdge;
 use crate::landmarks::lm_astar_heuristic::LMAstarHeuristic;
 use crate::landmarks::lm_data::LMData;
 use crate::stopwatch::Stopwatch;
-use crate::types::EdgeId;
+use crate::types::{EdgeId, NodeId};
 use crate::weighting::{Weight, Weighting};
 use std::cmp::{Ordering, max};
 use std::collections::{BinaryHeap, HashMap};
@@ -179,7 +180,17 @@ where
         );
     }
 
-    fn node_data_for_direction(&mut self, dir: SearchDirection) -> &mut FxHashMap<usize, NodeData> {
+    fn node_data_for_direction(&self, dir: SearchDirection) -> &FxHashMap<usize, NodeData> {
+        match dir {
+            SearchDirection::Forward => &self.forward_data,
+            SearchDirection::Backward => &self.backward_data,
+        }
+    }
+
+    fn node_data_for_direction_mut(
+        &mut self,
+        dir: SearchDirection,
+    ) -> &mut FxHashMap<usize, NodeData> {
         match dir {
             SearchDirection::Forward => &mut self.forward_data,
             SearchDirection::Backward => &mut self.backward_data,
@@ -201,7 +212,7 @@ where
         parent: usize,
         edge_id: usize,
     ) {
-        let data = self.node_data_for_direction(dir);
+        let data = self.node_data_for_direction_mut(dir);
         if let Some(node_data) = data.get_mut(&node) {
             node_data.weight = weight;
             node_data.settled = false;
@@ -221,12 +232,12 @@ where
     }
 
     fn node_data(&mut self, dir: SearchDirection, node: usize) -> &NodeData {
-        let data = self.node_data_for_direction(dir);
+        let data = self.node_data_for_direction_mut(dir);
         data.entry(node).or_insert_with(NodeData::new)
     }
 
     fn set_settled(&mut self, dir: SearchDirection, node: usize) {
-        self.node_data_for_direction(dir)
+        self.node_data_for_direction_mut(dir)
             .get_mut(&node)
             .unwrap()
             .settled = true;
@@ -238,95 +249,44 @@ where
     }
 
     #[inline(always)]
-    fn current_shortest_weight(&mut self, dir: SearchDirection, node: usize) -> Weight {
-        self.node_data(dir, node).weight
+    fn current_shortest_weight(&self, dir: SearchDirection, node: NodeId) -> Weight {
+        let data = self.node_data_for_direction(dir);
+        data.get(&node).map_or(MAX_WEIGHT, |entry| entry.weight)
     }
 
-    fn process_node(
-        &mut self,
-        graph: &G,
-        weighting: &dyn Weighting<G>,
+    fn is_stallable(
+        &self,
+        weighting: &impl Weighting<G>,
         dir: SearchDirection,
-        node_id: usize,
-        g_score: Weight,
-        target: usize,
-    ) {
-        // If this node has already been settled in this direction, skip it
-        if self.is_settled(dir, node_id) {
-            return;
-        }
-
-        // If the weight is bigger than the current shortest weight, skip
-        if g_score > self.current_shortest_weight(dir, node_id) {
-            return;
-        }
-
-        // If we already found a path and this path is longer, skip
-        if g_score > self.best_path_weight {
-            return;
-        }
-
-        // Check if this node has been visited from the other direction
-        let opposite_dir = match dir {
-            SearchDirection::Forward => SearchDirection::Backward,
-            SearchDirection::Backward => SearchDirection::Forward,
+        current: &HeapItem,
+    ) -> bool {
+        let edges_iter = match dir {
+            SearchDirection::Forward => self.graph.node_incoming_edges_iter(current.node_id),
+            SearchDirection::Backward => self.graph.node_outgoing_edges_iter(current.node_id),
         };
 
-        if self.current_shortest_weight(opposite_dir, node_id) != MAX_WEIGHT {
-            // We found a meeting point! Calculate the total path weight
-            let total_weight = g_score + self.current_shortest_weight(opposite_dir, node_id);
-            // If this is better than our best path so far, update it
-            if total_weight < self.best_path_weight {
-                self.best_path_weight = total_weight;
-                self.best_meeting_node = node_id;
-            }
-        }
-
-        let iter = match dir {
-            SearchDirection::Forward => graph.node_outgoing_edges_iter(node_id),
-            SearchDirection::Backward => graph.node_incoming_edges_iter(node_id),
-        };
-
-        // Process all adjacent nodes
-        for edge_id in iter {
-            let edge = graph.edge(edge_id);
-            let adj_node = edge.adj_node(node_id);
-
-            if self.is_settled(dir, adj_node) {
+        for edge_id in edges_iter {
+            let edge = self.graph.edge(edge_id);
+            let adj_node = edge.adj_node(current.node_id);
+            let adj_weight = self.current_shortest_weight(dir, adj_node);
+            if adj_weight == MAX_WEIGHT {
                 continue;
             }
 
-            let edge_direction = match dir {
-                SearchDirection::Forward => graph.edge_direction(edge_id, node_id),
-                SearchDirection::Backward => graph.edge_direction(edge_id, node_id).opposite(),
-            };
-
+            let edge_direction = self.graph.edge_direction(
+                edge_id,
+                match dir {
+                    SearchDirection::Forward => adj_node,
+                    SearchDirection::Backward => current.node_id,
+                },
+            );
             let edge_weight = weighting.calc_edge_weight(edge, edge_direction);
-
-            if edge_weight == MAX_WEIGHT {
-                continue;
-            }
-
-            let next_weight = g_score + edge_weight;
-
-            if next_weight < self.current_shortest_weight(dir, adj_node) {
-                self.update_node_data(dir, adj_node, next_weight, node_id, edge_id);
-
-                // Calculate heuristic
-                let h_score = match dir {
-                    SearchDirection::Forward => self.heuristic.estimate(graph, adj_node, target),
-                    SearchDirection::Backward => self.heuristic.estimate(graph, adj_node, target),
-                };
-
-                self.heap_for_direction(dir).push(HeapItem {
-                    g_score: next_weight,
-                    f_score: next_weight + h_score,
-                    node_id: adj_node,
-                });
+            if edge_weight + adj_weight < current.g_score {
+                return true;
             }
         }
 
-        self.set_settled(dir, node_id);
+        false
     }
 
     fn build_forward_path(&mut self, graph: &G, node: usize) -> Vec<(EdgeId, EdgeDirection)> {
@@ -494,10 +454,7 @@ where
             }
             // Otherwise alternate directions
             else {
-                active_direction = match active_direction {
-                    SearchDirection::Forward => SearchDirection::Backward,
-                    SearchDirection::Backward => SearchDirection::Forward,
-                };
+                active_direction = active_direction.opposite();
             }
 
             let (heap, opposite_heap) = match active_direction {
@@ -513,11 +470,13 @@ where
                 continue;
             }
 
+            let current = maybe_item.unwrap();
+
             let HeapItem {
                 node_id,
                 g_score,
                 f_score,
-            } = maybe_item.unwrap();
+            } = current;
 
             // If we already found a path and the min f_score is higher
             // than our best path, we can stop the search in this direction
@@ -537,23 +496,98 @@ where
                 self.heuristic
                     .estimate(self.graph, node_id, opposite_direction_target);
 
-            // Strategy from "Yet another bidirectional algorithm for shortest paths"
-            // Wim Pijls, Henk Post
-            // https://repub.eur.nl/pub/16100/ei2009-10.pdf
+            // // Strategy from "Yet another bidirectional algorithm for shortest paths"
+            // // Wim Pijls, Henk Post
+            // // https://repub.eur.nl/pub/16100/ei2009-10.pdf
             if g_score + opposite_direction_min_f_score - opposite_direction_h
                 >= self.best_path_weight
             {
                 continue;
             }
+            // If this node has already been settled in this direction, skip it
+            if self.is_settled(active_direction, node_id) {
+                continue;
+            }
 
-            self.process_node(
-                self.graph,
-                weighting,
-                active_direction,
-                node_id,
-                g_score,
-                target,
-            );
+            if self.is_stallable(weighting, active_direction, &current) {
+                continue;
+            }
+
+            // If the weight is bigger than the current shortest weight, skip
+            if g_score > self.current_shortest_weight(active_direction, node_id) {
+                continue;
+            }
+
+            // Check if this node has been visited from the other direction
+            let opposite_dir = active_direction.opposite();
+
+            if self.current_shortest_weight(opposite_dir, node_id) != MAX_WEIGHT {
+                // We found a meeting point! Calculate the total path weight
+                let total_weight = g_score + self.current_shortest_weight(opposite_dir, node_id);
+                // If this is better than our best path so far, update it
+                if total_weight < self.best_path_weight {
+                    self.best_path_weight = total_weight;
+                    self.best_meeting_node = node_id;
+                }
+            }
+
+            let iter = match active_direction {
+                SearchDirection::Forward => self.graph.node_outgoing_edges_iter(node_id),
+                SearchDirection::Backward => self.graph.node_incoming_edges_iter(node_id),
+            };
+
+            // Process all adjacent nodes
+            for edge_id in iter {
+                let edge = self.graph.edge(edge_id);
+                let adj_node = edge.adj_node(node_id);
+
+                if self.is_settled(active_direction, adj_node) {
+                    continue;
+                }
+
+                let edge_direction = match active_direction {
+                    SearchDirection::Forward => self.graph.edge_direction(edge_id, node_id),
+                    SearchDirection::Backward => {
+                        self.graph.edge_direction(edge_id, node_id).opposite()
+                    }
+                };
+
+                let edge_weight = weighting.calc_edge_weight(edge, edge_direction);
+
+                if edge_weight == MAX_WEIGHT {
+                    continue;
+                }
+
+                let next_weight = g_score + edge_weight;
+
+                if next_weight < self.current_shortest_weight(active_direction, adj_node) {
+                    self.update_node_data(
+                        active_direction,
+                        adj_node,
+                        next_weight,
+                        node_id,
+                        edge_id,
+                    );
+
+                    // Calculate heuristic
+                    let h_score = match active_direction {
+                        SearchDirection::Forward => {
+                            self.heuristic.estimate(self.graph, adj_node, target)
+                        }
+                        SearchDirection::Backward => {
+                            self.heuristic.estimate(self.graph, adj_node, target)
+                        }
+                    };
+
+                    self.heap_for_direction(active_direction).push(HeapItem {
+                        g_score: next_weight,
+                        f_score: next_weight + h_score,
+                        node_id: adj_node,
+                    });
+                }
+            }
+
+            self.set_settled(active_direction, node_id);
 
             if include_debug_info {
                 self.add_visited_node(active_direction, node_id);
@@ -573,7 +607,7 @@ where
                     .peek()
                     .map_or(MAX_WEIGHT, |item| item.f_score);
 
-                if min_forward_f + min_backward_f >= self.best_path_weight {
+                if max(min_forward_f, min_backward_f) >= self.best_path_weight {
                     break;
                 }
             }
@@ -631,5 +665,23 @@ impl CHBidirectionalDijkstra {
         G: Graph + DirectedEdgeAccess + UnfoldEdge + GeometryAccess,
     {
         CHBidirectionalAStar::with_heuristic(graph, CHDijkstraHeuristic)
+    }
+}
+
+pub struct CHLMAstar;
+
+impl CHLMAstar {
+    pub fn from_landmarks<
+        'a,
+        G: Graph + UnfoldEdge + UndirectedEdgeAccess + DirectedEdgeAccess + GeometryAccess,
+    >(
+        graph: &'a G,
+        weighting: &'a impl Weighting<G>,
+        lm: &'a LMData,
+        start: usize,
+        end: usize,
+    ) -> CHBidirectionalAStar<'a, G, LMAstarHeuristic<'a, G, impl Weighting<G>>> {
+        let heuristic = LMAstarHeuristic::new(graph, weighting, lm, start, end);
+        CHBidirectionalAStar::with_heuristic(graph, heuristic)
     }
 }
