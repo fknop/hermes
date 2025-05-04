@@ -18,7 +18,7 @@ use crate::{
 /// Virtual nodes are typically added when a query point (snap) lies along an existing edge,
 /// splitting that edge into two virtual edges connected by the new virtual node.
 pub(crate) struct QueryGraphOverlay<'a, G: Graph> {
-    base_graph: &'a G,
+    query_graph: &'a G,
 
     virtual_nodes: usize,
     virtual_edges: Vec<G::Edge>,
@@ -34,7 +34,7 @@ pub(crate) struct QueryGraphOverlay<'a, G: Graph> {
 impl<'a, G: Graph> QueryGraphOverlay<'a, G> {
     pub fn from_graph(graph: &'a G) -> Self {
         Self {
-            base_graph: graph,
+            query_graph: graph,
             virtual_nodes: 0,
             virtual_edges: Vec::new(),
             virtual_edge_geometry: Vec::new(),
@@ -83,21 +83,21 @@ impl<'a, G: Graph> QueryGraphOverlay<'a, G> {
     }
 
     pub fn is_virtual_node(&self, node_id: usize) -> bool {
-        node_id >= self.base_graph.node_count()
+        node_id >= self.query_graph.node_count()
     }
 
     pub fn is_virtual_edge(&self, edge_id: usize) -> bool {
-        edge_id >= self.base_graph.edge_count()
+        edge_id >= self.query_graph.edge_count()
     }
 
     // Assumes node_id is a virtual node
     pub fn virtual_node_id(&self, node_id: usize) -> usize {
-        node_id - self.base_graph.node_count()
+        node_id - self.query_graph.node_count()
     }
 
     // Assumes edge_id is a virtual edge
     pub fn virtual_edge_id(&self, edge_id: usize) -> usize {
-        edge_id - self.base_graph.edge_count()
+        edge_id - self.query_graph.edge_count()
     }
 
     // Assumes edge_id is a virtual edge
@@ -106,11 +106,11 @@ impl<'a, G: Graph> QueryGraphOverlay<'a, G> {
     }
 
     pub fn edge_count(&self) -> usize {
-        self.base_graph.edge_count() + self.virtual_edges.len()
+        self.query_graph.edge_count() + self.virtual_edges.len()
     }
 
     pub fn node_count(&self) -> usize {
-        self.base_graph.node_count() + self.virtual_nodes
+        self.query_graph.node_count() + self.virtual_nodes
     }
 
     pub fn edge_direction(&self, edge_id: usize, start_node_id: usize) -> EdgeDirection {
@@ -128,7 +128,7 @@ impl<'a, G: Graph> QueryGraphOverlay<'a, G> {
                 start_node_id, edge_id
             )
         } else {
-            self.base_graph.edge_direction(edge_id, start_node_id)
+            self.query_graph.edge_direction(edge_id, start_node_id)
         }
     }
 
