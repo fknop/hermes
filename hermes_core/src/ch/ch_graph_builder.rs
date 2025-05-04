@@ -1,5 +1,10 @@
 use std::cmp;
 
+use rand::{
+    Rng,
+    distr::{Distribution, Uniform},
+};
+
 use crate::{
     base_graph::BaseGraph,
     ch::{ch_edge::CHBaseEdge, ch_storage::CHStorage, priority_queue::PriorityQueue},
@@ -29,6 +34,9 @@ impl<'a> CHGraphBuilder<'a> {
     where
         W: Weighting<BaseGraph> + Send + Sync,
     {
+        let mut rng = rand::rng();
+        let dist = Uniform::new_inclusive(0, 100).unwrap();
+
         let mut ch_storage = CHStorage::new(self.base_graph);
         let mut preparation_graph = CHPreparationGraph::new(self.base_graph, weighting);
         let preparation_weighting = PreparationGraphWeighting::new(weighting);
@@ -60,9 +68,10 @@ impl<'a> CHGraphBuilder<'a> {
 
         println!("Finish computing priority for every node");
 
-        // let mut contracted_nodes = 0;
         let mut added_shortcuts = 0;
         let mut contracted_nodes = 0;
+        let mut skipped_nodes = 0;
+        let mut rank = 0;
 
         while let Some((node_id, priority)) = priority_queue.pop() {
             // Lazy recomputation of the priority
@@ -142,16 +151,17 @@ impl<'a> CHGraphBuilder<'a> {
                 }
             }
 
+            ch_storage.set_node_rank(node_id, rank);
+            rank += 1;
+
             // Only contract 95% of nodes
-            //
+            let percentage = 95;
 
-            contracted_nodes += 1;
-            // if contracted_nodes > 0 && contracted_nodes % 10 == 0 {
-            //     preparation_graph.disconnect_node(node_id);
-            //     continue;
-            // }
-
-            //
+            if preparation_graph.node_degree(node_id) == 0 || dist.sample(&mut rng) > percentage {
+                skipped_nodes += 1;
+                preparation_graph.disconnect_node(node_id);
+                continue;
+            }
 
             CHGraphBuilder::contract_node(
                 &mut preparation_graph,
@@ -159,6 +169,8 @@ impl<'a> CHGraphBuilder<'a> {
                 &preparation_weighting,
                 node_id,
             );
+
+            contracted_nodes += 1;
 
             // TODO: better condition
             if contracted_nodes % 500000 == 0 && added_shortcuts > 0 {
@@ -210,6 +222,8 @@ impl<'a> CHGraphBuilder<'a> {
             added_shortcuts,
             self.base_graph.edge_count()
         );
+        println!("Contracted nodes {}", contracted_nodes);
+        println!("Skipped nodes {}", skipped_nodes);
 
         ch_storage.check();
 

@@ -1,6 +1,6 @@
 import { Marker } from 'react-map-gl/mapbox'
-import { GeoPoint } from '../GeoPoint'
 import { MapPinIcon } from '@heroicons/react/24/outline'
+import { GeoPoint } from '../types/GeoPoint'
 
 export function MapMarker({
   coordinates,

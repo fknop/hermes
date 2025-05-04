@@ -1,6 +1,7 @@
 import { SvgIcon } from './SvgIcon'
 import { ButtonHTMLAttributes, RefObject } from 'react'
 import clsx from 'clsx'
+import { isNil } from '../utils/isNil'
 
 type ButtonVariant = 'primary'
 type ButtonSize = 'small' | 'normal'
@@ -14,10 +15,10 @@ type ButtonProps = {
   'className' | 'onClick' | 'type' | 'children' | 'disabled'
 >
 
-function getCommonClassNames() {
+function getCommonClassNames({ isIconButton }: { isIconButton: boolean }) {
   return clsx(
     'flex items-center justify-center',
-    'rounded-lg',
+    isIconButton ? 'rounded-full' : 'rounded-lg',
     'font-semibold',
     'shadow-sm',
     'focus-visible:outline',
@@ -60,12 +61,13 @@ export function Button({
   disabled = false,
   ...props
 }: ButtonProps & { ref?: RefObject<HTMLButtonElement> }) {
+  const isIconButton = !isNil(Icon) && isNil(children)
   return (
     <button
       ref={ref}
       type={type}
       className={clsx(
-        getCommonClassNames(),
+        getCommonClassNames({ isIconButton }),
         getVariantClassNames(variant, { disabled }),
         getSizeClassNames(size),
         className
@@ -74,8 +76,8 @@ export function Button({
       {...props}
     >
       {Icon && (
-        <span className="inline-flex justify-center items-center p-px bg-slate-200 rounded-full">
-          <Icon className="size-3 text-primary" />
+        <span>
+          <Icon className="size-3.5 text-white" />
         </span>
       )}
       {children}

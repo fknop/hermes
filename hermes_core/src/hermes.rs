@@ -191,13 +191,13 @@ impl Hermes {
             Some(RoutingAlgorithm::ContractionHierarchies) => match &self.ch_storage {
                 Some(ch_storage) => {
                     let weighting = CHWeighting::new();
-                    let ch_graph = CHGraph::new(ch_storage, &self.graph);
-                    let mut ch_bidirectional_dijkstra =
-                        CHLMAstar::from_landmarks(&ch_graph, &weighting, &self.lm, start, end);
 
                     let s = self.graph.edge(snaps[0].edge_id).start_node();
                     let e = self.graph.edge(snaps[1].edge_id).end_node();
 
+                    let ch_graph = CHGraph::new(ch_storage, &self.graph);
+                    let mut ch_bidirectional_dijkstra =
+                        CHLMAstar::from_landmarks(&ch_graph, &weighting, &self.lm, s, e);
                     ch_bidirectional_dijkstra.calc_path(&weighting, s, e, Some(options))
                 }
                 None => return Err(String::from("CH Graph not found")),

@@ -1,6 +1,7 @@
 use fxhash::{FxBuildHasher, FxHashMap};
 
-use crate::ch::ch_graph::CHGraph;
+use crate::ch::ch_edge::CHGraphEdge;
+use crate::ch::ch_graph::{CHGraph, NodeRank};
 use crate::constants::{DISTANCE_INFLUENCE, INVALID_EDGE, INVALID_NODE, MAX_WEIGHT};
 use crate::edge_direction::EdgeDirection;
 use crate::graph::{DirectedEdgeAccess, GeometryAccess, Graph, UndirectedEdgeAccess, UnfoldEdge};
@@ -412,7 +413,7 @@ where
 
 impl<G, H> CalcPath<G> for CHBidirectionalAStar<'_, G, H>
 where
-    G: Graph + DirectedEdgeAccess + GeometryAccess + UnfoldEdge,
+    G: Graph + DirectedEdgeAccess + GeometryAccess + UnfoldEdge + NodeRank,
     H: AStarHeuristic,
 {
     fn calc_path(
@@ -509,9 +510,9 @@ where
                 continue;
             }
 
-            if self.is_stallable(weighting, active_direction, &current) {
-                continue;
-            }
+            // if self.is_stallable(weighting, active_direction, &current) {
+            //     continue;
+            // }
 
             // If the weight is bigger than the current shortest weight, skip
             if g_score > self.current_shortest_weight(active_direction, node_id) {

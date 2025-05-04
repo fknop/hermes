@@ -11,17 +11,33 @@ import {
 } from './Autocomplete'
 import { Input } from './Input'
 import { MAPBOX_ACCESS_TOKEN } from '../constants'
-import { useEffect, useState } from 'react'
+import {
+  ComponentType,
+  HTMLAttributes,
+  InputHTMLAttributes,
+  Ref,
+  useEffect,
+  useState,
+} from 'react'
 import { isNil } from '../utils/isNil'
+import clsx from 'clsx'
 
 const sessionToken = crypto.randomUUID()
 
 export function AddressAutocomplete({
   onRetrieve,
   value,
+  InputComponent = Input,
+  placeholder,
 }: {
   onRetrieve: (value: SearchBoxRetrieveResponse) => void
   value: string
+  InputComponent?: ComponentType<
+    InputHTMLAttributes<HTMLInputElement> & {
+      ref?: Ref<HTMLInputElement>
+    }
+  >
+  placeholder?: string
 }) {
   const [input, setInput] = useState(value)
 
@@ -74,7 +90,7 @@ export function AddressAutocomplete({
           await fetchSuggestions(value)
         }}
       >
-        <Input data-1p-ignore />
+        <InputComponent data-1p-ignore placeholder={placeholder} />
       </AutocompleteInput>
 
       {suggestions.length > 0 && (

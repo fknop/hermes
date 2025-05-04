@@ -16,12 +16,14 @@ import { useDurationFormatter } from './hooks/useDurationFormatter.ts'
 import { useFetch } from './hooks/useFetch.ts'
 import { isNil } from './utils/isNil.ts'
 import { MapContextMenu, MapMenuItem } from './components/MapContextMenu.tsx'
-import { GeoPoint } from './GeoPoint.ts'
 import { MapMarker } from './components/Marker.tsx'
 import { MapPinIcon } from '@heroicons/react/16/solid'
 import { MagnifyingGlassIcon } from '@heroicons/react/16/solid'
 import { Label } from './components/Label.tsx'
 import { RouteResult } from './components/RouteResult.tsx'
+import { GeoPoint } from './types/GeoPoint.ts'
+import { JourneyAutocomplete } from './components/JourneyAutocomplete.tsx'
+import { Address } from './types/Address.ts'
 
 enum RoutingAlgorithm {
   Dijkstra = 'Dijkstra',
@@ -29,11 +31,6 @@ enum RoutingAlgorithm {
   BidirectionalAstar = 'BidirectionalAstar',
   Landmarks = 'Landmarks',
   ContractionHierarchies = 'ContractionHierarchies',
-}
-
-type Address = {
-  coordinates: GeoPoint
-  address: string
 }
 
 export default function App() {
@@ -48,8 +45,6 @@ export default function App() {
     }
   >('/route')
 
-  const formatDuration = useDurationFormatter()
-  const formatDistance = useDistanceFormatter()
   const [selectedAlgorithm, setSelectedAlgorithm] = useState<RoutingAlgorithm>(
     RoutingAlgorithm.BidirectionalAstar
   )
@@ -170,42 +165,21 @@ export default function App() {
         </MapContextMenu>
       </Map>
 
-      <div className="pointer-events-auto z-10 absolute top-0 left-0 bottom-0 bg-white  drop-shadow-xs border-r-2 border-zinc-900/20 min-w-96">
+      <div className="z-10 absolute top-0 left-0 bottom-0 bg-white  drop-shadow-xs border-r-2 border-zinc-900/20 min-w-96">
         <div className="flex flex-col gap-2.5 px-6 py-6">
-          <div className="flex flex-row gap-6 items-center">
-            <div className="flex flex-1 flex-col gap-3">
-              <AddressAutocomplete
-                value={start?.address ?? ''}
-                onRetrieve={async (response) => {
-                  const [lon, lat] = response.features[0].geometry.coordinates
-                  setStart({
-                    coordinates: { lat, lon },
-                    address: response.features[0].properties.full_address,
-                  })
-                }}
-              />
-              <AddressAutocomplete
-                value={end?.address ?? ''}
-                onRetrieve={async (response) => {
-                  const [lon, lat] = response.features[0].geometry.coordinates
-                  setEnd({
-                    coordinates: { lat, lon },
-                    address: response.features[0].properties.full_address,
-                  })
-                }}
-              />
-            </div>
-
-            <button
-              type="button"
-              onClick={() => {
-                setStart(end)
-                setEnd(start)
-              }}
-            >
-              <ArrowsUpDownIcon className="size-5 text-primary" />
-            </button>
-          </div>
+          <JourneyAutocomplete
+            start={start}
+            end={end}
+            onChange={(start, end) => {
+              setStart(start)
+              setEnd(end)
+            }}
+            onSearch={() => {
+              if (start && end) {
+                computeRoute({ start, end })
+              }
+            }}
+          />
 
           <Label>
             <Checkbox
@@ -232,21 +206,6 @@ export default function App() {
               </Label>
             )
           })}
-
-          <div>
-            <Button
-              variant="primary"
-              size="small"
-              icon={ArrowTurnDownRightIcon}
-              onClick={() => {
-                if (start && end) {
-                  computeRoute({ start, end })
-                }
-              }}
-            >
-              Route
-            </Button>
-          </div>
         </div>
 
         {!isNil(time) &&

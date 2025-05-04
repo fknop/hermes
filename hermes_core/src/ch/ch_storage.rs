@@ -1,3 +1,5 @@
+use std::usize;
+
 use crate::{
     base_graph::BaseGraph,
     constants::{INVALID_EDGE, INVALID_NODE, MAX_DURATION, MAX_WEIGHT},
@@ -17,6 +19,8 @@ use super::{
 pub struct CHStorage {
     nodes: usize,
     edges: Vec<CHGraphEdge>,
+
+    ranks: Vec<usize>,
 
     /// For each node, a list the incoming edges into this node
     incoming_edges: Vec<Vec<EdgeId>>,
@@ -54,7 +58,7 @@ impl CHStorage {
             });
             base_graph.edge_count()
         ];
-        let ranks = vec![0; base_graph.node_count()];
+        let ranks: Vec<usize> = vec![usize::MAX; base_graph.node_count()];
         let incoming_edges = vec![Vec::new(); base_graph.node_count()];
         let outgoing_edges = vec![Vec::new(); base_graph.node_count()];
 
@@ -63,7 +67,16 @@ impl CHStorage {
             edges,
             incoming_edges,
             outgoing_edges,
+            ranks,
         }
+    }
+
+    pub fn node_rank(&self, node_id: NodeId) -> usize {
+        self.ranks[node_id]
+    }
+
+    pub fn set_node_rank(&mut self, node: NodeId, rank: usize) {
+        self.ranks[node] = rank;
     }
 
     pub fn add_edge(&mut self, edge: CHBaseEdge) {

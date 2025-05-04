@@ -1,4 +1,4 @@
-mod ch_edge;
+pub(crate) mod ch_edge;
 pub mod ch_graph;
 pub mod ch_graph_builder;
 pub(crate) mod ch_storage;

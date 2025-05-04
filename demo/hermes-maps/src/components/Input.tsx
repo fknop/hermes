@@ -1,7 +1,7 @@
 import clsx from 'clsx'
-import { HTMLAttributes, Ref } from 'react'
+import { InputHTMLAttributes, Ref } from 'react'
 
-type InputProps = HTMLAttributes<HTMLInputElement> & {
+type InputProps = InputHTMLAttributes<HTMLInputElement> & {
   ref?: Ref<HTMLInputElement>
 }
 

@@ -27,7 +27,7 @@ import {
 } from '@floating-ui/react'
 import { MapMouseEvent, useMap } from 'react-map-gl/mapbox'
 import clsx from 'clsx'
-import { GeoPoint } from '../GeoPoint'
+import { GeoPoint } from '../types/GeoPoint'
 
 type MenuItemProps = Omit<
   ButtonHTMLAttributes<HTMLButtonElement>,
