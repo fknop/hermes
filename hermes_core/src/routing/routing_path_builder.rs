@@ -1,5 +1,5 @@
 use crate::{
-    edge_direction::{self, EdgeDirection},
+    edge_direction::EdgeDirection,
     geopoint::GeoPoint,
     graph::{GeometryAccess, Graph},
     graph_edge::GraphEdge,

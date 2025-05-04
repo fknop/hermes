@@ -1,7 +1,5 @@
 use fxhash::{FxBuildHasher, FxHashMap};
 
-use crate::ch::ch_edge::CHGraphEdge;
-use crate::ch::ch_graph::{CHGraph, NodeRank};
 use crate::constants::{DISTANCE_INFLUENCE, INVALID_EDGE, INVALID_NODE, MAX_WEIGHT};
 use crate::edge_direction::EdgeDirection;
 use crate::graph::{DirectedEdgeAccess, GeometryAccess, Graph, UndirectedEdgeAccess, UnfoldEdge};
@@ -16,7 +14,7 @@ use std::cmp::{Ordering, max};
 use std::collections::{BinaryHeap, HashMap};
 
 use super::astar_heuristic::AStarHeuristic;
-use super::routing_path::{RoutingPath, RoutingPathLeg};
+use super::routing_path::RoutingPath;
 use super::routing_path_builder::build_routing_path;
 use super::search_direction::SearchDirection;
 use super::shortest_path_algorithm::{

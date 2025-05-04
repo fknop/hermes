@@ -103,7 +103,7 @@ where
     heuristic: H,
 }
 
-impl<'a, G, H> AStar<'a, G, H>
+impl<G, H> AStar<'_, G, H>
 where
     G: Graph + UndirectedEdgeAccess + GeometryAccess,
     H: AStarHeuristic,

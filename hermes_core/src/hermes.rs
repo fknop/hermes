@@ -1,27 +1,18 @@
-use std::fs::File;
-use std::io::{BufWriter, Write};
-
-use geojson::GeoJson;
-
-use crate::base_graph::{self, BaseGraph};
-use crate::ch;
+use crate::base_graph::BaseGraph;
 use crate::ch::ch_graph::CHGraph;
 use crate::ch::ch_graph_builder::CHGraphBuilder;
 use crate::ch::ch_storage::CHStorage;
 use crate::ch::ch_weighting::CHWeighting;
 use crate::error::ImportError;
-use crate::graph::{GeometryAccess, Graph};
-use crate::graph_edge::GraphEdge;
+use crate::graph::Graph;
 use crate::landmarks::lm_bidirectional_astar::LMBidirectionalAstar;
 use crate::landmarks::lm_data::LMData;
 use crate::landmarks::lm_preparation::LMPreparation;
 use crate::location_index::LocationIndex;
-use crate::query_graph::QueryGraph;
+use crate::query::query_graph::QueryGraph;
 use crate::routing::astar::AStar;
 use crate::routing::bidirectional_astar::BidirectionalAStar;
-use crate::routing::ch_bidirectional_dijkstra::{
-    CHBidirectionalAStar, CHBidirectionalDijkstra, CHLMAstar,
-};
+use crate::routing::ch_bidirectional_dijkstra::CHLMAstar;
 use crate::routing::dijkstra::Dijkstra;
 use crate::routing::routing_request::{RoutingAlgorithm, RoutingRequest};
 
@@ -209,7 +200,7 @@ impl Hermes {
 
                     ch_bidirectional_dijkstra.calc_path(&weighting, start, end, Some(options))
                 }
-                None => return Err(String::from("CH Graph not found")),
+                None => Err(String::from("CH Graph not found")),
             },
 
             None => {

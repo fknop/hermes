@@ -1,9 +1,6 @@
 use std::cmp;
 
-use rand::{
-    Rng,
-    distr::{Distribution, Uniform},
-};
+use rand::distr::{Distribution, Uniform};
 
 use crate::{
     base_graph::BaseGraph,

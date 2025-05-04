@@ -1,7 +1,7 @@
 use crate::{
     constants::MAX_WEIGHT,
     edge_direction::EdgeDirection,
-    query_graph::QueryGraph,
+    query::query_graph::QueryGraph,
     weighting::{Milliseconds, Weight, Weighting},
 };
 

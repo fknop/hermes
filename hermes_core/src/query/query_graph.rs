@@ -13,10 +13,13 @@ use crate::{
     geopoint::GeoPoint,
     graph::{DirectedEdgeAccess, GeometryAccess, Graph, UndirectedEdgeAccess, UnfoldEdge},
     graph_edge::GraphEdge,
-    query_graph_overlay::QueryGraphOverlay,
     snap::Snap,
     types::{EdgeId, NodeId},
     weighting::{Milliseconds, Weight},
+};
+
+use super::{
+    query_graph_edge_iterator::QueryGraphEdgeIterator, query_graph_overlay::QueryGraphOverlay,
 };
 
 /// A dynamic graph that extends a base graph with virtual nodes and edges
@@ -256,10 +259,24 @@ where
     }
 }
 
-impl<G> UndirectedEdgeAccess for QueryGraph<'_, G>
-where
-    G: Graph + GeometryAccess + BuildVirtualEdge,
-{
+impl UndirectedEdgeAccess for QueryGraph<'_, BaseGraph> {
+    type EdgeIterator<'b>
+        = QueryGraphEdgeIterator<'b>
+    where
+        Self: 'b;
+    fn node_edges_iter(&self, node_id: usize) -> Self::EdgeIterator<'_> {
+        if self.is_virtual_node(node_id) {
+            QueryGraphEdgeIterator::new(&[], self.overlay.node_virtual_edges(node_id))
+        } else {
+            let virtual_edges = self.overlay.node_virtual_edges(node_id);
+            let base_edges = self.base_graph.node_edges(node_id);
+
+            QueryGraphEdgeIterator::new(base_edges, virtual_edges)
+        }
+    }
+}
+
+impl UndirectedEdgeAccess for QueryGraph<'_, CHGraph<'_>> {
     type EdgeIterator<'b>
         = QueryGraphEdgeIterator<'b>
     where
@@ -305,56 +322,13 @@ impl<'a> DirectedEdgeAccess for QueryGraph<'a, CHGraph<'a>> {
     }
 }
 
-impl UnfoldEdge for QueryGraph<'_, CHGraph<'_>> {
+impl<G: UnfoldEdge + GeometryAccess + BuildVirtualEdge> UnfoldEdge for QueryGraph<'_, G> {
     fn unfold_edge(&self, edge_id: EdgeId, edges: &mut Vec<EdgeId>) {
         if self.overlay.is_virtual_edge(edge_id) {
             edges.push(edge_id);
         } else {
             self.graph.unfold_edge(edge_id, edges);
         }
-    }
-}
-
-/// An iterator that combines base edges and virtual edges from a QueryGraph
-///
-/// This iterator will first yield all base edges, followed by all virtual edges.
-/// It is used internally by the QueryGraph to provide a unified view of both
-/// the original graph edges and dynamically added virtual edges.
-pub struct QueryGraphEdgeIterator<'a> {
-    base_edges: &'a [usize],
-    virtual_edges: &'a [usize],
-    index: usize,
-}
-
-impl<'a> QueryGraphEdgeIterator<'a> {
-    fn new(base_edges: &'a [usize], virtual_edges: &'a [usize]) -> Self {
-        QueryGraphEdgeIterator {
-            base_edges,
-            virtual_edges,
-            index: 0,
-        }
-    }
-}
-
-impl Iterator for QueryGraphEdgeIterator<'_> {
-    type Item = usize;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.index < self.base_edges.len() {
-            let edge = self.base_edges[self.index];
-            self.index += 1;
-            return Some(edge);
-        }
-
-        let virtual_index = self.index - self.base_edges.len();
-
-        if virtual_index < self.virtual_edges.len() {
-            let edge = self.virtual_edges[virtual_index];
-            self.index += 1;
-            return Some(edge);
-        }
-
-        None
     }
 }
 

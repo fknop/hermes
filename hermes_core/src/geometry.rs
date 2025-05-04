@@ -58,10 +58,6 @@ pub fn create_virtual_geometry_between_points(
     geometry: &[GeoPoint],
     points: (&GeoPoint, &GeoPoint),
 ) -> Vec<GeoPoint> {
-    let first_index = closest_point_index(geometry, points.0);
-    let second_index = closest_point_index(geometry, points.1);
-    // let mut virtual_geometry = Vec::new();
-
     let mut sorted_points = vec![points.0, points.1];
 
     sorted_points.sort_by(|a, b| {
@@ -70,57 +66,4 @@ pub fn create_virtual_geometry_between_points(
     });
 
     sorted_points.into_iter().cloned().collect::<Vec<_>>()
-
-    // if let (Some(first_index), Some(second_index)) = (first_index, second_index) {
-    //     if first_index <= second_index {
-    //         virtual_geometry.push(*points.0);
-    //         // virtual_geometry.extend_from_slice(&geometry[first_index..=second_index]);
-    //         virtual_geometry.push(*points.1);
-    //     } else {
-    //         virtual_geometry.push(*points.1);
-    //         // virtual_geometry.extend_from_slice(&geometry[second_index..=first_index]);
-    //         virtual_geometry.push(*points.0);
-    //     }
-    // }
-
-    // virtual_geometry
-}
-
-pub fn generate_intermediate_points_on_line(
-    start: &GeoPoint,
-    end: &GeoPoint,
-    interval: Distance<Meters>,
-) -> Vec<GeoPoint> {
-    let distance = start.haversine_distance(end);
-
-    let num_points = (distance / interval).ceil() as usize;
-
-    let mut points = Vec::with_capacity(num_points);
-
-    for i in 1..num_points {
-        let fraction = i as f64 / num_points as f64;
-
-        points.push(GeoPoint::new(
-            start.lon() + fraction * (end.lon() - start.lon()),
-            start.lat() + fraction * (end.lat() - start.lat()),
-        ))
-    }
-
-    points
-}
-
-pub fn interpolate_geometry(points: &[GeoPoint], interval: Distance<Meters>) -> Vec<GeoPoint> {
-    let mut interpolated_line = Vec::new();
-
-    interpolated_line.push(points[0]);
-
-    for window in points.windows(2) {
-        interpolated_line.extend(generate_intermediate_points_on_line(
-            &window[0], &window[1], interval,
-        ));
-    }
-
-    interpolated_line.push(points[points.len() - 1]);
-
-    interpolated_line
 }

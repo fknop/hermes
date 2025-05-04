@@ -11,11 +11,6 @@ use crate::{
 
 use super::{ch_edge::CHGraphEdge, ch_storage::CHStorage};
 
-pub trait NodeRank {
-    fn is_shortcut(&self, edge_id: EdgeId) -> bool;
-    fn node_rank(&self, node_id: NodeId) -> usize;
-}
-
 pub struct CHGraph<'a> {
     storage: &'a CHStorage,
     base_graph: &'a BaseGraph,
@@ -35,16 +30,6 @@ impl<'a> CHGraph<'a> {
 
     pub fn node_outgoing_edges(&self, node_id: NodeId) -> &[usize] {
         self.storage.outgoing_edges(node_id)
-    }
-}
-
-impl NodeRank for CHGraph<'_> {
-    fn is_shortcut(&self, edge_id: EdgeId) -> bool {
-        edge_id >= self.base_graph.edge_count()
-    }
-
-    fn node_rank(&self, node_id: NodeId) -> usize {
-        self.storage.node_rank(node_id)
     }
 }
 

@@ -1,11 +1,8 @@
 use fxhash::FxHashMap;
 
 use crate::{
-    base_graph::BaseGraphEdge,
-    edge_direction::EdgeDirection,
     geopoint::GeoPoint,
     graph::Graph,
-    graph_edge::GraphEdge,
     types::{EdgeId, NodeId},
 };
 
@@ -111,25 +108,6 @@ impl<'a, G: Graph> QueryGraphOverlay<'a, G> {
 
     pub fn node_count(&self) -> usize {
         self.query_graph.node_count() + self.virtual_nodes
-    }
-
-    pub fn edge_direction(&self, edge_id: usize, start_node_id: usize) -> EdgeDirection {
-        if self.is_virtual_edge(edge_id) {
-            let edge = self.virtual_edge(edge_id);
-
-            if edge.start_node() == start_node_id {
-                return EdgeDirection::Forward;
-            } else if edge.end_node() == start_node_id {
-                return EdgeDirection::Backward;
-            }
-
-            panic!(
-                "Node {} is neither the start nor the end of edge {}",
-                start_node_id, edge_id
-            )
-        } else {
-            self.query_graph.edge_direction(edge_id, start_node_id)
-        }
     }
 
     pub fn node_virtual_edges(&self, node_id: usize) -> &[usize] {
