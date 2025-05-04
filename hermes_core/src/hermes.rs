@@ -145,15 +145,6 @@ impl Hermes {
 
         let mut snaps = [start_snap, end_snap];
 
-        let build_query_graph_sw = Stopwatch::new("querygraph/build");
-
-        let query_graph = QueryGraph::from_base_graph(&self.graph, &mut snaps[..]);
-
-        build_query_graph_sw.report();
-
-        let start = snaps[0].closest_node();
-        let end = snaps[1].closest_node();
-
         let request_options = request.options.as_ref();
         let options = CalcPathOptions {
             include_debug_info: request_options.and_then(|options| options.include_debug_info),
@@ -162,22 +153,36 @@ impl Hermes {
         match request_options.and_then(|options| options.algorithm) {
             Some(RoutingAlgorithm::Dijkstra) => {
                 let weighting = self.create_weighting(&request.profile);
+                let query_graph = QueryGraph::from_graph(&self.graph, &self.graph, &mut snaps[..]);
+                let start = snaps[0].closest_node();
+                let end = snaps[1].closest_node();
+
                 let mut dijkstra = Dijkstra::new(&query_graph);
                 dijkstra.calc_path(&weighting, start, end, Some(options))
             }
             Some(RoutingAlgorithm::Astar) => {
                 let weighting = self.create_weighting(&request.profile);
+                let query_graph = QueryGraph::from_graph(&self.graph, &self.graph, &mut snaps[..]);
+                let start = snaps[0].closest_node();
+                let end = snaps[1].closest_node();
+
                 let mut astar = AStar::new(&query_graph);
                 astar.calc_path(&weighting, start, end, Some(options))
             }
             Some(RoutingAlgorithm::BidirectionalAstar) => {
                 let weighting = self.create_weighting(&request.profile);
+                let query_graph = QueryGraph::from_graph(&self.graph, &self.graph, &mut snaps[..]);
+                let start = snaps[0].closest_node();
+                let end = snaps[1].closest_node();
                 let mut bdirastar = BidirectionalAStar::new(&query_graph);
                 bdirastar.calc_path(&weighting, start, end, Some(options))
             }
 
             Some(RoutingAlgorithm::Landmarks) => {
                 let weighting = self.create_weighting(&request.profile);
+                let query_graph = QueryGraph::from_graph(&self.graph, &self.graph, &mut snaps[..]);
+                let start = snaps[0].closest_node();
+                let end = snaps[1].closest_node();
                 let mut landmarks_astar = LMBidirectionalAstar::from_landmarks(
                     &query_graph,
                     &weighting,
@@ -192,19 +197,26 @@ impl Hermes {
                 Some(ch_storage) => {
                     let weighting = CHWeighting::new();
 
-                    let s = self.graph.edge(snaps[0].edge_id).start_node();
-                    let e = self.graph.edge(snaps[1].edge_id).end_node();
-
                     let ch_graph = CHGraph::new(ch_storage, &self.graph);
+
+                    let query_graph =
+                        QueryGraph::from_graph(&ch_graph, &self.graph, &mut snaps[..]);
+                    let start = snaps[0].closest_node();
+                    let end = snaps[1].closest_node();
+
                     let mut ch_bidirectional_dijkstra =
-                        CHLMAstar::from_landmarks(&ch_graph, &weighting, &self.lm, s, e);
-                    ch_bidirectional_dijkstra.calc_path(&weighting, s, e, Some(options))
+                        CHLMAstar::from_landmarks(&query_graph, &weighting, &self.lm, start, end);
+
+                    ch_bidirectional_dijkstra.calc_path(&weighting, start, end, Some(options))
                 }
                 None => return Err(String::from("CH Graph not found")),
             },
 
             None => {
                 let weighting = self.create_weighting(&request.profile);
+                let query_graph = QueryGraph::from_graph(&self.graph, &self.graph, &mut snaps[..]);
+                let start = snaps[0].closest_node();
+                let end = snaps[1].closest_node();
                 let mut bdirastar = BidirectionalAStar::new(&query_graph);
                 bdirastar.calc_path(&weighting, start, end, Some(options))
             }

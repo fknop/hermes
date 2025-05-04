@@ -361,17 +361,11 @@ where
             return RoutingPath::new(Vec::new());
         }
 
-        println!("start building path");
-
         // Get the forward path (start to meeting point)
         let mut forward_path = self.build_forward_path(graph, self.best_meeting_node);
 
-        println!("build_forward_path");
-
         // Get the backward path (meeting point to end) and append to forward path
         let backward_path = self.build_backward_path(graph, self.best_meeting_node);
-
-        println!("build_backward_path");
 
         // Combine the two paths
         forward_path.extend(backward_path);
@@ -413,7 +407,7 @@ where
 
 impl<G, H> CalcPath<G> for CHBidirectionalAStar<'_, G, H>
 where
-    G: Graph + DirectedEdgeAccess + GeometryAccess + UnfoldEdge + NodeRank,
+    G: Graph + DirectedEdgeAccess + GeometryAccess + UnfoldEdge,
     H: AStarHeuristic,
 {
     fn calc_path(
@@ -617,8 +611,6 @@ where
         println!("CHBidirectionalAStar nodes visited: {}", nodes_visited);
 
         let path = self.build_path(self.graph, weighting, start, end);
-
-        println!("Build path");
 
         let duration = stopwatch.elapsed();
         stopwatch.report();

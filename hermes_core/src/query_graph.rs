@@ -1,15 +1,22 @@
 use crate::{
     base_graph::{BaseGraph, BaseGraphEdge},
+    ch::{
+        ch_edge::{CHBaseEdge, CHGraphEdge},
+        ch_graph::CHGraph,
+    },
+    constants::{MAX_DURATION, MAX_WEIGHT},
     edge_direction::EdgeDirection,
     geometry::{
         compute_geometry_distance, create_virtual_geometries,
         create_virtual_geometry_between_points,
     },
     geopoint::GeoPoint,
-    graph::{GeometryAccess, Graph, UndirectedEdgeAccess},
+    graph::{DirectedEdgeAccess, GeometryAccess, Graph, UndirectedEdgeAccess, UnfoldEdge},
     graph_edge::GraphEdge,
     query_graph_overlay::QueryGraphOverlay,
     snap::Snap,
+    types::{EdgeId, NodeId},
+    weighting::{Milliseconds, Weight},
 };
 
 /// A dynamic graph that extends a base graph with virtual nodes and edges
@@ -20,16 +27,24 @@ use crate::{
 ///
 /// Virtual nodes are typically added when a query point (snap) lies along an existing edge,
 /// splitting that edge into two virtual edges connected by the new virtual node.
-pub(crate) struct QueryGraph<'a> {
+pub(crate) struct QueryGraph<'a, G>
+where
+    G: Graph + GeometryAccess + BuildVirtualEdge,
+{
+    graph: &'a G,
     base_graph: &'a BaseGraph,
-    overlay: QueryGraphOverlay<'a, BaseGraph>,
+    overlay: QueryGraphOverlay<'a, G>,
 }
 
-impl<'a> QueryGraph<'a> {
-    pub fn from_base_graph(base_graph: &'a BaseGraph, snaps: &mut [Snap]) -> Self {
+impl<'a, G> QueryGraph<'a, G>
+where
+    G: Graph + GeometryAccess + BuildVirtualEdge,
+{
+    pub fn from_graph(queried_graph: &'a G, base_graph: &'a BaseGraph, snaps: &mut [Snap]) -> Self {
         let mut query_graph = QueryGraph {
             base_graph,
-            overlay: QueryGraphOverlay::from_graph(base_graph),
+            graph: queried_graph,
+            overlay: QueryGraphOverlay::from_graph(queried_graph),
         };
 
         for snap in snaps.iter_mut() {
@@ -50,8 +65,8 @@ impl<'a> QueryGraph<'a> {
     /// But we also need to add the virtual edge A <-> S and S <-> B to a new adjacency list for A and B
     fn add_edges_from_snap(&mut self, snap: &mut Snap) {
         let edge_id = snap.edge_id;
-        let edge = self.base_graph.edge(edge_id);
-        let geometry = self.base_graph.edge_geometry(edge_id);
+        let edge = self.graph.edge(edge_id);
+        let geometry = self.graph.edge_geometry(edge_id);
 
         let edge_start_node = edge.start_node();
         let edge_end_node = edge.end_node();
@@ -78,12 +93,12 @@ impl<'a> QueryGraph<'a> {
         let virtual_edge_id_2 = virtual_edge_id_1 + 1;
 
         self.overlay.add_virtual_edge(
-            BaseGraphEdge::new(
+            self.graph.build_virtual_edge(
                 virtual_edge_id_1,
                 edge_start_node,
                 virtual_node,
-                compute_geometry_distance(&virtual_geometry_1),
-                edge.properties().clone(),
+                &virtual_geometry_1,
+                edge,
             ),
             virtual_geometry_1,
         );
@@ -93,12 +108,12 @@ impl<'a> QueryGraph<'a> {
             .connect_edge(virtual_edge_id_1, edge_start_node);
 
         self.overlay.add_virtual_edge(
-            BaseGraphEdge::new(
+            self.graph.build_virtual_edge(
                 virtual_edge_id_2,
                 virtual_node,
                 edge_end_node,
-                compute_geometry_distance(&virtual_geometry_2),
-                edge.properties().clone(),
+                &virtual_geometry_2,
+                edge,
             ),
             virtual_geometry_2,
         );
@@ -127,7 +142,7 @@ impl<'a> QueryGraph<'a> {
                         continue;
                     }
 
-                    let edge = self.base_graph.edge(snap_i.edge_id);
+                    let edge = self.graph.edge(snap_i.edge_id);
                     let geometry = self.edge_geometry(snap_i.edge_id);
                     let virtual_geometry = create_virtual_geometry_between_points(
                         geometry,
@@ -144,12 +159,12 @@ impl<'a> QueryGraph<'a> {
 
                     // Add the new edge and its geometry
                     self.overlay.add_virtual_edge(
-                        BaseGraphEdge::new(
+                        self.graph.build_virtual_edge(
                             virtual_edge_id,
                             start_node,
                             end_node,
-                            compute_geometry_distance(&virtual_geometry),
-                            edge.properties().clone(),
+                            &virtual_geometry,
+                            edge,
                         ),
                         virtual_geometry,
                     );
@@ -168,12 +183,15 @@ impl<'a> QueryGraph<'a> {
     }
 }
 
-impl GeometryAccess for QueryGraph<'_> {
+impl<G> GeometryAccess for QueryGraph<'_, G>
+where
+    G: Graph + GeometryAccess + BuildVirtualEdge,
+{
     fn edge_geometry(&self, edge_id: usize) -> &[GeoPoint] {
         if self.overlay.is_virtual_edge(edge_id) {
             self.overlay.virtual_edge_geometry(edge_id)
         } else {
-            self.base_graph.edge_geometry(edge_id)
+            self.graph.edge_geometry(edge_id)
         }
     }
 
@@ -187,16 +205,19 @@ impl GeometryAccess for QueryGraph<'_> {
                 EdgeDirection::Backward => &edge_geometry[edge_geometry.len() - 1],
             }
         } else {
-            self.base_graph.node_geometry(node_id)
+            self.graph.node_geometry(node_id)
         }
     }
 }
 
-impl Graph for QueryGraph<'_> {
-    type Edge = BaseGraphEdge;
+impl<G> Graph for QueryGraph<'_, G>
+where
+    G: Graph + GeometryAccess + BuildVirtualEdge,
+{
+    type Edge = G::Edge;
 
     fn is_virtual_node(&self, node_id: usize) -> bool {
-        node_id >= self.base_graph.node_count()
+        node_id >= self.graph.node_count()
     }
 
     fn edge_count(&self) -> usize {
@@ -207,11 +228,11 @@ impl Graph for QueryGraph<'_> {
         self.overlay.node_count()
     }
 
-    fn edge(&self, edge_id: usize) -> &BaseGraphEdge {
+    fn edge(&self, edge_id: usize) -> &G::Edge {
         if self.overlay.is_virtual_edge(edge_id) {
             self.overlay.virtual_edge(edge_id)
         } else {
-            self.base_graph.edge(edge_id)
+            self.graph.edge(edge_id)
         }
     }
 
@@ -230,24 +251,94 @@ impl Graph for QueryGraph<'_> {
                 start_node_id, edge_id
             )
         } else {
-            self.base_graph.edge_direction(edge_id, start_node_id)
+            self.graph.edge_direction(edge_id, start_node_id)
         }
     }
 }
 
-impl UndirectedEdgeAccess for QueryGraph<'_> {
+impl<G> UndirectedEdgeAccess for QueryGraph<'_, G>
+where
+    G: Graph + GeometryAccess + BuildVirtualEdge,
+{
     type EdgeIterator<'b>
-        = QueryGraphEdgeIterator<'b>
+        = UndirectedQueryGraphEdgeIterator<'b>
     where
         Self: 'b;
     fn node_edges_iter(&self, node_id: usize) -> Self::EdgeIterator<'_> {
         if self.is_virtual_node(node_id) {
-            QueryGraphEdgeIterator::new(&[], self.overlay.node_virtual_edges(node_id))
+            UndirectedQueryGraphEdgeIterator::new(&[], self.overlay.node_virtual_edges(node_id))
         } else {
             let virtual_edges = self.overlay.node_virtual_edges(node_id);
             let base_edges = self.base_graph.node_edges(node_id);
 
-            QueryGraphEdgeIterator::new(base_edges, virtual_edges)
+            UndirectedQueryGraphEdgeIterator::new(base_edges, virtual_edges)
+        }
+    }
+}
+
+impl<'a> DirectedEdgeAccess for QueryGraph<'a, CHGraph<'a>> {
+    type EdgeIterator<'b>
+        = DirectedQueryGraphEdgeIterator<'b>
+    where
+        Self: 'b;
+
+    fn node_incoming_edges_iter(&self, node_id: NodeId) -> Self::EdgeIterator<'_> {
+        let virtual_edges: Vec<EdgeId> = self
+            .overlay
+            .node_virtual_edges(node_id)
+            .iter()
+            .filter(|&&edge_id| {
+                let edge = self.edge(edge_id);
+
+                match edge {
+                    CHGraphEdge::Edge(e) if e.start == node_id => e.backward_weight != MAX_WEIGHT,
+                    CHGraphEdge::Edge(e) if e.end == node_id => e.forward_weight != MAX_WEIGHT,
+                    _ => false,
+                }
+            })
+            .copied()
+            .collect();
+        if self.is_virtual_node(node_id) {
+            DirectedQueryGraphEdgeIterator::new(&[], virtual_edges)
+        } else {
+            let base_edges = self.graph.node_incoming_edges(node_id);
+
+            DirectedQueryGraphEdgeIterator::new(base_edges, virtual_edges)
+        }
+    }
+
+    fn node_outgoing_edges_iter(&self, node_id: NodeId) -> Self::EdgeIterator<'_> {
+        let virtual_edges: Vec<EdgeId> = self
+            .overlay
+            .node_virtual_edges(node_id)
+            .iter()
+            .filter(|&&edge_id| {
+                let edge = self.edge(edge_id);
+
+                match edge {
+                    CHGraphEdge::Edge(e) if e.start == node_id => e.forward_weight != MAX_WEIGHT,
+                    CHGraphEdge::Edge(e) if e.end == node_id => e.backward_weight != MAX_WEIGHT,
+                    _ => false,
+                }
+            })
+            .copied()
+            .collect();
+        if self.is_virtual_node(node_id) {
+            DirectedQueryGraphEdgeIterator::new(&[], virtual_edges)
+        } else {
+            let base_edges = self.graph.node_outgoing_edges(node_id);
+
+            DirectedQueryGraphEdgeIterator::new(base_edges, virtual_edges)
+        }
+    }
+}
+
+impl UnfoldEdge for QueryGraph<'_, CHGraph<'_>> {
+    fn unfold_edge(&self, edge_id: EdgeId, edges: &mut Vec<EdgeId>) {
+        if self.overlay.is_virtual_edge(edge_id) {
+            edges.push(edge_id);
+        } else {
+            self.graph.unfold_edge(edge_id, edges);
         }
     }
 }
@@ -257,15 +348,15 @@ impl UndirectedEdgeAccess for QueryGraph<'_> {
 /// This iterator will first yield all base edges, followed by all virtual edges.
 /// It is used internally by the QueryGraph to provide a unified view of both
 /// the original graph edges and dynamically added virtual edges.
-pub struct QueryGraphEdgeIterator<'a> {
+pub struct UndirectedQueryGraphEdgeIterator<'a> {
     base_edges: &'a [usize],
     virtual_edges: &'a [usize],
     index: usize,
 }
 
-impl<'a> QueryGraphEdgeIterator<'a> {
+impl<'a> UndirectedQueryGraphEdgeIterator<'a> {
     fn new(base_edges: &'a [usize], virtual_edges: &'a [usize]) -> Self {
-        QueryGraphEdgeIterator {
+        UndirectedQueryGraphEdgeIterator {
             base_edges,
             virtual_edges,
             index: 0,
@@ -273,7 +364,7 @@ impl<'a> QueryGraphEdgeIterator<'a> {
     }
 }
 
-impl Iterator for QueryGraphEdgeIterator<'_> {
+impl Iterator for UndirectedQueryGraphEdgeIterator<'_> {
     type Item = usize;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -292,5 +383,146 @@ impl Iterator for QueryGraphEdgeIterator<'_> {
         }
 
         None
+    }
+}
+
+pub struct DirectedQueryGraphEdgeIterator<'a> {
+    base_edges: &'a [EdgeId],
+    virtual_edges: Vec<EdgeId>,
+    index: usize,
+}
+
+impl<'a> DirectedQueryGraphEdgeIterator<'a> {
+    fn new(base_edges: &'a [EdgeId], virtual_edges: Vec<EdgeId>) -> Self {
+        DirectedQueryGraphEdgeIterator {
+            base_edges,
+            virtual_edges,
+            index: 0,
+        }
+    }
+}
+
+impl Iterator for DirectedQueryGraphEdgeIterator<'_> {
+    type Item = usize;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index < self.base_edges.len() {
+            let edge_id = self.base_edges[self.index];
+            self.index += 1;
+
+            return Some(edge_id);
+        }
+
+        if self.index - self.base_edges.len() < self.virtual_edges.len() {
+            let edge_id = self.virtual_edges[self.index - self.base_edges.len()];
+            self.index += 1;
+
+            return Some(edge_id);
+        }
+
+        None
+    }
+}
+
+pub trait BuildVirtualEdge
+where
+    Self: Graph,
+{
+    fn build_virtual_edge(
+        &self,
+        virtual_edge_id: EdgeId,
+        start: NodeId,
+        end: NodeId,
+        geometry: &[GeoPoint],
+        initial_edge: &Self::Edge,
+    ) -> Self::Edge;
+}
+
+impl BuildVirtualEdge for BaseGraph {
+    fn build_virtual_edge(
+        &self,
+        virtual_edge_id: EdgeId,
+        start: NodeId,
+        end: NodeId,
+        geometry: &[GeoPoint],
+        initial_edge: &BaseGraphEdge,
+    ) -> BaseGraphEdge {
+        BaseGraphEdge::new(
+            virtual_edge_id,
+            start,
+            end,
+            compute_geometry_distance(geometry),
+            initial_edge.properties().clone(),
+        )
+    }
+}
+
+impl BuildVirtualEdge for CHGraph<'_> {
+    fn build_virtual_edge(
+        &self,
+        virtual_edge_id: EdgeId,
+        start: NodeId,
+        end: NodeId,
+        geometry: &[GeoPoint],
+        initial_edge: &CHGraphEdge,
+    ) -> CHGraphEdge {
+        let distance = compute_geometry_distance(geometry);
+        let original_distance = initial_edge.distance();
+        let ratio = distance / original_distance;
+
+        match &initial_edge {
+            CHGraphEdge::Edge(edge) => {
+                let direction =
+                    if end == initial_edge.end_node() || start == initial_edge.start_node() {
+                        EdgeDirection::Forward
+                    } else {
+                        EdgeDirection::Backward
+                    };
+
+                let (forward_time, backward_time, forward_weight, backward_weight) = match direction
+                {
+                    EdgeDirection::Forward => (
+                        edge.forward_time,
+                        edge.backward_time,
+                        edge.forward_weight,
+                        edge.backward_weight,
+                    ),
+                    EdgeDirection::Backward => (
+                        edge.backward_time,
+                        edge.forward_time,
+                        edge.backward_weight,
+                        edge.forward_weight,
+                    ),
+                };
+
+                CHGraphEdge::Edge(CHBaseEdge {
+                    id: virtual_edge_id,
+                    start,
+                    end,
+                    distance: compute_geometry_distance(geometry),
+                    forward_time: if forward_time == MAX_DURATION {
+                        MAX_DURATION
+                    } else {
+                        (forward_time as f64 * ratio).round() as Milliseconds
+                    },
+                    backward_time: if backward_time == MAX_DURATION {
+                        MAX_DURATION
+                    } else {
+                        (backward_time as f64 * ratio).round() as Milliseconds
+                    },
+                    forward_weight: if forward_weight == MAX_WEIGHT {
+                        MAX_WEIGHT
+                    } else {
+                        (forward_weight as f64 * ratio).round() as Weight
+                    },
+                    backward_weight: if backward_weight == MAX_WEIGHT {
+                        MAX_WEIGHT
+                    } else {
+                        (backward_weight as f64 * ratio).round() as Weight
+                    },
+                })
+            }
+            _ => panic!("Could not create a virtual edge from a shortcut edge"),
+        }
     }
 }

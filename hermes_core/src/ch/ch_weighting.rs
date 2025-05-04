@@ -1,6 +1,7 @@
 use crate::{
     constants::MAX_WEIGHT,
     edge_direction::EdgeDirection,
+    query_graph::QueryGraph,
     weighting::{Milliseconds, Weight, Weighting},
 };
 
@@ -14,7 +15,7 @@ impl CHWeighting {
     }
 }
 
-impl Weighting<CHGraph<'_>> for CHWeighting {
+impl Weighting<QueryGraph<'_, CHGraph<'_>>> for CHWeighting {
     fn calc_edge_weight(&self, edge: &CHGraphEdge, direction: EdgeDirection) -> Weight {
         match edge {
             CHGraphEdge::Edge(edge) => match direction {

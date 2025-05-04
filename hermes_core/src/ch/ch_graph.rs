@@ -28,6 +28,14 @@ impl<'a> CHGraph<'a> {
             base_graph,
         }
     }
+
+    pub fn node_incoming_edges(&self, node_id: NodeId) -> &[usize] {
+        self.storage.incoming_edges(node_id)
+    }
+
+    pub fn node_outgoing_edges(&self, node_id: NodeId) -> &[usize] {
+        self.storage.outgoing_edges(node_id)
+    }
 }
 
 impl NodeRank for CHGraph<'_> {
