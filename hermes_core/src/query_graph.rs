@@ -261,74 +261,46 @@ where
     G: Graph + GeometryAccess + BuildVirtualEdge,
 {
     type EdgeIterator<'b>
-        = UndirectedQueryGraphEdgeIterator<'b>
+        = QueryGraphEdgeIterator<'b>
     where
         Self: 'b;
     fn node_edges_iter(&self, node_id: usize) -> Self::EdgeIterator<'_> {
         if self.is_virtual_node(node_id) {
-            UndirectedQueryGraphEdgeIterator::new(&[], self.overlay.node_virtual_edges(node_id))
+            QueryGraphEdgeIterator::new(&[], self.overlay.node_virtual_edges(node_id))
         } else {
             let virtual_edges = self.overlay.node_virtual_edges(node_id);
             let base_edges = self.base_graph.node_edges(node_id);
 
-            UndirectedQueryGraphEdgeIterator::new(base_edges, virtual_edges)
+            QueryGraphEdgeIterator::new(base_edges, virtual_edges)
         }
     }
 }
 
 impl<'a> DirectedEdgeAccess for QueryGraph<'a, CHGraph<'a>> {
     type EdgeIterator<'b>
-        = DirectedQueryGraphEdgeIterator<'b>
+        = QueryGraphEdgeIterator<'b>
     where
         Self: 'b;
 
     fn node_incoming_edges_iter(&self, node_id: NodeId) -> Self::EdgeIterator<'_> {
-        let virtual_edges: Vec<EdgeId> = self
-            .overlay
-            .node_virtual_edges(node_id)
-            .iter()
-            .filter(|&&edge_id| {
-                let edge = self.edge(edge_id);
-
-                match edge {
-                    CHGraphEdge::Edge(e) if e.start == node_id => e.backward_weight != MAX_WEIGHT,
-                    CHGraphEdge::Edge(e) if e.end == node_id => e.forward_weight != MAX_WEIGHT,
-                    _ => false,
-                }
-            })
-            .copied()
-            .collect();
+        let virtual_edges = self.overlay.node_virtual_edges(node_id);
         if self.is_virtual_node(node_id) {
-            DirectedQueryGraphEdgeIterator::new(&[], virtual_edges)
+            QueryGraphEdgeIterator::new(&[], virtual_edges)
         } else {
             let base_edges = self.graph.node_incoming_edges(node_id);
 
-            DirectedQueryGraphEdgeIterator::new(base_edges, virtual_edges)
+            QueryGraphEdgeIterator::new(base_edges, virtual_edges)
         }
     }
 
     fn node_outgoing_edges_iter(&self, node_id: NodeId) -> Self::EdgeIterator<'_> {
-        let virtual_edges: Vec<EdgeId> = self
-            .overlay
-            .node_virtual_edges(node_id)
-            .iter()
-            .filter(|&&edge_id| {
-                let edge = self.edge(edge_id);
-
-                match edge {
-                    CHGraphEdge::Edge(e) if e.start == node_id => e.forward_weight != MAX_WEIGHT,
-                    CHGraphEdge::Edge(e) if e.end == node_id => e.backward_weight != MAX_WEIGHT,
-                    _ => false,
-                }
-            })
-            .copied()
-            .collect();
+        let virtual_edges = self.overlay.node_virtual_edges(node_id);
         if self.is_virtual_node(node_id) {
-            DirectedQueryGraphEdgeIterator::new(&[], virtual_edges)
+            QueryGraphEdgeIterator::new(&[], virtual_edges)
         } else {
             let base_edges = self.graph.node_outgoing_edges(node_id);
 
-            DirectedQueryGraphEdgeIterator::new(base_edges, virtual_edges)
+            QueryGraphEdgeIterator::new(base_edges, virtual_edges)
         }
     }
 }
@@ -348,15 +320,15 @@ impl UnfoldEdge for QueryGraph<'_, CHGraph<'_>> {
 /// This iterator will first yield all base edges, followed by all virtual edges.
 /// It is used internally by the QueryGraph to provide a unified view of both
 /// the original graph edges and dynamically added virtual edges.
-pub struct UndirectedQueryGraphEdgeIterator<'a> {
+pub struct QueryGraphEdgeIterator<'a> {
     base_edges: &'a [usize],
     virtual_edges: &'a [usize],
     index: usize,
 }
 
-impl<'a> UndirectedQueryGraphEdgeIterator<'a> {
+impl<'a> QueryGraphEdgeIterator<'a> {
     fn new(base_edges: &'a [usize], virtual_edges: &'a [usize]) -> Self {
-        UndirectedQueryGraphEdgeIterator {
+        QueryGraphEdgeIterator {
             base_edges,
             virtual_edges,
             index: 0,
@@ -364,7 +336,7 @@ impl<'a> UndirectedQueryGraphEdgeIterator<'a> {
     }
 }
 
-impl Iterator for UndirectedQueryGraphEdgeIterator<'_> {
+impl Iterator for QueryGraphEdgeIterator<'_> {
     type Item = usize;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -380,44 +352,6 @@ impl Iterator for UndirectedQueryGraphEdgeIterator<'_> {
             let edge = self.virtual_edges[virtual_index];
             self.index += 1;
             return Some(edge);
-        }
-
-        None
-    }
-}
-
-pub struct DirectedQueryGraphEdgeIterator<'a> {
-    base_edges: &'a [EdgeId],
-    virtual_edges: Vec<EdgeId>,
-    index: usize,
-}
-
-impl<'a> DirectedQueryGraphEdgeIterator<'a> {
-    fn new(base_edges: &'a [EdgeId], virtual_edges: Vec<EdgeId>) -> Self {
-        DirectedQueryGraphEdgeIterator {
-            base_edges,
-            virtual_edges,
-            index: 0,
-        }
-    }
-}
-
-impl Iterator for DirectedQueryGraphEdgeIterator<'_> {
-    type Item = usize;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.index < self.base_edges.len() {
-            let edge_id = self.base_edges[self.index];
-            self.index += 1;
-
-            return Some(edge_id);
-        }
-
-        if self.index - self.base_edges.len() < self.virtual_edges.len() {
-            let edge_id = self.virtual_edges[self.index - self.base_edges.len()];
-            self.index += 1;
-
-            return Some(edge_id);
         }
 
         None
