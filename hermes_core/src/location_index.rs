@@ -65,7 +65,8 @@ pub struct LocationIndex {
 
 impl LocationIndex {
     pub fn build_from_graph(graph: &BaseGraph) -> LocationIndex {
-        let stopwatch = Stopwatch::new("build_location_index");
+        let mut stopwatch = Stopwatch::new(String::from("build_location_index"));
+        stopwatch.start();
         let tree: RTree<LocationIndexObject> = RTree::bulk_load(
             (0..graph.edge_count())
                 .map(|edge_id| {
@@ -76,13 +77,15 @@ impl LocationIndex {
                 .collect(),
         );
 
+        stopwatch.stop();
         stopwatch.report();
 
         LocationIndex { tree }
     }
 
     pub fn save_to_file(&self, path: &str) -> Result<usize, bincode::error::EncodeError> {
-        let stopwatch = Stopwatch::new("location_index/save_to_file");
+        let mut stopwatch = Stopwatch::new(String::from("location_index/save_to_file"));
+        stopwatch.start();
         let mut file = File::create(path).expect("failed to create file");
         let mut writer = BufWriter::new(&mut file);
         let result = bincode::serde::encode_into_std_write(
@@ -90,17 +93,22 @@ impl LocationIndex {
             &mut writer,
             bincode::config::standard(),
         );
+        stopwatch.stop();
         stopwatch.report();
         result
     }
 
     pub fn load_from_file(path: &str) -> Self {
-        let stopwatch = Stopwatch::new("location_index/load_from_file");
+        let mut stopwatch = Stopwatch::new(String::from("location_index/load_from_file"));
+        stopwatch.start();
         let mut file = File::open(path).expect("failed to open file");
         let mut reader = BufReader::new(&mut file);
+
         let result: Result<RTree<LocationIndexObject>, bincode::error::DecodeError> =
             bincode::serde::decode_from_std_read(&mut reader, bincode::config::standard());
         let tree = result.unwrap();
+
+        stopwatch.stop();
         stopwatch.report();
         LocationIndex { tree }
     }

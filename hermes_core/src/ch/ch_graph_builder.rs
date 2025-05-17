@@ -1,4 +1,7 @@
-use std::cmp;
+use std::{
+    cmp,
+    time::{Duration, Instant},
+};
 
 use rand::distr::{Distribution, Uniform};
 
@@ -8,29 +11,53 @@ use crate::{
     edge_direction::EdgeDirection,
     graph::{Graph, UndirectedEdgeAccess},
     graph_edge::GraphEdge,
+    stopwatch::Stopwatch,
     types::NodeId,
     weighting::Weighting,
 };
 
 use super::{
-    preparation_graph::{CHPreparationGraph, CHPreparationGraphEdge, PreparationGraphWeighting},
+    preparation_graph::{
+        self, CHPreparationGraph, CHPreparationGraphEdge, PreparationGraphWeighting,
+    },
     shortcut::PreparationShortcut,
     witness_search::WitnessSearch,
 };
 
 pub struct CHGraphBuilder<'a> {
     base_graph: &'a BaseGraph,
+    build_stopwatch: Stopwatch,
+    recompute_priority_stopwatch: Stopwatch,
+    recompute_neighbors_priority_stopwatch: Stopwatch,
+    contract_node_stopwatch: Stopwatch,
+    contracted_nodes: usize,
+    skipped_nodes: usize,
+    added_shortcuts: usize,
 }
 
 impl<'a> CHGraphBuilder<'a> {
     pub fn from_base_graph(base_graph: &'a BaseGraph) -> Self {
-        Self { base_graph }
+        Self {
+            base_graph,
+            build_stopwatch: Stopwatch::new(String::from("build_ch_graph")),
+            recompute_priority_stopwatch: Stopwatch::new(String::from("recompute_priority")),
+            recompute_neighbors_priority_stopwatch: Stopwatch::new(String::from(
+                "recompute_neighbors_priority",
+            )),
+            contract_node_stopwatch: Stopwatch::new(String::from("contract_node")),
+            skipped_nodes: 0,
+            contracted_nodes: 0,
+            added_shortcuts: 0,
+        }
     }
 
-    pub fn build<W>(&self, weighting: &W) -> CHStorage
+    pub fn build<W>(&mut self, weighting: &W) -> CHStorage
     where
         W: Weighting<BaseGraph> + Send + Sync,
     {
+        self.build_stopwatch.start();
+        let mut last_reported_time = Instant::now();
+
         let mut rng = rand::rng();
         let dist = Uniform::new_inclusive(0, 100).unwrap();
 
@@ -46,17 +73,13 @@ impl<'a> CHGraphBuilder<'a> {
         println!("Node count {}", self.base_graph.node_count());
 
         for node_id in 0..self.base_graph.node_count() {
-            let priority = CHGraphBuilder::calc_priority(
+            let priority = self.calc_priority(
                 &mut preparation_graph,
                 &mut witness_search,
                 &preparation_weighting,
                 0,
                 node_id,
             );
-
-            if node_id % 100000 == 0 {
-                println!("Priority for node {} is {}", node_id, priority);
-            }
 
             priority_queue
                 .push(node_id, priority)
@@ -65,28 +88,27 @@ impl<'a> CHGraphBuilder<'a> {
 
         println!("Finish computing priority for every node");
 
-        let mut added_shortcuts = 0;
-        let mut contracted_nodes = 0;
-        let mut skipped_nodes = 0;
         let mut rank = 0;
 
         while let Some((node_id, priority)) = priority_queue.pop() {
             // Lazy recomputation of the priority
             // If the recomputed priority is less than the next node to be contracted, we re-enqueue the node
 
-            if contracted_nodes > 1800000 {
+            if self.contracted_nodes > 1800000 {
                 println!("Remaining nodes {}", priority_queue.len());
             }
 
             if priority != i32::MIN {
                 if let Some((_, least_priority)) = priority_queue.peek() {
-                    let recomputed_priority = CHGraphBuilder::calc_priority(
+                    self.recompute_priority_stopwatch.start();
+                    let recomputed_priority = self.calc_priority(
                         &mut preparation_graph,
                         &mut witness_search,
                         &preparation_weighting,
                         hierarchies[node_id],
                         node_id,
                     );
+                    self.recompute_priority_stopwatch.stop();
 
                     if recomputed_priority > *least_priority {
                         priority_queue
@@ -109,8 +131,6 @@ impl<'a> CHGraphBuilder<'a> {
 
                 match edge {
                     CHPreparationGraphEdge::Edge(base_edge) => {
-                        // TODO: make sure directions are correct
-                        // From start to end
                         let forward_weight =
                             weighting.calc_edge_weight(base_edge, EdgeDirection::Forward);
                         let forward_time =
@@ -135,17 +155,14 @@ impl<'a> CHGraphBuilder<'a> {
                     }
                     CHPreparationGraphEdge::Shortcut(shortcut) => {
                         ch_storage.add_shortcut(shortcut.clone());
-                        added_shortcuts += 1;
+                        self.added_shortcuts += 1;
                     }
                 }
             }
 
             // Update hierarchy of neighbors
             for &neighbor in neighbors.iter() {
-                if neighbor != node_id {
-                    hierarchies[neighbor] =
-                        cmp::max(hierarchies[neighbor], hierarchies[node_id] + 1);
-                }
+                hierarchies[neighbor] = cmp::max(hierarchies[neighbor], hierarchies[node_id] + 1);
             }
 
             ch_storage.set_node_rank(node_id, rank);
@@ -155,27 +172,27 @@ impl<'a> CHGraphBuilder<'a> {
             let percentage = 95;
 
             if preparation_graph.node_degree(node_id) == 0 || dist.sample(&mut rng) > percentage {
-                skipped_nodes += 1;
+                self.skipped_nodes += 1;
                 preparation_graph.disconnect_node(node_id);
                 continue;
             }
 
-            CHGraphBuilder::contract_node(
+            self.contract_node(
                 &mut preparation_graph,
                 &mut witness_search,
                 &preparation_weighting,
                 node_id,
             );
 
-            contracted_nodes += 1;
+            self.contracted_nodes += 1;
 
             // TODO: better condition
-            if contracted_nodes % 500000 == 0 && added_shortcuts > 0 {
+            if self.contracted_nodes % 500000 == 0 && self.added_shortcuts > 0 {
                 println!("Recompute all remaining priorities");
                 let remaining_nodes: Vec<(NodeId, i32)> = priority_queue.to_vec();
                 priority_queue.clear();
                 for (node_id, _) in remaining_nodes {
-                    let priority = CHGraphBuilder::calc_priority(
+                    let priority = self.calc_priority(
                         &mut preparation_graph,
                         &mut witness_search,
                         &preparation_weighting,
@@ -190,8 +207,9 @@ impl<'a> CHGraphBuilder<'a> {
             } else {
                 let max_neighbor_update = 3;
                 let mut neighbor_count = 0;
+                self.recompute_neighbors_priority_stopwatch.start();
                 for neighbor in neighbors {
-                    let recomputed_neighbor_priority = CHGraphBuilder::calc_priority(
+                    let recomputed_neighbor_priority = self.calc_priority(
                         &mut preparation_graph,
                         &mut witness_search,
                         &preparation_weighting,
@@ -205,34 +223,79 @@ impl<'a> CHGraphBuilder<'a> {
                         break;
                     }
                 }
+                self.recompute_neighbors_priority_stopwatch.stop();
             }
 
-            if contracted_nodes % 100000 == 0 {
-                println!("Contracted nodes {}", contracted_nodes);
-                println!("added shortcuts {}", added_shortcuts)
+            if last_reported_time.elapsed().as_millis() > 5000 {
+                self.report_timings(&preparation_graph);
+                last_reported_time = Instant::now();
             }
         }
 
-        println!("Finished contraction");
+        self.report_timings(&preparation_graph);
         println!(
             "Added {} shortcuts for {} base edges",
-            added_shortcuts,
+            self.added_shortcuts,
             self.base_graph.edge_count()
         );
-        println!("Contracted nodes {}", contracted_nodes);
-        println!("Skipped nodes {}", skipped_nodes);
+        println!("Finished contraction");
 
         ch_storage.check();
 
         ch_storage
     }
 
+    fn report_timings(&self, preparation_graph: &CHPreparationGraph) {
+        let current_duration = self.build_stopwatch.elapsed();
+        let contract_node_duration = self.contract_node_stopwatch.total_duration();
+        let recompute_priority_duration = self.recompute_priority_stopwatch.total_duration();
+        let recompute_neighbors_duration =
+            self.recompute_neighbors_priority_stopwatch.total_duration();
+
+        println!(
+            "{:20} {:20} {:20} {:20} {:20} {:20} {:20} {:20} {:20}",
+            "Total",
+            "Contract",
+            "Recompute Prio.",
+            "Recompute N. Prio.",
+            "Contracted nodes",
+            "Skipped nodes",
+            "Remaining nodes",
+            "Shortcuts",
+            "Mean degree"
+        );
+
+        println!(
+            "{:20} {:20} {:20} {:20} {:20} {:20} {:20} {:20} {:20}",
+            format!("{}ms", current_duration.as_millis()),
+            CHGraphBuilder::format_percentage(&current_duration, &contract_node_duration),
+            CHGraphBuilder::format_percentage(&current_duration, &recompute_priority_duration),
+            CHGraphBuilder::format_percentage(&current_duration, &recompute_neighbors_duration),
+            format!("{}", self.contracted_nodes),
+            format!("{}", self.skipped_nodes),
+            format!(
+                "{}",
+                self.base_graph.node_count() - self.contracted_nodes - self.skipped_nodes
+            ),
+            format!("{}", self.added_shortcuts),
+            format!("{:.2}", preparation_graph.mean_degree())
+        );
+    }
+
+    fn format_percentage(total: &Duration, duration: &Duration) -> String {
+        let percentage = duration.as_millis() as f64 / total.as_millis() as f64 * 100.0;
+        format!("{:.2}%", percentage)
+    }
+
     fn contract_node(
+        &mut self,
         graph: &mut CHPreparationGraph<'a>,
         witness_search: &mut WitnessSearch,
         weighting: &impl Weighting<CHPreparationGraph<'a>>,
         node: NodeId,
     ) {
+        self.contract_node_stopwatch.start();
+
         let shortcuts = CHGraphBuilder::find_shortcuts(
             graph,
             witness_search,
@@ -246,9 +309,12 @@ impl<'a> CHGraphBuilder<'a> {
         }
 
         graph.disconnect_node(node);
+
+        self.contract_node_stopwatch.stop();
     }
 
     fn calc_priority(
+        &mut self,
         graph: &mut CHPreparationGraph<'a>,
         witness_search: &mut WitnessSearch,
         weighting: &impl Weighting<CHPreparationGraph<'a>>,
@@ -260,7 +326,7 @@ impl<'a> CHGraphBuilder<'a> {
             witness_search,
             weighting,
             node,
-            (graph.mean_degree() * 5.0).round() as usize,
+            (graph.mean_degree() * 10.0).round() as usize,
         );
 
         let degree = graph.node_degree(node);
@@ -270,8 +336,8 @@ impl<'a> CHGraphBuilder<'a> {
             return i32::MIN;
         }
 
-        let edge_difference = (shortcuts.len() as f32) / (degree as f32);
-        let priority = (hierarchy as f32 * 20.0) + (edge_difference * 100.0);
+        let edge_quotient = (shortcuts.len() as f32) / (degree as f32);
+        let priority = (hierarchy as f32 * 20.0) + (edge_quotient * 100.0);
         (priority * 1000.0).round() as i32
     }
 

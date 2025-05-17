@@ -415,8 +415,8 @@ where
         end: usize,
         options: Option<CalcPathOptions>,
     ) -> Result<CalcPathResult, String> {
-        let stopwatch = Stopwatch::new("bidirectional_astar/calc_path");
-
+        let mut stopwatch = Stopwatch::new(String::from("bidirectional_astar/calc_path"));
+        stopwatch.start();
         if start == INVALID_NODE {
             return Err(String::from("BidirectionalAStar: start node is invalid"));
         }
@@ -610,8 +610,10 @@ where
 
         let path = self.build_path(self.graph, weighting, start, end);
 
-        let duration = stopwatch.elapsed();
+        stopwatch.stop();
         stopwatch.report();
+
+        let duration = stopwatch.total_duration();
 
         let debug = if include_debug_info {
             Some(self.debug_info(self.graph))

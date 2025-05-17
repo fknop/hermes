@@ -3,21 +3,35 @@ use std::{
     time::{Duration, Instant},
 };
 
-pub struct Stopwatch<'a> {
-    start_time: Instant,
-    name: &'a str,
+pub struct Stopwatch {
+    start: Instant,
+    name: String,
+    elapsed_duration: Duration,
 }
 
-impl<'a> Stopwatch<'a> {
-    pub fn new(name: &'a str) -> Self {
+impl Stopwatch {
+    pub fn new(name: String) -> Self {
         Self {
-            start_time: Instant::now(),
+            start: Instant::now(),
+            elapsed_duration: Duration::ZERO,
             name,
         }
     }
 
+    pub fn start(&mut self) {
+        self.start = Instant::now();
+    }
+
+    pub fn stop(&mut self) {
+        self.elapsed_duration += self.start.elapsed();
+    }
+
+    pub fn total_duration(&self) -> Duration {
+        self.elapsed_duration
+    }
+
     pub fn elapsed(&self) -> Duration {
-        Instant::now() - self.start_time
+        self.start.elapsed()
     }
 
     pub fn report(&self) {
@@ -25,8 +39,17 @@ impl<'a> Stopwatch<'a> {
     }
 }
 
-impl Display for Stopwatch<'_> {
+impl Display for Stopwatch {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "[{}]: {:?}", self.name, self.elapsed())
+        write!(f, "[{}]: {:?}", self.name, self.elapsed_duration)
     }
+}
+
+#[macro_export]
+macro_rules! timer {
+    ($sw:ident, $block:block) => {
+        $sw.start();
+        $block;
+        $sw.stop();
+    };
 }

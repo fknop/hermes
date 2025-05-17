@@ -12,7 +12,9 @@ use crate::location_index::LocationIndex;
 use crate::query::query_graph::QueryGraph;
 use crate::routing::astar::AStar;
 use crate::routing::bidirectional_astar::BidirectionalAStar;
-use crate::routing::ch_bidirectional_dijkstra::CHLMAstar;
+use crate::routing::ch_bidirectional_dijkstra::{
+    CHBidirectionalAStar, CHBidirectionalDijkstra, CHLMAstar,
+};
 use crate::routing::dijkstra::Dijkstra;
 use crate::routing::routing_request::{RoutingAlgorithm, RoutingRequest};
 
@@ -95,7 +97,7 @@ impl Hermes {
 
         let index = LocationIndex::build_from_graph(&graph);
 
-        let ch_builder = CHGraphBuilder::from_base_graph(&graph);
+        let mut ch_builder = CHGraphBuilder::from_base_graph(&graph);
         let ch_storage = ch_builder.build(&weighting);
 
         Hermes {
@@ -117,22 +119,15 @@ impl Hermes {
     pub fn route(&self, request: RoutingRequest) -> Result<CalcPathResult, String> {
         let base_graph_weighting = self.create_weighting(&request.profile);
 
-        let start_snap_stop_watch = Stopwatch::new("snap/start");
         let start_snap = self
             .index()
             .snap(&self.graph, &base_graph_weighting, &request.start)
             .expect("no way to avenue closest way");
 
-        start_snap_stop_watch.report();
-
-        let end_snap_stop_watch = Stopwatch::new("snap/end");
-
         let end_snap = self
             .index()
             .snap(&self.graph, &base_graph_weighting, &request.end)
             .expect("no way to rue des palais way");
-
-        end_snap_stop_watch.report();
 
         let mut snaps = [start_snap, end_snap];
 
@@ -194,6 +189,8 @@ impl Hermes {
                         QueryGraph::from_graph(&ch_graph, &self.graph, &mut snaps[..]);
                     let start = snaps[0].closest_node();
                     let end = snaps[1].closest_node();
+
+                    // let mut ch_bidirectional_dijkstra = CHBidirectionalAStar::new(&query_graph);
 
                     let mut ch_bidirectional_dijkstra =
                         CHLMAstar::from_landmarks(&query_graph, &weighting, &self.lm, start, end);

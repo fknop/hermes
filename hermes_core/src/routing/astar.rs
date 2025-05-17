@@ -242,7 +242,8 @@ where
     where
         G: Graph + UndirectedEdgeAccess + GeometryAccess,
     {
-        let stopwatch = Stopwatch::new("astar/calc_path");
+        let mut stopwatch = Stopwatch::new(String::from("astar/calc_path"));
+        stopwatch.start();
         if start == INVALID_NODE {
             return Err(String::from("AStar: start node is invalid"));
         }
@@ -323,8 +324,11 @@ where
         println!("AStar nodes visited: {}", nodes_visited);
 
         let path = self.build_path(self.graph, weighting, start, end);
-        let duration = stopwatch.elapsed();
+
+        stopwatch.stop();
         stopwatch.report();
+
+        let duration = stopwatch.total_duration();
 
         Ok(CalcPathResult {
             path,

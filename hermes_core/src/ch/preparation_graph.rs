@@ -14,6 +14,7 @@ use crate::{
 
 use super::shortcut::{PreparationShortcut, Shortcut};
 
+#[derive(Debug)]
 pub enum CHPreparationGraphEdge<'a> {
     Shortcut(Shortcut),
     Edge(&'a BaseGraphEdge),
@@ -125,11 +126,11 @@ impl<'a> CHPreparationGraph<'a> {
         let start_node = edge.start_node();
         let end_node = edge.end_node();
 
-        self.incoming_edges[start_node].retain(|e| *e != edge_id);
-        self.outgoing_edges[start_node].retain(|e| *e != edge_id);
+        self.incoming_edges[start_node].retain(|&e| e != edge_id);
+        self.outgoing_edges[start_node].retain(|&e| e != edge_id);
 
-        self.incoming_edges[end_node].retain(|e| *e != edge_id);
-        self.outgoing_edges[end_node].retain(|e| *e != edge_id);
+        self.incoming_edges[end_node].retain(|&e| e != edge_id);
+        self.outgoing_edges[end_node].retain(|&e| e != edge_id);
     }
 
     pub fn disconnect_node(&mut self, node_id: NodeId) {
@@ -143,23 +144,27 @@ impl<'a> CHPreparationGraph<'a> {
             all_edges.extend(edges);
         }
 
-        let degree = all_edges.len();
-
-        if degree > 0 {
-            self.mean_degree = (self.mean_degree * 2.0 + degree as f64) / 3.0;
-        }
-
+        let mut neighbors = FxHashSet::default();
         for edge_id in all_edges {
+            let adj_node = self.edge(edge_id).adj_node(node_id);
+            neighbors.insert(adj_node);
             self.remove_edge(edge_id);
         }
+
+        let degree = neighbors.len();
+
+        // if degree > 0 {
+        // Maintain an approximation of a moving average
+        self.mean_degree = (self.mean_degree * 2.0 + degree as f64) / 3.0;
+        // }
     }
 
     pub fn add_shortcut(&mut self, shortcut: PreparationShortcut) {
         // Only accepts directed edges for now
         let edge_id = self.edges.len();
 
-        self.incoming_edges[shortcut.end].push(edge_id);
         self.outgoing_edges[shortcut.start].push(edge_id);
+        self.incoming_edges[shortcut.end].push(edge_id);
 
         self.edges.push(CHPreparationGraphEdge::Shortcut(Shortcut {
             id: edge_id,

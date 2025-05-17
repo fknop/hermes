@@ -532,8 +532,8 @@ where
     N: NodeData,
 {
     fn run(&mut self, stop_condition: Option<fn(&Self) -> bool>) {
-        let stopwatch = Stopwatch::new("bidirectional_dijkstra/calc_path");
-
+        let mut stopwatch = Stopwatch::new(String::from("bidirectional_dijkstra/calc_path"));
+        stopwatch.start();
         let include_debug_info: bool = false; // TODO
 
         // Initialize
@@ -608,7 +608,7 @@ where
             "BidirectionalDijkstra nodes visited: {}",
             self.nodes_visited
         );
-
+        stopwatch.stop();
         stopwatch.report();
     }
 

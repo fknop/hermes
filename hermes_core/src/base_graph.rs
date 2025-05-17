@@ -11,7 +11,7 @@ use crate::properties::property_map::EdgePropertyMap;
 use crate::storage::{read_bytes, write_bytes};
 use crate::types::{EdgeId, NodeId};
 
-#[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Debug)]
 pub struct BaseGraphEdge {
     id: EdgeId,
     start_node: NodeId,
