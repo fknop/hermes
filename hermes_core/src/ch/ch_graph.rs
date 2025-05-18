@@ -169,3 +169,13 @@ impl Iterator for CHUndirectedEdgeIterator<'_> {
         None
     }
 }
+
+pub trait NodeRank {
+    fn node_rank(&self, node_id: NodeId) -> usize;
+}
+
+impl NodeRank for CHGraph<'_> {
+    fn node_rank(&self, node_id: NodeId) -> usize {
+        self.storage.node_rank(node_id)
+    }
+}

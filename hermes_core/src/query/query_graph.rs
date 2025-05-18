@@ -2,7 +2,7 @@ use crate::{
     base_graph::{BaseGraph, BaseGraphEdge},
     ch::{
         ch_edge::{CHBaseEdge, CHGraphEdge},
-        ch_graph::CHGraph,
+        ch_graph::{CHGraph, NodeRank},
     },
     constants::{MAX_DURATION, MAX_WEIGHT},
     edge_direction::EdgeDirection,
@@ -290,6 +290,12 @@ impl UndirectedEdgeAccess for QueryGraph<'_, CHGraph<'_>> {
 
             QueryGraphEdgeIterator::new(base_edges, virtual_edges)
         }
+    }
+}
+
+impl NodeRank for QueryGraph<'_, CHGraph<'_>> {
+    fn node_rank(&self, node_id: NodeId) -> usize {
+        self.graph.node_rank(node_id)
     }
 }
 

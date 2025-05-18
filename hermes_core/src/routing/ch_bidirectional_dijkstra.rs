@@ -1,5 +1,6 @@
 use fxhash::{FxBuildHasher, FxHashMap};
 
+use crate::ch::ch_graph::NodeRank;
 use crate::constants::{DISTANCE_INFLUENCE, INVALID_EDGE, INVALID_NODE, MAX_WEIGHT};
 use crate::edge_direction::EdgeDirection;
 use crate::graph::{DirectedEdgeAccess, GeometryAccess, Graph, UndirectedEdgeAccess, UnfoldEdge};
@@ -405,7 +406,7 @@ where
 
 impl<G, H> CalcPath<G> for CHBidirectionalAStar<'_, G, H>
 where
-    G: Graph + DirectedEdgeAccess + GeometryAccess + UnfoldEdge,
+    G: Graph + DirectedEdgeAccess + GeometryAccess + UnfoldEdge + NodeRank,
     H: AStarHeuristic,
 {
     fn calc_path(
@@ -535,6 +536,20 @@ where
                 let edge = self.graph.edge(edge_id);
                 let adj_node = edge.adj_node(node_id);
 
+                if !self.graph.is_virtual_node(node_id) && !self.graph.is_virtual_node(adj_node) {
+                    if active_direction == SearchDirection::Forward
+                        && self.graph.node_rank(node_id) >= self.graph.node_rank(adj_node)
+                    {
+                        continue;
+                    }
+
+                    if active_direction == SearchDirection::Backward
+                        && self.graph.node_rank(node_id) >= self.graph.node_rank(adj_node)
+                    {
+                        continue;
+                    }
+                }
+
                 if self.is_settled(active_direction, adj_node) {
                     continue;
                 }
@@ -656,7 +671,7 @@ impl CHBidirectionalDijkstra {
     #[allow(clippy::new_ret_no_self)]
     pub fn new<G>(graph: &G) -> CHBidirectionalAStar<'_, G, CHDijkstraHeuristic>
     where
-        G: Graph + DirectedEdgeAccess + UnfoldEdge + GeometryAccess,
+        G: Graph + DirectedEdgeAccess + UnfoldEdge + GeometryAccess + NodeRank,
     {
         CHBidirectionalAStar::with_heuristic(graph, CHDijkstraHeuristic)
     }
@@ -667,7 +682,7 @@ pub struct CHLMAstar;
 impl CHLMAstar {
     pub fn from_landmarks<
         'a,
-        G: Graph + UnfoldEdge + UndirectedEdgeAccess + DirectedEdgeAccess + GeometryAccess,
+        G: Graph + UnfoldEdge + UndirectedEdgeAccess + DirectedEdgeAccess + GeometryAccess + NodeRank,
     >(
         graph: &'a G,
         weighting: &'a impl Weighting<G>,
