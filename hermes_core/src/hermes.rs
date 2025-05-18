@@ -13,7 +13,7 @@ use crate::query::query_graph::QueryGraph;
 use crate::routing::astar::AStar;
 use crate::routing::bidirectional_astar::BidirectionalAStar;
 use crate::routing::ch_bidirectional_dijkstra::{
-    CHBidirectionalAStar, CHBidirectionalDijkstra, CHLMAstar,
+    self, CHBidirectionalAStar, CHBidirectionalDijkstra, CHLMAstar,
 };
 use crate::routing::dijkstra::Dijkstra;
 use crate::routing::routing_request::{RoutingAlgorithm, RoutingRequest};
@@ -190,10 +190,12 @@ impl Hermes {
                     let start = snaps[0].closest_node();
                     let end = snaps[1].closest_node();
 
-                    // let mut ch_bidirectional_dijkstra = CHBidirectionalAStar::new(&query_graph);
+                    // let mut ch_bidirectional_dijkstra = CHBidirectionalDijkstra::new(&query_graph);
 
-                    let mut ch_bidirectional_dijkstra =
-                        CHLMAstar::from_landmarks(&query_graph, &weighting, &self.lm, start, end);
+                    let mut ch_bidirectional_dijkstra = CHBidirectionalAStar::new(&query_graph);
+
+                    // let mut ch_bidirectional_dijkstra =
+                    //     CHLMAstar::from_landmarks(&query_graph, &weighting, &self.lm, start, end);
 
                     ch_bidirectional_dijkstra.calc_path(&weighting, start, end, Some(options))
                 }

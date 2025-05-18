@@ -579,15 +579,7 @@ where
                     );
 
                     // Calculate heuristic
-                    let h_score = match active_direction {
-                        SearchDirection::Forward => {
-                            self.heuristic.estimate(self.graph, adj_node, target)
-                        }
-                        SearchDirection::Backward => {
-                            self.heuristic.estimate(self.graph, adj_node, target)
-                        }
-                    };
-
+                    let h_score = self.heuristic.estimate(self.graph, adj_node, target);
                     self.heap_for_direction(active_direction).push(HeapItem {
                         g_score: next_weight,
                         f_score: next_weight + h_score,

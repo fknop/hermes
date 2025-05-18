@@ -326,7 +326,7 @@ impl<'a> CHGraphBuilder<'a> {
             witness_search,
             weighting,
             node,
-            (graph.mean_degree() * 10.0).round() as usize,
+            (graph.mean_degree() * 5.0).round() as usize,
         );
 
         let degree = graph.node_degree(node);
@@ -348,13 +348,7 @@ impl<'a> CHGraphBuilder<'a> {
         node: NodeId,
         max_settled_nodes: usize,
     ) -> Vec<PreparationShortcut> {
-        let product = graph.incoming_edges(node).len() * graph.outgoing_edges(node).len();
-
         let mut shortcuts = Vec::new();
-
-        // if product > 1_000_000 {
-        //     return shortcuts;
-        // }
 
         for &incoming_edge_id in graph.incoming_edges(node) {
             let incoming_edge = graph.edge(incoming_edge_id);
