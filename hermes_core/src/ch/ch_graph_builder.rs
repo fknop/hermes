@@ -169,7 +169,7 @@ impl<'a> CHGraphBuilder<'a> {
             rank += 1;
 
             // Only contract 95% of nodes
-            let percentage = 95;
+            let percentage = 100;
 
             if preparation_graph.node_degree(node_id) == 0 || dist.sample(&mut rng) > percentage {
                 self.skipped_nodes += 1;
@@ -226,7 +226,7 @@ impl<'a> CHGraphBuilder<'a> {
                 self.recompute_neighbors_priority_stopwatch.stop();
             }
 
-            if last_reported_time.elapsed().as_millis() > 5000 {
+            if last_reported_time.elapsed().as_millis() > 3000 {
                 self.report_timings(&preparation_graph);
                 last_reported_time = Instant::now();
             }
@@ -352,9 +352,9 @@ impl<'a> CHGraphBuilder<'a> {
 
         let mut shortcuts = Vec::new();
 
-        if product > 1_000_000 {
-            return shortcuts;
-        }
+        // if product > 1_000_000 {
+        //     return shortcuts;
+        // }
 
         for &incoming_edge_id in graph.incoming_edges(node) {
             let incoming_edge = graph.edge(incoming_edge_id);

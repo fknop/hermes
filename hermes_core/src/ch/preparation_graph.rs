@@ -161,8 +161,28 @@ impl<'a> CHPreparationGraph<'a> {
 
     pub fn add_shortcut(&mut self, shortcut: PreparationShortcut) {
         // Only accepts directed edges for now
-        let edge_id = self.edges.len();
 
+        // Check if the shortcut already exists, if so, update it
+        for &outgoing_edge_id in self.outgoing_edges[shortcut.start].iter() {
+            if let CHPreparationGraphEdge::Shortcut(existing_shortcut) =
+                &mut self.edges[outgoing_edge_id]
+            {
+                if existing_shortcut.end == shortcut.end {
+                    // Only update it if it has a lower weight, otherwise do nothing
+                    if existing_shortcut.weight > shortcut.weight {
+                        existing_shortcut.weight = shortcut.weight;
+                        existing_shortcut.time = shortcut.time;
+                        existing_shortcut.distance = shortcut.distance;
+                        existing_shortcut.incoming_edge = shortcut.incoming_edge;
+                        existing_shortcut.outgoing_edge = shortcut.outgoing_edge;
+                    }
+
+                    return;
+                }
+            }
+        }
+
+        let edge_id = self.edges.len();
         self.outgoing_edges[shortcut.start].push(edge_id);
         self.incoming_edges[shortcut.end].push(edge_id);
 

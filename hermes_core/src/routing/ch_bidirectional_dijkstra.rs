@@ -497,14 +497,15 @@ where
             {
                 continue;
             }
+
             // If this node has already been settled in this direction, skip it
             if self.is_settled(active_direction, node_id) {
                 continue;
             }
 
-            // if self.is_stallable(weighting, active_direction, &current) {
-            //     continue;
-            // }
+            if self.is_stallable(weighting, active_direction, &current) {
+                continue;
+            }
 
             // If the weight is bigger than the current shortest weight, skip
             if g_score > self.current_shortest_weight(active_direction, node_id) {
