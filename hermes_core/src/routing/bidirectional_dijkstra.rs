@@ -604,10 +604,6 @@ where
             }
         }
 
-        println!(
-            "BidirectionalDijkstra nodes visited: {}",
-            self.nodes_visited
-        );
         stopwatch.stop();
         stopwatch.report();
     }

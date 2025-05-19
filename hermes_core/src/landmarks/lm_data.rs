@@ -1,3 +1,5 @@
+use tracing::{debug, info};
+
 use crate::{
     storage::{read_bytes, write_bytes},
     weighting::Weight,
@@ -31,11 +33,11 @@ pub(crate) struct LMData {
 
 impl LMData {
     pub fn from_file(path: &str) -> Self {
-        println!("Reading from path {}", path);
+        debug!("Reading from path {}", path);
         let bytes = read_bytes(path);
-        println!("Read from path {}, size {}", path, bytes.len());
+        debug!("Read from path {}, size {}", path, bytes.len());
         let data = rkyv::from_bytes::<Self, rkyv::rancor::Error>(&bytes[..]).unwrap();
-        println!("Deserialized landmarks from buffer");
+        info!("Deserialized landmarks from buffer");
         data
     }
 

@@ -1,5 +1,7 @@
 use std::cmp::max;
 
+use tracing::{debug, info};
+
 use crate::distance::{Distance, Meters};
 use crate::edge_direction::EdgeDirection;
 use crate::geometry::compute_geometry_distance;
@@ -78,7 +80,7 @@ pub struct BaseGraph {
 
 fn from_bytes(bytes: &[u8]) -> BaseGraph {
     let graph = rkyv::from_bytes::<BaseGraph, rkyv::rancor::Error>(bytes).unwrap();
-    println!("Deserialized graph from buffer");
+    info!("Deserialized graph from buffer");
     graph
 }
 
@@ -107,9 +109,9 @@ impl BaseGraph {
     }
 
     pub fn from_file(path: &str) -> BaseGraph {
-        println!("Reading from path {}", path);
+        debug!("Reading from path {}", path);
         let bytes = read_bytes(path);
-        println!("Read from path {}, size {}", path, bytes.len());
+        debug!("Read from path {}, size {}", path, bytes.len());
         from_bytes(&bytes)
     }
 

@@ -4,6 +4,7 @@ use std::{
 };
 
 use rand::distr::{Distribution, Uniform};
+use tracing::{debug, info};
 
 use crate::{
     base_graph::BaseGraph,
@@ -68,9 +69,11 @@ impl<'a> CHGraphBuilder<'a> {
         let mut priority_queue = PriorityQueue::new(self.base_graph.node_count());
         let mut hierarchies = vec![0; self.base_graph.node_count()];
 
-        println!("Start CH contraction");
-        println!("Edge count {}", self.base_graph.edge_count());
-        println!("Node count {}", self.base_graph.node_count());
+        info!("Start CH contraction");
+        info!(
+            node_count = self.base_graph.node_count(),
+            edge_count = self.base_graph.edge_count(),
+        );
 
         for node_id in 0..self.base_graph.node_count() {
             let priority = self.calc_priority(
@@ -86,17 +89,13 @@ impl<'a> CHGraphBuilder<'a> {
                 .unwrap_or_else(|err| panic!("{}", err));
         }
 
-        println!("Finish computing priority for every node");
+        info!("Finish computing priority for every node");
 
         let mut rank = 0;
 
         while let Some((node_id, priority)) = priority_queue.pop() {
             // Lazy recomputation of the priority
             // If the recomputed priority is less than the next node to be contracted, we re-enqueue the node
-
-            if self.contracted_nodes > 1800000 {
-                println!("Remaining nodes {}", priority_queue.len());
-            }
 
             if priority != i32::MIN {
                 if let Some((_, least_priority)) = priority_queue.peek() {
@@ -188,7 +187,7 @@ impl<'a> CHGraphBuilder<'a> {
 
             // TODO: better condition
             if self.contracted_nodes % 500000 == 0 && self.added_shortcuts > 0 {
-                println!("Recompute all remaining priorities");
+                debug!("Recompute all remaining priorities");
                 let remaining_nodes: Vec<(NodeId, i32)> = priority_queue.to_vec();
                 priority_queue.clear();
                 for (node_id, _) in remaining_nodes {
@@ -233,12 +232,12 @@ impl<'a> CHGraphBuilder<'a> {
         }
 
         self.report_timings(&preparation_graph);
-        println!(
+        info!(
             "Added {} shortcuts for {} base edges",
             self.added_shortcuts,
             self.base_graph.edge_count()
         );
-        println!("Finished contraction");
+        info!("Finished contraction");
 
         ch_storage.check();
 

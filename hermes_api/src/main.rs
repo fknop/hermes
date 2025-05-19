@@ -11,9 +11,14 @@ use hermes_core::hermes::Hermes;
 use std::sync::Arc;
 use tower::ServiceBuilder;
 use tower_http::cors::{Any, CorsLayer};
+use tracing::Level;
 
 #[tokio::main]
 async fn main() {
+    tracing_subscriber::fmt()
+        .with_max_level(Level::DEBUG)
+        .init();
+
     let hermes = Hermes::from_directory("./data");
 
     let app_state = Arc::new(AppState { hermes });

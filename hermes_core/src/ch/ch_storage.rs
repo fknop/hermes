@@ -1,11 +1,15 @@
+use tracing::{debug, info};
+
 use crate::{
     base_graph::BaseGraph,
     constants::{INVALID_EDGE, INVALID_NODE, MAX_DURATION, MAX_WEIGHT},
+    distance::{Distance, Meters},
     graph::Graph,
     graph_edge::GraphEdge,
     meters,
     storage::{read_bytes, write_bytes},
     types::{EdgeId, NodeId},
+    weighting::Weight,
 };
 
 use super::{
@@ -34,11 +38,11 @@ impl CHStorage {
     }
 
     pub fn from_file(path: &str) -> Self {
-        println!("Reading from path {}", path);
+        debug!("Reading from path {}", path);
         let bytes = read_bytes(path);
-        println!("Read from path {}, size {}", path, bytes.len());
+        debug!("Read from path {}, size {}", path, bytes.len());
         let data = rkyv::from_bytes::<Self, rkyv::rancor::Error>(&bytes[..]).unwrap();
-        println!("Deserialized ch storage from buffer");
+        info!("Deserialized ch storage from buffer");
         data
     }
 
@@ -167,9 +171,41 @@ impl CHStorage {
                         assert!(edge.end < self.nodes);
                     }
                 }
-                CHGraphEdge::Shortcut(_) => {
+                CHGraphEdge::Shortcut(shortcut) => {
                     let mut edge_parts = vec![];
                     self.unfold_edge(index, &mut edge_parts);
+
+                    let mut total_weight: Weight = 0;
+                    let mut total_distance = Distance::<Meters>::default();
+                    let mut total_time = 0;
+
+                    let mut node = shortcut.start;
+
+                    for &edge_id in edge_parts.iter() {
+                        match &self.edges[edge_id] {
+                            CHGraphEdge::Edge(e) => {
+                                total_distance = total_distance + e.distance;
+                                if node == e.start {
+                                    total_weight += e.forward_weight;
+                                    total_time += e.forward_time;
+                                    node = e.end;
+                                } else if node == e.end {
+                                    total_weight += e.backward_weight;
+                                    total_time += e.backward_time;
+                                    node = e.start;
+                                } else {
+                                    panic!("Wrong node")
+                                }
+                            }
+                            CHGraphEdge::Shortcut(_) => {
+                                panic!("Unfolded edge cannot be a shortcut")
+                            }
+                        }
+                    }
+
+                    assert!(total_weight == shortcut.weight);
+                    assert!(total_distance == shortcut.distance);
+                    assert!(total_time == shortcut.time);
 
                     for (i, &part) in edge_parts.iter().enumerate() {
                         let next_part = edge_parts.get(i + 1);
@@ -186,5 +222,7 @@ impl CHStorage {
                 }
             }
         }
+
+        info!("Fully checked shortcuts validity")
     }
 }

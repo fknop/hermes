@@ -17,6 +17,15 @@ pub struct Distance<T: DistanceUnit> {
     unit: PhantomData<T>,
 }
 
+impl<T: DistanceUnit> Default for Distance<T> {
+    fn default() -> Self {
+        Distance {
+            nm: 0,
+            unit: PhantomData,
+        }
+    }
+}
+
 impl From<Distance<Kilometers>> for Distance<Meters> {
     fn from(distance: Distance<Kilometers>) -> Distance<Meters> {
         Distance {

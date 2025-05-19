@@ -6,6 +6,7 @@ use crate::properties::tag_parser::parse_way_tags;
 use fxhash::FxHashMap;
 use osmpbfreader::{NodeId, OsmObj, OsmPbfReader};
 use std::{fs::File, path::Path};
+use tracing::info;
 
 struct OsmNode {
     coordinates: GeoPoint,
@@ -125,12 +126,12 @@ impl OsmReader {
                 self.accepted_ways += 1;
 
                 if self.accepted_ways % 100000 == 0 {
-                    println!("Preprocessed {} ways", self.accepted_ways);
+                    info!("Preprocessed {} ways", self.accepted_ways);
                 }
             }
         }
 
-        println!("Preprocessed {} ways", self.accepted_ways);
+        info!("Preprocessed {} ways", self.accepted_ways);
     }
 
     fn handle_element_second_pass<F>(&mut self, reader: &mut OsmPbfReader<File>, mut handle_edge: F)
@@ -215,7 +216,7 @@ impl OsmReader {
                         self.processed_segments += 1;
 
                         if self.processed_segments % 100000 == 0 {
-                            println!("Processed {} segments", self.processed_segments)
+                            info!("Processed {} segments", self.processed_segments)
                         }
                     }
                 }
@@ -271,7 +272,7 @@ impl OsmReader {
         let node_count = self.routing_nodes.len() + self.geometry_nodes.len();
 
         if node_count % 500000 == 0 {
-            println!("Processed {} nodes", node_count);
+            info!("Processed {} nodes", node_count);
         }
     }
 
@@ -313,9 +314,9 @@ impl OsmReader {
         let file = File::open(path).unwrap();
         let mut reader = OsmPbfReader::new(file);
 
-        println!("Starting first OSM parsing pass");
+        info!("Starting first OSM parsing pass");
         self.handle_element_first_pass(&mut reader);
-        println!("Starting second OSM parsing pass");
+        info!("Starting second OSM parsing pass");
 
         reader.rewind().expect("Failed to rewind reader");
 

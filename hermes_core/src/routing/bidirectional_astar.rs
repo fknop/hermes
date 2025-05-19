@@ -582,8 +582,6 @@ where
             }
         }
 
-        println!("BidirectionalAStar nodes visited: {}", nodes_visited);
-
         let path = self.build_path(self.graph, weighting, start, end);
 
         stopwatch.stop();

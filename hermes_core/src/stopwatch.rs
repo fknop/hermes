@@ -3,6 +3,8 @@ use std::{
     time::{Duration, Instant},
 };
 
+use tracing::debug;
+
 pub struct Stopwatch {
     start: Instant,
     name: String,
@@ -35,7 +37,7 @@ impl Stopwatch {
     }
 
     pub fn report(&self) {
-        println!("{}", self);
+        debug!("{}", self);
     }
 }
 
