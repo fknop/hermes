@@ -1,8 +1,17 @@
-import { useSearchBoxCore } from '@mapbox/search-js-react'
 import type {
   SearchBoxRetrieveResponse,
   SearchBoxSuggestion,
 } from '@mapbox/search-js-core'
+import { useSearchBoxCore } from '@mapbox/search-js-react'
+import {
+  ComponentType,
+  InputHTMLAttributes,
+  Ref,
+  useEffect,
+  useState,
+} from 'react'
+import { MAPBOX_ACCESS_TOKEN } from '../constants'
+import { isNil } from '../utils/isNil'
 import {
   Autocomplete,
   AutocompleteInput,
@@ -10,17 +19,6 @@ import {
   AutocompleteList,
 } from './Autocomplete'
 import { Input } from './Input'
-import { MAPBOX_ACCESS_TOKEN } from '../constants'
-import {
-  ComponentType,
-  HTMLAttributes,
-  InputHTMLAttributes,
-  Ref,
-  useEffect,
-  useState,
-} from 'react'
-import { isNil } from '../utils/isNil'
-import clsx from 'clsx'
 
 const sessionToken = crypto.randomUUID()
 
@@ -56,6 +54,7 @@ export function AddressAutocomplete({
       const response = await searchBox.suggest(query, {
         sessionToken,
         limit: 7,
+        country: 'BE',
       })
       const suggestions = response.suggestions
       setSuggestions(suggestions)
