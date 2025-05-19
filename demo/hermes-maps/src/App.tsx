@@ -24,6 +24,7 @@ import { RouteResult } from './components/RouteResult.tsx'
 import { GeoPoint } from './types/GeoPoint.ts'
 import { JourneyAutocomplete } from './components/JourneyAutocomplete.tsx'
 import { Address } from './types/Address.ts'
+import { Slider } from './components/Slider.tsx'
 
 enum RoutingAlgorithm {
   Dijkstra = 'Dijkstra',
@@ -46,13 +47,14 @@ export default function App() {
   >('/route')
 
   const [selectedAlgorithm, setSelectedAlgorithm] = useState<RoutingAlgorithm>(
-    RoutingAlgorithm.BidirectionalAstar
+    RoutingAlgorithm.Dijkstra
   )
 
-  const [includeDebugInfo, setIncludeDebugInfo] = useState(true)
+  const [includeDebugInfo, setIncludeDebugInfo] = useState(false)
 
   const [start, setStart] = useState<Address | null>(null)
   const [end, setEnd] = useState<Address | null>(null)
+  const [radiusMultiplier, setRadiusMultiplier] = useState<number>(1)
 
   const computeRoute = useCallback(
     ({ start, end }: { start: Address; end: Address }) => {
@@ -98,12 +100,14 @@ export default function App() {
               featureId="forward_visited_nodes"
               color="#00a6f4"
               sourceId="geojson"
+              radiusMultiplier={radiusMultiplier}
             />
             <MultiPointLayer
               id="backward_visited_nodes"
               featureId="backward_visited_nodes"
               color="#ff6467"
               sourceId="geojson"
+              radiusMultiplier={radiusMultiplier}
             />
 
             <PolylineLayer
@@ -181,16 +185,6 @@ export default function App() {
             }}
           />
 
-          <Label>
-            <Checkbox
-              checked={includeDebugInfo}
-              onChange={(event) => {
-                setIncludeDebugInfo(event.target.checked)
-              }}
-            />
-            Include debug info
-          </Label>
-
           {Object.values(RoutingAlgorithm).map((algorithm) => {
             return (
               <Label>
@@ -206,6 +200,26 @@ export default function App() {
               </Label>
             )
           })}
+
+          <Label>
+            <Checkbox
+              checked={includeDebugInfo}
+              onChange={(event) => {
+                setIncludeDebugInfo(event.target.checked)
+              }}
+            />
+            Include debug info
+          </Label>
+
+          <Slider
+            min={1}
+            max={10}
+            value={radiusMultiplier}
+            onChange={(value) => {
+              setRadiusMultiplier(value)
+            }}
+            defaultValue={1}
+          />
         </div>
 
         {!isNil(time) &&

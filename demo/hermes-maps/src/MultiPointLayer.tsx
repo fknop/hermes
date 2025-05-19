@@ -5,11 +5,13 @@ export function MultiPointLayer({
   id,
   featureId,
   sourceId,
+  radiusMultiplier = 1,
 }: {
   color: string
   id: string
   featureId: string
   sourceId: string
+  radiusMultiplier?: number
 }) {
   return (
     <Layer
@@ -23,11 +25,11 @@ export function MultiPointLayer({
           ['linear'],
           ['zoom'],
           5,
-          0.5,
+          0.5 * radiusMultiplier,
           10,
-          1,
+          1 * radiusMultiplier,
           15,
-          2.5,
+          3 * radiusMultiplier,
         ],
         'circle-color': color,
       }}

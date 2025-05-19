@@ -123,7 +123,7 @@ where
 
 impl<'a, G, H> CHBidirectionalAStar<'a, G, H>
 where
-    G: Graph + DirectedEdgeAccess + GeometryAccess + UnfoldEdge,
+    G: Graph + DirectedEdgeAccess + GeometryAccess + UnfoldEdge + NodeRank,
     H: AStarHeuristic,
 {
     pub fn with_heuristic(graph: &'a G, heuristic: H) -> Self {
@@ -260,14 +260,48 @@ where
         dir: SearchDirection,
         current: &HeapItem,
     ) -> bool {
+        if self.graph.is_virtual_node(current.node_id) {
+            return false;
+        }
+
+        // if dir == SearchDirection::Backward {
+        //     // TODO
+        //     return false;
+        // }
+
         let edges_iter = match dir {
             SearchDirection::Forward => self.graph.node_incoming_edges_iter(current.node_id),
             SearchDirection::Backward => self.graph.node_outgoing_edges_iter(current.node_id),
         };
 
+        // v = current.node_id
+        // w = adj_node
+        // For forward search, for each incoming node w into v where w > v, if d(w) + d(w, v) < d(v) then, the search can be stalled
+        // For backward search, for each outgoing node w from v, where w < v
+
         for edge_id in edges_iter {
             let edge = self.graph.edge(edge_id);
             let adj_node = edge.adj_node(current.node_id);
+
+            if self.graph.is_virtual_node(adj_node) {
+                continue;
+            }
+
+            // ensures w > v
+            if dir == SearchDirection::Forward
+                && self.graph.node_rank(adj_node) <= self.graph.node_rank(current.node_id)
+            {
+                continue;
+            }
+
+            // ensure w < v
+            if dir == SearchDirection::Backward
+                && self.graph.node_rank(adj_node) >= self.graph.node_rank(current.node_id)
+            {
+                continue;
+            }
+
+            // d(w)
             let adj_weight = self.current_shortest_weight(dir, adj_node);
             if adj_weight == MAX_WEIGHT {
                 continue;
@@ -280,8 +314,12 @@ where
                     SearchDirection::Backward => current.node_id,
                 },
             );
+
+            // d(w, v)
             let edge_weight = weighting.calc_edge_weight(edge, edge_direction);
-            if edge_weight + adj_weight < current.g_score {
+
+            // d(w) + d(w, v) < d(v)
+            if adj_weight + edge_weight < current.g_score {
                 return true;
             }
         }
@@ -451,9 +489,9 @@ where
                 active_direction = active_direction.opposite();
             }
 
-            let (heap, opposite_heap) = match active_direction {
-                SearchDirection::Forward => (&mut self.forward_heap, &mut self.backward_heap),
-                SearchDirection::Backward => (&mut self.backward_heap, &mut self.forward_heap),
+            let heap = match active_direction {
+                SearchDirection::Forward => &mut self.forward_heap,
+                SearchDirection::Backward => &mut self.backward_heap,
             };
 
             // Get the current heap for the active direction
@@ -478,38 +516,22 @@ where
                 continue;
             }
 
-            let opposite_direction_min_f_score =
-                opposite_heap.peek().map(|item| item.f_score).unwrap_or(0);
-
-            let (target, opposite_direction_target) = match active_direction {
-                SearchDirection::Forward => (end, start),
-                SearchDirection::Backward => (start, end),
+            let target = match active_direction {
+                SearchDirection::Forward => end,
+                SearchDirection::Backward => start,
             };
-
-            let opposite_direction_h =
-                self.heuristic
-                    .estimate(self.graph, node_id, opposite_direction_target);
-
-            // // Strategy from "Yet another bidirectional algorithm for shortest paths"
-            // // Wim Pijls, Henk Post
-            // // https://repub.eur.nl/pub/16100/ei2009-10.pdf
-            if g_score + opposite_direction_min_f_score - opposite_direction_h
-                >= self.best_path_weight
-            {
-                continue;
-            }
 
             // If this node has already been settled in this direction, skip it
             if self.is_settled(active_direction, node_id) {
                 continue;
             }
 
-            if self.is_stallable(weighting, active_direction, &current) {
+            // // If the weight is bigger than the current shortest weight, skip
+            if g_score > self.current_shortest_weight(active_direction, node_id) {
                 continue;
             }
 
-            // If the weight is bigger than the current shortest weight, skip
-            if g_score > self.current_shortest_weight(active_direction, node_id) {
+            if self.is_stallable(weighting, active_direction, &current) {
                 continue;
             }
 
@@ -638,7 +660,7 @@ where
 
 impl<'a, G> CHBidirectionalAStar<'a, G, HaversineHeuristic>
 where
-    G: Graph + DirectedEdgeAccess + GeometryAccess + UnfoldEdge,
+    G: Graph + DirectedEdgeAccess + GeometryAccess + UnfoldEdge + NodeRank,
 {
     pub fn new(graph: &'a G) -> CHBidirectionalAStar<'a, G, HaversineHeuristic> {
         Self::with_heuristic(graph, HaversineHeuristic)
