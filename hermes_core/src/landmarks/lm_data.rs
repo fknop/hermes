@@ -46,6 +46,10 @@ impl LMData {
         write_bytes(&bytes[..], path)
     }
 
+    pub fn get_node_ids(&self) -> Vec<usize> {
+        self.landmarks.iter().map(|lm| lm.node_id).collect()
+    }
+
     pub fn new(landmarks: Vec<Landmark>) -> Self {
         LMData { landmarks }
     }

@@ -1,5 +1,5 @@
 import { Marker } from 'react-map-gl/mapbox'
-import { MapPinIcon } from '@heroicons/react/24/outline'
+import { MapPinIcon } from '@heroicons/react/24/solid'
 import { GeoPoint } from '../types/GeoPoint'
 
 export function MapMarker({

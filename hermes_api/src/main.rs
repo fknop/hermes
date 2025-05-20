@@ -1,13 +1,16 @@
 mod error;
+mod landmarks;
 mod route;
 mod state;
 
+use crate::get_landmarks::get_landmarks;
 use crate::route::route_handler::route_handler;
 use crate::state::AppState;
 use axum::http::Method;
-use axum::routing::post;
+use axum::routing::{get, post};
 use axum::{Router, serve};
 use hermes_core::hermes::Hermes;
+use landmarks::get_landmarks;
 use std::sync::Arc;
 use tower::ServiceBuilder;
 use tower_http::cors::{Any, CorsLayer};
@@ -19,7 +22,7 @@ async fn main() {
         .with_max_level(Level::DEBUG)
         .init();
 
-    let hermes = Hermes::from_directory("./data");
+    let hermes = Hermes::from_directory("./data/uk");
 
     let app_state = Arc::new(AppState { hermes });
 
@@ -30,6 +33,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/route", post(route_handler))
+        .route("/landmarks", get(get_landmarks))
         .layer(ServiceBuilder::new().layer(cors_layer))
         .with_state(app_state);
 

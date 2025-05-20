@@ -1,30 +1,23 @@
-import {
-  ArrowsUpDownIcon,
-  ArrowTurnDownRightIcon,
-} from '@heroicons/react/16/solid'
+import { MagnifyingGlassIcon, MapPinIcon } from '@heroicons/react/16/solid'
+import { BuildingOfficeIcon } from '@heroicons/react/24/solid'
 import { useCallback, useEffect, useState } from 'react'
 import { Source } from 'react-map-gl/mapbox'
 import { Map } from './Map.tsx'
 import { MultiPointLayer } from './MultiPointLayer.tsx'
 import { PolylineLayer } from './PolylineLayer.tsx'
-import { AddressAutocomplete } from './components/AddressAutocomplete.tsx'
-import { Button } from './components/Button.tsx'
 import { Checkbox } from './components/Checkbox.tsx'
-import { RadioButton } from './components/RadioButton.tsx'
-import { useDistanceFormatter } from './hooks/useDistanceFormatter.ts'
-import { useDurationFormatter } from './hooks/useDurationFormatter.ts'
-import { useFetch } from './hooks/useFetch.ts'
-import { isNil } from './utils/isNil.ts'
-import { MapContextMenu, MapMenuItem } from './components/MapContextMenu.tsx'
-import { MapMarker } from './components/Marker.tsx'
-import { MapPinIcon } from '@heroicons/react/16/solid'
-import { MagnifyingGlassIcon } from '@heroicons/react/16/solid'
-import { Label } from './components/Label.tsx'
-import { RouteResult } from './components/RouteResult.tsx'
-import { GeoPoint } from './types/GeoPoint.ts'
 import { JourneyAutocomplete } from './components/JourneyAutocomplete.tsx'
-import { Address } from './types/Address.ts'
+import { Label } from './components/Label.tsx'
+import { MapContextMenu, MapMenuItem } from './components/MapContextMenu.tsx'
+import { MapMarker } from './components/MapMarker.tsx'
+import { RadioButton } from './components/RadioButton.tsx'
+import { RouteResult } from './components/RouteResult.tsx'
 import { Slider } from './components/Slider.tsx'
+import { useFetch } from './hooks/useFetch.ts'
+import { Address } from './types/Address.ts'
+import { GeoPoint } from './types/GeoPoint.ts'
+import { isNil } from './utils/isNil.ts'
+import { LandmarkMarker } from './components/LandmarkMarker.tsx'
 
 enum RoutingAlgorithm {
   Dijkstra = 'Dijkstra',
@@ -46,12 +39,19 @@ export default function App() {
     }
   >('/route')
 
+  const [landmarksRequest, { data: landmarksData }] =
+    useFetch<GeoJSON.FeatureCollection<GeoJSON.Point>>('/landmarks')
+
+  const fetchLandmarks = useCallback(async () => {
+    await landmarksRequest({ method: 'GET' })
+  }, [landmarksRequest])
+
   const [selectedAlgorithm, setSelectedAlgorithm] = useState<RoutingAlgorithm>(
     RoutingAlgorithm.Dijkstra
   )
 
   const [includeDebugInfo, setIncludeDebugInfo] = useState(false)
-
+  const [showLandmarks, setShowLandmarks] = useState(false)
   const [start, setStart] = useState<Address | null>(null)
   const [end, setEnd] = useState<Address | null>(null)
   const [radiusMultiplier, setRadiusMultiplier] = useState<number>(1)
@@ -132,6 +132,19 @@ export default function App() {
           />
         )}
 
+        {showLandmarks &&
+          landmarksData?.features.map((feature) => {
+            return (
+              <LandmarkMarker
+                coordinates={{
+                  lon: feature.geometry.coordinates[0],
+                  lat: feature.geometry.coordinates[1],
+                }}
+                color="var(--color-green-600)"
+              />
+            )
+          })}
+
         <MapContextMenu>
           <MapMenuItem
             onSelect={({ coordinates }) => {
@@ -164,6 +177,20 @@ export default function App() {
             <span className="inline-flex items-center gap-1 whitespace-nowrap">
               <MagnifyingGlassIcon className="size-5" />
               <span>Query graph</span>
+            </span>
+          </MapMenuItem>
+
+          <MapMenuItem
+            onSelect={async () => {
+              if (!showLandmarks) {
+                await fetchLandmarks()
+              }
+              setShowLandmarks((show) => !show)
+            }}
+          >
+            <span className="inline-flex items-center gap-1 whitespace-nowrap">
+              <BuildingOfficeIcon className="size-5" />
+              {showLandmarks ? 'Hide landmarks' : 'Show landmarks'}
             </span>
           </MapMenuItem>
         </MapContextMenu>

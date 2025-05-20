@@ -4,7 +4,8 @@ use crate::ch::ch_graph_builder::CHGraphBuilder;
 use crate::ch::ch_storage::CHStorage;
 use crate::ch::ch_weighting::CHWeighting;
 use crate::error::ImportError;
-use crate::graph::Graph;
+use crate::geopoint::GeoPoint;
+use crate::graph::{GeometryAccess, Graph};
 use crate::landmarks::lm_bidirectional_astar::LMBidirectionalAstar;
 use crate::landmarks::lm_data::LMData;
 use crate::landmarks::lm_preparation::LMPreparation;
@@ -114,6 +115,15 @@ impl Hermes {
 
     pub fn index(&self) -> &LocationIndex {
         &self.index
+    }
+
+    pub fn get_landmarks(&self) -> Vec<GeoPoint> {
+        self.lm
+            .get_node_ids()
+            .iter()
+            .map(|&node_id| self.graph.node_geometry(node_id))
+            .copied()
+            .collect()
     }
 
     pub fn route(&self, request: RoutingRequest) -> Result<CalcPathResult, String> {

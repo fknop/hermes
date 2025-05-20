@@ -264,11 +264,6 @@ where
             return false;
         }
 
-        // if dir == SearchDirection::Backward {
-        //     // TODO
-        //     return false;
-        // }
-
         let edges_iter = match dir {
             SearchDirection::Forward => self.graph.node_incoming_edges_iter(current.node_id),
             SearchDirection::Backward => self.graph.node_outgoing_edges_iter(current.node_id),
@@ -289,7 +284,7 @@ where
 
             // ensures w > v
             if dir == SearchDirection::Forward
-                && self.graph.node_rank(adj_node) <= self.graph.node_rank(current.node_id)
+                && (self.graph.node_rank(current.node_id) >= self.graph.node_rank(adj_node))
             {
                 continue;
             }
@@ -531,9 +526,9 @@ where
                 continue;
             }
 
-            if self.is_stallable(weighting, active_direction, &current) {
-                continue;
-            }
+            // if self.is_stallable(weighting, active_direction, &current) {
+            //     continue;
+            // }
 
             // Check if this node has been visited from the other direction
             let opposite_dir = active_direction.opposite();
