@@ -100,7 +100,7 @@ impl OsmReader {
         true
     }
 
-    /// First pass reads the ways, stores each node
+    /// First pass reads the ways, stores each node with its type
     fn handle_element_first_pass(&mut self, reader: &mut OsmPbfReader<File>) {
         for object in reader
             .par_iter()
@@ -134,6 +134,10 @@ impl OsmReader {
         info!("Preprocessed {} ways", self.accepted_ways);
     }
 
+    /// Second pass reads all the nodes, for each node contained in a way from the first pass, it stores the coordinates of that node
+    /// Second pass also re-reads all the ways
+    ///   - Parse way tags
+    ///   - Split the ways into segments (split at junction nodes)
     fn handle_element_second_pass<F>(&mut self, reader: &mut OsmPbfReader<File>, mut handle_edge: F)
     where
         F: FnMut(OsmWaySegment),

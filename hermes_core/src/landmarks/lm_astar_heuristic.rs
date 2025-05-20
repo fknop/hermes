@@ -140,14 +140,19 @@ where
 
         // TODO: pick active landmarks
         for i in 0..self.lm.num_landmarks() {
+            // d(S, L)
             let start_to_landmark: i64 =
                 (self.lm.weight_to_landmark(i, start) + start_weight_to_real_node) as i64;
 
+            // d(E, L)
             let end_to_landmark: i64 =
                 (self.lm.weight_to_landmark(i, end) + end_weight_to_real_node) as i64;
 
+            // d(L, S)
             let landmark_to_start: i64 =
                 (self.lm.weight_from_landmark(i, start) + start_weight_to_real_node) as i64;
+
+            // d(L, E)
             let landmark_to_end: i64 =
                 (self.lm.weight_from_landmark(i, end) + end_weight_to_real_node) as i64;
 
