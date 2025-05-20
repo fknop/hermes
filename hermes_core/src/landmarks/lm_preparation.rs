@@ -1,4 +1,5 @@
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use tracing::info;
 
 use crate::{
     base_graph::BaseGraph,
@@ -23,12 +24,17 @@ impl<'a, W: Weighting<BaseGraph> + Send + Sync> LMPreparation<'a, W> {
     }
 
     pub fn create_landmarks(&self, num_landmarks: usize) -> LMData {
+        info!("Start LM preparation");
         let landmarks_ids = self.find_landmarks(num_landmarks);
+
+        info!("Found all {} landmarks", landmarks_ids.len());
 
         let landmarks: Vec<Landmark> = landmarks_ids
             .par_iter()
             .map(|&node_id| self.create_landmark(node_id))
             .collect();
+
+        info!("Finished LM preparation");
 
         LMData::new(landmarks)
     }
