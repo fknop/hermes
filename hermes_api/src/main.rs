@@ -22,7 +22,7 @@ async fn main() {
         .with_max_level(Level::DEBUG)
         .init();
 
-    let hermes = Hermes::from_directory("./data/uk");
+    let hermes = Hermes::from_directory("./data");
 
     let app_state = Arc::new(AppState { hermes });
 

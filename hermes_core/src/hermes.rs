@@ -10,6 +10,9 @@ use crate::landmarks::lm_bidirectional_astar::LMBidirectionalAstar;
 use crate::landmarks::lm_data::LMData;
 use crate::landmarks::lm_preparation::LMPreparation;
 use crate::location_index::LocationIndex;
+use crate::matrix::matrix_algorithm::{MatrixAlgorithm, MatrixAlgorithmResult};
+use crate::matrix::matrix_request::MatrixRequest;
+use crate::matrix::sbi_matrix_algorithm::SBIMatrixAlgorithm;
 use crate::query::query_graph::QueryGraph;
 use crate::routing::astar::AStar;
 use crate::routing::bidirectional_astar::BidirectionalAStar;
@@ -20,8 +23,10 @@ use crate::routing::dijkstra::Dijkstra;
 use crate::routing::routing_request::{RoutingAlgorithm, RoutingRequest};
 
 use crate::routing::shortest_path_algorithm::{CalcPath, CalcPathOptions, CalcPathResult};
+use crate::snap::Snap;
 use crate::stopwatch::Stopwatch;
 use crate::storage::binary_file_path;
+use crate::types::NodeId;
 use crate::weighting::{CarWeighting, Weighting};
 
 pub struct Hermes {
@@ -221,6 +226,51 @@ impl Hermes {
                 bdirastar.calc_path(&weighting, start, end, Some(options))
             }
         }
+    }
+
+    pub fn matrix(&self, request: MatrixRequest) -> Result<MatrixAlgorithmResult, String> {
+        let base_graph_weighting = self.create_weighting(&request.profile);
+
+        let mut source_snaps: Vec<Snap> = request
+            .sources
+            .iter()
+            .map(|source| {
+                self.index
+                    .snap(&self.graph, &base_graph_weighting, source)
+                    .unwrap_or_else(|| panic!("Source not found"))
+            })
+            .collect();
+
+        let mut target_snaps: Vec<Snap> = request
+            .targets
+            .iter()
+            .map(|target| {
+                self.index
+                    .snap(&self.graph, &base_graph_weighting, target)
+                    .unwrap_or_else(|| panic!("target not found"))
+            })
+            .collect();
+
+        let mut snaps: Vec<Snap> = vec![];
+        snaps.extend(source_snaps);
+        snaps.extend(target_snaps);
+
+        let ch_graph = CHGraph::new(self.ch_storage.as_ref().unwrap(), &self.graph);
+        let query_graph = QueryGraph::from_graph(&ch_graph, &self.graph, &mut snaps[..]);
+        let weighting = CHWeighting::new();
+        let mut algorithm = SBIMatrixAlgorithm::new(&query_graph, &weighting);
+
+        let sources: Vec<NodeId> = (0..request.sources.len())
+            .map(|index| snaps[index].closest_node())
+            .collect();
+
+        let targets: Vec<NodeId> = (0..request.targets.len())
+            .map(|index| snaps[request.sources.len() + index].closest_node())
+            .collect();
+
+        let result = algorithm.calc_matrix(&sources, &targets);
+
+        Ok(result)
     }
 
     fn create_weighting<G: Graph>(&self, profile: &str) -> impl Weighting<G> {

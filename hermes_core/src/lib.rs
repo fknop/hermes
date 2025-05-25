@@ -12,6 +12,7 @@ mod graph_edge;
 pub mod hermes;
 mod landmarks;
 pub mod location_index;
+pub mod matrix;
 pub mod osm;
 pub mod properties;
 pub(crate) mod query;

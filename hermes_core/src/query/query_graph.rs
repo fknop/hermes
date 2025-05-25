@@ -295,7 +295,11 @@ impl UndirectedEdgeAccess for QueryGraph<'_, CHGraph<'_>> {
 
 impl NodeRank for QueryGraph<'_, CHGraph<'_>> {
     fn node_rank(&self, node_id: NodeId) -> usize {
-        self.graph.node_rank(node_id)
+        if self.is_virtual_node(node_id) {
+            0
+        } else {
+            self.graph.node_rank(node_id)
+        }
     }
 }
 
