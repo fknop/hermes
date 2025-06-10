@@ -1,0 +1,85 @@
+use std::time::Duration;
+
+use super::{location::LocationId, time_window::TimeWindow, vehicle::Capacity};
+
+pub type ServiceId = usize;
+
+pub struct Service {
+    external_id: String,
+    location_id: LocationId,
+    time_window: Option<TimeWindow>,
+    demand: Vec<Capacity>,
+    service_time: Duration,
+}
+
+#[derive(Default)]
+pub struct ServiceBuilder {
+    external_id: Option<String>,
+    location_id: Option<LocationId>,
+    time_window: Option<TimeWindow>,
+    demand: Option<Vec<Capacity>>,
+    service_time: Option<Duration>,
+}
+
+impl ServiceBuilder {
+    pub fn with_external_id(mut self, external_id: String) -> Self {
+        self.external_id = Some(external_id);
+        self
+    }
+
+    pub fn with_location_id(mut self, location_id: LocationId) -> Self {
+        self.location_id = Some(location_id);
+        self
+    }
+
+    pub fn with_time_window(mut self, time_window: TimeWindow) -> Self {
+        self.time_window = Some(time_window);
+        self
+    }
+
+    pub fn with_demand(mut self, demand: Vec<Capacity>) -> Self {
+        self.demand = Some(demand);
+        self
+    }
+
+    pub fn with_service_time(mut self, service_time: Duration) -> Self {
+        self.service_time = Some(service_time);
+        self
+    }
+
+    pub fn build(self) -> Service {
+        Service {
+            external_id: self.external_id.expect("Expected service id"),
+            location_id: self.location_id.expect("Expected location id"),
+            demand: self.demand.unwrap_or_default(),
+            service_time: self.service_time.unwrap_or(Duration::ZERO),
+            time_window: self.time_window,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use crate::problem::time_window::TimeWindowBuilder;
+
+    use super::*;
+
+    #[test]
+    fn test_builder() {
+        let builder = ServiceBuilder::default()
+            .with_external_id(String::from("service_id"))
+            .with_location_id(1)
+            .with_time_window(
+                TimeWindowBuilder::default()
+                    .with_iso_start("2025-06-10T08:00:00+02:00")
+                    .build(),
+            );
+
+        let service = builder.build();
+
+        assert_eq!(service.external_id, String::from("service_id"));
+        assert_eq!(service.location_id, 1);
+        assert_eq!(service.service_time, Duration::ZERO);
+    }
+}

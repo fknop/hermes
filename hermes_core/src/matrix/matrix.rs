@@ -13,6 +13,20 @@ pub struct MatrixEntry {
     time: Milliseconds,
 }
 
+impl MatrixEntry {
+    pub fn weight(&self) -> Weight {
+        self.weight
+    }
+
+    pub fn distance(&self) -> Distance<Meters> {
+        self.distance
+    }
+
+    pub fn time(&self) -> Milliseconds {
+        self.time
+    }
+}
+
 impl fmt::Debug for MatrixEntry {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
