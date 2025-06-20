@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use super::{location::LocationId, time_window::TimeWindow, vehicle::Capacity};
+use super::{capacity::Capacity, location::LocationId, time_window::TimeWindow};
 
 pub type ServiceId = usize;
 
@@ -8,8 +8,30 @@ pub struct Service {
     external_id: String,
     location_id: LocationId,
     time_window: Option<TimeWindow>,
-    demand: Vec<Capacity>,
+    demand: Capacity,
     service_time: Duration,
+}
+
+impl Service {
+    pub fn external_id(&self) -> &str {
+        &self.external_id
+    }
+
+    pub fn location_id(&self) -> LocationId {
+        self.location_id
+    }
+
+    pub fn demand(&self) -> &Capacity {
+        &self.demand
+    }
+
+    pub fn service_time(&self) -> Duration {
+        self.service_time
+    }
+
+    pub fn time_window(&self) -> Option<&TimeWindow> {
+        self.time_window.as_ref()
+    }
 }
 
 #[derive(Default)]
@@ -17,7 +39,7 @@ pub struct ServiceBuilder {
     external_id: Option<String>,
     location_id: Option<LocationId>,
     time_window: Option<TimeWindow>,
-    demand: Option<Vec<Capacity>>,
+    demand: Option<Capacity>,
     service_time: Option<Duration>,
 }
 
@@ -37,7 +59,7 @@ impl ServiceBuilder {
         self
     }
 
-    pub fn with_demand(mut self, demand: Vec<Capacity>) -> Self {
+    pub fn with_demand(mut self, demand: Capacity) -> Self {
         self.demand = Some(demand);
         self
     }
@@ -67,7 +89,7 @@ mod tests {
 
     #[test]
     fn test_builder() {
-        let builder = ServiceBuilder::default()
+        let mut builder = ServiceBuilder::default()
             .with_external_id(String::from("service_id"))
             .with_location_id(1)
             .with_time_window(
@@ -76,10 +98,13 @@ mod tests {
                     .build(),
             );
 
+        builder = builder.with_demand(Capacity::new(vec![1.0, 2.0, 3.0]));
+
         let service = builder.build();
 
         assert_eq!(service.external_id, String::from("service_id"));
         assert_eq!(service.location_id, 1);
         assert_eq!(service.service_time, Duration::ZERO);
+        assert_eq!(service.demand, Capacity::new(vec![1.0, 2.0, 3.0]));
     }
 }

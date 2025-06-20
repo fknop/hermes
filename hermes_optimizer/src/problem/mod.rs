@@ -1,3 +1,4 @@
+pub mod capacity;
 pub mod location;
 pub mod service;
 pub mod time_window;

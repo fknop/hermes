@@ -1,52 +1,44 @@
-use std::time::Instant;
+use jiff::Timestamp;
 
 pub struct TimeWindow {
-    start: Option<i64>,
-    end: Option<i64>,
+    start: Option<Timestamp>,
+    end: Option<Timestamp>,
 }
 
 impl TimeWindow {
-    pub fn start(&self) -> Option<i64> {
+    pub fn start(&self) -> Option<Timestamp> {
         self.start
     }
 
-    pub fn end(&self) -> Option<i64> {
+    pub fn end(&self) -> Option<Timestamp> {
         self.end
     }
 }
 
 #[derive(Default)]
 pub struct TimeWindowBuilder {
-    start: Option<i64>,
-    end: Option<i64>,
+    start: Option<Timestamp>,
+    end: Option<Timestamp>,
 }
 
 impl TimeWindowBuilder {
-    pub fn with_start(mut self, start: i64) -> Self {
+    pub fn with_start(mut self, start: Timestamp) -> Self {
         self.start = Some(start);
         self
     }
 
     pub fn with_iso_start(mut self, start: &str) -> Self {
-        self.start = Some(
-            chrono::DateTime::parse_from_rfc3339(start)
-                .unwrap()
-                .timestamp(),
-        );
+        self.start = Some(start.parse().expect("Error parsing ISO"));
         self
     }
 
-    pub fn with_end(mut self, end: i64) -> Self {
+    pub fn with_end(mut self, end: Timestamp) -> Self {
         self.end = Some(end);
         self
     }
 
     pub fn with_iso_end(mut self, end: &str) -> Self {
-        self.end = Some(
-            chrono::DateTime::parse_from_rfc3339(end)
-                .unwrap()
-                .timestamp(),
-        );
+        self.end = Some(end.parse().expect("Error parsing ISO"));
         self
     }
 
@@ -65,15 +57,15 @@ mod tests {
 
     #[test]
     fn test_builder() {
-        let start = chrono::DateTime::parse_from_rfc3339("2025-06-10T08:00:00+02:00").unwrap();
-        let end = chrono::DateTime::parse_from_rfc3339("2025-06-10T10:00:00+02:00").unwrap();
+        let start: Timestamp = "2025-06-10T08:00:00+02:00".parse().unwrap();
+        let end: Timestamp = "2025-06-10T10:00:00+02:00".parse().unwrap();
         let time_window = TimeWindowBuilder::default()
-            .with_start(start.timestamp())
-            .with_end(end.timestamp())
+            .with_start(start)
+            .with_end(end)
             .build();
 
-        assert_eq!(time_window.start().unwrap(), start.timestamp());
-        assert_eq!(time_window.end().unwrap(), end.timestamp());
+        assert_eq!(time_window.start().unwrap(), start);
+        assert_eq!(time_window.end().unwrap(), end);
     }
 
     #[test]
@@ -83,10 +75,10 @@ mod tests {
             .with_iso_end("2025-06-10T10:00:00+02:00")
             .build();
 
-        let start = chrono::DateTime::parse_from_rfc3339("2025-06-10T08:00:00+02:00").unwrap();
-        let end = chrono::DateTime::parse_from_rfc3339("2025-06-10T10:00:00+02:00").unwrap();
+        let start = "2025-06-10T08:00:00+02:00".parse().unwrap();
+        let end = "2025-06-10T10:00:00+02:00".parse().unwrap();
 
-        assert_eq!(time_window.start().unwrap(), start.timestamp());
-        assert_eq!(time_window.end().unwrap(), end.timestamp());
+        assert_eq!(time_window.start().unwrap(), start);
+        assert_eq!(time_window.end().unwrap(), end);
     }
 }
