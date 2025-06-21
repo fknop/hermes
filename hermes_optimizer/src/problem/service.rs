@@ -1,4 +1,4 @@
-use std::time::Duration;
+use jiff::SignedDuration;
 
 use super::{capacity::Capacity, location::LocationId, time_window::TimeWindow};
 
@@ -9,7 +9,7 @@ pub struct Service {
     location_id: LocationId,
     time_window: Option<TimeWindow>,
     demand: Capacity,
-    service_time: Duration,
+    service_duration: SignedDuration,
 }
 
 impl Service {
@@ -25,8 +25,8 @@ impl Service {
         &self.demand
     }
 
-    pub fn service_time(&self) -> Duration {
-        self.service_time
+    pub fn service_duration(&self) -> SignedDuration {
+        self.service_duration
     }
 
     pub fn time_window(&self) -> Option<&TimeWindow> {
@@ -40,7 +40,7 @@ pub struct ServiceBuilder {
     location_id: Option<LocationId>,
     time_window: Option<TimeWindow>,
     demand: Option<Capacity>,
-    service_time: Option<Duration>,
+    service_time: Option<SignedDuration>,
 }
 
 impl ServiceBuilder {
@@ -64,7 +64,7 @@ impl ServiceBuilder {
         self
     }
 
-    pub fn with_service_time(mut self, service_time: Duration) -> Self {
+    pub fn with_service_duration(mut self, service_time: SignedDuration) -> Self {
         self.service_time = Some(service_time);
         self
     }
@@ -74,7 +74,7 @@ impl ServiceBuilder {
             external_id: self.external_id.expect("Expected service id"),
             location_id: self.location_id.expect("Expected location id"),
             demand: self.demand.unwrap_or_default(),
-            service_time: self.service_time.unwrap_or(Duration::ZERO),
+            service_duration: self.service_time.unwrap_or(SignedDuration::ZERO),
             time_window: self.time_window,
         }
     }
@@ -104,7 +104,7 @@ mod tests {
 
         assert_eq!(service.external_id, String::from("service_id"));
         assert_eq!(service.location_id, 1);
-        assert_eq!(service.service_time, Duration::ZERO);
+        assert_eq!(service.service_duration, SignedDuration::ZERO);
         assert_eq!(service.demand, Capacity::new(vec![1.0, 2.0, 3.0]));
     }
 }

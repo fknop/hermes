@@ -12,6 +12,10 @@ pub struct Vehicle {
 }
 
 impl Vehicle {
+    pub fn capacity(&self) -> &Capacity {
+        &self.capacity
+    }
+
     pub fn depot_location_id(&self) -> Option<usize> {
         self.depot_location_id
     }

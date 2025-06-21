@@ -1,5 +1,5 @@
-use crate::solution::Solution;
+use crate::solver::solution::Solution;
 
 pub trait SolutionSelector {
-    fn accept_solution(solutions: &[Solution]) -> Option<&Solution>;
+    fn select_solution<'a>(&self, solutions: &'a [Solution]) -> Option<&'a Solution>;
 }

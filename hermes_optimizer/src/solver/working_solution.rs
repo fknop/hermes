@@ -6,9 +6,11 @@ use jiff::{SignedDuration, Timestamp};
 use crate::problem::{
     capacity::Capacity,
     service::{Service, ServiceId},
-    vehicle::VehicleId,
+    vehicle::{Vehicle, VehicleId},
     vehicle_routing_problem::VehicleRoutingProblem,
 };
+
+use super::solution::Solution;
 
 pub struct WorkingSolution<'a> {
     problem: &'a VehicleRoutingProblem,
@@ -17,6 +19,36 @@ pub struct WorkingSolution<'a> {
 }
 
 impl<'a> WorkingSolution<'a> {
+    pub fn from_solution(problem: &'a VehicleRoutingProblem, solution: &Solution) -> Self {
+        WorkingSolution {
+            problem,
+            routes: solution
+                .routes
+                .iter()
+                .map(|route| WorkingSolutionRoute {
+                    problem,
+                    vehicle_id: route.vehicle_id,
+                    total_demand: route.total_demand.clone(),
+                    activities: route
+                        .activities
+                        .iter()
+                        .map(|activity| WorkingSolutionRouteActivity {
+                            problem,
+                            service_id: activity.service_id,
+                            arrival_time: activity.arrival_time,
+                        })
+                        .collect(),
+                    services: route
+                        .activities
+                        .iter()
+                        .map(|activity| activity.service_id)
+                        .collect(),
+                })
+                .collect(),
+            unassigned_services: FxHashSet::default(),
+        }
+    }
+
     pub fn new(problem: &'a VehicleRoutingProblem) -> Self {
         let routes = Vec::new();
         let unassigned_services = (0..problem.services().len()).collect();
@@ -26,6 +58,10 @@ impl<'a> WorkingSolution<'a> {
             routes,
             unassigned_services,
         }
+    }
+
+    pub fn routes(&self) -> &[WorkingSolutionRoute] {
+        &self.routes
     }
 }
 
@@ -38,6 +74,24 @@ pub struct WorkingSolutionRoute<'a> {
 }
 
 impl WorkingSolutionRoute<'_> {
+    pub fn start(&self) -> &WorkingSolutionRouteActivity<'_> {
+        // Empty routes should not be allowed
+        &self.activities[0]
+    }
+
+    pub fn end(&self) -> &WorkingSolutionRouteActivity<'_> {
+        // Empty routes should not be allowed
+        &self.activities[self.activities().len() - 1]
+    }
+
+    pub fn activities(&self) -> &[WorkingSolutionRouteActivity] {
+        &self.activities
+    }
+
+    pub fn vehicle(&self) -> &Vehicle {
+        self.problem.vehicle(self.vehicle_id)
+    }
+
     fn remove_service(&mut self, service_id: ServiceId) {
         if !self.services.contains(&service_id) {
             return;
@@ -98,7 +152,11 @@ impl<'a> WorkingSolutionRouteActivity<'a> {
         self.arrival_time
     }
 
-    pub fn waiting_time(&self) -> SignedDuration {
+    pub fn get_departure_time(&self) -> Timestamp {
+        self.arrival_time + self.get_waiting_time() + self.service().service_duration()
+    }
+
+    pub fn get_waiting_time(&self) -> SignedDuration {
         let service = self.service();
         let time_window = service.time_window();
 
