@@ -1,11 +1,12 @@
 use crate::solver::{score::Score, solution::Solution};
 
-use super::solution_selector::SolutionSelector;
+use super::select_solution::SelectSolution;
 
 pub struct SelectBestSelector;
 
-impl SolutionSelector for SelectBestSelector {
+impl SelectSolution for SelectBestSelector {
     fn select_solution<'a>(&self, solutions: &'a [Solution]) -> Option<&'a Solution> {
+        // TODO
         let mut max_score = Score::MAX;
         let mut best_solution = None;
 

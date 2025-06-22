@@ -153,26 +153,20 @@ impl WorkingSolutionRoute<'_> {
         self.problem.vehicle(self.vehicle_id)
     }
 
-    fn remove_service(&mut self, service_id: ServiceId) {
-        if !self.services.contains(&service_id) {
-            return;
-        }
-
-        let activity = self
-            .activities
+    fn remove_services(&mut self, service_ids: &FxHashSet<ServiceId>) {
+        self.activities
             .iter()
-            .find(|activity| activity.service_id == service_id);
+            .filter(|activity| service_ids.contains(&activity.service_id))
+            .for_each(|activity| self.waiting_duration -= activity.waiting_duration());
 
-        if let Some(activity) = activity {
-            self.waiting_duration -= activity.waiting_duration()
+        for service_id in service_ids {
+            self.services.remove(service_id);
+            self.total_demand
+                .sub_mut(self.problem.service(*service_id).demand());
         }
 
         self.activities
-            .retain(|activity| activity.service_id != service_id);
-        self.services.remove(&service_id);
-
-        self.total_demand
-            .sub_mut(self.problem.service(service_id).demand());
+            .retain(|activity| !service_ids.contains(&activity.service_id));
     }
 
     fn insert_service(&mut self, position: usize, service_id: ServiceId) {

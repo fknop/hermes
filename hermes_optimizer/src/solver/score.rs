@@ -39,12 +39,16 @@ impl Score {
     }
 }
 
+impl Ord for Score {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.hard_score
+            .cmp(&other.hard_score)
+            .then_with(|| self.soft_score.cmp(&other.soft_score))
+    }
+}
+
 impl PartialOrd for Score {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(
-            self.hard_score
-                .cmp(&other.hard_score)
-                .then_with(|| self.soft_score.cmp(&other.soft_score)),
-        )
+        Some(self.cmp(other))
     }
 }

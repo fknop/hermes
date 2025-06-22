@@ -1,34 +1,32 @@
 use crate::{
     acceptor::solution_acceptor::SolutionAcceptor,
     problem::vehicle_routing_problem::VehicleRoutingProblem,
-    selector::{select_best_selector::SelectBestSelector, solution_selector::SolutionSelector},
+    selector::{
+        select_best_selector::SelectBestSelector, select_solution::SelectSolution,
+        solution_selector::SolutionSelector,
+    },
 };
 
-use super::{solution::Solution, working_solution::WorkingSolution};
+use super::{constraint::Constraint, solution::Solution, working_solution::WorkingSolution};
 
-pub struct Search<'a, Selector, Acceptor>
-where
-    Selector: SolutionSelector,
-    Acceptor: SolutionAcceptor,
-{
+pub struct Search<'a> {
     problem: &'a VehicleRoutingProblem,
+    constraints: &'a Vec<Constraint>,
     best_solutions: Vec<Solution>,
-    solution_selector: Selector,
-    solution_acceptor: Acceptor,
+    solution_selector: SolutionSelector,
+    solution_acceptor: SolutionAcceptor,
 }
 
-impl<'a, Selector, Acceptor> Search<'a, Selector, Acceptor>
-where
-    Selector: SolutionSelector,
-    Acceptor: SolutionAcceptor,
-{
+impl<'a> Search<'a> {
     pub fn new(
         problem: &'a VehicleRoutingProblem,
-        solution_selector: Selector,
-        solution_acceptor: Acceptor,
+        constraints: &'a Vec<Constraint>,
+        solution_selector: SolutionSelector,
+        solution_acceptor: SolutionAcceptor,
     ) -> Self {
         Search {
             problem,
+            constraints,
             best_solutions: Vec::new(),
             solution_selector,
             solution_acceptor,
