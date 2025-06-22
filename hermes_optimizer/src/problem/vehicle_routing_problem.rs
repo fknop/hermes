@@ -1,5 +1,7 @@
+use jiff::SignedDuration;
+
 use super::{
-    location::Location,
+    location::{Location, LocationId},
     service::{Service, ServiceId},
     travel_cost_matrix::{Cost, Distance, Time, TravelCostMatrix},
     vehicle::{Vehicle, VehicleId},
@@ -46,17 +48,25 @@ impl VehicleRoutingProblem {
             .map(|location_id| &self.locations[location_id])
     }
 
-    pub fn travel_distance(&self, from: &Location, to: &Location) -> Distance {
-        self.travel_costs.travel_distance(from.id(), to.id())
+    pub fn travel_distance(&self, from: LocationId, to: LocationId) -> Distance {
+        self.travel_costs.travel_distance(from, to)
     }
 
-    pub fn travel_time(&self, from: &Location, to: &Location) -> jiff::SignedDuration {
-        let travel_time_seconds = self.travel_costs.travel_time(from.id(), to.id());
+    pub fn travel_time(&self, from: LocationId, to: LocationId) -> jiff::SignedDuration {
+        let travel_time_seconds = self.travel_costs.travel_time(from, to);
         jiff::SignedDuration::from_secs(travel_time_seconds)
     }
 
-    pub fn travel_cost(&self, from: &Location, to: &Location) -> Cost {
-        self.travel_costs.travel_cost(from.id(), to.id())
+    pub fn travel_cost(&self, from: LocationId, to: LocationId) -> Cost {
+        self.travel_costs.travel_cost(from, to)
+    }
+
+    pub fn waiting_cost(&self, waiting_duration: SignedDuration) -> Cost {
+        waiting_duration.as_secs() * 5
+    }
+
+    pub fn route_costs(&self) -> Cost {
+        0 // Placeholder for the static cost of a route
     }
 }
 

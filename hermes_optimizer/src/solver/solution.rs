@@ -1,6 +1,8 @@
 use jiff::{SignedDuration, Timestamp};
 
-use crate::problem::{capacity::Capacity, service::ServiceId, vehicle::VehicleId};
+use crate::problem::{
+    capacity::Capacity, service::ServiceId, travel_cost_matrix::Cost, vehicle::VehicleId,
+};
 
 use super::score::Score;
 
@@ -16,6 +18,7 @@ pub struct SolutionRoute {
     pub vehicle_id: VehicleId,
     pub activities: Vec<SolutionActivity>,
     pub total_demand: Capacity,
+    pub total_cost: Cost,
 }
 
 pub struct Solution {

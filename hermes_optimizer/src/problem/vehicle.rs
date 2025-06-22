@@ -9,6 +9,7 @@ pub struct Vehicle {
     shift: VehicleShift,
     capacity: Capacity,
     depot_location_id: Option<usize>,
+    should_return_to_depot: bool,
 }
 
 impl Vehicle {
@@ -27,6 +28,10 @@ impl Vehicle {
     pub fn latest_end_time(&self) -> Timestamp {
         self.shift.earliest_start
     }
+
+    pub fn should_return_to_depot(&self) -> bool {
+        self.should_return_to_depot
+    }
 }
 
 pub struct VehicleShift {
@@ -40,6 +45,7 @@ pub struct VehicleBuilder {
     shift: Option<VehicleShift>,
     capacity: Option<Capacity>,
     depot_location_id: Option<usize>,
+    should_return_to_depot: Option<bool>,
 }
 
 impl VehicleBuilder {
@@ -61,5 +67,21 @@ impl VehicleBuilder {
     pub fn with_depot_location_id(mut self, depot_location_id: usize) -> Self {
         self.depot_location_id = Some(depot_location_id);
         self
+    }
+
+    pub fn with_return(mut self, should_return_to_depot: bool) -> Self {
+        // This method is not used in the current implementation but can be added for future use
+        self.should_return_to_depot = Some(should_return_to_depot);
+        self
+    }
+
+    pub fn build(self) -> Vehicle {
+        Vehicle {
+            external_id: self.external_id.expect("External ID is required"),
+            shift: self.shift.expect("Vehicle shift is required"),
+            capacity: self.capacity.unwrap_or_else(|| Capacity::ZERO),
+            depot_location_id: self.depot_location_id,
+            should_return_to_depot: self.should_return_to_depot.unwrap_or(false),
+        }
     }
 }

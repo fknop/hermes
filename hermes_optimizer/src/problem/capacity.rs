@@ -1,3 +1,5 @@
+use std::ops::Add;
+
 #[derive(Default, Debug, PartialEq, Clone)]
 pub struct Capacity(Vec<f64>);
 
@@ -12,7 +14,7 @@ impl Capacity {
         self.0.fill(0.0);
     }
 
-    pub fn add(&mut self, other: &Capacity) {
+    pub fn add_mut(&mut self, other: &Capacity) {
         if self.0.len() < other.0.len() {
             self.0.resize(other.0.len(), 0.0);
         }
@@ -22,7 +24,7 @@ impl Capacity {
         }
     }
 
-    pub fn sub(&mut self, other: &Capacity) {
+    pub fn sub_mut(&mut self, other: &Capacity) {
         if self.0.len() < other.0.len() {
             self.0.resize(other.0.len(), 0.0);
         }
@@ -59,33 +61,46 @@ impl Capacity {
     }
 }
 
+impl Add<&Capacity> for &Capacity {
+    type Output = Capacity;
+
+    fn add(self, rhs: &Capacity) -> Self::Output {
+        let mut output = Capacity::ZERO;
+
+        output.add_mut(self);
+        output.add_mut(rhs);
+
+        output
+    }
+}
+
 #[cfg(test)]
 mod tests {
 
     use super::*;
 
     #[test]
-    fn test_add() {
+    fn test_add_mut() {
         let mut total_capacity = Capacity::default();
 
-        total_capacity.add(&Capacity(vec![1.0, 2.0, 3.0]));
+        total_capacity.add_mut(&Capacity(vec![1.0, 2.0, 3.0]));
 
         assert_eq!(total_capacity, Capacity::new(vec![1.0, 2.0, 3.0]));
 
-        total_capacity.add(&Capacity(vec![1.0, 2.0, 3.0]));
+        total_capacity.add_mut(&Capacity(vec![1.0, 2.0, 3.0]));
 
         assert_eq!(total_capacity, Capacity::new(vec![2.0, 4.0, 6.0]));
     }
 
     #[test]
-    fn test_sub() {
+    fn test_sub_mut() {
         let mut total_capacity = Capacity::new(vec![10.0, 4.0, 5.0]);
 
-        total_capacity.sub(&Capacity(vec![1.0, 2.0, 3.0]));
+        total_capacity.sub_mut(&Capacity(vec![1.0, 2.0, 3.0]));
 
         assert_eq!(total_capacity, Capacity::new(vec![9.0, 2.0, 2.0]));
 
-        total_capacity.sub(&Capacity(vec![1.0, 0.0, 0.0]));
+        total_capacity.sub_mut(&Capacity(vec![1.0, 0.0, 0.0]));
 
         assert_eq!(total_capacity, Capacity::new(vec![8.0, 2.0, 2.0]));
     }
@@ -109,5 +124,14 @@ mod tests {
 
         assert_eq!(total_capacity.over_capacity_demand(&demand), 3.0);
         assert_eq!(demand.over_capacity_demand(&total_capacity), 13.0);
+    }
+
+    fn test_add_op() {
+        let capacity1 = Capacity::new(vec![1.0, 2.0, 3.0]);
+        let capacity2 = Capacity::new(vec![4.0, 5.0, 6.0]);
+
+        let result = &capacity1 + &capacity2;
+
+        assert_eq!(result, Capacity::new(vec![5.0, 7.0, 9.0]));
     }
 }
