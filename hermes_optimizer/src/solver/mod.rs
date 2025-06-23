@@ -1,4 +1,4 @@
-pub mod constraint;
+pub mod constraints;
 pub mod insertion_context;
 pub mod score;
 pub mod search;

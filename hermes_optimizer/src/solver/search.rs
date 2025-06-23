@@ -7,7 +7,9 @@ use crate::{
     },
 };
 
-use super::{constraint::Constraint, solution::Solution, working_solution::WorkingSolution};
+use super::{
+    constraints::constraint::Constraint, solution::Solution, working_solution::WorkingSolution,
+};
 
 pub struct Search<'a> {
     problem: &'a VehicleRoutingProblem,
