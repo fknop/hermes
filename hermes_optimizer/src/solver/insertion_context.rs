@@ -1,33 +1,34 @@
-use crate::problem::{service::ServiceId, vehicle::VehicleId};
+use jiff::{SignedDuration, Timestamp};
 
-pub struct ExistingRouteInsertionContext {
-    pub route_id: usize,
+use crate::problem::{service::ServiceId, vehicle_routing_problem::VehicleRoutingProblem};
+
+use super::{insertion::Insertion, working_solution::WorkingSolution};
+
+pub struct ActivityInsertionContext {
     pub service_id: ServiceId,
-    pub position: usize,
+    pub arrival_time: Timestamp,
+    pub departure_time: Timestamp,
+    pub waiting_duration: SignedDuration,
 }
 
-pub struct NewRouteInsertionContext {
-    pub service_id: ServiceId,
-    pub vehicle_id: VehicleId,
+impl ActivityInsertionContext {
+    pub fn departure_time(&self) -> Timestamp {
+        self.departure_time
+    }
 }
 
-pub enum InsertionContext {
-    NewRoute(NewRouteInsertionContext),
-    ExistingRoute(ExistingRouteInsertionContext),
+pub struct InsertionContext<'a> {
+    pub solution: &'a WorkingSolution<'a>,
+    pub insertion: &'a Insertion,
+    pub activities: Vec<ActivityInsertionContext>,
 }
 
-impl InsertionContext {
-    pub fn service_id(&self) -> ServiceId {
-        match self {
-            InsertionContext::NewRoute(ctx) => ctx.service_id,
-            InsertionContext::ExistingRoute(ctx) => ctx.service_id,
-        }
+impl InsertionContext<'_> {
+    pub fn inserted_activity(&self) -> &ActivityInsertionContext {
+        &self.activities[self.insertion.position()]
     }
 
-    pub fn position(&self) -> usize {
-        match self {
-            InsertionContext::NewRoute(_) => 0,
-            InsertionContext::ExistingRoute(ctx) => ctx.position,
-        }
+    pub fn problem(&self) -> &VehicleRoutingProblem {
+        self.solution.problem()
     }
 }

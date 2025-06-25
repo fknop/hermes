@@ -10,6 +10,10 @@ impl Capacity {
 
     pub const ZERO: Capacity = Capacity(vec![]);
 
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty() || self.0.iter().all(|&c| c == 0.0)
+    }
+
     pub fn reset(&mut self) {
         self.0.fill(0.0);
     }

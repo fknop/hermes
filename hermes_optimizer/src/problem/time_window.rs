@@ -15,6 +15,22 @@ impl TimeWindow {
     }
 }
 
+impl TimeWindow {
+    pub fn is_satisfied(&self, arrival: Timestamp) -> bool {
+        match self.end {
+            Some(end) => arrival <= end,
+            None => true,
+        }
+    }
+
+    pub fn overtime(&self, arrival: Timestamp) -> i64 {
+        match self.end {
+            Some(end) => end.as_second() - arrival.as_second(),
+            None => 0,
+        }
+    }
+}
+
 #[derive(Default)]
 pub struct TimeWindowBuilder {
     start: Option<Timestamp>,

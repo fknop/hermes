@@ -1,4 +1,4 @@
-use std::cmp::Ordering;
+use std::{cmp::Ordering, iter};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Score {
@@ -50,5 +50,14 @@ impl Ord for Score {
 impl PartialOrd for Score {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
+    }
+}
+
+impl iter::Sum for Score {
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Self::zero(), |acc, score| Score {
+            hard_score: acc.hard_score + score.hard_score,
+            soft_score: acc.soft_score + score.soft_score,
+        })
     }
 }

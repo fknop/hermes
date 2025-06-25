@@ -1,15 +1,25 @@
-use crate::solver::{score::Score, working_solution::WorkingSolution};
+use crate::solver::{
+    insertion_context::InsertionContext, score::Score, working_solution::WorkingSolution,
+};
 
 pub trait GlobalConstraint {
-    fn compute_delta_score(&self, solution: &WorkingSolution) -> Score;
+    fn compute_insertion_score(&self, context: &InsertionContext) -> Score;
 }
 
 pub enum GlobalConstraintType {}
 
-impl GlobalConstraint for GlobalConstraintType {
-    fn compute_delta_score(&self, _solution: &WorkingSolution) -> Score {
+impl GlobalConstraintType {
+    pub fn constraint_name(&self) -> &'static str {
         match self {
-            _ => Score::zero(),
+            _ => panic!(),
+        }
+    }
+}
+
+impl GlobalConstraint for GlobalConstraintType {
+    fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
+        match self {
+            _ => panic!(),
         }
     }
 }

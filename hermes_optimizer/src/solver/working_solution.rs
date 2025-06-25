@@ -9,7 +9,12 @@ use crate::problem::{
     vehicle_routing_problem::VehicleRoutingProblem,
 };
 
-use super::{insertion_context::InsertionContext, score::Score, solution::Solution};
+use super::{
+    insertion::Insertion,
+    insertion_context::{ActivityInsertionContext, InsertionContext},
+    score::Score,
+    solution::Solution,
+};
 
 pub struct WorkingSolution<'a> {
     problem: &'a VehicleRoutingProblem,
@@ -79,25 +84,34 @@ impl<'a> WorkingSolution<'a> {
         &self.routes
     }
 
-    fn insert_service(&mut self, insertion_context: &InsertionContext) {
-        match insertion_context {
-            InsertionContext::ExistingRoute(context) => {
+    pub fn route(&self, route_id: usize) -> &WorkingSolutionRoute {
+        &self.routes[route_id]
+    }
+
+    fn insert_service(&mut self, insertion: &Insertion) {
+        match insertion {
+            Insertion::ExistingRoute(context) => {
                 let route = &mut self.routes[context.route_id];
                 route.insert_service(context.position, context.service_id);
             }
-            InsertionContext::NewRoute(context) => {
-                let mut new_route = WorkingSolutionRoute {
-                    problem: self.problem,
-                    vehicle_id: context.vehicle_id,
-                    services: FxHashSet::default(),
-                    activities: Vec::new(),
-                    total_demand: Capacity::ZERO,
-                    total_cost: 0,
-                    waiting_duration: SignedDuration::ZERO,
-                };
+            Insertion::NewRoute(context) => {
+                let mut new_route = WorkingSolutionRoute::empty(self.problem, context.vehicle_id);
                 new_route.insert_service(0, context.service_id);
                 self.routes.push(new_route);
             }
+        }
+    }
+
+    pub fn remove_activity(&mut self, route_id: usize, activity_id: usize) {
+        if route_id >= self.routes.len() {
+            return; // Invalid route ID
+        }
+
+        let route = &mut self.routes[route_id];
+        route.remove_activity(activity_id);
+
+        if route.is_empty() {
+            self.routes.remove(route_id);
         }
     }
 }
@@ -118,7 +132,19 @@ pub struct WorkingSolutionRoute<'a> {
     waiting_duration: SignedDuration,
 }
 
-impl WorkingSolutionRoute<'_> {
+impl<'a> WorkingSolutionRoute<'a> {
+    pub fn empty(problem: &'a VehicleRoutingProblem, vehicle_id: VehicleId) -> Self {
+        WorkingSolutionRoute {
+            problem,
+            vehicle_id,
+            services: FxHashSet::default(),
+            activities: Vec::new(),
+            total_demand: Capacity::ZERO,
+            total_cost: 0,
+            waiting_duration: SignedDuration::ZERO,
+        }
+    }
+
     pub fn is_empty(&self) -> bool {
         self.activities.is_empty()
     }
@@ -151,6 +177,21 @@ impl WorkingSolutionRoute<'_> {
 
     pub fn vehicle(&self) -> &Vehicle {
         self.problem.vehicle(self.vehicle_id)
+    }
+
+    fn remove_activity(&mut self, activity_id: usize) {
+        if activity_id >= self.activities.len() {
+            return; // Invalid activity ID
+        }
+
+        let activity = &self.activities[activity_id];
+        self.waiting_duration -= activity.waiting_duration();
+
+        self.services.remove(&activity.service_id);
+        self.total_demand
+            .sub_mut(self.problem.service(activity.service_id).demand());
+
+        self.activities.remove(activity_id);
     }
 
     fn remove_services(&mut self, service_ids: &FxHashSet<ServiceId>) {
@@ -356,14 +397,27 @@ pub fn compute_departure_time(
     arrival_time + waiting_duration + problem.service(service_id).service_duration()
 }
 
-fn compute_insertion_waiting_duration_delta(
-    problem: &VehicleRoutingProblem,
-    solution: &WorkingSolution,
-    insertion_context: &InsertionContext,
-) -> SignedDuration {
-    match insertion_context {
-        InsertionContext::ExistingRoute(context) => {
+fn compute_insertion_context<'a>(
+    problem: &'a VehicleRoutingProblem,
+    solution: &'a WorkingSolution<'a>,
+    insertion: &'a Insertion,
+) -> InsertionContext<'a> {
+    let mut activities = Vec::new();
+
+    match insertion {
+        Insertion::ExistingRoute(context) => {
             let route = solution.routes.get(context.route_id).unwrap();
+
+            for i in 0..context.position {
+                activities.push({
+                    ActivityInsertionContext {
+                        service_id: route.activities[i].service_id,
+                        arrival_time: route.activities[i].arrival_time,
+                        departure_time: route.activities[i].departure_time,
+                        waiting_duration: route.activities[i].waiting_duration,
+                    }
+                })
+            }
 
             let mut arrival_time = if route.is_empty() || context.position == 0 {
                 compute_first_activity_arrival_time(problem, route.vehicle_id, context.service_id)
@@ -381,7 +435,12 @@ fn compute_insertion_waiting_duration_delta(
             let mut departure_time =
                 compute_departure_time(problem, arrival_time, waiting_duration, context.service_id);
 
-            let mut delta = waiting_duration;
+            activities.push(ActivityInsertionContext {
+                service_id: context.service_id,
+                arrival_time,
+                departure_time,
+                waiting_duration,
+            });
 
             let mut last_service_id = context.service_id;
 
@@ -399,117 +458,51 @@ fn compute_insertion_waiting_duration_delta(
                 departure_time =
                     compute_departure_time(problem, arrival_time, waiting_duration, service_id);
 
-                last_service_id = service_id;
+                activities.push(ActivityInsertionContext {
+                    service_id,
+                    arrival_time,
+                    departure_time,
+                    waiting_duration,
+                });
 
-                delta += waiting_duration;
-                delta -= route.activities[i].waiting_duration;
+                last_service_id = service_id;
             }
 
-            delta
+            InsertionContext {
+                solution,
+                activities,
+                insertion,
+            }
         }
-        InsertionContext::NewRoute(context) => {
+        Insertion::NewRoute(context) => {
             let arrival_time = compute_first_activity_arrival_time(
                 problem,
                 context.vehicle_id,
                 context.service_id,
             );
 
-            compute_waiting_duration(problem, arrival_time, context.service_id)
-        }
-    }
-}
+            let departure_time = compute_departure_time(
+                problem,
+                arrival_time,
+                compute_waiting_duration(problem, arrival_time, context.service_id),
+                context.service_id,
+            );
 
-pub fn compute_insertion_score(
-    solution: &WorkingSolution,
-    insertion_context: &InsertionContext,
-) -> Score {
-    let route = match insertion_context {
-        InsertionContext::ExistingRoute(context) => solution.routes.get(context.route_id),
-        InsertionContext::NewRoute(_) => None,
-    };
+            let waiting_duration =
+                compute_waiting_duration(problem, arrival_time, context.service_id);
 
-    let vehicle_id = match insertion_context {
-        InsertionContext::ExistingRoute(context) => solution.routes()[context.route_id].vehicle_id,
-        InsertionContext::NewRoute(context) => context.vehicle_id,
-    };
+            activities.push(ActivityInsertionContext {
+                service_id: context.service_id,
+                arrival_time,
+                departure_time,
+                waiting_duration,
+            });
 
-    let problem = solution.problem();
-    let service_id = insertion_context.service_id();
-    let position = insertion_context.position();
-    let service_to_insert = problem.service(service_id);
-    let vehicle = problem.vehicle(vehicle_id);
-
-    // 1. Check Capacity Constraint
-    if vehicle.capacity().satisfies_demand(
-        &(route
-            .map(|route| &route.total_demand)
-            .unwrap_or(&Capacity::ZERO)
-            + service_to_insert.demand()),
-    ) {
-        return Score::hard(1); // TODO
-    }
-
-    // let depot_idx = 0; // Assuming depot is always at index 0
-    let depot_location = problem.vehicle_depot_location(vehicle_id);
-    let service_location_id = service_to_insert.location_id();
-
-    let mut previous_location_id = None;
-    let mut next_location_id = None;
-
-    if route.is_none() || route.unwrap().is_empty() {
-        if let Some(depot) = depot_location {
-            previous_location_id = Some(depot.id());
-
-            if vehicle.should_return_to_depot() {
-                next_location_id = Some(depot.id());
+            InsertionContext {
+                solution,
+                activities,
+                insertion,
             }
         }
-    } else if position == 0 {
-        if let Some(location) = depot_location {
-            previous_location_id = Some(location.id());
-        }
-
-        let activities = route.unwrap().activities();
-        next_location_id = Some(activities[1].service().location_id());
-    } else if position >= route.unwrap().activities().len() {
-        // Inserting at the end
-        let activities = route.unwrap().activities();
-        previous_location_id = Some(activities[activities.len() - 1].service().location_id());
-
-        if let Some(depot) = depot_location {
-            if vehicle.should_return_to_depot() {
-                next_location_id = Some(depot.id());
-            }
-        }
-    } else {
-        let activities = route.unwrap().activities();
-        previous_location_id = Some(activities[position - 1].service().location_id());
-        next_location_id = Some(activities[position].service().location_id());
     }
-
-    let old_cost = if let (Some(previous), Some(next)) = (previous_location_id, next_location_id) {
-        problem.travel_cost(previous, next)
-    } else {
-        0
-    };
-
-    let mut new_cost = 0;
-
-    if let Some(previous) = previous_location_id {
-        new_cost += problem.travel_cost(previous, service_location_id);
-    }
-
-    if let Some(next) = next_location_id {
-        new_cost += problem.travel_cost(service_location_id, next);
-    }
-
-    let travel_cost_delta = new_cost - old_cost;
-
-    let waiting_duration_delta =
-        compute_insertion_waiting_duration_delta(problem, solution, insertion_context);
-
-    // (Optional) Add Time Window checks here. This is more complex as it
-    // requires re-calculating arrival times from `position` onwards.
-
-    Score::soft(travel_cost_delta + problem.waiting_cost(waiting_duration_delta))
 }

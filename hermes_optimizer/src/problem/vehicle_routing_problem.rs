@@ -35,6 +35,10 @@ impl VehicleRoutingProblem {
         &self.locations
     }
 
+    pub fn location(&self, location_id: usize) -> &Location {
+        &self.locations[location_id]
+    }
+
     pub fn service_location(&self, service_id: ServiceId) -> &Location {
         let service = &self.services[service_id];
         let location_id = service.location_id();

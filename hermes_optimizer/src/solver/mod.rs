@@ -1,5 +1,8 @@
 pub mod constraints;
+pub mod insertion;
 pub mod insertion_context;
+pub mod recreate;
+pub mod ruin;
 pub mod score;
 pub mod search;
 pub mod solution;
