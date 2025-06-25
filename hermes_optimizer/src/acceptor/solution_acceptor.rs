@@ -1,4 +1,4 @@
-use crate::solver::solution::Solution;
+use crate::solver::{score::Score, solution::Solution, working_solution::WorkingSolution};
 
 use super::{accept_solution::AcceptSolution, greedy_solution_acceptor::GreedySolutionAcceptor};
 
@@ -7,10 +7,15 @@ pub enum SolutionAcceptor {
 }
 
 impl AcceptSolution for SolutionAcceptor {
-    fn accept_solution(&self, current_solutions: &[Solution], solution: &Solution) -> bool {
+    fn accept(
+        &self,
+        current_solutions: &[Solution],
+        solution: &WorkingSolution,
+        score: &Score,
+    ) -> bool {
         match self {
             SolutionAcceptor::Greedy(acceptor) => {
-                acceptor.accept_solution(current_solutions, solution)
+                acceptor.accept(current_solutions, solution, score)
             }
         }
     }

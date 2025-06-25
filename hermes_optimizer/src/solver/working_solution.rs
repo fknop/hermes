@@ -76,6 +76,29 @@ impl<'a> WorkingSolution<'a> {
         }
     }
 
+    pub fn has_available_vehicle(&self) -> bool {
+        self.problem.vehicles().len() > self.routes.len()
+    }
+
+    pub fn available_vehicle(&self) -> Option<VehicleId> {
+        // Find the first vehicle that has no routes assigned
+        self.problem
+            .vehicles()
+            .iter()
+            .enumerate()
+            .map(|(vehicle_id, _)| vehicle_id)
+            .find(|&vehicle_id| {
+                !self
+                    .routes
+                    .iter()
+                    .any(|route| route.vehicle_id == vehicle_id)
+            })
+    }
+
+    pub fn unassigned_services(&self) -> &FxHashSet<ServiceId> {
+        &self.unassigned_services
+    }
+
     pub fn problem(&self) -> &VehicleRoutingProblem {
         self.problem
     }
@@ -88,7 +111,7 @@ impl<'a> WorkingSolution<'a> {
         &self.routes[route_id]
     }
 
-    fn insert_service(&mut self, insertion: &Insertion) {
+    pub fn insert_service(&mut self, insertion: &Insertion) {
         match insertion {
             Insertion::ExistingRoute(context) => {
                 let route = &mut self.routes[context.route_id];
@@ -108,7 +131,9 @@ impl<'a> WorkingSolution<'a> {
         }
 
         let route = &mut self.routes[route_id];
-        route.remove_activity(activity_id);
+        if let Some(service_id) = route.remove_activity(activity_id) {
+            self.unassigned_services.insert(service_id);
+        }
 
         if route.is_empty() {
             self.routes.remove(route_id);
@@ -179,36 +204,43 @@ impl<'a> WorkingSolutionRoute<'a> {
         self.problem.vehicle(self.vehicle_id)
     }
 
-    fn remove_activity(&mut self, activity_id: usize) {
+    fn remove_activity(&mut self, activity_id: usize) -> Option<ServiceId> {
         if activity_id >= self.activities.len() {
-            return; // Invalid activity ID
+            return None;
         }
 
         let activity = &self.activities[activity_id];
-        self.waiting_duration -= activity.waiting_duration();
+        let service_id = activity.service_id();
+
+        if !self.services.contains(&service_id) {
+            return None;
+        }
 
         self.services.remove(&activity.service_id);
+        self.waiting_duration -= activity.waiting_duration();
         self.total_demand
             .sub_mut(self.problem.service(activity.service_id).demand());
 
         self.activities.remove(activity_id);
+
+        Some(service_id)
     }
 
-    fn remove_services(&mut self, service_ids: &FxHashSet<ServiceId>) {
-        self.activities
-            .iter()
-            .filter(|activity| service_ids.contains(&activity.service_id))
-            .for_each(|activity| self.waiting_duration -= activity.waiting_duration());
+    // fn remove_services(&mut self, service_ids: &FxHashSet<ServiceId>) {
+    //     self.activities
+    //         .iter()
+    //         .filter(|activity| service_ids.contains(&activity.service_id))
+    //         .for_each(|activity| self.waiting_duration -= activity.waiting_duration());
 
-        for service_id in service_ids {
-            self.services.remove(service_id);
-            self.total_demand
-                .sub_mut(self.problem.service(*service_id).demand());
-        }
+    //     for service_id in service_ids {
+    //         self.services.remove(service_id);
+    //         self.total_demand
+    //             .sub_mut(self.problem.service(*service_id).demand());
+    //     }
 
-        self.activities
-            .retain(|activity| !service_ids.contains(&activity.service_id));
-    }
+    //     self.activities
+    //         .retain(|activity| !service_ids.contains(&activity.service_id));
+    // }
 
     fn insert_service(&mut self, position: usize, service_id: ServiceId) {
         if self.services.contains(&service_id) {

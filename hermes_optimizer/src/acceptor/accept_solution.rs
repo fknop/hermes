@@ -1,5 +1,10 @@
-use crate::solver::solution::Solution;
+use crate::solver::{score::Score, solution::Solution, working_solution::WorkingSolution};
 
 pub trait AcceptSolution {
-    fn accept_solution(&self, current_solutions: &[Solution], solution: &Solution) -> bool;
+    fn accept(
+        &self,
+        current_solutions: &[Solution],
+        solution: &WorkingSolution,
+        score: &Score,
+    ) -> bool;
 }
