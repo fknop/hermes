@@ -50,10 +50,10 @@ impl GlobalConstraint for TransportCostConstraint {
             let activities = route.unwrap().activities();
             previous_location_id = Some(activities[activities.len() - 1].service().location_id());
 
-            if let Some(depot_id) = depot_location_id {
-                if vehicle.should_return_to_depot() {
-                    next_location_id = Some(depot_id);
-                }
+            if let Some(depot_id) = depot_location_id
+                && vehicle.should_return_to_depot()
+            {
+                next_location_id = Some(depot_id);
             }
         } else {
             let activities = route.unwrap().activities();

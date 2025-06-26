@@ -89,7 +89,7 @@ impl OsmReader {
             return false;
         }
 
-        if way.tags.len() == 0 {
+        if way.tags.is_empty() {
             return false;
         }
 

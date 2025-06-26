@@ -5,6 +5,8 @@ pub struct SolverParams {
     pub solver_acceptor: SolverAcceptorStrategy,
     pub solver_selector: SolverSelectorStrategy,
 
+    pub max_solutions: usize,
+
     pub ruin: RuinParams,
     pub recreate: RecreateParams,
 }
@@ -22,6 +24,7 @@ impl Default for SolverParams {
     fn default() -> Self {
         Self {
             max_iterations: 1000,
+            max_solutions: 4,
             solver_acceptor: SolverAcceptorStrategy::Greedy,
             solver_selector: SolverSelectorStrategy::SelectBest,
             ruin: RuinParams::default(),

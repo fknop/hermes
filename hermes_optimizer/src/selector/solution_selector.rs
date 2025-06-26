@@ -1,4 +1,4 @@
-use crate::solver::solution::Solution;
+use crate::solver::accepted_solution::AcceptedSolution;
 
 use super::{
     select_best_selector::SelectBestSelector, select_random_selector::SelectRandomSelector,
@@ -11,7 +11,10 @@ pub enum SolutionSelector {
 }
 
 impl SelectSolution for SolutionSelector {
-    fn select_solution<'a>(&self, solutions: &'a [Solution]) -> Option<&'a Solution> {
+    fn select_solution<'r, 'a>(
+        &self,
+        solutions: &'r [AcceptedSolution<'a>],
+    ) -> Option<&'r AcceptedSolution<'a>> {
         match self {
             SolutionSelector::SelectBest(selector) => selector.select_solution(solutions),
             SolutionSelector::SelectRandom(selector) => selector.select_solution(solutions),

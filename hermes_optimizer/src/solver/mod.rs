@@ -1,3 +1,4 @@
+pub mod accepted_solution;
 pub mod constraints;
 pub mod insertion;
 pub mod insertion_context;
@@ -5,7 +6,6 @@ pub mod recreate;
 pub mod ruin;
 pub mod score;
 pub mod search;
-pub mod solution;
 pub mod solver;
 pub mod solver_params;
 pub mod working_solution;

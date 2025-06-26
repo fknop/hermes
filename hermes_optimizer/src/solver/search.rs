@@ -1,4 +1,4 @@
-use rand::{Rng, rngs::ThreadRng};
+use rand::{Rng, SeedableRng, rngs::SmallRng};
 
 use crate::{
     acceptor::{
@@ -13,11 +13,14 @@ use crate::{
 };
 
 use super::{
+    accepted_solution::AcceptedSolution,
     constraints::constraint::Constraint,
-    recreate::{recreate_solution::RecreateSolution, recreate_strategy::RecreateStrategy},
-    ruin::{ruin_solution::RuinSolution, ruin_strategy::RuinStrategy},
+    recreate::{
+        recreate_context::RecreateContext, recreate_solution::RecreateSolution,
+        recreate_strategy::RecreateStrategy,
+    },
+    ruin::{ruin_context::RuinContext, ruin_solution::RuinSolution, ruin_strategy::RuinStrategy},
     score::Score,
-    solution::Solution,
     solver_params::{SolverAcceptorStrategy, SolverParams, SolverSelectorStrategy},
     working_solution::WorkingSolution,
 };
@@ -26,7 +29,7 @@ pub struct Search<'a> {
     problem: &'a VehicleRoutingProblem,
     constraints: &'a Vec<Constraint>,
     params: &'a SolverParams,
-    best_solutions: Vec<Solution>,
+    best_solutions: Vec<AcceptedSolution<'a>>,
     solution_selector: SolutionSelector,
     solution_acceptor: SolutionAcceptor,
 }
@@ -57,46 +60,69 @@ impl<'a> Search<'a> {
         }
     }
 
-    pub fn best_solutions(&self) -> &[Solution] {
+    pub fn best_solutions(&self) -> &[AcceptedSolution] {
         &self.best_solutions
     }
 
     pub fn run(&mut self) {
+        let mut rng = SmallRng::seed_from_u64(123);
+
         for _ in 0..self.params.max_iterations {
-            self.perform_iteration();
+            self.perform_iteration(&mut rng);
         }
     }
 
-    fn perform_iteration(&mut self) {
-        let current_solution = self.solution_selector.select_solution(&self.best_solutions);
-        let mut working_solution = if let Some(solution) = current_solution {
-            WorkingSolution::from_solution(self.problem, solution)
+    fn perform_iteration(&mut self, rng: &mut SmallRng) {
+        let mut working_solution = if !self.best_solutions.is_empty()
+            && let Some(AcceptedSolution { solution, .. }) =
+                self.solution_selector.select_solution(&self.best_solutions)
+        {
+            solution.clone()
         } else {
             WorkingSolution::new(self.problem)
         };
 
-        self.ruin(&mut working_solution);
-        self.recreate(&mut working_solution);
+        self.ruin(&mut working_solution, rng);
+        self.recreate(&mut working_solution, rng);
 
-        let score = self.compute_solution_score(&working_solution);
-        let accept = self
-            .solution_acceptor
-            .accept(&self.best_solutions, &working_solution, &score);
+        self.store_solution(working_solution);
     }
 
-    fn ruin(&self, solution: &mut WorkingSolution) {
-        let mut rng = rand::rng();
+    fn store_solution(&mut self, solution: WorkingSolution<'a>) {
+        let score = self.compute_solution_score(&solution);
 
-        let ruin_strategy = self.select_ruin_strategy(&mut rng);
+        if self
+            .solution_acceptor
+            .accept(&self.best_solutions, &solution, &score)
+        {
+            self.best_solutions
+                .push(AcceptedSolution { solution, score });
+            self.best_solutions.sort_by(|a, b| a.score.cmp(&b.score));
+
+            // Evict worst
+            if self.best_solutions.len() > self.params.max_solutions {
+                self.best_solutions.pop();
+            }
+        }
+    }
+
+    fn ruin(&self, solution: &mut WorkingSolution, rng: &mut SmallRng) {
+        let ruin_strategy = self.select_ruin_strategy(rng);
         let ruin_maximum_ratio = self.params.ruin.ruin_maximum_ratio;
         let maximum_ruin_size =
             (ruin_maximum_ratio * self.problem.services().len() as f64).floor() as usize;
         let ruin_size = rng.random_range(0..maximum_ruin_size);
 
-        ruin_strategy.ruin_solution(solution, ruin_size);
+        ruin_strategy.ruin_solution(
+            solution,
+            RuinContext {
+                rng,
+                num_activities_to_remove: ruin_size,
+            },
+        );
     }
 
-    fn select_ruin_strategy(&self, rng: &mut ThreadRng) -> RuinStrategy {
+    fn select_ruin_strategy(&self, rng: &mut SmallRng) -> RuinStrategy {
         let total_weight: u64 = self
             .params
             .ruin
@@ -115,14 +141,12 @@ impl<'a> Search<'a> {
         panic!("No ruin strategy configured on solver");
     }
 
-    fn recreate(&self, solution: &mut WorkingSolution) {
-        let mut rng = rand::rng();
-
-        let recreate_strategy = self.select_recreate_strategy(&mut rng);
-        recreate_strategy.recreate_solution(solution);
+    fn recreate(&self, solution: &mut WorkingSolution, rng: &mut SmallRng) {
+        let recreate_strategy = self.select_recreate_strategy(rng);
+        recreate_strategy.recreate_solution(solution, RecreateContext { rng });
     }
 
-    fn select_recreate_strategy(&self, rng: &mut ThreadRng) -> RecreateStrategy {
+    fn select_recreate_strategy(&self, rng: &mut SmallRng) -> RecreateStrategy {
         let total_weight: u64 = self
             .params
             .recreate

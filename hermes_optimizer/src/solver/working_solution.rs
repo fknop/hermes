@@ -12,10 +12,9 @@ use crate::problem::{
 use super::{
     insertion::Insertion,
     insertion_context::{ActivityInsertionContext, InsertionContext},
-    score::Score,
-    solution::Solution,
 };
 
+#[derive(Clone)]
 pub struct WorkingSolution<'a> {
     problem: &'a VehicleRoutingProblem,
     routes: Vec<WorkingSolutionRoute<'a>>,
@@ -23,48 +22,6 @@ pub struct WorkingSolution<'a> {
 }
 
 impl<'a> WorkingSolution<'a> {
-    pub fn from_solution(problem: &'a VehicleRoutingProblem, solution: &Solution) -> Self {
-        WorkingSolution {
-            problem,
-            routes: solution
-                .routes
-                .iter()
-                .map(|route| {
-                    let activities: Vec<WorkingSolutionRouteActivity> = route
-                        .activities
-                        .iter()
-                        .map(|activity| {
-                            WorkingSolutionRouteActivity::new(
-                                problem,
-                                activity.service_id,
-                                activity.arrival_time,
-                            )
-                        })
-                        .collect();
-
-                    let waiting_duration = activities
-                        .iter()
-                        .map(|activity| activity.waiting_duration())
-                        .sum();
-                    WorkingSolutionRoute {
-                        problem,
-                        vehicle_id: route.vehicle_id,
-                        total_demand: route.total_demand.clone(),
-                        activities,
-                        services: route
-                            .activities
-                            .iter()
-                            .map(|activity| activity.service_id)
-                            .collect(),
-                        total_cost: route.total_cost,
-                        waiting_duration,
-                    }
-                })
-                .collect(),
-            unassigned_services: FxHashSet::default(),
-        }
-    }
-
     pub fn new(problem: &'a VehicleRoutingProblem) -> Self {
         let routes = Vec::new();
         let unassigned_services = (0..problem.services().len()).collect();
@@ -97,6 +54,10 @@ impl<'a> WorkingSolution<'a> {
 
     pub fn unassigned_services(&self) -> &FxHashSet<ServiceId> {
         &self.unassigned_services
+    }
+
+    pub fn unassigned_services_mut(&mut self) -> &mut FxHashSet<ServiceId> {
+        &mut self.unassigned_services
     }
 
     pub fn problem(&self) -> &VehicleRoutingProblem {
@@ -141,6 +102,7 @@ impl<'a> WorkingSolution<'a> {
     }
 }
 
+#[derive(Clone)]
 pub struct WorkingSolutionRoute<'a> {
     problem: &'a VehicleRoutingProblem,
     vehicle_id: VehicleId,
@@ -291,6 +253,7 @@ impl<'a> WorkingSolutionRoute<'a> {
     }
 }
 
+#[derive(Clone)]
 pub struct WorkingSolutionRouteActivity<'a> {
     problem: &'a VehicleRoutingProblem,
     service_id: ServiceId,

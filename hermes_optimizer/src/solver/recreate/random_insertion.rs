@@ -5,16 +5,17 @@ use crate::solver::{
     working_solution::WorkingSolution,
 };
 
-use super::recreate_solution::RecreateSolution;
+use super::{recreate_context::RecreateContext, recreate_solution::RecreateSolution};
 
 pub struct RandomInsertion;
 
 impl RecreateSolution for RandomInsertion {
-    fn recreate_solution(&self, solution: &mut WorkingSolution) {
-        let mut rng = rand::rng();
-        // TODO: better solution without copied?
-        let unassigned_services: Vec<_> = solution.unassigned_services().iter().copied().collect();
-        for service_id in unassigned_services {
+    fn recreate_solution(
+        &self,
+        solution: &mut WorkingSolution,
+        RecreateContext { rng }: RecreateContext,
+    ) {
+        while let Some(&service_id) = solution.unassigned_services().iter().next() {
             let num_routes = solution.routes().len();
             let route_id = rng.random_range(0..num_routes + 1);
 

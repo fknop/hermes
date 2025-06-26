@@ -1,6 +1,6 @@
 use crate::solver::working_solution::WorkingSolution;
 
-use super::{ruin_random::RuinRandom, ruin_solution::RuinSolution};
+use super::{ruin_context::RuinContext, ruin_random::RuinRandom, ruin_solution::RuinSolution};
 
 #[derive(Clone, Copy, Debug)]
 pub enum RuinStrategy {
@@ -8,11 +8,11 @@ pub enum RuinStrategy {
 }
 
 impl RuinSolution for RuinStrategy {
-    fn ruin_solution(&self, solution: &mut WorkingSolution, num_activities_to_remove: usize) {
+    fn ruin_solution(&self, solution: &mut WorkingSolution, context: RuinContext) {
         match self {
             RuinStrategy::Random => {
                 let strategy = RuinRandom;
-                strategy.ruin_solution(solution, num_activities_to_remove);
+                strategy.ruin_solution(solution, context);
             }
         }
     }

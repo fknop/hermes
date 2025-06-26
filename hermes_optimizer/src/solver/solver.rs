@@ -49,7 +49,5 @@ impl Solver {
     pub fn solve(&self) {
         let mut search = Search::new(&self.params, &self.problem, &self.constraints);
         search.run();
-
-        println!("{:?}", search.best_solutions())
     }
 }
