@@ -102,6 +102,25 @@ impl<'a> WorkingSolution<'a> {
             self.routes.remove(route_id);
         }
     }
+
+    pub fn remove_service(&mut self, service_id: ServiceId) {
+        let mut route_to_remove = None;
+        for (route_id, route) in self.routes.iter_mut().enumerate() {
+            if route.contains_service(service_id) {
+                route.remove_service(service_id);
+
+                self.unassigned_services.insert(service_id);
+
+                if route.is_empty() {
+                    route_to_remove = Some(route_id);
+                }
+            }
+        }
+
+        if let Some(route_id) = route_to_remove {
+            self.routes.remove(route_id);
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -132,6 +151,10 @@ impl<'a> WorkingSolutionRoute<'a> {
             total_cost: 0,
             waiting_duration: SignedDuration::ZERO,
         }
+    }
+
+    pub fn contains_service(&self, service_id: ServiceId) -> bool {
+        self.services.contains(&service_id)
     }
 
     pub fn is_empty(&self) -> bool {
@@ -190,21 +213,24 @@ impl<'a> WorkingSolutionRoute<'a> {
         Some(service_id)
     }
 
-    // fn remove_services(&mut self, service_ids: &FxHashSet<ServiceId>) {
-    //     self.activities
-    //         .iter()
-    //         .filter(|activity| service_ids.contains(&activity.service_id))
-    //         .for_each(|activity| self.waiting_duration -= activity.waiting_duration());
+    fn remove_service(&mut self, service_id: ServiceId) {
+        if !self.contains_service(service_id) {
+            return; // Service is not in the route
+        }
 
-    //     for service_id in service_ids {
-    //         self.services.remove(service_id);
-    //         self.total_demand
-    //             .sub_mut(self.problem.service(*service_id).demand());
-    //     }
+        let activity = self
+            .activities
+            .iter()
+            .find(|a| a.service_id == service_id)
+            .unwrap();
+        self.waiting_duration -= activity.waiting_duration();
+        self.services.remove(&service_id);
+        self.total_demand
+            .sub_mut(self.problem.service(service_id).demand());
 
-    //     self.activities
-    //         .retain(|activity| !service_ids.contains(&activity.service_id));
-    // }
+        self.activities
+            .retain(|activity| activity.service_id != service_id);
+    }
 
     fn insert_service(&mut self, position: usize, service_id: ServiceId) {
         if self.services.contains(&service_id) {

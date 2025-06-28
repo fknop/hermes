@@ -649,8 +649,10 @@ name = "hermes_optimizer"
 version = "0.1.0"
 dependencies = [
  "fxhash",
+ "geo",
  "jiff",
  "rand",
+ "rstar",
  "tracing",
 ]
 

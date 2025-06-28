@@ -1,4 +1,4 @@
-use super::ruin_strategy::RuinStrategy;
+use super::{ruin_radial::RuinRadial, ruin_strategy::RuinStrategy};
 
 pub struct RuinParams {
     pub ruin_strategies: Vec<(RuinStrategy, u64)>,
@@ -13,9 +13,9 @@ pub struct RuinParams {
 impl Default for RuinParams {
     fn default() -> Self {
         RuinParams {
-            ruin_strategies: vec![(RuinStrategy::Random, 100)],
+            ruin_strategies: vec![(RuinStrategy::Random, 20), (RuinStrategy::RuinRadial, 100)],
             ruin_minimum_ratio: 0.05,
-            ruin_maximum_ratio: 0.6, // Default to removing up to 70% of the solution
+            ruin_maximum_ratio: 0.4,
         }
     }
 }

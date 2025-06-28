@@ -74,7 +74,7 @@ impl<'a> Search<'a> {
     }
 
     pub fn run(&mut self) {
-        let mut rng = SmallRng::seed_from_u64(123);
+        let mut rng = SmallRng::seed_from_u64(2427121);
 
         for i in 0..self.params.max_iterations {
             self.perform_iteration(&mut rng);
@@ -159,8 +159,12 @@ impl<'a> Search<'a> {
             .sum();
 
         let random = rng.random_range(0..total_weight);
+
+        let mut cumulative_weight = 0;
         for (strategy, weight) in &self.params.ruin.ruin_strategies {
-            if random < *weight {
+            cumulative_weight += weight;
+
+            if random < cumulative_weight {
                 return *strategy;
             }
         }
@@ -189,8 +193,12 @@ impl<'a> Search<'a> {
             .sum();
 
         let random = rng.random_range(0..total_weight);
+        let mut cumulative_weight = 0;
+
         for (strategy, weight) in &self.params.recreate.recreate_strategies {
-            if random < *weight {
+            cumulative_weight += weight;
+
+            if random < cumulative_weight {
                 return *strategy;
             }
         }

@@ -3,6 +3,7 @@ use jiff::SignedDuration;
 use super::{
     location::{Location, LocationId},
     service::{Service, ServiceId},
+    service_location_index::ServiceLocationIndex,
     travel_cost_matrix::{Cost, Distance, Time, TravelCostMatrix},
     vehicle::{Vehicle, VehicleId},
 };
@@ -12,6 +13,7 @@ pub struct VehicleRoutingProblem {
     vehicles: Vec<Vehicle>,
     services: Vec<Service>,
     travel_costs: TravelCostMatrix,
+    service_location_index: ServiceLocationIndex,
 }
 
 impl VehicleRoutingProblem {
@@ -72,6 +74,13 @@ impl VehicleRoutingProblem {
     pub fn route_costs(&self) -> Cost {
         0 // Placeholder for the static cost of a route
     }
+
+    pub fn nearest_services(&self, service_id: ServiceId) -> impl Iterator<Item = ServiceId> {
+        let location_id = self.service(service_id).location_id();
+        let location = &self.locations[location_id];
+        self.service_location_index
+            .nearest_neighbor_iter(geo::Point::new(location.x(), location.y()))
+    }
 }
 
 #[derive(Default)]
@@ -119,11 +128,14 @@ impl VehicleRoutingProblemBuilder {
             }
         }
 
+        let service_location_index = ServiceLocationIndex::new(&locations, &services);
+
         VehicleRoutingProblem {
             locations,
             vehicles: self.vehicles.expect("Expected list of vehicles"),
             services,
             travel_costs: self.travel_costs.expect("Missing travel_costs"),
+            service_location_index,
         }
     }
 }
