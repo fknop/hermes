@@ -1,6 +1,6 @@
 mod acceptor;
-mod problem;
+pub mod problem;
 mod search;
 mod selector;
-mod solomon;
-mod solver;
+pub mod solomon;
+pub mod solver;

@@ -1,8 +1,12 @@
 use jiff::{SignedDuration, Timestamp};
 
-use super::{score::Score, working_solution::WorkingSolution};
+use super::{
+    score::{Score, ScoreAnalysis},
+    working_solution::WorkingSolution,
+};
 
 pub struct AcceptedSolution<'a> {
     pub solution: WorkingSolution<'a>,
     pub score: Score,
+    pub score_analysis: ScoreAnalysis,
 }

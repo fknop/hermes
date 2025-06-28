@@ -1,10 +1,49 @@
-use crate::solver::{insertion::Insertion, insertion_context::InsertionContext, score::Score};
+use crate::solver::{
+    insertion::Insertion, insertion_context::InsertionContext, score::Score,
+    working_solution::WorkingSolution,
+};
 
 use super::global_constraint::GlobalConstraint;
 
 pub struct TransportCostConstraint;
 
 impl GlobalConstraint for TransportCostConstraint {
+    fn compute_score(&self, solution: &WorkingSolution) -> Score {
+        let problem = solution.problem();
+        let mut cost = 0;
+        for route in solution.routes() {
+            let vehicle = route.vehicle();
+
+            let activities = route.activities();
+
+            if let Some(depot_location_id) = vehicle.depot_location_id() {
+                cost +=
+                    problem.travel_cost(depot_location_id, activities[0].service().location_id());
+
+                if vehicle.should_return_to_depot() {
+                    cost += problem.travel_cost(
+                        activities[activities.len() - 1].service().location_id(),
+                        depot_location_id,
+                    )
+                }
+            }
+
+            for (index, activity) in activities.iter().enumerate() {
+                if index == 0 {
+                    // Skip the first activity, as it is already counted with the depot
+                    continue;
+                }
+
+                cost += problem.travel_cost(
+                    activities[index - 1].service().location_id(),
+                    activity.service().location_id(),
+                )
+            }
+        }
+
+        Score::soft(cost)
+    }
+
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
         let problem = context.problem();
         let service_id = context.insertion.service_id();

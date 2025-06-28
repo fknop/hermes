@@ -1,4 +1,7 @@
+use std::sync::Arc;
+
 use rand::{Rng, SeedableRng, rngs::SmallRng};
+use tracing::info;
 
 use crate::{
     acceptor::{
@@ -20,8 +23,8 @@ use super::{
         recreate_strategy::RecreateStrategy,
     },
     ruin::{ruin_context::RuinContext, ruin_solution::RuinSolution, ruin_strategy::RuinStrategy},
-    score::Score,
-    solver_params::{SolverAcceptorStrategy, SolverParams, SolverSelectorStrategy},
+    score::{Score, ScoreAnalysis},
+    solver_params::{SolverAcceptorStrategy, SolverParams, SolverSelectorStrategy, Threads},
     working_solution::WorkingSolution,
 };
 
@@ -32,6 +35,7 @@ pub struct Search<'a> {
     best_solutions: Vec<AcceptedSolution<'a>>,
     solution_selector: SolutionSelector,
     solution_acceptor: SolutionAcceptor,
+    on_best_solution_handler: Arc<Option<fn(&AcceptedSolution<'a>)>>,
 }
 
 impl<'a> Search<'a> {
@@ -57,7 +61,12 @@ impl<'a> Search<'a> {
             best_solutions: Vec::new(),
             solution_selector,
             solution_acceptor,
+            on_best_solution_handler: Arc::new(None),
         }
+    }
+
+    pub fn on_best_solution(&mut self, callback: fn(&AcceptedSolution<'a>)) {
+        self.on_best_solution_handler = Arc::new(Some(callback));
     }
 
     pub fn best_solutions(&self) -> &[AcceptedSolution] {
@@ -67,7 +76,7 @@ impl<'a> Search<'a> {
     pub fn run(&mut self) {
         let mut rng = SmallRng::seed_from_u64(123);
 
-        for _ in 0..self.params.max_iterations {
+        for i in 0..self.params.max_iterations {
             self.perform_iteration(&mut rng);
         }
     }
@@ -83,25 +92,37 @@ impl<'a> Search<'a> {
         };
 
         self.ruin(&mut working_solution, rng);
+
         self.recreate(&mut working_solution, rng);
 
         self.store_solution(working_solution);
     }
 
     fn store_solution(&mut self, solution: WorkingSolution<'a>) {
-        let score = self.compute_solution_score(&solution);
+        let (score, score_analysis) = self.compute_solution_score(&solution);
 
         if self
             .solution_acceptor
             .accept(&self.best_solutions, &solution, &score)
         {
-            self.best_solutions
-                .push(AcceptedSolution { solution, score });
+            let is_best = self.best_solutions.is_empty() || score < self.best_solutions[0].score;
+
+            self.best_solutions.push(AcceptedSolution {
+                solution,
+                score,
+                score_analysis,
+            });
             self.best_solutions.sort_by(|a, b| a.score.cmp(&b.score));
 
             // Evict worst
             if self.best_solutions.len() > self.params.max_solutions {
                 self.best_solutions.pop();
+            }
+
+            if is_best {
+                if let Some(callback) = self.on_best_solution_handler.as_ref() {
+                    callback(&self.best_solutions[0]);
+                }
             }
         }
     }
@@ -165,13 +186,24 @@ impl<'a> Search<'a> {
         panic!("No ruin strategy configured on solver");
     }
 
-    fn compute_solution_score(&self, solution: &WorkingSolution) -> Score {
-        let mut score = Score::zero();
+    fn compute_solution_score(&self, solution: &WorkingSolution) -> (Score, ScoreAnalysis) {
+        let mut score_analysis = ScoreAnalysis::default();
 
         for constraint in self.constraints.iter() {
-            // score += constraint.compute_insertion_score(solution);
+            let score = constraint.compute_score(solution);
+            score_analysis
+                .scores
+                .insert(constraint.constraint_name(), score);
         }
 
-        score
+        (score_analysis.total_score(), score_analysis)
+    }
+
+    fn number_of_threads(&self) -> usize {
+        match self.params.threads {
+            Threads::Single => 1,
+            Threads::Multi(num) => num,
+            Threads::Auto => std::thread::available_parallelism().map_or(1, |n| n.get()),
+        }
     }
 }

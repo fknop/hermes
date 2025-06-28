@@ -1,4 +1,10 @@
-use std::{cmp::Ordering, iter};
+use std::{
+    cmp::Ordering,
+    iter,
+    ops::{Add, AddAssign},
+};
+
+use fxhash::FxHashMap;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Score {
@@ -59,5 +65,34 @@ impl iter::Sum for Score {
             hard_score: acc.hard_score + score.hard_score,
             soft_score: acc.soft_score + score.soft_score,
         })
+    }
+}
+
+impl Add<Score> for Score {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self::Output {
+        Score {
+            hard_score: self.hard_score + other.hard_score,
+            soft_score: self.soft_score + other.soft_score,
+        }
+    }
+}
+
+impl AddAssign<Score> for Score {
+    fn add_assign(&mut self, other: Score) {
+        self.hard_score += other.hard_score;
+        self.soft_score += other.soft_score;
+    }
+}
+
+#[derive(Default, Debug)]
+pub struct ScoreAnalysis {
+    pub scores: FxHashMap<&'static str, Score>,
+}
+
+impl ScoreAnalysis {
+    pub fn total_score(&self) -> Score {
+        self.scores.values().copied().sum()
     }
 }

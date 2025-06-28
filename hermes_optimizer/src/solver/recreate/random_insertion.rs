@@ -1,4 +1,5 @@
 use rand::Rng;
+use tracing::info;
 
 use crate::solver::{
     insertion::{ExistingRouteInsertion, Insertion, NewRouteInsertion},
@@ -17,7 +18,6 @@ impl RecreateSolution for RandomInsertion {
     ) {
         while let Some(&service_id) = solution.unassigned_services().iter().next() {
             let num_routes = solution.routes().len();
-            let route_id = rng.random_range(0..num_routes + 1);
 
             let create_new_route = if solution.has_available_vehicle() {
                 rng.random_ratio(1, num_routes as u32 + 1)
@@ -31,6 +31,8 @@ impl RecreateSolution for RandomInsertion {
                     vehicle_id: solution.available_vehicle().unwrap(),
                 }));
             } else {
+                let route_id = rng.random_range(0..num_routes);
+
                 solution.insert_service(&Insertion::ExistingRoute(ExistingRouteInsertion {
                     route_id,
                     service_id,

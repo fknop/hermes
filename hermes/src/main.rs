@@ -4,71 +4,89 @@ use hermes_core::{
     matrix::matrix_request::MatrixRequest,
     routing::routing_request::{RoutingAlgorithm, RoutingRequest, RoutingRequestOptions},
 };
+use hermes_optimizer::{
+    solomon::solomon_parser::SolomonParser,
+    solver::{solver::Solver, solver_params::SolverParams},
+};
 
 fn main() {
     tracing_subscriber::fmt::init();
+
+    let file = "./data/solomon/c1/c101.txt";
+
+    let vrp = SolomonParser::from_file(file).unwrap();
+
+    let solver = Solver::new(
+        vrp,
+        SolverParams {
+            max_iterations: 10000,
+            ..SolverParams::default()
+        },
+    );
+
+    solver.solve();
 
     // let hermes = Hermes::from_osm_file("./data/osm/united-kingdom-latest.osm.pbf");
     // let hermes = Hermes::from_osm_file("./data/osm/belgium-latest.osm.pbf");
     // hermes.save("./data/uk");
     //
-    let hermes = Hermes::from_directory("./data");
+    // let hermes = Hermes::from_directory("./data");
 
-    let brussels = GeoPoint::new(4.34878, 50.85045);
-    let liege = GeoPoint::new(5.56749, 50.63373);
-    let antwerp = GeoPoint::new(4.40346, 51.21989);
+    // let brussels = GeoPoint::new(4.34878, 50.85045);
+    // let liege = GeoPoint::new(5.56749, 50.63373);
+    // let antwerp = GeoPoint::new(4.40346, 51.21989);
 
-    // let sources = vec![brussels, liege, antwerp];
-    let sources = create_belgium_coordinates();
-    let targets = sources.clone();
+    // // let sources = vec![brussels, liege, antwerp];
+    // let sources = create_belgium_coordinates();
+    // let targets = sources.clone();
 
-    let result = hermes
-        .matrix(MatrixRequest {
-            sources: sources.clone(),
-            targets: targets.clone(),
-            profile: String::from("car"),
-            options: None,
-        })
-        .unwrap();
+    // let result = hermes
+    //     .matrix(MatrixRequest {
+    //         sources: sources.clone(),
+    //         targets: targets.clone(),
+    //         profile: String::from("car"),
+    //         options: None,
+    //     })
+    //     .unwrap();
 
-    let matrix = result.matrix;
+    // let matrix = result.matrix;
 
-    println!("{:?}", result.duration);
+    // println!("{:?}", result.duration);
 
-    for (source_index, source) in sources.iter().enumerate() {
-        for (target_index, target) in targets.iter().enumerate() {
-            let route_result = hermes
-                .route(RoutingRequest {
-                    start: *source,
-                    end: *target,
-                    options: Some(RoutingRequestOptions {
-                        algorithm: Some(RoutingAlgorithm::ContractionHierarchies),
-                        include_debug_info: None,
-                    }),
-                    profile: String::from("car"),
-                })
-                .unwrap();
+    // for (source_index, source) in sources.iter().enumerate() {
+    //     for (target_index, target) in targets.iter().enumerate() {
+    //         let route_result = hermes
+    //             .route(RoutingRequest {
+    //                 start: *source,
+    //                 end: *target,
+    //                 options: Some(RoutingRequestOptions {
+    //                     algorithm: Some(RoutingAlgorithm::ContractionHierarchies),
+    //                     include_debug_info: None,
+    //                 }),
+    //                 profile: String::from("car"),
+    //             })
+    //             .unwrap();
 
-            let time = route_result.path.time();
-            let distance = route_result.path.distance();
-            let matrix_entry = matrix.entry(source_index, target_index).unwrap();
+    //         let time = route_result.path.time();
+    //         let distance = route_result.path.distance();
+    //         let matrix_entry = matrix.entry(source_index, target_index).unwrap();
 
-            assert_eq!(
-                distance,
-                matrix_entry.distance(),
-                "source_index {}, target_index {}",
-                source_index,
-                target_index
-            );
-            // assert_eq!(
-            //     time,
-            //     matrix_entry.time(),
-            //     "source_index {}, target_index {}",
-            //     source_index,
-            //     target_index
-            // );
-        }
-    }
+    //         assert_eq!(
+    //             distance,
+    //             matrix_entry.distance(),
+    //             "source_index {}, target_index {}",
+    //             source_index,
+    //             target_index
+    //         );
+    //         // assert_eq!(
+    //         //     time,
+    //         //     matrix_entry.time(),
+    //         //     "source_index {}, target_index {}",
+    //         //     source_index,
+    //         //     target_index
+    //         // );
+    //     }
+    // }
 }
 
 fn create_belgium_coordinates() -> Vec<GeoPoint> {

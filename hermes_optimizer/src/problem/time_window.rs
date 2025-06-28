@@ -29,7 +29,7 @@ impl TimeWindow {
 
     pub fn overtime(&self, arrival: Timestamp) -> i64 {
         match self.end {
-            Some(end) => end.as_second() - arrival.as_second(),
+            Some(end) => arrival.as_second() - end.as_second(),
             None => 0,
         }
     }

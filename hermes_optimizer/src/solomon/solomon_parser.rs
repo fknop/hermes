@@ -8,7 +8,7 @@ use crate::problem::{
     service::{Service, ServiceBuilder},
     time_window::TimeWindow,
     travel_cost_matrix::TravelCostMatrix,
-    vehicle::{Vehicle, VehicleBuilder},
+    vehicle::{Vehicle, VehicleBuilder, VehicleShift},
     vehicle_routing_problem::{VehicleRoutingProblem, VehicleRoutingProblemBuilder},
 };
 
@@ -36,6 +36,7 @@ impl SolomonParser {
                 break;
             }
         }
+        let mut vehicles: Vec<Vehicle> = vec![];
 
         // Parse Vehicle Capacity
         if let Some(line) = lines.next() {
@@ -43,19 +44,17 @@ impl SolomonParser {
             if parts.len() < 2 {
                 return Err("Invalid VEHICLE line format".into());
             }
-            let mut vehicles: Vec<Vehicle> = vec![];
 
             let num_vehicles = parts[0].parse::<usize>()?;
             let vehicle_capacity = parts[1].parse::<f64>()?;
 
-            for _ in 0..num_vehicles {
+            for index in 0..num_vehicles {
                 let vehicle = VehicleBuilder::default()
+                    .with_vehicle_id(index.to_string())
                     .with_capacity(Capacity::new(vec![vehicle_capacity]))
                     .build();
                 vehicles.push(vehicle);
             }
-
-            builder = builder.with_vehicles(vehicles)
         } else {
             return Err("Missing VEHICLE section or content".into());
         }
@@ -74,7 +73,7 @@ impl SolomonParser {
         let mut services: Vec<Service> = Vec::new();
 
         // Parse Customers
-        for line in lines {
+        for (line_index, line) in lines.enumerate() {
             let trimmed_line = line.trim();
             if trimmed_line.is_empty() {
                 continue; // Skip empty lines
@@ -97,30 +96,79 @@ impl SolomonParser {
             let due_time = parts[5].parse::<i64>()?;
             let service_time = parts[6].parse::<i64>()?;
 
-            let location = Location::from_cartesian(locations.len(), x, y);
+            let location_id = locations.len();
+            let location = Location::from_cartesian(location_id, x, y);
             locations.push(location);
 
-            let mut service_builder = ServiceBuilder::default();
+            let customer_index = line_index - 1;
+            if customer_index == 0 {
+                for vehicle in vehicles.iter_mut() {
+                    vehicle.set_shift(VehicleShift::new(
+                        Some(Timestamp::from_second(ready_time)?),
+                        Some(Timestamp::from_second(due_time)?),
+                    ));
+                    vehicle.set_depot_location(location_id);
+                }
+            } else {
+                let mut service_builder = ServiceBuilder::default();
 
-            let start = Timestamp::from_second(ready_time)?;
-            let end = Timestamp::from_second(due_time)?;
+                let start = Timestamp::from_second(ready_time)?;
+                let end = Timestamp::from_second(due_time)?;
 
-            service_builder
-                .set_external_id(parts[0].to_string())
-                .set_demand(Capacity::new(vec![demand]))
-                .set_service_duration(SignedDuration::from_secs(service_time))
-                .set_location_id(locations.len())
-                .set_time_window(TimeWindow::new(Some(start), Some(end)));
+                service_builder
+                    .set_external_id(id)
+                    .set_demand(Capacity::new(vec![demand]))
+                    .set_service_duration(SignedDuration::from_secs(service_time))
+                    .set_location_id(location_id)
+                    .set_time_window(TimeWindow::new(Some(start), Some(end)));
 
-            services.push(service_builder.build());
+                services.push(service_builder.build());
+            }
         }
 
         let travel_costs_matrix = TravelCostMatrix::from_euclidian(&locations);
         builder = builder
-            .with_services(services)
+            .with_vehicles(vehicles)
             .with_locations(locations)
+            .with_services(services)
             .with_travel_costs(travel_costs_matrix);
 
         Ok(builder.build())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_solomon_parser() {
+        let file = "datasets/c1/c101.txt";
+
+        let vrp = SolomonParser::from_file(file).unwrap();
+
+        assert_eq!(vrp.vehicles().len(), 25);
+
+        for vehicle in vrp.vehicles() {
+            assert_eq!(vehicle.depot_location_id(), Some(0));
+            assert_eq!(*vehicle.capacity(), Capacity::new(vec![200.0]));
+        }
+
+        for (index, service) in vrp.services().iter().enumerate() {
+            assert_eq!(service.external_id(), (index + 1).to_string().as_str());
+            assert_eq!(service.service_duration(), SignedDuration::from_secs(90));
+        }
+
+        // Check one location
+        let time_window = vrp.services()[9].time_window().unwrap();
+        let timestamp_zero = Timestamp::from_second(0).unwrap();
+        assert_eq!(
+            time_window.start().unwrap(),
+            timestamp_zero + SignedDuration::from_secs(357)
+        );
+        assert_eq!(
+            time_window.end().unwrap(),
+            timestamp_zero + SignedDuration::from_secs(410)
+        );
     }
 }

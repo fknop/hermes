@@ -48,6 +48,35 @@ impl Solver {
 
     pub fn solve(&self) {
         let mut search = Search::new(&self.params, &self.problem, &self.constraints);
+
+        search.on_best_solution(|solution| println!("Score: {:?}", solution.score_analysis));
+
         search.run();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        solomon::solomon_parser::SolomonParser, solver::solver_params::SolverAcceptorStrategy,
+    };
+
+    use super::*;
+
+    #[test]
+    fn test_solomon_parser() {
+        let file = "datasets/c1/c101.txt";
+
+        let vrp = SolomonParser::from_file(file).unwrap();
+
+        let solver = Solver::new(
+            vrp,
+            SolverParams {
+                max_iterations: 100,
+                ..SolverParams::default()
+            },
+        );
+
+        solver.solve();
     }
 }

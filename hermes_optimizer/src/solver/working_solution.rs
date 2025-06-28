@@ -77,11 +77,13 @@ impl<'a> WorkingSolution<'a> {
             Insertion::ExistingRoute(context) => {
                 let route = &mut self.routes[context.route_id];
                 route.insert_service(context.position, context.service_id);
+                self.unassigned_services.remove(&context.service_id);
             }
             Insertion::NewRoute(context) => {
                 let mut new_route = WorkingSolutionRoute::empty(self.problem, context.vehicle_id);
                 new_route.insert_service(0, context.service_id);
                 self.routes.push(new_route);
+                self.unassigned_services.remove(&context.service_id);
             }
         }
     }
@@ -326,7 +328,9 @@ fn compute_first_activity_arrival_time(
     let vehicle_depot_location = problem.vehicle_depot_location(vehicle_id);
 
     let vehicle = problem.vehicle(vehicle_id);
-    let earliest_start_time = vehicle.earliest_start_time();
+    let earliest_start_time = vehicle
+        .earliest_start_time()
+        .unwrap_or_else(|| Timestamp::from_second(0).unwrap());
     let time_window_start = service
         .time_window()
         .and_then(|time_window| time_window.start());

@@ -10,6 +10,7 @@ use crate::{
 use super::time_window_constraint::TimeWindowConstraint;
 
 pub trait ActivityConstraint {
+    fn compute_score(&self, activity: &WorkingSolutionRouteActivity) -> Score;
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score;
 }
 
@@ -29,6 +30,12 @@ impl ActivityConstraint for ActivityConstraintType {
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
         match self {
             Self::TimeWindow(constraint) => constraint.compute_insertion_score(context),
+        }
+    }
+
+    fn compute_score(&self, activity: &WorkingSolutionRouteActivity) -> Score {
+        match self {
+            Self::TimeWindow(constraint) => constraint.compute_score(activity),
         }
     }
 }

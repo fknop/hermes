@@ -9,6 +9,13 @@ pub struct SolverParams {
 
     pub ruin: RuinParams,
     pub recreate: RecreateParams,
+    pub threads: Threads,
+}
+
+pub enum Threads {
+    Single,
+    Auto,
+    Multi(usize),
 }
 
 pub enum SolverAcceptorStrategy {
@@ -29,6 +36,7 @@ impl Default for SolverParams {
             solver_selector: SolverSelectorStrategy::SelectBest,
             ruin: RuinParams::default(),
             recreate: RecreateParams::default(),
+            threads: Threads::Auto,
         }
     }
 }

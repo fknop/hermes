@@ -1,8 +1,11 @@
-use crate::solver::{insertion_context::InsertionContext, score::Score};
+use crate::solver::{
+    insertion_context::InsertionContext, score::Score, working_solution::WorkingSolution,
+};
 
 use super::transport_cost_constraint::TransportCostConstraint;
 
 pub trait GlobalConstraint {
+    fn compute_score(&self, solution: &WorkingSolution) -> Score;
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score;
 }
 
@@ -22,6 +25,12 @@ impl GlobalConstraint for GlobalConstraintType {
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
         match self {
             Self::TransportCost(constraint) => constraint.compute_insertion_score(context),
+        }
+    }
+
+    fn compute_score(&self, context: &WorkingSolution) -> Score {
+        match self {
+            Self::TransportCost(constraint) => constraint.compute_score(context),
         }
     }
 }

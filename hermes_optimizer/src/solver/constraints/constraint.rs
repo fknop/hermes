@@ -1,4 +1,6 @@
-use crate::solver::insertion_context::InsertionContext;
+use crate::solver::{
+    insertion_context::InsertionContext, score::Score, working_solution::WorkingSolution,
+};
 
 use super::{
     activity_constraint::{ActivityConstraint, ActivityConstraintType},
@@ -13,14 +15,32 @@ pub enum Constraint {
 }
 
 impl Constraint {
-    pub fn compute_insertion_score(
-        &self,
-        context: &InsertionContext,
-    ) -> crate::solver::score::Score {
+    pub fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
         match self {
             Constraint::Global(constraint) => constraint.compute_insertion_score(context),
             Constraint::Route(constraint) => constraint.compute_insertion_score(context),
             Constraint::Activity(constraint) => constraint.compute_insertion_score(context),
+        }
+    }
+
+    pub fn compute_score(&self, solution: &WorkingSolution) -> Score {
+        match self {
+            Constraint::Global(constraint) => constraint.compute_score(solution),
+            Constraint::Route(constraint) => {
+                solution.routes().iter().fold(Score::zero(), |acc, route| {
+                    acc + constraint.compute_score(route)
+                })
+            }
+            Constraint::Activity(constraint) => {
+                solution.routes().iter().fold(Score::zero(), |acc, route| {
+                    acc + route
+                        .activities()
+                        .iter()
+                        .fold(Score::zero(), |acc, activity| {
+                            acc + constraint.compute_score(activity)
+                        })
+                })
+            }
         }
     }
 

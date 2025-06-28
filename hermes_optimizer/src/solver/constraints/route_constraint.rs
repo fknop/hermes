@@ -7,6 +7,7 @@ use crate::solver::{
 use super::capacity_constraint::CapacityConstraint;
 
 pub trait RouteConstraint {
+    fn compute_score(&self, route: &WorkingSolutionRoute) -> Score;
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score;
 }
 
@@ -26,6 +27,12 @@ impl RouteConstraint for RouteConstraintType {
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
         match self {
             RouteConstraintType::Capacity(c) => c.compute_insertion_score(context),
+        }
+    }
+
+    fn compute_score(&self, route: &WorkingSolutionRoute) -> Score {
+        match self {
+            RouteConstraintType::Capacity(c) => c.compute_score(route),
         }
     }
 }
