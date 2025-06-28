@@ -12,13 +12,13 @@ pub struct RecreateContext<'a> {
     pub constraints: &'a Vec<Constraint>,
 }
 
-impl RecreateContext<'_> {
+impl<'a> RecreateContext<'a> {
     pub fn compute_insertion_score(
         &self,
         solution: &WorkingSolution,
         insertion: &Insertion,
     ) -> Score {
         let context = compute_insertion_context(solution.problem(), solution, insertion);
-        compute_insertion_score(&self.constraints, &context)
+        compute_insertion_score(self.constraints, &context)
     }
 }

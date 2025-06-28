@@ -15,7 +15,7 @@ impl Default for RuinParams {
         RuinParams {
             ruin_strategies: vec![(RuinStrategy::Random, 20), (RuinStrategy::RuinRadial, 100)],
             ruin_minimum_ratio: 0.05,
-            ruin_maximum_ratio: 0.4,
+            ruin_maximum_ratio: 0.5,
         }
     }
 }

@@ -1,7 +1,7 @@
 use std::{
     cmp::Ordering,
     iter,
-    ops::{Add, AddAssign},
+    ops::{Add, AddAssign, Sub, SubAssign},
 };
 
 use fxhash::FxHashMap;
@@ -83,6 +83,24 @@ impl AddAssign<Score> for Score {
     fn add_assign(&mut self, other: Score) {
         self.hard_score += other.hard_score;
         self.soft_score += other.soft_score;
+    }
+}
+
+impl Sub<Score> for Score {
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self::Output {
+        Score {
+            hard_score: self.hard_score - other.hard_score,
+            soft_score: self.soft_score - other.soft_score,
+        }
+    }
+}
+
+impl SubAssign<Score> for Score {
+    fn sub_assign(&mut self, other: Score) {
+        self.hard_score -= other.hard_score;
+        self.soft_score -= other.soft_score;
     }
 }
 

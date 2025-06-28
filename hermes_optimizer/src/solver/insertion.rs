@@ -1,16 +1,19 @@
 use crate::problem::{service::ServiceId, vehicle::VehicleId};
 
+#[derive(Clone)]
 pub struct ExistingRouteInsertion {
     pub route_id: usize,
     pub service_id: ServiceId,
     pub position: usize,
 }
 
+#[derive(Clone)]
 pub struct NewRouteInsertion {
     pub service_id: ServiceId,
     pub vehicle_id: VehicleId,
 }
 
+#[derive(Clone)]
 pub enum Insertion {
     NewRoute(NewRouteInsertion),
     ExistingRoute(ExistingRouteInsertion),

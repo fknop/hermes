@@ -33,7 +33,7 @@ impl Default for SolverParams {
             max_iterations: 1000,
             max_solutions: 10,
             solver_acceptor: SolverAcceptorStrategy::Greedy,
-            solver_selector: SolverSelectorStrategy::SelectRandom,
+            solver_selector: SolverSelectorStrategy::SelectBest,
             ruin: RuinParams::default(),
             recreate: RecreateParams::default(),
             threads: Threads::Auto,

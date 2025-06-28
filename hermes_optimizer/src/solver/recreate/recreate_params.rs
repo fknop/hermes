@@ -7,7 +7,10 @@ pub struct RecreateParams {
 impl Default for RecreateParams {
     fn default() -> Self {
         RecreateParams {
-            recreate_strategies: vec![(RecreateStrategy::BestInsertion, 100)],
+            recreate_strategies: vec![
+                (RecreateStrategy::RegretInsertion, 100),
+                (RecreateStrategy::BestInsertion, 100),
+            ],
         }
     }
 }
