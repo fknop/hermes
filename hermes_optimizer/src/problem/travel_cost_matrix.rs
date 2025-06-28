@@ -33,6 +33,26 @@ impl TravelCostMatrix {
         }
     }
 
+    pub fn from_euclidian(locations: &[Location]) -> Self {
+        let mut distances: Vec<Vec<Distance>> = vec![vec![0.0; locations.len()]; locations.len()];
+        let mut times: Vec<Vec<Time>> = vec![vec![0; locations.len()]; locations.len()];
+        let mut costs: Vec<Vec<Cost>> = vec![vec![0; locations.len()]; locations.len()];
+
+        for (i, from) in locations.iter().enumerate() {
+            for (j, to) in locations.iter().enumerate() {
+                distances[i][j] = from.euclidian_distance(to);
+                times[i][j] = distances[i][j].round() as i64;
+                costs[i][j] = distances[i][j].round() as i64;
+            }
+        }
+
+        TravelCostMatrix {
+            distances,
+            times,
+            costs,
+        }
+    }
+
     #[inline(always)]
     pub fn travel_distance(&self, from: usize, to: usize) -> Distance {
         self.distances[from][to]

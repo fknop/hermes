@@ -44,27 +44,27 @@ pub struct ServiceBuilder {
 }
 
 impl ServiceBuilder {
-    pub fn with_external_id(mut self, external_id: String) -> Self {
+    pub fn set_external_id(&mut self, external_id: String) -> &mut ServiceBuilder {
         self.external_id = Some(external_id);
         self
     }
 
-    pub fn with_location_id(mut self, location_id: LocationId) -> Self {
+    pub fn set_location_id(&mut self, location_id: LocationId) -> &mut ServiceBuilder {
         self.location_id = Some(location_id);
         self
     }
 
-    pub fn with_time_window(mut self, time_window: TimeWindow) -> Self {
+    pub fn set_time_window(&mut self, time_window: TimeWindow) -> &mut ServiceBuilder {
         self.time_window = Some(time_window);
         self
     }
 
-    pub fn with_demand(mut self, demand: Capacity) -> Self {
+    pub fn set_demand(&mut self, demand: Capacity) -> &mut ServiceBuilder {
         self.demand = Some(demand);
         self
     }
 
-    pub fn with_service_duration(mut self, service_time: SignedDuration) -> Self {
+    pub fn set_service_duration(&mut self, service_time: SignedDuration) -> &mut ServiceBuilder {
         self.service_time = Some(service_time);
         self
     }
@@ -89,16 +89,17 @@ mod tests {
 
     #[test]
     fn test_builder() {
-        let mut builder = ServiceBuilder::default()
-            .with_external_id(String::from("service_id"))
-            .with_location_id(1)
-            .with_time_window(
+        let mut builder = ServiceBuilder::default();
+        builder
+            .set_external_id(String::from("service_id"))
+            .set_location_id(1)
+            .set_time_window(
                 TimeWindowBuilder::default()
                     .with_iso_start("2025-06-10T08:00:00+02:00")
                     .build(),
             );
 
-        builder = builder.with_demand(Capacity::new(vec![1.0, 2.0, 3.0]));
+        builder.set_demand(Capacity::new(vec![1.0, 2.0, 3.0]));
 
         let service = builder.build();
 

@@ -6,6 +6,10 @@ pub struct TimeWindow {
 }
 
 impl TimeWindow {
+    pub fn new(start: Option<Timestamp>, end: Option<Timestamp>) -> Self {
+        TimeWindow { start, end }
+    }
+
     pub fn start(&self) -> Option<Timestamp> {
         self.start
     }
