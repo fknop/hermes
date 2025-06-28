@@ -129,10 +129,16 @@ impl<'a> Search<'a> {
 
     fn ruin(&self, solution: &mut WorkingSolution, rng: &mut SmallRng) {
         let ruin_strategy = self.select_ruin_strategy(rng);
+        let ruin_minimum_ratio = self.params.ruin.ruin_minimum_ratio;
         let ruin_maximum_ratio = self.params.ruin.ruin_maximum_ratio;
+
+        let minimum_ruin_size =
+            (ruin_minimum_ratio * self.problem.services().len() as f64).ceil() as usize;
+
         let maximum_ruin_size =
             (ruin_maximum_ratio * self.problem.services().len() as f64).floor() as usize;
-        let ruin_size = rng.random_range(0..maximum_ruin_size);
+
+        let ruin_size = rng.random_range(minimum_ruin_size..maximum_ruin_size);
 
         ruin_strategy.ruin_solution(
             solution,
@@ -164,7 +170,13 @@ impl<'a> Search<'a> {
 
     fn recreate(&self, solution: &mut WorkingSolution, rng: &mut SmallRng) {
         let recreate_strategy = self.select_recreate_strategy(rng);
-        recreate_strategy.recreate_solution(solution, RecreateContext { rng });
+        recreate_strategy.recreate_solution(
+            solution,
+            RecreateContext {
+                rng,
+                constraints: self.constraints,
+            },
+        );
     }
 
     fn select_recreate_strategy(&self, rng: &mut SmallRng) -> RecreateStrategy {

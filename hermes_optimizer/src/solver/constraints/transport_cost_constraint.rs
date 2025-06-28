@@ -83,7 +83,7 @@ impl GlobalConstraint for TransportCostConstraint {
             }
 
             let activities = route.unwrap().activities();
-            next_location_id = Some(activities[1].service().location_id());
+            next_location_id = Some(activities[0].service().location_id());
         } else if position >= route.unwrap().activities().len() {
             // Inserting at the end
             let activities = route.unwrap().activities();

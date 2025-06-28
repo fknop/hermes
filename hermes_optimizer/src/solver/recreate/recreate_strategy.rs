@@ -1,8 +1,8 @@
 use crate::solver::working_solution::WorkingSolution;
 
 use super::{
-    random_insertion::RandomInsertion, recreate_context::RecreateContext,
-    recreate_solution::RecreateSolution,
+    best_insertion::BestInsertion, random_insertion::RandomInsertion,
+    recreate_context::RecreateContext, recreate_solution::RecreateSolution,
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -19,7 +19,8 @@ impl RecreateSolution for RecreateStrategy {
                 strategy.recreate_solution(solution, context);
             }
             RecreateStrategy::BestInsertion => {
-                todo!()
+                let strategy = BestInsertion;
+                strategy.recreate_solution(solution, context);
             }
         }
     }

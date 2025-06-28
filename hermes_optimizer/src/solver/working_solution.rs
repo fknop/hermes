@@ -396,7 +396,7 @@ pub fn compute_departure_time(
     arrival_time + waiting_duration + problem.service(service_id).service_duration()
 }
 
-fn compute_insertion_context<'a>(
+pub fn compute_insertion_context<'a>(
     problem: &'a VehicleRoutingProblem,
     solution: &'a WorkingSolution<'a>,
     insertion: &'a Insertion,

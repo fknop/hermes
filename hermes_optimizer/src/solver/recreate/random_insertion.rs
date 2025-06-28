@@ -14,7 +14,7 @@ impl RecreateSolution for RandomInsertion {
     fn recreate_solution(
         &self,
         solution: &mut WorkingSolution,
-        RecreateContext { rng }: RecreateContext,
+        RecreateContext { rng, .. }: RecreateContext,
     ) {
         while let Some(&service_id) = solution.unassigned_services().iter().next() {
             let num_routes = solution.routes().len();
