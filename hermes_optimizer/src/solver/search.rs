@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use jiff::{SignedDuration, Timestamp};
 use rand::{Rng, SeedableRng, rngs::SmallRng};
 use tracing::info;
 
@@ -36,6 +37,7 @@ pub struct Search<'a> {
     solution_selector: SolutionSelector,
     solution_acceptor: SolutionAcceptor,
     on_best_solution_handler: Arc<Option<fn(&AcceptedSolution<'a>)>>,
+    start: Option<Timestamp>,
 }
 
 impl<'a> Search<'a> {
@@ -62,6 +64,7 @@ impl<'a> Search<'a> {
             solution_selector,
             solution_acceptor,
             on_best_solution_handler: Arc::new(None),
+            start: None,
         }
     }
 
@@ -75,6 +78,7 @@ impl<'a> Search<'a> {
 
     pub fn run(&mut self) {
         let mut rng = SmallRng::seed_from_u64(2427121);
+        self.start = Some(Timestamp::now());
 
         for i in 0..self.params.max_iterations {
             self.perform_iteration(&mut rng);

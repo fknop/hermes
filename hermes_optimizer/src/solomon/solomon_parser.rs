@@ -16,6 +16,7 @@ pub struct SolomonParser;
 
 impl SolomonParser {
     pub fn from_file(file: &str) -> Result<VehicleRoutingProblem, Box<dyn Error>> {
+        println!("{}", file);
         let file_content = std::fs::read_to_string(file)?;
         Self::from_solomon(&file_content)
     }
@@ -49,10 +50,11 @@ impl SolomonParser {
             let vehicle_capacity = parts[1].parse::<f64>()?;
 
             for index in 0..num_vehicles {
-                let vehicle = VehicleBuilder::default()
-                    .with_vehicle_id(index.to_string())
-                    .with_capacity(Capacity::new(vec![vehicle_capacity]))
-                    .build();
+                let mut builder = VehicleBuilder::default();
+                builder
+                    .set_vehicle_id(index.to_string())
+                    .set_capacity(Capacity::new(vec![vehicle_capacity]));
+                let vehicle = builder.build();
                 vehicles.push(vehicle);
             }
         } else {
@@ -139,13 +141,18 @@ impl SolomonParser {
 
 #[cfg(test)]
 mod tests {
+    use std::{env, path::Path};
+
     use super::*;
 
     #[test]
     fn test_solomon_parser() {
-        let file = "datasets/c1/c101.txt";
+        let current_dir = env::current_dir().unwrap();
+        let root_directory = current_dir.parent().unwrap();
 
-        let vrp = SolomonParser::from_file(file).unwrap();
+        let path = root_directory.join("./data/solomon/c1/c101.txt");
+
+        let vrp = SolomonParser::from_file(path.to_str().unwrap()).unwrap();
 
         assert_eq!(vrp.vehicles().len(), 25);
 

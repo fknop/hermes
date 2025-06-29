@@ -37,19 +37,20 @@ impl<'a> WorkingSolution<'a> {
         self.problem.vehicles().len() > self.routes.len()
     }
 
-    pub fn available_vehicle(&self) -> Option<VehicleId> {
+    pub fn available_vehicles(&self) -> Vec<VehicleId> {
         // Find the first vehicle that has no routes assigned
         self.problem
             .vehicles()
             .iter()
             .enumerate()
             .map(|(vehicle_id, _)| vehicle_id)
-            .find(|&vehicle_id| {
+            .filter(|&vehicle_id| {
                 !self
                     .routes
                     .iter()
                     .any(|route| route.vehicle_id == vehicle_id)
             })
+            .collect()
     }
 
     pub fn unassigned_services(&self) -> &FxHashSet<ServiceId> {
@@ -165,12 +166,32 @@ impl<'a> WorkingSolutionRoute<'a> {
         self.problem
     }
 
-    pub fn start(&self) -> &WorkingSolutionRouteActivity<'_> {
+    pub fn start(&self) -> Timestamp {
+        let first = self.first();
+        compute_vehicle_start(
+            self.problem,
+            self.vehicle_id,
+            first.service_id(),
+            first.arrival_time(),
+        )
+    }
+
+    pub fn end(&self) -> Timestamp {
+        let last = self.last();
+        compute_vehicle_end(
+            self.problem,
+            self.vehicle_id,
+            last.service_id(),
+            last.departure_time(),
+        )
+    }
+
+    pub fn first(&self) -> &WorkingSolutionRouteActivity<'_> {
         // Empty routes should not be allowed
         &self.activities[0]
     }
 
-    pub fn end(&self) -> &WorkingSolutionRouteActivity<'_> {
+    pub fn last(&self) -> &WorkingSolutionRouteActivity<'_> {
         // Empty routes should not be allowed
         &self.activities[self.activities().len() - 1]
     }
@@ -369,9 +390,45 @@ fn compute_first_activity_arrival_time(
         None => SignedDuration::ZERO,
     };
 
+    let depot_duration = vehicle.depot_duration();
+
     match time_window_start {
-        Some(start) => (earliest_start_time + travel_time).max(start),
-        None => earliest_start_time + travel_time,
+        Some(start) => (earliest_start_time + travel_time + depot_duration).max(start),
+        None => earliest_start_time + travel_time + depot_duration,
+    }
+}
+
+fn compute_vehicle_start(
+    problem: &VehicleRoutingProblem,
+    vehicle_id: VehicleId,
+    first_service_id: ServiceId,
+    first_arrival_time: Timestamp,
+) -> Timestamp {
+    let vehicle = problem.vehicle(vehicle_id);
+    let service = problem.service(first_service_id);
+
+    if let Some(depot_location) = problem.vehicle_depot_location(vehicle_id) {
+        let travel_time = problem.travel_time(depot_location.id(), service.location_id());
+
+        first_arrival_time - travel_time - vehicle.depot_duration()
+    } else {
+        first_arrival_time
+    }
+}
+
+fn compute_vehicle_end(
+    problem: &VehicleRoutingProblem,
+    vehicle_id: VehicleId,
+    last_service_id: ServiceId,
+    last_departure_time: Timestamp,
+) -> Timestamp {
+    let service = problem.service(last_service_id);
+    if let Some(depot_location) = problem.vehicle_depot_location(vehicle_id) {
+        let travel_time = problem.travel_time(service.location_id(), depot_location.id());
+
+        last_departure_time + travel_time
+    } else {
+        last_departure_time
     }
 }
 
@@ -494,6 +551,18 @@ pub fn compute_insertion_context<'a>(
             }
 
             InsertionContext {
+                start: compute_vehicle_start(
+                    problem,
+                    route.vehicle_id,
+                    activities[0].service_id,
+                    activities[0].arrival_time,
+                ),
+                end: compute_vehicle_end(
+                    problem,
+                    route.vehicle_id,
+                    activities[activities.len() - 1].service_id,
+                    activities[activities.len() - 1].departure_time,
+                ),
                 solution,
                 activities,
                 insertion,
@@ -524,6 +593,18 @@ pub fn compute_insertion_context<'a>(
             });
 
             InsertionContext {
+                start: compute_vehicle_start(
+                    problem,
+                    context.vehicle_id,
+                    activities[0].service_id,
+                    activities[0].arrival_time,
+                ),
+                end: compute_vehicle_end(
+                    problem,
+                    context.vehicle_id,
+                    activities[activities.len() - 1].service_id,
+                    activities[activities.len() - 1].departure_time,
+                ),
                 solution,
                 activities,
                 insertion,

@@ -4,5 +4,6 @@ pub mod compute_constraints_score;
 pub mod constraint;
 pub mod global_constraint;
 pub mod route_constraint;
+pub mod shift_constraint;
 pub mod time_window_constraint;
 pub mod transport_cost_constraint;

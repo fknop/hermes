@@ -73,12 +73,14 @@ impl RecreateSolution for RegretInsertion {
 
                 // Consider creating a new route if a vehicle is available
                 if solution.has_available_vehicle() {
-                    let insertion = Insertion::NewRoute(NewRouteInsertion {
-                        service_id,
-                        vehicle_id: solution.available_vehicle().unwrap(),
-                    });
-                    let score = context.compute_insertion_score(solution, &insertion);
-                    potential_insertions.push((score, insertion));
+                    for vehicle_id in solution.available_vehicles() {
+                        let insertion = Insertion::NewRoute(NewRouteInsertion {
+                            service_id,
+                            vehicle_id,
+                        });
+                        let score = context.compute_insertion_score(solution, &insertion);
+                        potential_insertions.push((score, insertion));
+                    }
                 }
 
                 // If no valid insertion was found for this service, skip it

@@ -21,6 +21,8 @@ pub struct InsertionContext<'a> {
     pub solution: &'a WorkingSolution<'a>,
     pub insertion: &'a Insertion,
     pub activities: Vec<ActivityInsertionContext>,
+    pub start: Timestamp,
+    pub end: Timestamp,
 }
 
 impl InsertionContext<'_> {

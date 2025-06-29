@@ -6,7 +6,8 @@ use super::{
     constraints::{
         activity_constraint::ActivityConstraintType, capacity_constraint::CapacityConstraint,
         constraint::Constraint, global_constraint::GlobalConstraintType,
-        route_constraint::RouteConstraintType, time_window_constraint::TimeWindowConstraint,
+        route_constraint::RouteConstraintType, shift_constraint::ShiftConstraint,
+        time_window_constraint::TimeWindowConstraint,
         transport_cost_constraint::TransportCostConstraint,
     },
     search::Search,
@@ -27,6 +28,7 @@ impl Solver {
                 Constraint::Global(GlobalConstraintType::TransportCost(TransportCostConstraint)),
                 Constraint::Activity(ActivityConstraintType::TimeWindow(TimeWindowConstraint)),
                 Constraint::Route(RouteConstraintType::Capacity(CapacityConstraint)),
+                Constraint::Route(RouteConstraintType::Shift(ShiftConstraint)),
             ],
             params,
         };
@@ -49,34 +51,14 @@ impl Solver {
     pub fn solve(&self) {
         let mut search = Search::new(&self.params, &self.problem, &self.constraints);
 
-        search.on_best_solution(|solution| println!("Score: {:?}", solution.score_analysis));
+        search.on_best_solution(|solution| {
+            println!("Score: {:?}", solution.score_analysis);
+            println!("Vehicles {:?}", solution.solution.routes().len());
+        });
 
         search.run();
     }
 }
 
 #[cfg(test)]
-mod tests {
-    use crate::{
-        solomon::solomon_parser::SolomonParser, solver::solver_params::SolverAcceptorStrategy,
-    };
-
-    use super::*;
-
-    #[test]
-    fn test_solomon_parser() {
-        let file = "datasets/c1/c101.txt";
-
-        let vrp = SolomonParser::from_file(file).unwrap();
-
-        let solver = Solver::new(
-            vrp,
-            SolverParams {
-                max_iterations: 100,
-                ..SolverParams::default()
-            },
-        );
-
-        solver.solve();
-    }
-}
+mod tests {}

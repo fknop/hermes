@@ -36,16 +36,18 @@ impl RecreateSolution for BestInsertion {
             }
 
             if solution.has_available_vehicle() {
-                let new_route_insertion = Insertion::NewRoute(NewRouteInsertion {
-                    service_id,
-                    vehicle_id: solution.available_vehicle().unwrap(),
-                });
+                for vehicle_id in solution.available_vehicles() {
+                    let new_route_insertion = Insertion::NewRoute(NewRouteInsertion {
+                        service_id,
+                        vehicle_id,
+                    });
 
-                let score = context.compute_insertion_score(solution, &new_route_insertion);
+                    let score = context.compute_insertion_score(solution, &new_route_insertion);
 
-                if score < best_score {
-                    // best_score = score;
-                    best_insertion = Some(new_route_insertion);
+                    if score < best_score {
+                        // best_score = score;
+                        best_insertion = Some(new_route_insertion);
+                    }
                 }
             }
 

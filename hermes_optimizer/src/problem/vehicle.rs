@@ -1,4 +1,4 @@
-use jiff::Timestamp;
+use jiff::{SignedDuration, Timestamp};
 
 use super::{capacity::Capacity, location::LocationId};
 
@@ -9,6 +9,7 @@ pub struct Vehicle {
     shift: Option<VehicleShift>,
     capacity: Capacity,
     depot_location_id: Option<usize>,
+    depot_duration: Option<SignedDuration>,
     should_return_to_depot: bool,
 }
 
@@ -31,6 +32,10 @@ impl Vehicle {
 
     pub fn should_return_to_depot(&self) -> bool {
         self.should_return_to_depot
+    }
+
+    pub fn depot_duration(&self) -> SignedDuration {
+        self.depot_duration.unwrap_or(SignedDuration::ZERO)
     }
 
     pub fn set_shift(&mut self, shift: VehicleShift) {
@@ -71,32 +76,38 @@ pub struct VehicleBuilder {
     capacity: Option<Capacity>,
     depot_location_id: Option<usize>,
     should_return_to_depot: Option<bool>,
+    depot_duration: Option<SignedDuration>,
 }
 
 impl VehicleBuilder {
-    pub fn with_vehicle_id(mut self, external_id: String) -> Self {
+    pub fn set_vehicle_id(&mut self, external_id: String) -> &mut VehicleBuilder {
         self.external_id = Some(external_id);
         self
     }
 
-    pub fn with_vehicle_shift(mut self, shift: VehicleShift) -> Self {
+    pub fn set_vehicle_shift(&mut self, shift: VehicleShift) -> &mut VehicleBuilder {
         self.shift = Some(shift);
         self
     }
 
-    pub fn with_capacity(mut self, capacity: Capacity) -> Self {
+    pub fn set_capacity(&mut self, capacity: Capacity) -> &mut VehicleBuilder {
         self.capacity = Some(capacity);
         self
     }
 
-    pub fn with_depot_location_id(mut self, depot_location_id: usize) -> Self {
+    pub fn set_depot_location_id(&mut self, depot_location_id: usize) -> &mut VehicleBuilder {
         self.depot_location_id = Some(depot_location_id);
         self
     }
 
-    pub fn with_return(mut self, should_return_to_depot: bool) -> Self {
+    pub fn set_return(&mut self, should_return_to_depot: bool) -> &mut VehicleBuilder {
         // This method is not used in the current implementation but can be added for future use
         self.should_return_to_depot = Some(should_return_to_depot);
+        self
+    }
+
+    pub fn set_depot_duration(&mut self, duration: SignedDuration) -> &mut VehicleBuilder {
+        self.depot_duration = Some(duration);
         self
     }
 
@@ -107,6 +118,7 @@ impl VehicleBuilder {
             capacity: self.capacity.unwrap_or_else(|| Capacity::ZERO),
             depot_location_id: self.depot_location_id,
             should_return_to_depot: self.should_return_to_depot.unwrap_or(false),
+            depot_duration: self.depot_duration,
         }
     }
 }
