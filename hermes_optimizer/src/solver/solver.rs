@@ -1,4 +1,5 @@
 use rand::{Rng, rngs::ThreadRng};
+use tracing::info;
 
 use crate::problem::vehicle_routing_problem::VehicleRoutingProblem;
 
@@ -9,6 +10,8 @@ use super::{
         route_constraint::RouteConstraintType, shift_constraint::ShiftConstraint,
         time_window_constraint::TimeWindowConstraint,
         transport_cost_constraint::TransportCostConstraint,
+        vehicle_cost_constraint::VehicleCostConstraint,
+        waiting_duration_constraint::WaitingDurationConstraint,
     },
     search::Search,
     solver_params::SolverParams,
@@ -29,6 +32,10 @@ impl Solver {
                 Constraint::Activity(ActivityConstraintType::TimeWindow(TimeWindowConstraint)),
                 Constraint::Route(RouteConstraintType::Capacity(CapacityConstraint)),
                 Constraint::Route(RouteConstraintType::Shift(ShiftConstraint)),
+                Constraint::Route(RouteConstraintType::WaitingDuration(
+                    WaitingDurationConstraint,
+                )),
+                Constraint::Route(RouteConstraintType::VehicleCost(VehicleCostConstraint)),
             ],
             params,
         };
@@ -51,9 +58,20 @@ impl Solver {
     pub fn solve(&self) {
         let mut search = Search::new(&self.params, &self.problem, &self.constraints);
 
-        search.on_best_solution(|solution| {
-            println!("Score: {:?}", solution.score_analysis);
-            println!("Vehicles {:?}", solution.solution.routes().len());
+        search.on_best_solution(|accepted_solution| {
+            info!("Score: {:?}", accepted_solution.score_analysis);
+            info!("Vehicles {:?}", accepted_solution.solution.routes().len());
+
+            // for route in accepted_solution.solution.routes() {
+            //     info!(
+            //         "Activities: {:?}",
+            //         route
+            //             .activities()
+            //             .iter()
+            //             .map(|a| a.service_id())
+            //             .collect::<Vec<_>>()
+            //     );
+            // }
         });
 
         search.run();

@@ -208,6 +208,10 @@ impl<'a> WorkingSolutionRoute<'a> {
         self.total_cost
     }
 
+    pub fn total_waiting_duration(&self) -> SignedDuration {
+        self.waiting_duration
+    }
+
     pub fn vehicle(&self) -> &Vehicle {
         self.problem.vehicle(self.vehicle_id)
     }

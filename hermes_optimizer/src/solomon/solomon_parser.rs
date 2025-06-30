@@ -53,7 +53,8 @@ impl SolomonParser {
                 let mut builder = VehicleBuilder::default();
                 builder
                     .set_vehicle_id(index.to_string())
-                    .set_capacity(Capacity::new(vec![vehicle_capacity]));
+                    .set_capacity(Capacity::new(vec![vehicle_capacity]))
+                    .set_return(true);
                 let vehicle = builder.build();
                 vehicles.push(vehicle);
             }

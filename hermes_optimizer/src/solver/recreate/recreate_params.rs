@@ -9,7 +9,7 @@ impl Default for RecreateParams {
         RecreateParams {
             recreate_strategies: vec![
                 (RecreateStrategy::RegretInsertion, 100),
-                (RecreateStrategy::BestInsertion, 100),
+                (RecreateStrategy::BestInsertion, 500),
             ],
         }
     }
