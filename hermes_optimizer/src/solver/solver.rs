@@ -58,21 +58,21 @@ impl Solver {
     pub fn solve(&self) {
         let mut search = Search::new(&self.params, &self.problem, &self.constraints);
 
-        search.on_best_solution(|accepted_solution| {
-            info!("Score: {:?}", accepted_solution.score_analysis);
-            info!("Vehicles {:?}", accepted_solution.solution.routes().len());
+        // search.on_best_solution(|accepted_solution| {
+        //     info!("Score: {:?}", accepted_solution.score_analysis);
+        //     info!("Vehicles {:?}", accepted_solution.solution.routes().len());
 
-            // for route in accepted_solution.solution.routes() {
-            //     info!(
-            //         "Activities: {:?}",
-            //         route
-            //             .activities()
-            //             .iter()
-            //             .map(|a| a.service_id())
-            //             .collect::<Vec<_>>()
-            //     );
-            // }
-        });
+        //     // for route in accepted_solution.solution.routes() {
+        //     //     info!(
+        //     //         "Activities: {:?}",
+        //     //         route
+        //     //             .activities()
+        //     //             .iter()
+        //     //             .map(|a| a.service_id())
+        //     //             .collect::<Vec<_>>()
+        //     //     );
+        //     // }
+        // });
 
         search.run();
     }

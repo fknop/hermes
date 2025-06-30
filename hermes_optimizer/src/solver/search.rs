@@ -1,4 +1,7 @@
-use std::sync::Arc;
+use std::{
+    sync::{Arc, Mutex, atomic::AtomicUsize},
+    thread,
+};
 
 use jiff::{SignedDuration, Timestamp};
 use rand::{Rng, SeedableRng, rngs::SmallRng};
@@ -33,11 +36,10 @@ pub struct Search<'a> {
     problem: &'a VehicleRoutingProblem,
     constraints: &'a Vec<Constraint>,
     params: &'a SolverParams,
-    best_solutions: Vec<AcceptedSolution<'a>>,
+    best_solutions: Arc<Mutex<Vec<AcceptedSolution<'a>>>>,
     solution_selector: SolutionSelector,
     solution_acceptor: SolutionAcceptor,
     on_best_solution_handler: Arc<Option<fn(&AcceptedSolution<'a>)>>,
-    start: Option<Timestamp>,
 }
 
 impl<'a> Search<'a> {
@@ -60,11 +62,10 @@ impl<'a> Search<'a> {
             problem,
             constraints,
             params,
-            best_solutions: Vec::new(),
+            best_solutions: Arc::new(Mutex::new(Vec::new())),
             solution_selector,
             solution_acceptor,
             on_best_solution_handler: Arc::new(None),
-            start: None,
         }
     }
 
@@ -72,60 +73,93 @@ impl<'a> Search<'a> {
         self.on_best_solution_handler = Arc::new(Some(callback));
     }
 
-    pub fn best_solutions(&self) -> &[AcceptedSolution] {
-        &self.best_solutions
-    }
-
-    pub fn run(&mut self) {
+    pub fn run(&self) {
         let mut rng = SmallRng::seed_from_u64(2427121);
-        self.start = Some(Timestamp::now());
 
-        for i in 0..self.params.max_iterations {
-            self.perform_iteration(&mut rng);
-        }
+        let num_threads = self.number_of_threads();
+
+        info!("Running search on {} threads", num_threads);
+        thread::scope(|s| {
+            for thread_index in 0..num_threads {
+                let best_solutions = Arc::clone(&self.best_solutions);
+                let on_best_solution_handler = Arc::clone(&self.on_best_solution_handler);
+
+                let mut thread_rng = SmallRng::from_rng(&mut rng);
+                let max_iterations = self.params.max_iterations;
+
+                let builder = thread::Builder::new().name(thread_index.to_string());
+
+                builder
+                    .spawn_scoped(s, move || {
+                        for _ in 0..max_iterations {
+                            self.perform_iteration(&mut thread_rng, &best_solutions);
+                        }
+                    })
+                    .unwrap();
+            }
+        });
     }
 
-    fn perform_iteration(&mut self, rng: &mut SmallRng) {
-        let mut working_solution = if !self.best_solutions.is_empty()
-            && let Some(AcceptedSolution { solution, .. }) =
-                self.solution_selector.select_solution(&self.best_solutions)
-        {
-            solution.clone()
-        } else {
-            WorkingSolution::new(self.problem)
-        };
+    fn perform_iteration(
+        &self,
+        rng: &mut SmallRng,
+        best_solutions: &Arc<Mutex<Vec<AcceptedSolution<'a>>>>,
+    ) {
+        let mut working_solution = {
+            let solutions_guard = best_solutions.lock().unwrap();
+            if !solutions_guard.is_empty()
+                && let Some(AcceptedSolution { solution, .. }) =
+                    self.solution_selector.select_solution(&solutions_guard)
+            {
+                solution.clone()
+            } else {
+                WorkingSolution::new(self.problem)
+            }
+        }; // Lock is released here
 
         self.ruin(&mut working_solution, rng);
 
         self.recreate(&mut working_solution, rng);
 
-        self.store_solution(working_solution);
+        self.store_solution(working_solution, best_solutions);
     }
 
-    fn store_solution(&mut self, solution: WorkingSolution<'a>) {
+    fn store_solution(
+        &self,
+        solution: WorkingSolution<'a>,
+        best_solutions: &Arc<Mutex<Vec<AcceptedSolution<'a>>>>,
+    ) {
         let (score, score_analysis) = self.compute_solution_score(&solution);
+
+        let mut solutions_guard = best_solutions.lock().unwrap();
 
         if self
             .solution_acceptor
-            .accept(&self.best_solutions, &solution, &score)
+            .accept(&solutions_guard, &solution, &score)
         {
-            let is_best = self.best_solutions.is_empty() || score < self.best_solutions[0].score;
+            let is_best = solutions_guard.is_empty() || score < solutions_guard[0].score;
 
-            self.best_solutions.push(AcceptedSolution {
+            solutions_guard.push(AcceptedSolution {
                 solution,
                 score,
                 score_analysis,
             });
-            self.best_solutions.sort_by(|a, b| a.score.cmp(&b.score));
+            solutions_guard.sort_by(|a, b| a.score.cmp(&b.score));
 
             // Evict worst
-            if self.best_solutions.len() > self.params.max_solutions {
-                self.best_solutions.pop();
+            if solutions_guard.len() > self.params.max_solutions {
+                solutions_guard.pop();
             }
 
             if is_best {
+                info!(
+                    thread = thread::current().name().unwrap_or("main"),
+                    "Score: {:?}", solutions_guard[0].score_analysis,
+                );
+                info!("Vehicles {:?}", solutions_guard[0].solution.routes().len());
+
                 if let Some(callback) = self.on_best_solution_handler.as_ref() {
-                    callback(&self.best_solutions[0]);
+                    callback(&solutions_guard[0]);
                 }
             }
         }
