@@ -1,9 +1,9 @@
-use geo::HaversineClosestPoint;
-use rstar::RTree;
 use rstar::primitives::GeomWithData;
+use rstar::{AABB, PointDistance, RTree, RTreeObject};
 
-use super::location::Location;
+use super::location::{Location, LocationId};
 use super::service::Service;
+use super::travel_cost_matrix::{Cost, TravelCostMatrix};
 
 pub struct IndexedData {
     service_id: usize,

@@ -22,6 +22,7 @@ use crate::{
 use super::{
     accepted_solution::AcceptedSolution,
     constraints::constraint::Constraint,
+    construction::construct_solution::construct_solution,
     recreate::{
         recreate_context::RecreateContext, recreate_solution::RecreateSolution,
         recreate_strategy::RecreateStrategy,
@@ -113,7 +114,7 @@ impl<'a> Search<'a> {
             {
                 solution.clone()
             } else {
-                WorkingSolution::new(self.problem)
+                construct_solution(self.problem, rng, self.constraints)
             }
         }; // Lock is released here
 

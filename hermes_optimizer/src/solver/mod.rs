@@ -1,5 +1,6 @@
 pub mod accepted_solution;
 pub mod constraints;
+pub mod construction;
 pub mod insertion;
 pub mod insertion_context;
 pub mod recreate;

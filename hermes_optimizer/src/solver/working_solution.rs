@@ -1,5 +1,7 @@
 use fxhash::FxHashSet;
 use jiff::{SignedDuration, Timestamp};
+use rand::rngs::SmallRng;
+use rand::seq::IteratorRandom;
 
 use crate::problem::{
     capacity::Capacity,

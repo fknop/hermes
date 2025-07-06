@@ -59,4 +59,21 @@ impl Location {
         // Calculate distance
         EARTH_RADIUS_METERS * c
     }
+
+    pub fn bearing(&self, dest: &Self) -> f64 {
+        let lat1_rad = self.lat().to_radians();
+        let lon1_rad = self.lon().to_radians();
+        let lat2_rad = dest.lat().to_radians();
+        let lon2_rad = dest.lon().to_radians();
+
+        let delta_lon = lon2_rad - lon1_rad;
+
+        let y = delta_lon.sin() * lat2_rad.cos();
+        let x = lat1_rad.cos() * lat2_rad.sin() - lat1_rad.sin() * lat2_rad.cos() * delta_lon.cos();
+
+        let bearing_rad = y.atan2(x);
+        let bearing_deg = bearing_rad.to_degrees();
+
+        (bearing_deg + 360.0) % 360.0
+    }
 }

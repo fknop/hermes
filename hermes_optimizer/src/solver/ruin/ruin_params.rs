@@ -13,7 +13,11 @@ pub struct RuinParams {
 impl Default for RuinParams {
     fn default() -> Self {
         RuinParams {
-            ruin_strategies: vec![(RuinStrategy::Random, 20), (RuinStrategy::RuinRadial, 100)],
+            ruin_strategies: vec![
+                (RuinStrategy::Random, 50),
+                (RuinStrategy::RuinWorst, 50),
+                (RuinStrategy::RuinRadial, 200),
+            ],
             ruin_minimum_ratio: 0.05,
             ruin_maximum_ratio: 0.3,
         }

@@ -128,13 +128,14 @@ impl VehicleRoutingProblemBuilder {
             }
         }
 
+        let travel_costs = self.travel_costs.expect("Expected travel costs matrix");
         let service_location_index = ServiceLocationIndex::new(&locations, &services);
 
         VehicleRoutingProblem {
             locations,
             vehicles: self.vehicles.expect("Expected list of vehicles"),
             services,
-            travel_costs: self.travel_costs.expect("Missing travel_costs"),
+            travel_costs,
             service_location_index,
         }
     }

@@ -1,19 +1,25 @@
-use rand::Rng;
+use rand::{Rng, seq::SliceRandom};
 
-use crate::solver::{
-    constraints::compute_constraints_score::compute_insertion_score,
-    insertion::{ExistingRouteInsertion, Insertion, NewRouteInsertion},
-    score::Score,
-    working_solution::{WorkingSolution, compute_insertion_context},
+use crate::{
+    problem::service::ServiceId,
+    solver::{
+        insertion::{ExistingRouteInsertion, Insertion, NewRouteInsertion},
+        score::Score,
+        working_solution::WorkingSolution,
+    },
 };
 
 use super::{recreate_context::RecreateContext, recreate_solution::RecreateSolution};
 
 pub struct BestInsertion;
 
-impl RecreateSolution for BestInsertion {
-    fn recreate_solution(&self, solution: &mut WorkingSolution, context: RecreateContext) {
-        while let Some(&service_id) = solution.unassigned_services().iter().next() {
+impl BestInsertion {
+    pub fn insert_services(
+        unassigned_services: &Vec<ServiceId>,
+        solution: &mut WorkingSolution,
+        context: RecreateContext,
+    ) {
+        for &service_id in unassigned_services {
             let mut best_insertion: Option<Insertion> = None;
             let mut best_score = Score::MAX;
 
@@ -57,5 +63,15 @@ impl RecreateSolution for BestInsertion {
                 panic!("No insertion possible")
             }
         }
+    }
+}
+
+impl RecreateSolution for BestInsertion {
+    fn recreate_solution(&self, solution: &mut WorkingSolution, context: RecreateContext) {
+        let mut unassigned_services: Vec<_> =
+            solution.unassigned_services().iter().copied().collect();
+        unassigned_services.shuffle(context.rng);
+
+        BestInsertion::insert_services(&unassigned_services, solution, context);
     }
 }

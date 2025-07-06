@@ -4,3 +4,4 @@ pub mod ruin_radial;
 pub mod ruin_random;
 pub mod ruin_solution;
 pub mod ruin_strategy;
+pub mod ruin_worst;

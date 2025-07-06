@@ -31,7 +31,7 @@ impl Default for SolverParams {
     fn default() -> Self {
         Self {
             max_iterations: 1000,
-            max_solutions: 10,
+            max_solutions: 50,
             solver_acceptor: SolverAcceptorStrategy::Greedy,
             solver_selector: SolverSelectorStrategy::SelectBest,
             ruin: RuinParams::default(),

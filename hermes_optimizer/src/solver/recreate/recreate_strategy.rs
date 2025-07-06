@@ -19,7 +19,7 @@ impl RecreateSolution for RecreateStrategy {
                 strategy.recreate_solution(solution, context);
             }
             RecreateStrategy::RegretInsertion => {
-                let strategy = RegretInsertion::new(3);
+                let strategy = RegretInsertion::new(2);
                 strategy.recreate_solution(solution, context);
             }
         }

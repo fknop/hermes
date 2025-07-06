@@ -1,4 +1,4 @@
-use rand::Rng;
+use rand::{Rng, seq::SliceRandom};
 
 use crate::solver::{
     insertion::{ExistingRouteInsertion, Insertion, NewRouteInsertion},
