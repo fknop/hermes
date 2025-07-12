@@ -1,7 +1,7 @@
 use rand::rngs::SmallRng;
 
 use crate::solver::{
-    constraints::{compute_constraints_score::compute_insertion_score, constraint::Constraint},
+    constraints::{compute_insertion_score::compute_insertion_score, constraint::Constraint},
     insertion::Insertion,
     score::Score,
     working_solution::{WorkingSolution, compute_insertion_context},

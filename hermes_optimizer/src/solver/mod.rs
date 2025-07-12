@@ -8,5 +8,6 @@ pub mod ruin;
 pub mod score;
 pub mod search;
 pub mod solver;
+pub mod solver_manager;
 pub mod solver_params;
 pub mod working_solution;

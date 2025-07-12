@@ -1,12 +1,13 @@
-use rand::{Rng, rngs::ThreadRng};
-use tracing::info;
+use std::sync::MutexGuard;
 
 use crate::problem::vehicle_routing_problem::VehicleRoutingProblem;
 
 use super::{
+    accepted_solution::AcceptedSolution,
     constraints::{
         activity_constraint::ActivityConstraintType, capacity_constraint::CapacityConstraint,
         constraint::Constraint, global_constraint::GlobalConstraintType,
+        maximum_working_duration_constraint::MaximumWorkingDurationConstraint,
         route_constraint::RouteConstraintType, shift_constraint::ShiftConstraint,
         time_window_constraint::TimeWindowConstraint,
         transport_cost_constraint::TransportCostConstraint,
@@ -17,64 +18,41 @@ use super::{
     solver_params::SolverParams,
 };
 
-pub struct Solver {
-    problem: VehicleRoutingProblem,
-    constraints: Vec<Constraint>,
+pub struct Solver<'a> {
     params: SolverParams,
+    search: Search<'a>,
 }
 
-impl Solver {
+impl<'a> Solver<'a> {
     pub fn new(problem: VehicleRoutingProblem, params: SolverParams) -> Self {
-        let mut solver = Solver {
-            problem,
-            constraints: vec![
-                Constraint::Global(GlobalConstraintType::TransportCost(TransportCostConstraint)),
-                Constraint::Activity(ActivityConstraintType::TimeWindow(TimeWindowConstraint)),
-                Constraint::Route(RouteConstraintType::Capacity(CapacityConstraint)),
-                Constraint::Route(RouteConstraintType::Shift(ShiftConstraint)),
-                Constraint::Route(RouteConstraintType::WaitingDuration(
-                    WaitingDurationConstraint,
-                )),
-                Constraint::Route(RouteConstraintType::VehicleCost(VehicleCostConstraint)),
-            ],
-            params,
-        };
+        let constraints = vec![
+            Constraint::Global(GlobalConstraintType::TransportCost(TransportCostConstraint)),
+            Constraint::Activity(ActivityConstraintType::TimeWindow(TimeWindowConstraint)),
+            Constraint::Route(RouteConstraintType::Capacity(CapacityConstraint)),
+            Constraint::Route(RouteConstraintType::Shift(ShiftConstraint)),
+            Constraint::Route(RouteConstraintType::WaitingDuration(
+                WaitingDurationConstraint,
+            )),
+            Constraint::Route(RouteConstraintType::VehicleCost(VehicleCostConstraint)),
+            Constraint::Route(RouteConstraintType::MaximumWorkingDuration(
+                MaximumWorkingDurationConstraint,
+            )),
+        ];
 
-        solver
-            .params
-            .ruin
-            .ruin_strategies
-            .sort_by(|(_, w1), (_, w2)| w1.cmp(w2));
+        let mut final_params = params.clone();
+        final_params.prepare();
 
-        solver
-            .params
-            .recreate
-            .recreate_strategies
-            .sort_by(|(_, w1), (_, w2)| w1.cmp(w2));
+        let search = Search::new(final_params, problem, constraints);
 
-        solver
+        Solver { search, params }
     }
 
-    pub fn solve(&self) {
-        let mut search = Search::new(&self.params, &self.problem, &self.constraints);
+    pub fn solve(&'a self) {
+        self.search.run();
+    }
 
-        // search.on_best_solution(|accepted_solution| {
-        //     info!("Score: {:?}", accepted_solution.score_analysis);
-        //     info!("Vehicles {:?}", accepted_solution.solution.routes().len());
-
-        //     // for route in accepted_solution.solution.routes() {
-        //     //     info!(
-        //     //         "Activities: {:?}",
-        //     //         route
-        //     //             .activities()
-        //     //             .iter()
-        //     //             .map(|a| a.service_id())
-        //     //             .collect::<Vec<_>>()
-        //     //     );
-        //     // }
-        // });
-
-        search.run();
+    pub fn best_solutions(&self) -> MutexGuard<'_, Vec<AcceptedSolution<'a>>> {
+        self.search.best_solutions()
     }
 }
 

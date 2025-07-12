@@ -38,12 +38,18 @@ impl ActivityConstraint for TimeWindowConstraint {
 
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
         let problem = context.problem();
-        let activity = context.inserted_activity();
-        let service = problem.service(activity.service_id);
 
-        TimeWindowConstraint::compute_time_window_score(
-            service.time_window(),
-            activity.arrival_time,
-        )
+        let mut total_score = Score::zero();
+        for i in context.insertion.position()..context.activities.len() {
+            let activity = &context.activities[i];
+            let service = problem.service(activity.service_id);
+
+            total_score += TimeWindowConstraint::compute_time_window_score(
+                service.time_window(),
+                activity.arrival_time,
+            )
+        }
+
+        total_score
     }
 }

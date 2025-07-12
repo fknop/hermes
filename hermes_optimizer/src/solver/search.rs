@@ -1,5 +1,5 @@
 use std::{
-    sync::{Arc, Mutex, atomic::AtomicUsize},
+    sync::{Arc, Mutex, MutexGuard, atomic::AtomicUsize},
     thread,
 };
 
@@ -34,9 +34,9 @@ use super::{
 };
 
 pub struct Search<'a> {
-    problem: &'a VehicleRoutingProblem,
-    constraints: &'a Vec<Constraint>,
-    params: &'a SolverParams,
+    problem: VehicleRoutingProblem,
+    constraints: Vec<Constraint>,
+    params: SolverParams,
     best_solutions: Arc<Mutex<Vec<AcceptedSolution<'a>>>>,
     solution_selector: SolutionSelector,
     solution_acceptor: SolutionAcceptor,
@@ -45,9 +45,9 @@ pub struct Search<'a> {
 
 impl<'a> Search<'a> {
     pub fn new(
-        params: &'a SolverParams,
-        problem: &'a VehicleRoutingProblem,
-        constraints: &'a Vec<Constraint>,
+        params: SolverParams,
+        problem: VehicleRoutingProblem,
+        constraints: Vec<Constraint>,
     ) -> Self {
         let solution_selector = match params.solver_selector {
             SolverSelectorStrategy::SelectBest => SolutionSelector::SelectBest(SelectBestSelector),
@@ -74,7 +74,11 @@ impl<'a> Search<'a> {
         self.on_best_solution_handler = Arc::new(Some(callback));
     }
 
-    pub fn run(&self) {
+    pub fn best_solutions(&self) -> MutexGuard<'_, Vec<AcceptedSolution<'a>>> {
+        self.best_solutions.lock().unwrap()
+    }
+
+    pub fn run(&'a self) {
         let mut rng = SmallRng::seed_from_u64(2427121);
 
         let num_threads = self.number_of_threads();
@@ -102,7 +106,7 @@ impl<'a> Search<'a> {
     }
 
     fn perform_iteration(
-        &self,
+        &'a self,
         rng: &mut SmallRng,
         best_solutions: &Arc<Mutex<Vec<AcceptedSolution<'a>>>>,
     ) {
@@ -114,7 +118,7 @@ impl<'a> Search<'a> {
             {
                 solution.clone()
             } else {
-                construct_solution(self.problem, rng, self.constraints)
+                construct_solution(&self.problem, rng, &self.constraints)
             }
         }; // Lock is released here
 
@@ -217,7 +221,7 @@ impl<'a> Search<'a> {
             solution,
             RecreateContext {
                 rng,
-                constraints: self.constraints,
+                constraints: &self.constraints,
             },
         );
     }

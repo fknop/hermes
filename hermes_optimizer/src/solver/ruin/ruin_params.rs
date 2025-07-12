@@ -1,5 +1,6 @@
 use super::{ruin_radial::RuinRadial, ruin_strategy::RuinStrategy};
 
+#[derive(Clone, Debug)]
 pub struct RuinParams {
     pub ruin_strategies: Vec<(RuinStrategy, u64)>,
 

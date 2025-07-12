@@ -26,6 +26,18 @@ impl Vehicle {
         self.shift.as_ref().and_then(|shift| shift.earliest_start)
     }
 
+    pub fn maximum_transport_duration(&self) -> Option<SignedDuration> {
+        self.shift
+            .as_ref()
+            .and_then(|shift| shift.maximum_transport_duration)
+    }
+
+    pub fn maximum_working_duration(&self) -> Option<SignedDuration> {
+        self.shift
+            .as_ref()
+            .and_then(|shift| shift.maximum_working_duration)
+    }
+
     pub fn latest_end_time(&self) -> Option<Timestamp> {
         self.shift.as_ref().and_then(|shift| shift.latest_end)
     }
@@ -50,14 +62,17 @@ impl Vehicle {
 pub struct VehicleShift {
     earliest_start: Option<Timestamp>,
     latest_end: Option<Timestamp>,
+    maximum_transport_duration: Option<SignedDuration>,
+    maximum_working_duration: Option<SignedDuration>,
 }
 
 impl VehicleShift {
-    pub fn new(earliest_start: Option<Timestamp>, latest_end: Option<Timestamp>) -> Self {
-        VehicleShift {
-            earliest_start,
-            latest_end,
-        }
+    pub fn maximum_transport_duration(&self) -> Option<SignedDuration> {
+        self.maximum_transport_duration
+    }
+
+    pub fn maximum_working_duration(&self) -> Option<SignedDuration> {
+        self.maximum_working_duration
     }
 
     pub fn earliest_start(&self) -> Option<Timestamp> {
@@ -66,6 +81,51 @@ impl VehicleShift {
 
     pub fn latest_end(&self) -> Option<Timestamp> {
         self.latest_end
+    }
+}
+
+#[derive(Default)]
+pub struct VehicleShiftBuilder {
+    earliest_start: Option<Timestamp>,
+    latest_end: Option<Timestamp>,
+    maximum_transport_duration: Option<SignedDuration>,
+    maximum_working_duration: Option<SignedDuration>,
+}
+
+impl VehicleShiftBuilder {
+    pub fn set_earliest_start(&mut self, earliest_start: Timestamp) -> &mut VehicleShiftBuilder {
+        self.earliest_start = Some(earliest_start);
+        self
+    }
+
+    pub fn set_latest_end(&mut self, latest_end: Timestamp) -> &mut VehicleShiftBuilder {
+        self.latest_end = Some(latest_end);
+        self
+    }
+
+    pub fn set_maximum_transport_duration(
+        &mut self,
+        maximum_transport_duration: SignedDuration,
+    ) -> &mut VehicleShiftBuilder {
+        self.maximum_transport_duration = Some(maximum_transport_duration);
+        self
+    }
+
+    pub fn set_maximum_working_duration(
+        &mut self,
+        maximum_working_duration: SignedDuration,
+    ) -> &mut VehicleShiftBuilder {
+        self.maximum_working_duration = Some(maximum_working_duration);
+        self
+    }
+
+    pub fn build(self) -> VehicleShift {
+        VehicleShift {
+            earliest_start: self.earliest_start,
+            latest_end: self.latest_end,
+            maximum_transport_duration: self.maximum_transport_duration,
+            maximum_working_duration: self.maximum_working_duration,
+        }
     }
 }
 

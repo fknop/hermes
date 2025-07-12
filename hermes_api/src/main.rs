@@ -2,12 +2,13 @@ mod error;
 mod landmarks;
 mod route;
 mod state;
+mod vrp;
 
 use crate::get_landmarks::get_landmarks;
 use crate::route::route_handler::route_handler;
 use crate::state::AppState;
 use axum::http::Method;
-use axum::routing::{get, post};
+use axum::routing::{any, get, post};
 use axum::{Router, serve};
 use hermes_core::hermes::Hermes;
 use landmarks::get_landmarks;
@@ -34,6 +35,7 @@ async fn main() {
     let app = Router::new()
         .route("/route", post(route_handler))
         .route("/landmarks", get(get_landmarks))
+        .route("/vrp/ws", any(vrp::ws::handler))
         .layer(ServiceBuilder::new().layer(cors_layer))
         .with_state(app_state);
 

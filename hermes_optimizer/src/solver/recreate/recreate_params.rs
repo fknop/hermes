@@ -1,5 +1,6 @@
 use super::recreate_strategy::RecreateStrategy;
 
+#[derive(Clone, Debug)]
 pub struct RecreateParams {
     pub recreate_strategies: Vec<(RecreateStrategy, u64)>,
 }

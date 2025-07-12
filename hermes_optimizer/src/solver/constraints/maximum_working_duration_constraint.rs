@@ -1,0 +1,57 @@
+use crate::solver::{
+    insertion::{ExistingRouteInsertion, Insertion, NewRouteInsertion},
+    insertion_context::InsertionContext,
+    score::Score,
+    working_solution::WorkingSolutionRoute,
+};
+
+use super::route_constraint::RouteConstraint;
+
+pub struct MaximumWorkingDurationConstraint;
+
+impl RouteConstraint for MaximumWorkingDurationConstraint {
+    fn compute_score(&self, route: &WorkingSolutionRoute) -> Score {
+        let vehicle = route.vehicle();
+        if let Some(maximum_working_duration) = vehicle.maximum_working_duration() {
+            let duration = route.end().duration_since(route.start());
+            if duration > maximum_working_duration {
+                return Score::hard(duration.as_secs() - maximum_working_duration.as_secs());
+            }
+        }
+
+        Score::zero()
+    }
+
+    fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
+        let problem = context.solution.problem();
+
+        let duration = context.end.duration_since(context.start);
+
+        match *context.insertion {
+            Insertion::ExistingRoute(ExistingRouteInsertion { route_id, .. }) => {
+                let route = context.solution.route(route_id);
+                let vehicle = route.vehicle();
+
+                if let Some(maximum_working_duration) = vehicle.maximum_working_duration() {
+                    if duration > maximum_working_duration {
+                        return Score::hard(
+                            duration.as_secs() - maximum_working_duration.as_secs(),
+                        );
+                    }
+                }
+            }
+            Insertion::NewRoute(NewRouteInsertion { vehicle_id, .. }) => {
+                let vehicle = problem.vehicle(vehicle_id);
+                if let Some(maximum_working_duration) = vehicle.maximum_working_duration() {
+                    if duration > maximum_working_duration {
+                        return Score::hard(
+                            duration.as_secs() - maximum_working_duration.as_secs(),
+                        );
+                    }
+                }
+            }
+        }
+
+        Score::zero()
+    }
+}

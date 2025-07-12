@@ -8,7 +8,7 @@ use crate::problem::{
     service::{Service, ServiceBuilder},
     time_window::TimeWindow,
     travel_cost_matrix::TravelCostMatrix,
-    vehicle::{Vehicle, VehicleBuilder, VehicleShift},
+    vehicle::{Vehicle, VehicleBuilder, VehicleShift, VehicleShiftBuilder},
     vehicle_routing_problem::{VehicleRoutingProblem, VehicleRoutingProblemBuilder},
 };
 
@@ -106,10 +106,11 @@ impl SolomonParser {
             let customer_index = line_index - 1;
             if customer_index == 0 {
                 for vehicle in vehicles.iter_mut() {
-                    vehicle.set_shift(VehicleShift::new(
-                        Some(Timestamp::from_second(ready_time)?),
-                        Some(Timestamp::from_second(due_time)?),
-                    ));
+                    let mut shift_builder = VehicleShiftBuilder::default();
+                    shift_builder
+                        .set_earliest_start(Timestamp::from_second(ready_time)?)
+                        .set_latest_end(Timestamp::from_second(due_time)?);
+                    vehicle.set_shift(shift_builder.build());
                     vehicle.set_depot_location(location_id);
                 }
             } else {

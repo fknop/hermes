@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-axum = "0.8.1"
+axum = { version = "0.8.1", features = ["ws"] }
 serde = { version = "1.0.219", features = ["derive"] }
 tokio = { version = "1.44.1", features = ["full"] }
 hermes_core = { version = "0.1.0", path = "../hermes_core" }
@@ -14,4 +14,3 @@ geojson = "0.24.2"
 tower-http = { version = "0.6.2", features = ["cors"] }
 tracing-subscriber = "0.3.19"
 tracing = "0.1.41"
-
