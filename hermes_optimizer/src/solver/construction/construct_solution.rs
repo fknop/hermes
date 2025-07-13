@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use rand::rngs::SmallRng;
 
 use crate::{
@@ -9,12 +11,12 @@ use crate::{
     },
 };
 
-pub fn construct_solution<'a>(
-    problem: &'a VehicleRoutingProblem,
+pub fn construct_solution(
+    problem: &Arc<VehicleRoutingProblem>,
     rng: &mut SmallRng,
-    constraints: &'a Vec<Constraint>,
-) -> WorkingSolution<'a> {
-    let mut solution = WorkingSolution::new(problem);
+    constraints: &Vec<Constraint>,
+) -> WorkingSolution {
+    let mut solution = WorkingSolution::new(problem.clone());
     let mut services: Vec<_> = (0..problem.services().len()).collect();
 
     let vehicles = problem.vehicles();

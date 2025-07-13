@@ -7,11 +7,11 @@ use crate::problem::vehicle_routing_problem::VehicleRoutingProblem;
 use super::{accepted_solution::AcceptedSolution, solver::Solver, solver_params::SolverParams};
 
 #[derive(Default)]
-pub struct SolverManager<'a> {
-    solvers: HashMap<String, Solver<'a>>, // This struct will manage the solver instances and their configurations
+pub struct SolverManager {
+    solvers: HashMap<String, Solver>, // This struct will manage the solver instances and their configurations
 }
 
-impl SolverManager<'_> {
+impl SolverManager {
     pub fn solve(&mut self, problem: VehicleRoutingProblem) -> String {
         let job_id = Uuid::new_v4().to_string();
 
@@ -22,7 +22,7 @@ impl SolverManager<'_> {
     }
 
     // TODO: avoid cloning the solution
-    pub fn get_best_solution(&self, job_id: String) -> Option<AcceptedSolution<'_>> {
+    pub fn get_best_solution(&self, job_id: String) -> Option<AcceptedSolution> {
         if let Some(solver) = self.solvers.get(&job_id) {
             let guard = solver.best_solutions();
             guard.first().cloned()

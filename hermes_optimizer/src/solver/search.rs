@@ -1,9 +1,8 @@
 use std::{
-    sync::{Arc, Mutex, MutexGuard, atomic::AtomicUsize},
+    sync::{Arc, Mutex, MutexGuard},
     thread,
 };
 
-use jiff::{SignedDuration, Timestamp};
 use rand::{Rng, SeedableRng, rngs::SmallRng};
 use tracing::info;
 
@@ -33,17 +32,17 @@ use super::{
     working_solution::WorkingSolution,
 };
 
-pub struct Search<'a> {
-    problem: VehicleRoutingProblem,
+pub struct Search {
+    problem: Arc<VehicleRoutingProblem>,
     constraints: Vec<Constraint>,
     params: SolverParams,
-    best_solutions: Arc<Mutex<Vec<AcceptedSolution<'a>>>>,
+    best_solutions: Arc<Mutex<Vec<AcceptedSolution>>>,
     solution_selector: SolutionSelector,
     solution_acceptor: SolutionAcceptor,
-    on_best_solution_handler: Arc<Option<fn(&AcceptedSolution<'a>)>>,
+    on_best_solution_handler: Arc<Option<fn(&AcceptedSolution)>>,
 }
 
-impl<'a> Search<'a> {
+impl Search {
     pub fn new(
         params: SolverParams,
         problem: VehicleRoutingProblem,
@@ -60,7 +59,7 @@ impl<'a> Search<'a> {
         };
 
         Search {
-            problem,
+            problem: Arc::new(problem),
             constraints,
             params,
             best_solutions: Arc::new(Mutex::new(Vec::new())),
@@ -70,15 +69,15 @@ impl<'a> Search<'a> {
         }
     }
 
-    pub fn on_best_solution(&mut self, callback: fn(&AcceptedSolution<'a>)) {
+    pub fn on_best_solution(&mut self, callback: fn(&AcceptedSolution)) {
         self.on_best_solution_handler = Arc::new(Some(callback));
     }
 
-    pub fn best_solutions(&self) -> MutexGuard<'_, Vec<AcceptedSolution<'a>>> {
+    pub fn best_solutions(&self) -> MutexGuard<'_, Vec<AcceptedSolution>> {
         self.best_solutions.lock().unwrap()
     }
 
-    pub fn run(&'a self) {
+    pub fn run(&self) {
         let mut rng = SmallRng::seed_from_u64(2427121);
 
         let num_threads = self.number_of_threads();
@@ -96,7 +95,17 @@ impl<'a> Search<'a> {
 
                 builder
                     .spawn_scoped(s, move || {
-                        for _ in 0..max_iterations {
+                        for iteration in 0..max_iterations {
+                            if (iteration + 1) % 1000 == 0 {
+                                info!(
+                                    thread = thread::current().name().unwrap_or("main"),
+                                    "Thread {}: Iteration {}/{}",
+                                    thread_index,
+                                    iteration + 1,
+                                    max_iterations
+                                );
+                            }
+
                             self.perform_iteration(&mut thread_rng, &best_solutions);
                         }
                     })
@@ -106,9 +115,9 @@ impl<'a> Search<'a> {
     }
 
     fn perform_iteration(
-        &'a self,
+        &self,
         rng: &mut SmallRng,
-        best_solutions: &Arc<Mutex<Vec<AcceptedSolution<'a>>>>,
+        best_solutions: &Arc<Mutex<Vec<AcceptedSolution>>>,
     ) {
         let mut working_solution = {
             let solutions_guard = best_solutions.lock().unwrap();
@@ -131,8 +140,8 @@ impl<'a> Search<'a> {
 
     fn store_solution(
         &self,
-        solution: WorkingSolution<'a>,
-        best_solutions: &Arc<Mutex<Vec<AcceptedSolution<'a>>>>,
+        solution: WorkingSolution,
+        best_solutions: &Arc<Mutex<Vec<AcceptedSolution>>>,
     ) {
         let (score, score_analysis) = self.compute_solution_score(&solution);
 

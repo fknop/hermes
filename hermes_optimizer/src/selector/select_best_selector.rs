@@ -5,10 +5,10 @@ use super::select_solution::SelectSolution;
 pub struct SelectBestSelector;
 
 impl SelectSolution for SelectBestSelector {
-    fn select_solution<'r, 'a>(
+    fn select_solution<'a>(
         &self,
-        solutions: &'r [AcceptedSolution<'a>],
-    ) -> Option<&'r AcceptedSolution<'a>> {
+        solutions: &'a [AcceptedSolution],
+    ) -> Option<&'a AcceptedSolution> {
         // TODO
         let mut max_score = Score::MAX;
         let mut best_solution = None;

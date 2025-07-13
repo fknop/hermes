@@ -3,5 +3,5 @@ use hermes_optimizer::solver::solver_manager::SolverManager;
 
 pub struct AppState {
     pub hermes: Hermes,
-    pub solver_manager: SolverManager<'static>,
+    pub solver_manager: SolverManager,
 }

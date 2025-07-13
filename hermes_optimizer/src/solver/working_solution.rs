@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use fxhash::FxHashSet;
 use jiff::{SignedDuration, Timestamp};
 
@@ -15,14 +17,14 @@ use super::{
 };
 
 #[derive(Clone)]
-pub struct WorkingSolution<'a> {
-    problem: &'a VehicleRoutingProblem,
+pub struct WorkingSolution {
+    problem: Arc<VehicleRoutingProblem>,
     routes: Vec<WorkingSolutionRoute>,
     unassigned_services: FxHashSet<ServiceId>,
 }
 
-impl<'a> WorkingSolution<'a> {
-    pub fn new(problem: &'a VehicleRoutingProblem) -> Self {
+impl WorkingSolution {
+    pub fn new(problem: Arc<VehicleRoutingProblem>) -> Self {
         let routes = Vec::new();
         let unassigned_services = (0..problem.services().len()).collect();
 
@@ -62,7 +64,7 @@ impl<'a> WorkingSolution<'a> {
     }
 
     pub fn problem(&self) -> &VehicleRoutingProblem {
-        self.problem
+        self.problem.as_ref()
     }
 
     pub fn routes(&self) -> &[WorkingSolutionRoute] {
@@ -77,12 +79,12 @@ impl<'a> WorkingSolution<'a> {
         match insertion {
             Insertion::ExistingRoute(context) => {
                 let route = &mut self.routes[context.route_id];
-                route.insert_service(self.problem, context.position, context.service_id);
+                route.insert_service(&self.problem, context.position, context.service_id);
                 self.unassigned_services.remove(&context.service_id);
             }
             Insertion::NewRoute(context) => {
-                let mut new_route = WorkingSolutionRoute::empty(self.problem, context.vehicle_id);
-                new_route.insert_service(self.problem, 0, context.service_id);
+                let mut new_route = WorkingSolutionRoute::empty(context.vehicle_id);
+                new_route.insert_service(&self.problem, 0, context.service_id);
                 self.routes.push(new_route);
                 self.unassigned_services.remove(&context.service_id);
             }
@@ -95,7 +97,7 @@ impl<'a> WorkingSolution<'a> {
         }
 
         let route = &mut self.routes[route_id];
-        if let Some(service_id) = route.remove_activity(self.problem, activity_id) {
+        if let Some(service_id) = route.remove_activity(&self.problem, activity_id) {
             self.unassigned_services.insert(service_id);
         }
 
@@ -108,7 +110,7 @@ impl<'a> WorkingSolution<'a> {
         let mut route_to_remove = None;
         for (route_id, route) in self.routes.iter_mut().enumerate() {
             if route.contains_service(service_id) {
-                route.remove_service(self.problem, service_id);
+                route.remove_service(&self.problem, service_id);
 
                 self.unassigned_services.insert(service_id);
 
@@ -142,9 +144,8 @@ pub struct WorkingSolutionRoute {
 }
 
 impl WorkingSolutionRoute {
-    pub fn empty(problem: &VehicleRoutingProblem, vehicle_id: VehicleId) -> Self {
+    pub fn empty(vehicle_id: VehicleId) -> Self {
         WorkingSolutionRoute {
-            // problem,
             vehicle_id,
             services: FxHashSet::default(),
             activities: Vec::new(),
@@ -496,7 +497,7 @@ pub fn compute_departure_time(
 
 pub fn compute_insertion_context<'a>(
     problem: &'a VehicleRoutingProblem,
-    solution: &'a WorkingSolution<'a>,
+    solution: &'a WorkingSolution,
     insertion: &'a Insertion,
 ) -> InsertionContext<'a> {
     let mut activities = Vec::new();

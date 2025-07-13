@@ -11,10 +11,10 @@ pub enum SolutionSelector {
 }
 
 impl SelectSolution for SolutionSelector {
-    fn select_solution<'r, 'a>(
+    fn select_solution<'a>(
         &self,
-        solutions: &'r [AcceptedSolution<'a>],
-    ) -> Option<&'r AcceptedSolution<'a>> {
+        solutions: &'a [AcceptedSolution],
+    ) -> Option<&'a AcceptedSolution> {
         match self {
             SolutionSelector::SelectBest(selector) => selector.select_solution(solutions),
             SolutionSelector::SelectRandom(selector) => selector.select_solution(solutions),

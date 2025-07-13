@@ -19,7 +19,7 @@ impl ActivityInsertionContext {
 
 pub struct InsertionContext<'a> {
     pub problem: &'a VehicleRoutingProblem,
-    pub solution: &'a WorkingSolution<'a>,
+    pub solution: &'a WorkingSolution,
     pub insertion: &'a Insertion,
     pub activities: Vec<ActivityInsertionContext>,
     pub start: Timestamp,

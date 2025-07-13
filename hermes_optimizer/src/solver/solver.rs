@@ -18,12 +18,12 @@ use super::{
     solver_params::SolverParams,
 };
 
-pub struct Solver<'a> {
+pub struct Solver {
     params: SolverParams,
-    search: Search<'a>,
+    search: Search,
 }
 
-impl<'a> Solver<'a> {
+impl Solver {
     pub fn new(problem: VehicleRoutingProblem, params: SolverParams) -> Self {
         let constraints = vec![
             Constraint::Global(GlobalConstraintType::TransportCost(TransportCostConstraint)),
@@ -47,11 +47,11 @@ impl<'a> Solver<'a> {
         Solver { search, params }
     }
 
-    pub fn solve(&'a self) {
+    pub fn solve(&self) {
         self.search.run();
     }
 
-    pub fn best_solutions(&self) -> MutexGuard<'_, Vec<AcceptedSolution<'a>>> {
+    pub fn best_solutions(&self) -> MutexGuard<'_, Vec<AcceptedSolution>> {
         self.search.best_solutions()
     }
 }

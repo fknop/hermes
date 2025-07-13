@@ -6,8 +6,8 @@ use super::{
 };
 
 #[derive(Clone)]
-pub struct AcceptedSolution<'a> {
-    pub solution: WorkingSolution<'a>,
+pub struct AcceptedSolution {
+    pub solution: WorkingSolution,
     pub score: Score,
     pub score_analysis: ScoreAnalysis,
 }
