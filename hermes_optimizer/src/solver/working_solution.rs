@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use fxhash::FxHashSet;
 use jiff::{SignedDuration, Timestamp};
+use serde::Serialize;
 
 use crate::problem::{
     capacity::Capacity,
@@ -16,8 +17,9 @@ use super::{
     insertion_context::{ActivityInsertionContext, InsertionContext},
 };
 
-#[derive(Clone)]
+#[derive(Clone, Serialize)]
 pub struct WorkingSolution {
+    #[serde(skip_serializing)]
     problem: Arc<VehicleRoutingProblem>,
     routes: Vec<WorkingSolutionRoute>,
     unassigned_services: FxHashSet<ServiceId>,
@@ -126,7 +128,7 @@ impl WorkingSolution {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize)]
 pub struct WorkingSolutionRoute {
     // problem: &'a VehicleRoutingProblem,
     vehicle_id: VehicleId,
@@ -319,7 +321,7 @@ impl WorkingSolutionRoute {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize)]
 pub struct WorkingSolutionRouteActivity {
     // problem: &'a VehicleRoutingProblem,
     service_id: ServiceId,

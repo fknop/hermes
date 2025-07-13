@@ -5,8 +5,9 @@ use std::{
 };
 
 use fxhash::FxHashMap;
+use serde::Serialize;
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize)]
 pub struct Score {
     pub hard_score: i64,
     pub soft_score: i64,
@@ -111,7 +112,7 @@ impl SubAssign<Score> for Score {
     }
 }
 
-#[derive(Default, Clone, Debug)]
+#[derive(Default, Clone, Debug, Serialize)]
 pub struct ScoreAnalysis {
     pub scores: FxHashMap<&'static str, Score>,
 }

@@ -1,36 +1,47 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
-use parking_lot::{MappedMutexGuard, MappedRwLockReadGuard};
-use uuid::Uuid;
+use tokio::sync::RwLock;
 
 use crate::problem::vehicle_routing_problem::VehicleRoutingProblem;
 
-use super::{accepted_solution::AcceptedSolution, solver::Solver, solver_params::SolverParams};
+use super::{
+    accepted_solution::AcceptedSolution,
+    solver::{Solver, SolverStatus},
+    solver_params::SolverParams,
+};
 
 #[derive(Default)]
 pub struct SolverManager {
-    solvers: HashMap<String, Solver>, // This struct will manage the solver instances and their configurations
+    solvers: RwLock<HashMap<String, Arc<Solver>>>, // This struct will manage the solver instances and their configurations
 }
 
 impl SolverManager {
-    pub fn solve(&mut self, problem: VehicleRoutingProblem) -> String {
-        let job_id = Uuid::new_v4().to_string();
+    pub async fn solve(&self, job_id: String, problem: VehicleRoutingProblem) {
+        let solver = Arc::new(Solver::new(problem, SolverParams::default()));
+        self.solvers
+            .write()
+            .await
+            .insert(job_id, Arc::clone(&solver));
 
-        let solver = Solver::new(problem, SolverParams::default());
-        self.solvers.insert(job_id.clone(), solver);
-
-        job_id
+        tokio::spawn(async move {
+            solver.solve();
+        });
     }
 
-    // TODO: avoid cloning the solution
-    pub fn best_solution(
-        &self,
-        job_id: String,
-    ) -> Option<MappedRwLockReadGuard<'_, AcceptedSolution>> {
-        if let Some(solver) = self.solvers.get(&job_id) {
-            solver.best_solution()
-        } else {
-            None
-        }
+    pub async fn get_status(&self, job_id: &str) -> Option<SolverStatus> {
+        self.solvers
+            .read()
+            .await
+            .get(job_id)
+            .map(|solver| solver.status())
+    }
+
+    pub async fn get_solution(&self, job_id: &str) -> Option<AcceptedSolution> {
+        self.solvers
+            .read()
+            .await
+            .get(job_id)
+            .and_then(|solver| solver.current_best_solution())
+            .map(|solution| solution.clone())
     }
 }

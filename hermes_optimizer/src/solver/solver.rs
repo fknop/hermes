@@ -1,4 +1,6 @@
-use parking_lot::MappedRwLockReadGuard;
+use std::{cell::Cell, ops::DerefMut};
+
+use parking_lot::{MappedRwLockReadGuard, RwLock, RwLockWriteGuard};
 
 use crate::problem::vehicle_routing_problem::VehicleRoutingProblem;
 
@@ -18,9 +20,17 @@ use super::{
     solver_params::SolverParams,
 };
 
+#[derive(Copy, Clone)]
+pub enum SolverStatus {
+    Pending,
+    Running,
+    Completed,
+}
+
 pub struct Solver {
     params: SolverParams,
     search: Search,
+    status: RwLock<SolverStatus>,
 }
 
 impl Solver {
@@ -44,14 +54,24 @@ impl Solver {
 
         let search = Search::new(final_params, problem, constraints);
 
-        Solver { search, params }
+        Solver {
+            search,
+            params,
+            status: RwLock::new(SolverStatus::Pending),
+        }
     }
 
     pub fn solve(&self) {
+        *self.status.write() = SolverStatus::Running;
         self.search.run();
+        *self.status.write() = SolverStatus::Completed;
     }
 
-    pub fn best_solution(&self) -> Option<MappedRwLockReadGuard<'_, AcceptedSolution>> {
+    pub fn status(&self) -> SolverStatus {
+        self.status.read().clone()
+    }
+
+    pub fn current_best_solution(&self) -> Option<MappedRwLockReadGuard<'_, AcceptedSolution>> {
         self.search.best_solution()
     }
 }

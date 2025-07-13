@@ -4,6 +4,7 @@ use axum::response::{IntoResponse, Response};
 pub enum ApiError {
     BadRequest(String),
     InternalServerError(String),
+    NotFound(String),
 }
 
 impl IntoResponse for ApiError {
@@ -13,6 +14,7 @@ impl IntoResponse for ApiError {
                 (StatusCode::INTERNAL_SERVER_ERROR, message).into_response()
             }
             ApiError::BadRequest(message) => (StatusCode::BAD_REQUEST, message).into_response(),
+            ApiError::NotFound(message) => (StatusCode::NOT_FOUND, message).into_response(),
         }
     }
 }

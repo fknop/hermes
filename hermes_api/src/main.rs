@@ -13,6 +13,7 @@ use axum::{Router, serve};
 use hermes_core::hermes::Hermes;
 use hermes_optimizer::solver::solver_manager::SolverManager;
 use landmarks::get_landmarks;
+use parking_lot::RwLock;
 use std::sync::Arc;
 use tower::ServiceBuilder;
 use tower_http::cors::{Any, CorsLayer};
@@ -40,6 +41,7 @@ async fn main() {
         .route("/route", post(route_handler))
         .route("/landmarks", get(get_landmarks))
         .route("/vrp/ws", any(vrp::ws::handler))
+        .route("/vrp/poll/:job_id", get(vrp::poll::poll_handler))
         .layer(ServiceBuilder::new().layer(cors_layer))
         .with_state(app_state);
 

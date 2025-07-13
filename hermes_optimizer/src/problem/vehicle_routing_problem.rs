@@ -1,4 +1,5 @@
 use jiff::SignedDuration;
+use serde::Serialize;
 
 use super::{
     location::{Location, LocationId},

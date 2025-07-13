@@ -16,7 +16,7 @@ pub fn construct_solution(
     rng: &mut SmallRng,
     constraints: &Vec<Constraint>,
 ) -> WorkingSolution {
-    let mut solution = WorkingSolution::new(problem.clone());
+    let mut solution = WorkingSolution::new(Arc::clone(problem));
     let mut services: Vec<_> = (0..problem.services().len()).collect();
 
     let vehicles = problem.vehicles();

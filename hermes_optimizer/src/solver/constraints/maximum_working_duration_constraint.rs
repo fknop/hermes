@@ -20,9 +20,11 @@ impl RouteConstraint for MaximumWorkingDurationConstraint {
     ) -> Score {
         let vehicle = route.vehicle(problem);
         if let Some(maximum_working_duration) = vehicle.maximum_working_duration() {
-            let duration = route.end(problem).duration_since(route.start(problem));
-            if duration > maximum_working_duration {
-                return Score::hard(duration.as_secs() - maximum_working_duration.as_secs());
+            let working_duration = route.end(problem).duration_since(route.start(problem));
+            if working_duration > maximum_working_duration {
+                return Score::hard(
+                    working_duration.as_secs() - maximum_working_duration.as_secs(),
+                );
             }
         }
 
@@ -32,7 +34,7 @@ impl RouteConstraint for MaximumWorkingDurationConstraint {
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
         let problem = context.problem();
 
-        let duration = context.end.duration_since(context.start);
+        let working_duration = context.end.duration_since(context.start);
 
         match *context.insertion {
             Insertion::ExistingRoute(ExistingRouteInsertion { route_id, .. }) => {
@@ -40,9 +42,9 @@ impl RouteConstraint for MaximumWorkingDurationConstraint {
                 let vehicle = route.vehicle(problem);
 
                 if let Some(maximum_working_duration) = vehicle.maximum_working_duration() {
-                    if duration > maximum_working_duration {
+                    if working_duration > maximum_working_duration {
                         return Score::hard(
-                            duration.as_secs() - maximum_working_duration.as_secs(),
+                            working_duration.as_secs() - maximum_working_duration.as_secs(),
                         );
                     }
                 }
@@ -50,9 +52,9 @@ impl RouteConstraint for MaximumWorkingDurationConstraint {
             Insertion::NewRoute(NewRouteInsertion { vehicle_id, .. }) => {
                 let vehicle = problem.vehicle(vehicle_id);
                 if let Some(maximum_working_duration) = vehicle.maximum_working_duration() {
-                    if duration > maximum_working_duration {
+                    if working_duration > maximum_working_duration {
                         return Score::hard(
-                            duration.as_secs() - maximum_working_duration.as_secs(),
+                            working_duration.as_secs() - maximum_working_duration.as_secs(),
                         );
                     }
                 }
