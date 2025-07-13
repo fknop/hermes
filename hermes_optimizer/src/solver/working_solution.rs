@@ -1,7 +1,5 @@
 use fxhash::FxHashSet;
 use jiff::{SignedDuration, Timestamp};
-use rand::rngs::SmallRng;
-use rand::seq::IteratorRandom;
 
 use crate::problem::{
     capacity::Capacity,
@@ -19,7 +17,7 @@ use super::{
 #[derive(Clone)]
 pub struct WorkingSolution<'a> {
     problem: &'a VehicleRoutingProblem,
-    routes: Vec<WorkingSolutionRoute<'a>>,
+    routes: Vec<WorkingSolutionRoute>,
     unassigned_services: FxHashSet<ServiceId>,
 }
 
@@ -79,12 +77,12 @@ impl<'a> WorkingSolution<'a> {
         match insertion {
             Insertion::ExistingRoute(context) => {
                 let route = &mut self.routes[context.route_id];
-                route.insert_service(context.position, context.service_id);
+                route.insert_service(self.problem, context.position, context.service_id);
                 self.unassigned_services.remove(&context.service_id);
             }
             Insertion::NewRoute(context) => {
                 let mut new_route = WorkingSolutionRoute::empty(self.problem, context.vehicle_id);
-                new_route.insert_service(0, context.service_id);
+                new_route.insert_service(self.problem, 0, context.service_id);
                 self.routes.push(new_route);
                 self.unassigned_services.remove(&context.service_id);
             }
@@ -97,7 +95,7 @@ impl<'a> WorkingSolution<'a> {
         }
 
         let route = &mut self.routes[route_id];
-        if let Some(service_id) = route.remove_activity(activity_id) {
+        if let Some(service_id) = route.remove_activity(self.problem, activity_id) {
             self.unassigned_services.insert(service_id);
         }
 
@@ -110,7 +108,7 @@ impl<'a> WorkingSolution<'a> {
         let mut route_to_remove = None;
         for (route_id, route) in self.routes.iter_mut().enumerate() {
             if route.contains_service(service_id) {
-                route.remove_service(service_id);
+                route.remove_service(self.problem, service_id);
 
                 self.unassigned_services.insert(service_id);
 
@@ -127,11 +125,11 @@ impl<'a> WorkingSolution<'a> {
 }
 
 #[derive(Clone)]
-pub struct WorkingSolutionRoute<'a> {
-    problem: &'a VehicleRoutingProblem,
+pub struct WorkingSolutionRoute {
+    // problem: &'a VehicleRoutingProblem,
     vehicle_id: VehicleId,
     services: FxHashSet<ServiceId>,
-    activities: Vec<WorkingSolutionRouteActivity<'a>>,
+    activities: Vec<WorkingSolutionRouteActivity>,
 
     // Current total demand of the route
     total_demand: Capacity,
@@ -143,10 +141,10 @@ pub struct WorkingSolutionRoute<'a> {
     waiting_duration: SignedDuration,
 }
 
-impl<'a> WorkingSolutionRoute<'a> {
-    pub fn empty(problem: &'a VehicleRoutingProblem, vehicle_id: VehicleId) -> Self {
+impl WorkingSolutionRoute {
+    pub fn empty(problem: &VehicleRoutingProblem, vehicle_id: VehicleId) -> Self {
         WorkingSolutionRoute {
-            problem,
+            // problem,
             vehicle_id,
             services: FxHashSet::default(),
             activities: Vec::new(),
@@ -164,36 +162,36 @@ impl<'a> WorkingSolutionRoute<'a> {
         self.activities.is_empty()
     }
 
-    pub fn problem(&self) -> &VehicleRoutingProblem {
-        self.problem
-    }
+    // pub fn problem(&self) -> &VehicleRoutingProblem {
+    //     self.problem
+    // }
 
-    pub fn start(&self) -> Timestamp {
+    pub fn start(&self, problem: &VehicleRoutingProblem) -> Timestamp {
         let first = self.first();
         compute_vehicle_start(
-            self.problem,
+            problem,
             self.vehicle_id,
             first.service_id(),
             first.arrival_time(),
         )
     }
 
-    pub fn end(&self) -> Timestamp {
+    pub fn end(&self, problem: &VehicleRoutingProblem) -> Timestamp {
         let last = self.last();
         compute_vehicle_end(
-            self.problem,
+            problem,
             self.vehicle_id,
             last.service_id(),
             last.departure_time(),
         )
     }
 
-    pub fn first(&self) -> &WorkingSolutionRouteActivity<'_> {
+    pub fn first(&self) -> &WorkingSolutionRouteActivity {
         // Empty routes should not be allowed
         &self.activities[0]
     }
 
-    pub fn last(&self) -> &WorkingSolutionRouteActivity<'_> {
+    pub fn last(&self) -> &WorkingSolutionRouteActivity {
         // Empty routes should not be allowed
         &self.activities[self.activities().len() - 1]
     }
@@ -214,11 +212,15 @@ impl<'a> WorkingSolutionRoute<'a> {
         self.waiting_duration
     }
 
-    pub fn vehicle(&self) -> &Vehicle {
-        self.problem.vehicle(self.vehicle_id)
+    pub fn vehicle<'a>(&self, problem: &'a VehicleRoutingProblem) -> &'a Vehicle {
+        problem.vehicle(self.vehicle_id)
     }
 
-    fn remove_activity(&mut self, activity_id: usize) -> Option<ServiceId> {
+    fn remove_activity(
+        &mut self,
+        problem: &VehicleRoutingProblem,
+        activity_id: usize,
+    ) -> Option<ServiceId> {
         if activity_id >= self.activities.len() {
             return None;
         }
@@ -233,14 +235,14 @@ impl<'a> WorkingSolutionRoute<'a> {
         self.services.remove(&activity.service_id);
         self.waiting_duration -= activity.waiting_duration();
         self.total_demand
-            .sub_mut(self.problem.service(activity.service_id).demand());
+            .sub_mut(activity.service(problem).demand());
 
         self.activities.remove(activity_id);
 
         Some(service_id)
     }
 
-    fn remove_service(&mut self, service_id: ServiceId) {
+    fn remove_service(&mut self, problem: &VehicleRoutingProblem, service_id: ServiceId) {
         if !self.contains_service(service_id) {
             return; // Service is not in the route
         }
@@ -253,27 +255,32 @@ impl<'a> WorkingSolutionRoute<'a> {
         self.waiting_duration -= activity.waiting_duration();
         self.services.remove(&service_id);
         self.total_demand
-            .sub_mut(self.problem.service(service_id).demand());
+            .sub_mut(problem.service(service_id).demand());
 
         self.activities
             .retain(|activity| activity.service_id != service_id);
     }
 
-    fn insert_service(&mut self, position: usize, service_id: ServiceId) {
+    fn insert_service(
+        &mut self,
+        problem: &VehicleRoutingProblem,
+        position: usize,
+        service_id: ServiceId,
+    ) {
         if self.services.contains(&service_id) {
             return;
         }
 
         self.services.insert(service_id);
         let activity = WorkingSolutionRouteActivity::new(
-            self.problem,
+            problem,
             service_id,
             if self.activities.is_empty() || position == 0 {
-                compute_first_activity_arrival_time(self.problem, self.vehicle_id, service_id)
+                compute_first_activity_arrival_time(problem, self.vehicle_id, service_id)
             } else {
                 let last_activity = &self.activities[position - 1];
                 compute_activity_arrival_time(
-                    self.problem,
+                    problem,
                     last_activity.service_id(),
                     last_activity.departure_time(),
                     service_id,
@@ -293,39 +300,42 @@ impl<'a> WorkingSolutionRoute<'a> {
 
             self.waiting_duration -= activity.waiting_duration();
 
-            activity.update_arrival_time(compute_activity_arrival_time(
-                self.problem,
-                previous_service_id,
-                previous_departure_time,
-                service_id,
-            ));
+            activity.update_arrival_time(
+                problem,
+                compute_activity_arrival_time(
+                    problem,
+                    previous_service_id,
+                    previous_departure_time,
+                    service_id,
+                ),
+            );
 
             self.waiting_duration += activity.waiting_duration()
         }
 
         self.total_demand
-            .add_mut(self.problem.service(service_id).demand());
+            .add_mut(problem.service(service_id).demand());
     }
 }
 
 #[derive(Clone)]
-pub struct WorkingSolutionRouteActivity<'a> {
-    problem: &'a VehicleRoutingProblem,
+pub struct WorkingSolutionRouteActivity {
+    // problem: &'a VehicleRoutingProblem,
     service_id: ServiceId,
     arrival_time: Timestamp,
     departure_time: Timestamp,
     waiting_duration: SignedDuration,
 }
 
-impl<'a> WorkingSolutionRouteActivity<'a> {
+impl WorkingSolutionRouteActivity {
     pub fn new(
-        problem: &'a VehicleRoutingProblem,
+        problem: &VehicleRoutingProblem,
         service_id: ServiceId,
         arrival_time: Timestamp,
     ) -> Self {
         let waiting_duration = compute_waiting_duration(problem, arrival_time, service_id);
         WorkingSolutionRouteActivity {
-            problem,
+            // problem,
             service_id,
             arrival_time,
             waiting_duration,
@@ -338,8 +348,8 @@ impl<'a> WorkingSolutionRouteActivity<'a> {
         }
     }
 
-    pub fn service(&self) -> &'a Service {
-        self.problem.service(self.service_id)
+    pub fn service<'a>(&self, problem: &'a VehicleRoutingProblem) -> &'a Service {
+        problem.service(self.service_id)
     }
 
     pub fn service_id(&self) -> ServiceId {
@@ -358,12 +368,11 @@ impl<'a> WorkingSolutionRouteActivity<'a> {
         self.waiting_duration
     }
 
-    pub fn update_arrival_time(&mut self, arrival_time: Timestamp) {
+    fn update_arrival_time(&mut self, problem: &VehicleRoutingProblem, arrival_time: Timestamp) {
         self.arrival_time = arrival_time;
-        self.waiting_duration =
-            compute_waiting_duration(self.problem, arrival_time, self.service_id);
+        self.waiting_duration = compute_waiting_duration(problem, arrival_time, self.service_id);
         self.departure_time = compute_departure_time(
-            self.problem,
+            problem,
             self.arrival_time,
             self.waiting_duration,
             self.service_id,
@@ -557,6 +566,7 @@ pub fn compute_insertion_context<'a>(
             }
 
             InsertionContext {
+                problem,
                 start: compute_vehicle_start(
                     problem,
                     route.vehicle_id,
@@ -599,6 +609,7 @@ pub fn compute_insertion_context<'a>(
             });
 
             InsertionContext {
+                problem,
                 start: compute_vehicle_start(
                     problem,
                     context.vehicle_id,

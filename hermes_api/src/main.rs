@@ -11,6 +11,7 @@ use axum::http::Method;
 use axum::routing::{any, get, post};
 use axum::{Router, serve};
 use hermes_core::hermes::Hermes;
+use hermes_optimizer::solver::solver_manager::SolverManager;
 use landmarks::get_landmarks;
 use std::sync::Arc;
 use tower::ServiceBuilder;
@@ -25,7 +26,10 @@ async fn main() {
 
     let hermes = Hermes::from_directory("./data");
 
-    let app_state = Arc::new(AppState { hermes });
+    let app_state = Arc::new(AppState {
+        hermes,
+        solver_manager: SolverManager::default(),
+    });
 
     let cors_layer = CorsLayer::new()
         .allow_methods([Method::GET, Method::POST])

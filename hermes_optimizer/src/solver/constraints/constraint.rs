@@ -1,5 +1,8 @@
-use crate::solver::{
-    insertion_context::InsertionContext, score::Score, working_solution::WorkingSolution,
+use crate::{
+    problem::vehicle_routing_problem::VehicleRoutingProblem,
+    solver::{
+        insertion_context::InsertionContext, score::Score, working_solution::WorkingSolution,
+    },
 };
 
 use super::{
@@ -23,12 +26,16 @@ impl Constraint {
         }
     }
 
-    pub fn compute_score(&self, solution: &WorkingSolution) -> Score {
+    pub fn compute_score(
+        &self,
+        problem: &VehicleRoutingProblem,
+        solution: &WorkingSolution,
+    ) -> Score {
         match self {
             Constraint::Global(constraint) => constraint.compute_score(solution),
             Constraint::Route(constraint) => {
                 solution.routes().iter().fold(Score::zero(), |acc, route| {
-                    acc + constraint.compute_score(route)
+                    acc + constraint.compute_score(problem, route)
                 })
             }
             Constraint::Activity(constraint) => {
@@ -37,7 +44,7 @@ impl Constraint {
                         .activities()
                         .iter()
                         .fold(Score::zero(), |acc, activity| {
-                            acc + constraint.compute_score(activity)
+                            acc + constraint.compute_score(problem, activity)
                         })
                 })
             }

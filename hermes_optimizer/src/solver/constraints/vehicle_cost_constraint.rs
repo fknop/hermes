@@ -1,6 +1,9 @@
-use crate::solver::{
-    insertion::Insertion, insertion_context::InsertionContext, score::Score,
-    working_solution::WorkingSolutionRoute,
+use crate::{
+    problem::vehicle_routing_problem::VehicleRoutingProblem,
+    solver::{
+        insertion::Insertion, insertion_context::InsertionContext, score::Score,
+        working_solution::WorkingSolutionRoute,
+    },
 };
 
 use super::route_constraint::RouteConstraint;
@@ -10,7 +13,7 @@ pub struct VehicleCostConstraint;
 const VEHICLE_COST: i64 = 10000;
 
 impl RouteConstraint for VehicleCostConstraint {
-    fn compute_score(&self, _: &WorkingSolutionRoute) -> Score {
+    fn compute_score(&self, _: &VehicleRoutingProblem, _: &WorkingSolutionRoute) -> Score {
         Score::soft(VEHICLE_COST)
     }
 

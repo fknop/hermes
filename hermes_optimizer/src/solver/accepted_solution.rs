@@ -5,6 +5,7 @@ use super::{
     working_solution::WorkingSolution,
 };
 
+#[derive(Clone)]
 pub struct AcceptedSolution<'a> {
     pub solution: WorkingSolution<'a>,
     pub score: Score,

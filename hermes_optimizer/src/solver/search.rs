@@ -186,6 +186,7 @@ impl<'a> Search<'a> {
         ruin_strategy.ruin_solution(
             solution,
             RuinContext {
+                problem: &self.problem,
                 rng,
                 num_activities_to_remove: ruin_size,
             },
@@ -253,7 +254,7 @@ impl<'a> Search<'a> {
         let mut score_analysis = ScoreAnalysis::default();
 
         for constraint in self.constraints.iter() {
-            let score = constraint.compute_score(solution);
+            let score = constraint.compute_score(&self.problem, solution);
             score_analysis
                 .scores
                 .insert(constraint.constraint_name(), score);

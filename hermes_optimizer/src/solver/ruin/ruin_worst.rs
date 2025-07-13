@@ -1,5 +1,8 @@
 use crate::{
-    problem::{service::ServiceId, travel_cost_matrix::Cost},
+    problem::{
+        service::ServiceId, travel_cost_matrix::Cost,
+        vehicle_routing_problem::VehicleRoutingProblem,
+    },
     solver::working_solution::WorkingSolution,
 };
 
@@ -7,16 +10,19 @@ use super::{ruin_context::RuinContext, ruin_solution::RuinSolution};
 
 pub struct RuinWorst;
 
-fn compute_savings(solution: &WorkingSolution) -> Vec<(ServiceId, Cost)> {
+fn compute_savings(
+    problem: &VehicleRoutingProblem,
+    solution: &WorkingSolution,
+) -> Vec<(ServiceId, Cost)> {
     let mut savings = Vec::new();
 
     for route in solution.routes() {
-        let vehicle = route.vehicle();
+        let vehicle = route.vehicle(problem);
         for (index, activity) in route.activities().iter().enumerate() {
             let previous_location_id = if index == 0 {
                 vehicle.depot_location_id()
             } else {
-                Some(route.activities()[index - 1].service().location_id())
+                Some(route.activities()[index - 1].service(problem).location_id())
             };
 
             let next_location_id = if index == route.activities().len() - 1 {
@@ -26,10 +32,10 @@ fn compute_savings(solution: &WorkingSolution) -> Vec<(ServiceId, Cost)> {
                     None
                 }
             } else {
-                Some(route.activities()[index + 1].service().location_id())
+                Some(route.activities()[index + 1].service(problem).location_id())
             };
 
-            let location_id = activity.service().location_id();
+            let location_id = activity.service(problem).location_id();
 
             let travel_cost_previous = if let Some(previous_location_id) = previous_location_id {
                 solution
@@ -75,7 +81,7 @@ impl RuinSolution for RuinWorst {
             }
 
             // Compute savings for the current solution
-            let mut savings = compute_savings(solution);
+            let mut savings = compute_savings(context.problem, solution);
 
             // Remove the activity with the worst savings
             if let Some((service_id, _)) = savings.pop() {

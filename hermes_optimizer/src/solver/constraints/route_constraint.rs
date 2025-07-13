@@ -1,7 +1,10 @@
-use crate::solver::{
-    insertion_context::InsertionContext,
-    score::Score,
-    working_solution::{WorkingSolution, WorkingSolutionRoute},
+use crate::{
+    problem::vehicle_routing_problem::VehicleRoutingProblem,
+    solver::{
+        insertion_context::InsertionContext,
+        score::Score,
+        working_solution::{WorkingSolution, WorkingSolutionRoute},
+    },
 };
 
 use super::{
@@ -12,7 +15,8 @@ use super::{
 };
 
 pub trait RouteConstraint {
-    fn compute_score(&self, route: &WorkingSolutionRoute) -> Score;
+    fn compute_score(&self, problem: &VehicleRoutingProblem, route: &WorkingSolutionRoute)
+    -> Score;
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score;
 }
 
@@ -47,13 +51,17 @@ impl RouteConstraint for RouteConstraintType {
         }
     }
 
-    fn compute_score(&self, route: &WorkingSolutionRoute) -> Score {
+    fn compute_score(
+        &self,
+        problem: &VehicleRoutingProblem,
+        route: &WorkingSolutionRoute,
+    ) -> Score {
         match self {
-            RouteConstraintType::Capacity(c) => c.compute_score(route),
-            RouteConstraintType::Shift(s) => s.compute_score(route),
-            RouteConstraintType::WaitingDuration(w) => w.compute_score(route),
-            RouteConstraintType::VehicleCost(v) => v.compute_score(route),
-            RouteConstraintType::MaximumWorkingDuration(m) => m.compute_score(route),
+            RouteConstraintType::Capacity(c) => c.compute_score(problem, route),
+            RouteConstraintType::Shift(s) => s.compute_score(problem, route),
+            RouteConstraintType::WaitingDuration(w) => w.compute_score(problem, route),
+            RouteConstraintType::VehicleCost(v) => v.compute_score(problem, route),
+            RouteConstraintType::MaximumWorkingDuration(m) => m.compute_score(problem, route),
         }
     }
 }

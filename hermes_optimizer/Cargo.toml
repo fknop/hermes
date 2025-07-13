@@ -10,3 +10,4 @@ jiff = "0.2.15"
 rand = "0.9.1"
 rstar = "0.12.2"
 tracing = "0.1.41"
+uuid = { features = ["v4"], version = "1.17.0" }

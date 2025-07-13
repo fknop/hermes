@@ -1,8 +1,11 @@
-use crate::solver::{
-    insertion::{ExistingRouteInsertion, Insertion, NewRouteInsertion},
-    insertion_context::InsertionContext,
-    score::Score,
-    working_solution::WorkingSolutionRoute,
+use crate::{
+    problem::vehicle_routing_problem::VehicleRoutingProblem,
+    solver::{
+        insertion::{ExistingRouteInsertion, Insertion, NewRouteInsertion},
+        insertion_context::InsertionContext,
+        score::Score,
+        working_solution::WorkingSolutionRoute,
+    },
 };
 
 use super::route_constraint::RouteConstraint;
@@ -10,10 +13,14 @@ use super::route_constraint::RouteConstraint;
 pub struct MaximumWorkingDurationConstraint;
 
 impl RouteConstraint for MaximumWorkingDurationConstraint {
-    fn compute_score(&self, route: &WorkingSolutionRoute) -> Score {
-        let vehicle = route.vehicle();
+    fn compute_score(
+        &self,
+        problem: &VehicleRoutingProblem,
+        route: &WorkingSolutionRoute,
+    ) -> Score {
+        let vehicle = route.vehicle(problem);
         if let Some(maximum_working_duration) = vehicle.maximum_working_duration() {
-            let duration = route.end().duration_since(route.start());
+            let duration = route.end(problem).duration_since(route.start(problem));
             if duration > maximum_working_duration {
                 return Score::hard(duration.as_secs() - maximum_working_duration.as_secs());
             }
@@ -23,14 +30,14 @@ impl RouteConstraint for MaximumWorkingDurationConstraint {
     }
 
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
-        let problem = context.solution.problem();
+        let problem = context.problem();
 
         let duration = context.end.duration_since(context.start);
 
         match *context.insertion {
             Insertion::ExistingRoute(ExistingRouteInsertion { route_id, .. }) => {
                 let route = context.solution.route(route_id);
-                let vehicle = route.vehicle();
+                let vehicle = route.vehicle(problem);
 
                 if let Some(maximum_working_duration) = vehicle.maximum_working_duration() {
                     if duration > maximum_working_duration {

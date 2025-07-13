@@ -12,17 +12,21 @@ impl GlobalConstraint for TransportCostConstraint {
         let problem = solution.problem();
         let mut cost = 0;
         for route in solution.routes() {
-            let vehicle = route.vehicle();
+            let vehicle = route.vehicle(problem);
 
             let activities = route.activities();
 
             if let Some(depot_location_id) = vehicle.depot_location_id() {
-                cost +=
-                    problem.travel_cost(depot_location_id, activities[0].service().location_id());
+                cost += problem.travel_cost(
+                    depot_location_id,
+                    activities[0].service(problem).location_id(),
+                );
 
                 if vehicle.should_return_to_depot() {
                     cost += problem.travel_cost(
-                        activities[activities.len() - 1].service().location_id(),
+                        activities[activities.len() - 1]
+                            .service(problem)
+                            .location_id(),
                         depot_location_id,
                     )
                 }
@@ -35,8 +39,8 @@ impl GlobalConstraint for TransportCostConstraint {
                 }
 
                 cost += problem.travel_cost(
-                    activities[index - 1].service().location_id(),
-                    activity.service().location_id(),
+                    activities[index - 1].service(problem).location_id(),
+                    activity.service(problem).location_id(),
                 )
             }
         }
@@ -50,9 +54,10 @@ impl GlobalConstraint for TransportCostConstraint {
         let service = problem.service(service_id);
 
         let vehicle = match context.insertion {
-            Insertion::ExistingRoute(existing_route) => {
-                context.solution.route(existing_route.route_id).vehicle()
-            }
+            Insertion::ExistingRoute(existing_route) => context
+                .solution
+                .route(existing_route.route_id)
+                .vehicle(problem),
             Insertion::NewRoute(new_route) => problem.vehicle(new_route.vehicle_id),
         };
 
@@ -83,11 +88,15 @@ impl GlobalConstraint for TransportCostConstraint {
             }
 
             let activities = route.unwrap().activities();
-            next_location_id = Some(activities[0].service().location_id());
+            next_location_id = Some(activities[0].service(problem).location_id());
         } else if position >= route.unwrap().activities().len() {
             // Inserting at the end
             let activities = route.unwrap().activities();
-            previous_location_id = Some(activities[activities.len() - 1].service().location_id());
+            previous_location_id = Some(
+                activities[activities.len() - 1]
+                    .service(problem)
+                    .location_id(),
+            );
 
             if let Some(depot_id) = depot_location_id
                 && vehicle.should_return_to_depot()
@@ -96,8 +105,8 @@ impl GlobalConstraint for TransportCostConstraint {
             }
         } else {
             let activities = route.unwrap().activities();
-            previous_location_id = Some(activities[position - 1].service().location_id());
-            next_location_id = Some(activities[position].service().location_id());
+            previous_location_id = Some(activities[position - 1].service(problem).location_id());
+            next_location_id = Some(activities[position].service(problem).location_id());
         }
 
         let old_cost =

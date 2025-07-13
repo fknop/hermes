@@ -1,5 +1,5 @@
 use crate::{
-    problem::time_window::TimeWindow,
+    problem::{time_window::TimeWindow, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{
         insertion_context::{ActivityInsertionContext, InsertionContext},
         score::Score,
@@ -10,7 +10,11 @@ use crate::{
 use super::time_window_constraint::TimeWindowConstraint;
 
 pub trait ActivityConstraint {
-    fn compute_score(&self, activity: &WorkingSolutionRouteActivity) -> Score;
+    fn compute_score(
+        &self,
+        problem: &VehicleRoutingProblem,
+        activity: &WorkingSolutionRouteActivity,
+    ) -> Score;
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score;
 }
 
@@ -33,9 +37,13 @@ impl ActivityConstraint for ActivityConstraintType {
         }
     }
 
-    fn compute_score(&self, activity: &WorkingSolutionRouteActivity) -> Score {
+    fn compute_score(
+        &self,
+        problem: &VehicleRoutingProblem,
+        activity: &WorkingSolutionRouteActivity,
+    ) -> Score {
         match self {
-            Self::TimeWindow(constraint) => constraint.compute_score(activity),
+            Self::TimeWindow(constraint) => constraint.compute_score(problem, activity),
         }
     }
 }

@@ -111,7 +111,7 @@ impl SubAssign<Score> for Score {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Clone, Debug)]
 pub struct ScoreAnalysis {
     pub scores: FxHashMap<&'static str, Score>,
 }
