@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use parking_lot::{MappedMutexGuard, MappedRwLockReadGuard};
 use uuid::Uuid;
 
 use crate::problem::vehicle_routing_problem::VehicleRoutingProblem;
@@ -22,10 +23,12 @@ impl SolverManager {
     }
 
     // TODO: avoid cloning the solution
-    pub fn get_best_solution(&self, job_id: String) -> Option<AcceptedSolution> {
+    pub fn best_solution(
+        &self,
+        job_id: String,
+    ) -> Option<MappedRwLockReadGuard<'_, AcceptedSolution>> {
         if let Some(solver) = self.solvers.get(&job_id) {
-            let guard = solver.best_solutions();
-            guard.first().cloned()
+            solver.best_solution()
         } else {
             None
         }

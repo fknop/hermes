@@ -1,8 +1,8 @@
-use std::{
-    sync::{Arc, Mutex, MutexGuard},
-    thread,
-};
+use std::{sync::Arc, thread};
 
+use parking_lot::{
+    MappedMutexGuard, MappedRwLockReadGuard, Mutex, MutexGuard, RwLock, RwLockReadGuard,
+};
 use rand::{Rng, SeedableRng, rngs::SmallRng};
 use tracing::info;
 
@@ -36,7 +36,7 @@ pub struct Search {
     problem: Arc<VehicleRoutingProblem>,
     constraints: Vec<Constraint>,
     params: SolverParams,
-    best_solutions: Arc<Mutex<Vec<AcceptedSolution>>>,
+    best_solutions: Arc<RwLock<Vec<AcceptedSolution>>>,
     solution_selector: SolutionSelector,
     solution_acceptor: SolutionAcceptor,
     on_best_solution_handler: Arc<Option<fn(&AcceptedSolution)>>,
@@ -62,7 +62,7 @@ impl Search {
             problem: Arc::new(problem),
             constraints,
             params,
-            best_solutions: Arc::new(Mutex::new(Vec::new())),
+            best_solutions: Arc::new(RwLock::new(Vec::new())),
             solution_selector,
             solution_acceptor,
             on_best_solution_handler: Arc::new(None),
@@ -73,8 +73,8 @@ impl Search {
         self.on_best_solution_handler = Arc::new(Some(callback));
     }
 
-    pub fn best_solutions(&self) -> MutexGuard<'_, Vec<AcceptedSolution>> {
-        self.best_solutions.lock().unwrap()
+    pub fn best_solution(&self) -> Option<MappedRwLockReadGuard<'_, AcceptedSolution>> {
+        RwLockReadGuard::try_map(self.best_solutions.read(), |solutions| solutions.first()).ok()
     }
 
     pub fn run(&self) {
@@ -117,10 +117,10 @@ impl Search {
     fn perform_iteration(
         &self,
         rng: &mut SmallRng,
-        best_solutions: &Arc<Mutex<Vec<AcceptedSolution>>>,
+        best_solutions: &Arc<RwLock<Vec<AcceptedSolution>>>,
     ) {
         let mut working_solution = {
-            let solutions_guard = best_solutions.lock().unwrap();
+            let solutions_guard = best_solutions.read();
             if !solutions_guard.is_empty()
                 && let Some(AcceptedSolution { solution, .. }) =
                     self.solution_selector.select_solution(&solutions_guard)
@@ -141,39 +141,38 @@ impl Search {
     fn store_solution(
         &self,
         solution: WorkingSolution,
-        best_solutions: &Arc<Mutex<Vec<AcceptedSolution>>>,
+        best_solutions: &Arc<RwLock<Vec<AcceptedSolution>>>,
     ) {
         let (score, score_analysis) = self.compute_solution_score(&solution);
 
-        let mut solutions_guard = best_solutions.lock().unwrap();
-
         if self
             .solution_acceptor
-            .accept(&solutions_guard, &solution, &score)
+            .accept(&best_solutions.read(), &solution, &score)
         {
-            let is_best = solutions_guard.is_empty() || score < solutions_guard[0].score;
+            let mut guard = best_solutions.write();
+            let is_best = guard.is_empty() || score < guard[0].score;
 
-            solutions_guard.push(AcceptedSolution {
+            guard.push(AcceptedSolution {
                 solution,
                 score,
                 score_analysis,
             });
-            solutions_guard.sort_by(|a, b| a.score.cmp(&b.score));
+            guard.sort_by(|a, b| a.score.cmp(&b.score));
 
             // Evict worst
-            if solutions_guard.len() > self.params.max_solutions {
-                solutions_guard.pop();
+            if guard.len() > self.params.max_solutions {
+                guard.pop();
             }
 
             if is_best {
                 info!(
                     thread = thread::current().name().unwrap_or("main"),
-                    "Score: {:?}", solutions_guard[0].score_analysis,
+                    "Score: {:?}", guard[0].score_analysis,
                 );
-                info!("Vehicles {:?}", solutions_guard[0].solution.routes().len());
+                info!("Vehicles {:?}", guard[0].solution.routes().len());
 
                 if let Some(callback) = self.on_best_solution_handler.as_ref() {
-                    callback(&solutions_guard[0]);
+                    callback(&guard[0]);
                 }
             }
         }

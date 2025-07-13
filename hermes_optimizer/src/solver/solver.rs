@@ -1,4 +1,4 @@
-use std::sync::MutexGuard;
+use parking_lot::MappedRwLockReadGuard;
 
 use crate::problem::vehicle_routing_problem::VehicleRoutingProblem;
 
@@ -51,8 +51,8 @@ impl Solver {
         self.search.run();
     }
 
-    pub fn best_solutions(&self) -> MutexGuard<'_, Vec<AcceptedSolution>> {
-        self.search.best_solutions()
+    pub fn best_solution(&self) -> Option<MappedRwLockReadGuard<'_, AcceptedSolution>> {
+        self.search.best_solution()
     }
 }
 
