@@ -1,8 +1,8 @@
 use std::ops::Add;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Default, Debug, PartialEq, Clone, Serialize)]
+#[derive(Default, Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct Capacity(Vec<f64>);
 
 impl Capacity {

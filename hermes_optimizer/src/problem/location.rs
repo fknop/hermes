@@ -1,4 +1,8 @@
+use serde::Deserialize;
+
 pub type LocationId = usize;
+
+#[derive(Deserialize)]
 pub struct Location {
     /// id is the index of the location in the locations list
     id: LocationId,

@@ -1,9 +1,12 @@
+use serde::Deserialize;
+
 use super::location::Location;
 
 pub type Distance = f64;
 pub type Time = i64;
 pub type Cost = i64;
 
+#[derive(Deserialize)]
 pub struct TravelCostMatrix {
     distances: Vec<Vec<Distance>>,
     times: Vec<Vec<Time>>,

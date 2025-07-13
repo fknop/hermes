@@ -1,9 +1,11 @@
 use jiff::SignedDuration;
+use serde::Deserialize;
 
 use super::{capacity::Capacity, location::LocationId, time_window::TimeWindow};
 
 pub type ServiceId = usize;
 
+#[derive(Deserialize)]
 pub struct Service {
     external_id: String,
     location_id: LocationId,

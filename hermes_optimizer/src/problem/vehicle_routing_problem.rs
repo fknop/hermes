@@ -93,22 +93,25 @@ pub struct VehicleRoutingProblemBuilder {
 }
 
 impl VehicleRoutingProblemBuilder {
-    pub fn with_travel_costs(mut self, travel_costs: TravelCostMatrix) -> Self {
+    pub fn set_travel_costs(
+        &mut self,
+        travel_costs: TravelCostMatrix,
+    ) -> &mut VehicleRoutingProblemBuilder {
         self.travel_costs = Some(travel_costs);
         self
     }
 
-    pub fn with_services(mut self, services: Vec<Service>) -> Self {
+    pub fn set_services(&mut self, services: Vec<Service>) -> &mut VehicleRoutingProblemBuilder {
         self.services = Some(services);
         self
     }
 
-    pub fn with_locations(mut self, locations: Vec<Location>) -> Self {
+    pub fn set_locations(&mut self, locations: Vec<Location>) -> &mut VehicleRoutingProblemBuilder {
         self.locations = Some(locations);
         self
     }
 
-    pub fn with_vehicles(mut self, vehicles: Vec<Vehicle>) -> Self {
+    pub fn set_vehicles(&mut self, vehicles: Vec<Vehicle>) -> &mut VehicleRoutingProblemBuilder {
         self.vehicles = Some(vehicles);
         self
     }

@@ -6,11 +6,22 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use hermes_optimizer::solomon::solomon_parser::SolomonParser;
-use serde::Serialize;
+use hermes_optimizer::problem::{
+    location::Location, service::Service, travel_cost_matrix::TravelCostMatrix, vehicle::Vehicle,
+    vehicle_routing_problem::VehicleRoutingProblemBuilder,
+};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{error::ApiError, state::AppState};
+
+#[derive(Deserialize)]
+pub struct PostRequestBody {
+    locations: Vec<Location>,
+    vehicles: Vec<Vehicle>,
+    services: Vec<Service>,
+    travel_costs: TravelCostMatrix,
+}
 
 #[derive(Serialize)]
 pub struct PostResponse {
@@ -23,14 +34,25 @@ impl IntoResponse for PostResponse {
     }
 }
 
-pub async fn post_handler(State(state): State<Arc<AppState>>) -> Result<PostResponse, ApiError> {
+pub async fn post_handler(
+    State(state): State<Arc<AppState>>,
+    Json(body): Json<PostRequestBody>,
+) -> Result<PostResponse, ApiError> {
     let solver_manager = &state.solver_manager;
 
     let job_id = Uuid::new_v4().to_string();
 
-    let file = "./data/solomon/c1/c102.txt";
-    let vrp = SolomonParser::from_file(file).unwrap();
-    solver_manager.solve(job_id.clone(), vrp);
+    let mut builder = VehicleRoutingProblemBuilder::default();
+
+    builder
+        .set_services(body.services)
+        .set_vehicles(body.vehicles)
+        .set_locations(body.locations)
+        .set_travel_costs(body.travel_costs);
+
+    let vrp = builder.build();
+
+    solver_manager.solve(job_id.clone(), vrp).await;
 
     Ok(PostResponse { job_id })
 }

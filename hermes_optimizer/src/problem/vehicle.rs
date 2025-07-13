@@ -1,9 +1,11 @@
 use jiff::{SignedDuration, Timestamp};
+use serde::Deserialize;
 
 use super::{capacity::Capacity, location::LocationId};
 
 pub type VehicleId = usize;
 
+#[derive(Deserialize)]
 pub struct Vehicle {
     external_id: String,
     shift: Option<VehicleShift>,
@@ -59,6 +61,7 @@ impl Vehicle {
     }
 }
 
+#[derive(Deserialize)]
 pub struct VehicleShift {
     earliest_start: Option<Timestamp>,
     latest_end: Option<Timestamp>,

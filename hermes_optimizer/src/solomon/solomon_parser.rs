@@ -131,11 +131,11 @@ impl SolomonParser {
         }
 
         let travel_costs_matrix = TravelCostMatrix::from_euclidian(&locations);
-        builder = builder
-            .with_vehicles(vehicles)
-            .with_locations(locations)
-            .with_services(services)
-            .with_travel_costs(travel_costs_matrix);
+        builder
+            .set_vehicles(vehicles)
+            .set_locations(locations)
+            .set_services(services)
+            .set_travel_costs(travel_costs_matrix);
 
         Ok(builder.build())
     }

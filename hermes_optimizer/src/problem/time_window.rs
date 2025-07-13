@@ -1,5 +1,7 @@
 use jiff::Timestamp;
+use serde::Deserialize;
 
+#[derive(Deserialize)]
 pub struct TimeWindow {
     start: Option<Timestamp>,
     end: Option<Timestamp>,
