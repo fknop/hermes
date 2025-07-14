@@ -6,7 +6,9 @@ pub type LocationId = usize;
 pub struct Location {
     /// id is the index of the location in the locations list
     id: LocationId,
+    #[serde(alias = "lon")]
     x: f64,
+    #[serde(alias = "lat")]
     y: f64,
 }
 

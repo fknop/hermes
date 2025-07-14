@@ -169,7 +169,11 @@ mod tests {
         }
 
         // Check one location
-        let time_window = vrp.services()[9].time_window().unwrap();
+        let time_window = vrp.services()[9]
+            .time_windows()
+            .iter()
+            .min_by_key(|tw| tw.start())
+            .unwrap();
         let timestamp_zero = Timestamp::from_second(0).unwrap();
         assert_eq!(
             time_window.start().unwrap(),

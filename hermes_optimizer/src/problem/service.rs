@@ -9,7 +9,7 @@ pub type ServiceId = usize;
 pub struct Service {
     external_id: String,
     location_id: LocationId,
-    time_window: Option<TimeWindow>,
+    time_windows: Vec<TimeWindow>,
     demand: Capacity,
     service_duration: SignedDuration,
 }
@@ -31,8 +31,8 @@ impl Service {
         self.service_duration
     }
 
-    pub fn time_window(&self) -> Option<&TimeWindow> {
-        self.time_window.as_ref()
+    pub fn time_windows(&self) -> &Vec<TimeWindow> {
+        &self.time_windows
     }
 }
 
@@ -40,7 +40,7 @@ impl Service {
 pub struct ServiceBuilder {
     external_id: Option<String>,
     location_id: Option<LocationId>,
-    time_window: Option<TimeWindow>,
+    time_windows: Option<Vec<TimeWindow>>,
     demand: Option<Capacity>,
     service_time: Option<SignedDuration>,
 }
@@ -57,7 +57,7 @@ impl ServiceBuilder {
     }
 
     pub fn set_time_window(&mut self, time_window: TimeWindow) -> &mut ServiceBuilder {
-        self.time_window = Some(time_window);
+        self.time_windows = Some(vec![time_window]);
         self
     }
 
@@ -77,7 +77,7 @@ impl ServiceBuilder {
             location_id: self.location_id.expect("Expected location id"),
             demand: self.demand.unwrap_or_default(),
             service_duration: self.service_time.unwrap_or(SignedDuration::ZERO),
-            time_window: self.time_window,
+            time_windows: self.time_windows.unwrap_or(vec![]),
         }
     }
 }

@@ -1,3 +1,5 @@
+use std::cmp;
+
 use jiff::Timestamp;
 use serde::Deserialize;
 
@@ -31,7 +33,7 @@ impl TimeWindow {
 
     pub fn overtime(&self, arrival: Timestamp) -> i64 {
         match self.end {
-            Some(end) => arrival.as_second() - end.as_second(),
+            Some(end) => cmp::max(arrival.as_second() - end.as_second(), 0),
             None => 0,
         }
     }

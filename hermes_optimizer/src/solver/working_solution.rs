@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{cmp, sync::Arc};
 
 use fxhash::FxHashSet;
 use jiff::{SignedDuration, Timestamp};
@@ -397,8 +397,10 @@ fn compute_first_activity_arrival_time(
         .earliest_start_time()
         .unwrap_or_else(|| Timestamp::from_second(0).unwrap());
     let time_window_start = service
-        .time_window()
-        .and_then(|time_window| time_window.start());
+        .time_windows()
+        .iter()
+        .min_by_key(|tw| tw.start())
+        .and_then(|tw| tw.start());
 
     let travel_time = match vehicle_depot_location {
         Some(depot_location) => problem.travel_time(
@@ -470,22 +472,17 @@ pub fn compute_waiting_duration(
     service_id: ServiceId,
 ) -> SignedDuration {
     let service = problem.service(service_id);
-    let time_window = service.time_window();
 
-    match time_window {
-        Some(window) => {
-            if let Some(time_window_start) = window.start() {
-                if arrival_time < time_window_start {
-                    return SignedDuration::from_secs(
-                        time_window_start.as_second() - arrival_time.as_second(),
-                    );
-                }
-            }
-
-            SignedDuration::ZERO
-        }
-        None => SignedDuration::ZERO,
-    }
+    SignedDuration::from_secs(
+        service
+            .time_windows()
+            .iter()
+            .filter(|tw| tw.is_satisfied(arrival_time))
+            .filter_map(|tw| tw.start())
+            .map(|start| cmp::max(start.as_second() - arrival_time.as_second(), 0))
+            .min()
+            .unwrap_or(0),
+    )
 }
 
 pub fn compute_departure_time(

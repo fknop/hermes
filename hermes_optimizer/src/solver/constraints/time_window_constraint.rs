@@ -14,17 +14,18 @@ use super::activity_constraint::ActivityConstraint;
 pub struct TimeWindowConstraint;
 
 impl TimeWindowConstraint {
-    fn compute_time_window_score(
-        time_window: Option<&TimeWindow>,
-        arrival_time: Timestamp,
-    ) -> Score {
-        if let Some(time_window) = time_window
-            && !time_window.is_satisfied(arrival_time)
-        {
-            Score::hard(time_window.overtime(arrival_time))
-        } else {
-            Score::zero()
+    fn compute_time_window_score(time_windows: &Vec<TimeWindow>, arrival_time: Timestamp) -> Score {
+        if time_windows.is_empty() {
+            return Score::zero();
         }
+
+        let overtime = time_windows
+            .iter()
+            .filter(|time_window| !time_window.is_satisfied(arrival_time))
+            .map(|time_window| time_window.overtime(arrival_time))
+            .min();
+
+        Score::hard(overtime.unwrap_or(0))
     }
 }
 
@@ -35,7 +36,7 @@ impl ActivityConstraint for TimeWindowConstraint {
         activity: &WorkingSolutionRouteActivity,
     ) -> Score {
         TimeWindowConstraint::compute_time_window_score(
-            activity.service(problem).time_window(),
+            activity.service(problem).time_windows(),
             activity.arrival_time(),
         )
     }
@@ -49,7 +50,7 @@ impl ActivityConstraint for TimeWindowConstraint {
             let service = problem.service(activity.service_id);
 
             total_score += TimeWindowConstraint::compute_time_window_score(
-                service.time_window(),
+                service.time_windows(),
                 activity.arrival_time,
             )
         }
