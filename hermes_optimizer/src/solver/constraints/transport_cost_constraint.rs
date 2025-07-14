@@ -10,7 +10,7 @@ pub struct TransportCostConstraint;
 impl GlobalConstraint for TransportCostConstraint {
     fn compute_score(&self, solution: &WorkingSolution) -> Score {
         let problem = solution.problem();
-        let mut cost = 0;
+        let mut cost = 0.0;
         for route in solution.routes() {
             let vehicle = route.vehicle(problem);
 
@@ -45,7 +45,7 @@ impl GlobalConstraint for TransportCostConstraint {
             }
         }
 
-        Score::soft(cost)
+        Score::soft(cost.round() as i64)
     }
 
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
@@ -113,10 +113,10 @@ impl GlobalConstraint for TransportCostConstraint {
             if let (Some(previous), Some(next)) = (previous_location_id, next_location_id) {
                 problem.travel_cost(previous, next)
             } else {
-                0
+                0.0
             };
 
-        let mut new_cost = 0;
+        let mut new_cost = 0.0;
 
         if let Some(previous) = previous_location_id {
             new_cost += problem.travel_cost(previous, service.location_id());
@@ -128,6 +128,6 @@ impl GlobalConstraint for TransportCostConstraint {
 
         let travel_cost_delta = new_cost - old_cost;
 
-        Score::soft(travel_cost_delta)
+        Score::soft(travel_cost_delta.round() as i64)
     }
 }

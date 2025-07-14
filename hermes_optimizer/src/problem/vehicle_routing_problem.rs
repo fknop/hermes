@@ -69,11 +69,11 @@ impl VehicleRoutingProblem {
     }
 
     pub fn waiting_cost(&self, waiting_duration: SignedDuration) -> Cost {
-        waiting_duration.as_secs() * 5
+        waiting_duration.as_secs_f64() * 5.0
     }
 
     pub fn route_costs(&self) -> Cost {
-        0 // Placeholder for the static cost of a route
+        0.0 // Placeholder for the static cost of a route
     }
 
     pub fn nearest_services(&self, service_id: ServiceId) -> impl Iterator<Item = ServiceId> {

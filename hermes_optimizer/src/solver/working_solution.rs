@@ -152,7 +152,7 @@ impl WorkingSolutionRoute {
             services: FxHashSet::default(),
             activities: Vec::new(),
             total_demand: Capacity::ZERO,
-            total_cost: 0,
+            total_cost: 0.0,
             waiting_duration: SignedDuration::ZERO,
         }
     }

@@ -13,7 +13,7 @@ pub struct RuinWorst;
 fn compute_savings(
     problem: &VehicleRoutingProblem,
     solution: &WorkingSolution,
-) -> Vec<(ServiceId, Cost)> {
+) -> Vec<(ServiceId, i64)> {
     let mut savings = Vec::new();
 
     for route in solution.routes() {
@@ -42,7 +42,7 @@ fn compute_savings(
                     .problem()
                     .travel_cost(previous_location_id, location_id)
             } else {
-                0
+                0.0
             };
 
             let travel_cost_next = if let Some(next_location_id) = next_location_id {
@@ -50,7 +50,7 @@ fn compute_savings(
                     .problem()
                     .travel_cost(location_id, next_location_id)
             } else {
-                0
+                0.0
             };
 
             let new_travel_cost = if let Some(next_location_id) = next_location_id
@@ -60,10 +60,11 @@ fn compute_savings(
                     .problem()
                     .travel_cost(previous_location_id, next_location_id)
             } else {
-                0
+                0.0
             };
 
-            let service_savings = new_travel_cost - (travel_cost_previous + travel_cost_next);
+            let service_savings: i64 =
+                (new_travel_cost - (travel_cost_previous + travel_cost_next)).round() as i64;
             savings.push((activity.service_id(), service_savings))
         }
     }
