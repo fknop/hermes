@@ -20,7 +20,7 @@ use super::{
     solver_params::SolverParams,
 };
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum SolverStatus {
     Pending,
     Running,
@@ -68,6 +68,7 @@ impl Solver {
     }
 
     pub fn status(&self) -> SolverStatus {
+        println!("STATUS? {:?}", self.status.read().clone());
         self.status.read().clone()
     }
 

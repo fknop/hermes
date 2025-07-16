@@ -26,6 +26,7 @@ pub struct PollSolverCompleted {
 }
 
 #[derive(Serialize)]
+#[serde(tag = "status")]
 pub enum PollResponse {
     Pending,
     Running(PollSolverRunning),
@@ -56,6 +57,7 @@ pub async fn poll_handler(
             }
         }
     } else {
+        println!("NOT FOUND?");
         Err(ApiError::NotFound(job_id.to_string()))
     }
 }

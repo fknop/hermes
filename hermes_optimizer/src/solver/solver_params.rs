@@ -1,8 +1,11 @@
+use jiff::SignedDuration;
+
 use super::{recreate::recreate_params::RecreateParams, ruin::ruin_params::RuinParams};
 
 #[derive(Clone, Debug)]
 pub struct SolverParams {
     pub max_iterations: usize,
+    pub max_duration: SignedDuration,
     pub solver_acceptor: SolverAcceptorStrategy,
     pub solver_selector: SolverSelectorStrategy,
 
@@ -46,13 +49,14 @@ pub enum SolverSelectorStrategy {
 impl Default for SolverParams {
     fn default() -> Self {
         Self {
-            max_iterations: 1000,
-            max_solutions: 50,
+            max_iterations: 100000,
+            max_duration: SignedDuration::from_mins(1),
+            max_solutions: 20,
             solver_acceptor: SolverAcceptorStrategy::Greedy,
             solver_selector: SolverSelectorStrategy::SelectBest,
             ruin: RuinParams::default(),
             recreate: RecreateParams::default(),
-            threads: Threads::Multi(4),
+            threads: Threads::Auto,
         }
     }
 }

@@ -42,7 +42,7 @@ async fn main() {
         .route("/landmarks", get(get_landmarks))
         .route("/vrp/ws", any(vrp::ws::handler))
         .route("/vrp", post(vrp::post::post_handler))
-        .route("/vrp/poll/:job_id", get(vrp::poll::poll_handler))
+        .route("/vrp/poll/{job_id}", get(vrp::poll::poll_handler))
         .layer(ServiceBuilder::new().layer(cors_layer))
         .with_state(app_state);
 

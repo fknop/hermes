@@ -4,7 +4,7 @@ import { API_URL } from '../constants.ts'
 type FetchFunction<
   T,
   SP extends Record<string, string | number | boolean> = {},
-  Body extends unknown,
+  Body extends unknown = unknown,
 > = (options?: {
   query?: SP
   body?: Body
@@ -47,7 +47,7 @@ export function useFetch<
           method: options?.method ?? 'GET',
           body: options?.body
             ? typeof options.body === 'string'
-              ? body
+              ? options.body
               : JSON.stringify(options.body)
             : undefined,
           headers: {

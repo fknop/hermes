@@ -2,22 +2,23 @@ import { MagnifyingGlassIcon, MapPinIcon } from '@heroicons/react/16/solid'
 import { BuildingOfficeIcon } from '@heroicons/react/24/solid'
 import { useCallback, useEffect, useState } from 'react'
 import { Source } from 'react-map-gl/mapbox'
-import { Map } from './Map.tsx'
-import { MultiPointLayer } from './MultiPointLayer.tsx'
-import { PolylineLayer } from './PolylineLayer.tsx'
-import { Checkbox } from './components/Checkbox.tsx'
-import { JourneyAutocomplete } from './components/JourneyAutocomplete.tsx'
-import { Label } from './components/Label.tsx'
-import { MapContextMenu, MapMenuItem } from './components/MapContextMenu.tsx'
-import { MapMarker } from './components/MapMarker.tsx'
-import { RadioButton } from './components/RadioButton.tsx'
-import { RouteResult } from './components/RouteResult.tsx'
-import { Slider } from './components/Slider.tsx'
-import { useFetch } from './hooks/useFetch.ts'
-import { Address } from './types/Address.ts'
-import { GeoPoint } from './types/GeoPoint.ts'
-import { isNil } from './utils/isNil.ts'
-import { LandmarkMarker } from './components/LandmarkMarker.tsx'
+import { Map } from '../Map.tsx'
+import { MultiPointLayer } from '../MultiPointLayer.tsx'
+import { PolylineLayer } from '../PolylineLayer.tsx'
+import { Checkbox } from '../components/Checkbox.tsx'
+import { JourneyAutocomplete } from '../components/JourneyAutocomplete.tsx'
+import { Label } from '../components/Label.tsx'
+import { MapContextMenu, MapMenuItem } from '../components/MapContextMenu.tsx'
+import { MapMarker } from '../components/MapMarker.tsx'
+import { RadioButton } from '../components/RadioButton.tsx'
+import { RouteResult } from '../components/RouteResult.tsx'
+import { Slider } from '../components/Slider.tsx'
+import { useFetch } from '../hooks/useFetch.ts'
+import { Address } from '../types/Address.ts'
+import { GeoPoint } from '../types/GeoPoint.ts'
+import { isNil } from '../utils/isNil.ts'
+import { LandmarkMarker } from '../components/LandmarkMarker.tsx'
+import { MapSidePanel } from '../components/MapSidePanel.tsx'
 
 enum RoutingAlgorithm {
   Dijkstra = 'Dijkstra',
@@ -27,7 +28,7 @@ enum RoutingAlgorithm {
   ContractionHierarchies = 'ContractionHierarchies',
 }
 
-export default function App() {
+export default function HomeScreen() {
   const [routeRequest, { data: routeData }] = useFetch<
     GeoJSON.FeatureCollection,
     {},
@@ -196,58 +197,56 @@ export default function App() {
         </MapContextMenu>
       </Map>
 
-      <div className="z-10 absolute top-0 left-0 bottom-0 bg-white  drop-shadow-xs border-r-2 border-zinc-900/20 min-w-96">
-        <div className="flex flex-col gap-2.5 px-6 py-6">
-          <JourneyAutocomplete
-            start={start}
-            end={end}
-            onChange={(start, end) => {
-              setStart(start)
-              setEnd(end)
-            }}
-            onSearch={() => {
-              if (start && end) {
-                computeRoute({ start, end })
-              }
+      <MapSidePanel>
+        <JourneyAutocomplete
+          start={start}
+          end={end}
+          onChange={(start, end) => {
+            setStart(start)
+            setEnd(end)
+          }}
+          onSearch={() => {
+            if (start && end) {
+              computeRoute({ start, end })
+            }
+          }}
+        />
+
+        {Object.values(RoutingAlgorithm).map((algorithm) => {
+          return (
+            <Label>
+              <RadioButton
+                checked={selectedAlgorithm == algorithm}
+                name="algorithm"
+                value={algorithm}
+                onChange={(event) => {
+                  setSelectedAlgorithm(event.target.value as RoutingAlgorithm)
+                }}
+              />
+              {algorithm}
+            </Label>
+          )
+        })}
+
+        <Label>
+          <Checkbox
+            checked={includeDebugInfo}
+            onChange={(event) => {
+              setIncludeDebugInfo(event.target.checked)
             }}
           />
+          Include debug info
+        </Label>
 
-          {Object.values(RoutingAlgorithm).map((algorithm) => {
-            return (
-              <Label>
-                <RadioButton
-                  checked={selectedAlgorithm == algorithm}
-                  name="algorithm"
-                  value={algorithm}
-                  onChange={(event) => {
-                    setSelectedAlgorithm(event.target.value as RoutingAlgorithm)
-                  }}
-                />
-                {algorithm}
-              </Label>
-            )
-          })}
-
-          <Label>
-            <Checkbox
-              checked={includeDebugInfo}
-              onChange={(event) => {
-                setIncludeDebugInfo(event.target.checked)
-              }}
-            />
-            Include debug info
-          </Label>
-
-          <Slider
-            min={1}
-            max={10}
-            value={radiusMultiplier}
-            onChange={(value) => {
-              setRadiusMultiplier(value)
-            }}
-            defaultValue={1}
-          />
-        </div>
+        <Slider
+          min={1}
+          max={10}
+          value={radiusMultiplier}
+          onChange={(value) => {
+            setRadiusMultiplier(value)
+          }}
+          defaultValue={1}
+        />
 
         {!isNil(time) &&
           !isNil(distance) &&
@@ -260,7 +259,7 @@ export default function App() {
               duration={duration}
             />
           )}
-      </div>
+      </MapSidePanel>
     </div>
   )
 }
