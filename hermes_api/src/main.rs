@@ -21,9 +21,7 @@ use tracing::Level;
 
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::fmt()
-        .with_max_level(Level::DEBUG)
-        .init();
+    tracing_subscriber::fmt().with_max_level(Level::INFO).init();
 
     let hermes = Hermes::from_directory("./data");
 

@@ -698,6 +698,7 @@ dependencies = [
  "geojson",
  "hermes_core",
  "hermes_optimizer",
+ "jiff",
  "parking_lot",
  "serde",
  "serde_json",

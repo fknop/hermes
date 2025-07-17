@@ -6,30 +6,29 @@ import { MultiPointLayer } from '../../MultiPointLayer.tsx'
 import { transformSolutionToGeoJson } from './transformSolutionToGeoJson.tsx'
 import { usePollRouting } from './usePollRouting.ts'
 import { POST_BODY, usePostRouting } from './usePostRouting.ts'
+import { PolylineLayer } from '../../PolylineLayer.tsx'
 
 const colors = [
-  '#e6194b',
-  '#3cb44b',
-  '#ffe119',
-  '#4363d8',
-  '#f58231',
-  '#911eb4',
-  '#46f0f0',
-  '#f032e6',
-  '#bcf60c',
-  '#fabebe',
-  '#008080',
-  '#e6beff',
-  '#9a6324',
-  '#fffac8',
-  '#800000',
-  '#aaffc3',
-  '#808000',
-  '#ffd8b1',
-  '#000075',
-  '#808080',
-  '#ffffff',
-  '#000000',
+  '#2C3E50', // Dark Blue (Deep Navy)
+  '#1A521A', // Forest Green (Darker)
+  '#8B0000', // Dark Red (Maroon)
+  '#4B0082', // Indigo (Deep Violet)
+  '#B8860B', // Dark Goldenrod (Mustard-like)
+  '#006400', // Dark Green (Bottle Green)
+  '#D2691E', // Chocolate (Rich Brown)
+  '#483D8B', // Dark Slate Blue (Muted Purple-Blue)
+  '#708090', // Slate Gray (Medium Dark Gray)
+  '#008B8B', // Dark Cyan (Deep Teal)
+  '#696969', // Dim Gray (Neutral Gray)
+  '#5F9EA0', // Cadet Blue (Dusty Blue)
+  '#8B4513', // Saddle Brown (Earthy Brown)
+  '#556B2F', // Dark Olive Green (Muted Green-Brown)
+  '#CD5C5C', // Indian Red (Softer Red)
+  '#4682B4', // Steel Blue (Medium Blue)
+  '#7B68EE', // Medium Slate Blue (Slightly more vibrant purple)
+  '#2E8B57', // Sea Green (Deep Green)
+  '#8A2BE2', // Blue Violet (Purple with Blue undertone)
+  '#FF8C00', // Dark Orange (Pumpkin-like, good for a distinct pop)
 ]
 
 export default function VehicleRoutingScreen() {
@@ -41,6 +40,10 @@ export default function VehicleRoutingScreen() {
   const geojson = solution
     ? transformSolutionToGeoJson(POST_BODY, solution)
     : null
+
+  const totalTime = solution?.solution.duration
+
+  console.log(totalTime)
 
   return (
     <div className="h-screen w-screen">
@@ -56,6 +59,28 @@ export default function VehicleRoutingScreen() {
             Start
           </Button>
         </MapSidePanel>
+
+        {solution && (
+          <>
+            {solution.solution.routes.map((route, index) => {
+              return (
+                <Source
+                  key={index}
+                  type="geojson"
+                  data={route.polyline}
+                  id={`polyline-${index}`}
+                >
+                  <PolylineLayer
+                    id={`polyline-${index}`}
+                    color={colors[index % colors.length]}
+                    sourceId={`polyline-${index}`}
+                    lineWidth={3}
+                  />
+                </Source>
+              )
+            })}
+          </>
+        )}
 
         {geojson && (
           <>

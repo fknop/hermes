@@ -18,9 +18,11 @@ export function transformSolutionToGeoJson(
       return {
         geometry: {
           type: 'MultiPoint',
-          coordinates: route.activities.map((activity) => {
-            return getLocationForServiceId(activity.service_id)
-          }),
+          coordinates: route.activities
+            .filter((activity) => activity.type === 'Service')
+            .map((activity) => {
+              return getLocationForServiceId(activity.service_id)
+            }),
         },
         type: 'Feature',
         properties: {

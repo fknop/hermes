@@ -1,14 +1,13 @@
-import { LineLayer } from 'mapbox-gl'
-import { Layer } from 'react-map-gl/mapbox'
+import { FilterSpecification, LineLayer } from 'mapbox-gl'
+import { useMemo } from 'react'
+import { Layer, LayerProps } from 'react-map-gl/mapbox'
 
 const layerStyle: Partial<LineLayer> = {
   layout: {
     'line-cap': 'round',
     'line-join': 'round',
   },
-  paint: {
-    'line-width': 4,
-  },
+  paint: {},
 }
 
 export function PolylineLayer({
@@ -16,20 +15,33 @@ export function PolylineLayer({
   id,
   featureId,
   sourceId,
+  lineWidth,
 }: {
   color: string
   id: string
-  featureId: string
+  featureId?: string
   sourceId: string
+  lineWidth?: number
 }) {
+  const additionalProps: Pick<LayerProps, 'filter'> = useMemo(() => {
+    const props: Partial<LayerProps> = {}
+
+    if (featureId) {
+      props.filter = ['==', ['get', 'id'], featureId]
+    }
+
+    return props
+  }, [featureId])
+
   return (
     <Layer
       id={id}
       source={sourceId}
       type="line"
-      filter={['==', ['get', 'id'], featureId]}
       {...layerStyle}
+      {...additionalProps}
       paint={{
+        'line-width': lineWidth ?? 4,
         ...layerStyle.paint,
         'line-color': color,
       }}

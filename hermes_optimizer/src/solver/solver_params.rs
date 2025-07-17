@@ -38,6 +38,7 @@ pub enum Threads {
 #[derive(Clone, Debug)]
 pub enum SolverAcceptorStrategy {
     Greedy,
+    Shrimpf,
 }
 
 #[derive(Clone, Debug)]

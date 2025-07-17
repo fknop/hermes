@@ -17,3 +17,4 @@ tracing = "0.1.41"
 hermes_optimizer = { version = "0.1.0", path = "../hermes_optimizer" }
 uuid = { version = "1.17.0", features = ["serde"] }
 parking_lot = "0.12.4"
+jiff = "0.2.15"

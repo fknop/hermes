@@ -165,9 +165,37 @@ impl WorkingSolutionRoute {
         self.activities.is_empty()
     }
 
-    // pub fn problem(&self) -> &VehicleRoutingProblem {
-    //     self.problem
-    // }
+    pub fn has_start(&self, problem: &VehicleRoutingProblem) -> bool {
+        let vehicle = problem.vehicle(self.vehicle_id);
+        vehicle.depot_location_id().is_some()
+    }
+
+    pub fn has_end(&self, problem: &VehicleRoutingProblem) -> bool {
+        let vehicle = problem.vehicle(self.vehicle_id);
+        vehicle.depot_location_id().is_some() && vehicle.should_return_to_depot()
+    }
+
+    pub fn compute_location_ids(&self, problem: &VehicleRoutingProblem) -> Vec<usize> {
+        let mut location_ids = vec![];
+
+        if self.has_start(problem) {
+            if let Some(depot_location) = problem.vehicle_depot_location(self.vehicle_id) {
+                location_ids.push(depot_location.id());
+            }
+        }
+
+        for activity in &self.activities {
+            location_ids.push(activity.service(problem).location_id());
+        }
+
+        if self.has_end(problem) {
+            if let Some(depot_location) = problem.vehicle_depot_location(self.vehicle_id) {
+                location_ids.push(depot_location.id());
+            }
+        }
+
+        location_ids
+    }
 
     pub fn start(&self, problem: &VehicleRoutingProblem) -> Timestamp {
         let first = self.first();
@@ -187,6 +215,12 @@ impl WorkingSolutionRoute {
             last.service_id(),
             last.departure_time(),
         )
+    }
+
+    pub fn duration(&self, problem: &VehicleRoutingProblem) -> SignedDuration {
+        let start = self.start(problem);
+        let end = self.end(problem);
+        end.duration_since(start)
     }
 
     pub fn first(&self) -> &WorkingSolutionRouteActivity {
@@ -213,6 +247,10 @@ impl WorkingSolutionRoute {
 
     pub fn total_waiting_duration(&self) -> SignedDuration {
         self.waiting_duration
+    }
+
+    pub fn vehicle_id(&self) -> VehicleId {
+        self.vehicle_id
     }
 
     pub fn vehicle<'a>(&self, problem: &'a VehicleRoutingProblem) -> &'a Vehicle {
@@ -443,10 +481,11 @@ fn compute_vehicle_end(
     last_departure_time: Timestamp,
 ) -> Timestamp {
     let service = problem.service(last_service_id);
-    if let Some(depot_location) = problem.vehicle_depot_location(vehicle_id) {
-        let travel_time = problem.travel_time(service.location_id(), depot_location.id());
+    let vehicle = problem.vehicle(vehicle_id);
+    if let Some(depot_location_id) = vehicle.depot_location_id() {
+        let travel_time = problem.travel_time(service.location_id(), depot_location_id);
 
-        last_departure_time + travel_time
+        last_departure_time + travel_time + vehicle.end_depot_duration()
     } else {
         last_departure_time
     }

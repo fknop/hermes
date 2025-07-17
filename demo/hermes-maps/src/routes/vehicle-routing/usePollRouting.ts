@@ -2,17 +2,32 @@ import { useEffect, useState } from 'react'
 import { isNil } from '../../utils/isNil'
 import { API_URL } from '../../constants'
 
+type Activity =
+  | {
+      type: 'Start'
+      arrival_time: string
+      departure_time: string
+    }
+  | {
+      type: 'End'
+      arrival_time: string
+      departure_time: string
+    }
+  | {
+      type: 'Service'
+      service_id: number
+      arrival_time: string
+      departure_time: string
+      waiting_duration: string
+    }
+
 export type SolutionResponse = {
   status: 'Pending' | 'Running' | 'Completed'
   solution: {
     routes: {
       vehicle_id: number
-      activities: {
-        service_id: number
-        arrival_time: string
-        departure_time: string
-        waiting_duration: string
-      }[]
+      activities: Activity[]
+      polyline: GeoJSON.Feature<GeoJSON.LineString>
     }[]
   }
 }

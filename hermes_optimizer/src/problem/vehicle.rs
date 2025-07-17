@@ -12,6 +12,7 @@ pub struct Vehicle {
     capacity: Capacity,
     depot_location_id: Option<usize>,
     depot_duration: Option<SignedDuration>,
+    end_depot_duration: Option<SignedDuration>,
     should_return_to_depot: bool,
 }
 
@@ -49,6 +50,10 @@ impl Vehicle {
     }
 
     pub fn depot_duration(&self) -> SignedDuration {
+        self.depot_duration.unwrap_or(SignedDuration::ZERO)
+    }
+
+    pub fn end_depot_duration(&self) -> SignedDuration {
         self.depot_duration.unwrap_or(SignedDuration::ZERO)
     }
 
@@ -140,6 +145,7 @@ pub struct VehicleBuilder {
     depot_location_id: Option<usize>,
     should_return_to_depot: Option<bool>,
     depot_duration: Option<SignedDuration>,
+    end_depot_duration: Option<SignedDuration>,
 }
 
 impl VehicleBuilder {
@@ -182,6 +188,7 @@ impl VehicleBuilder {
             depot_location_id: self.depot_location_id,
             should_return_to_depot: self.should_return_to_depot.unwrap_or(false),
             depot_duration: self.depot_duration,
+            end_depot_duration: self.end_depot_duration,
         }
     }
 }

@@ -2,7 +2,7 @@ use crate::solver::{
     accepted_solution::AcceptedSolution, score::Score, working_solution::WorkingSolution,
 };
 
-use super::accept_solution::AcceptSolution;
+use super::accept_solution::{AcceptSolution, AcceptSolutionContext};
 
 pub struct GreedySolutionAcceptor;
 
@@ -10,10 +10,11 @@ impl AcceptSolution for GreedySolutionAcceptor {
     fn accept(
         &self,
         current_solutions: &[AcceptedSolution],
-        solution: &WorkingSolution,
+        _: &WorkingSolution,
         score: &Score,
+        context: AcceptSolutionContext,
     ) -> bool {
-        if current_solutions.is_empty() {
+        if current_solutions.len() < context.max_solutions {
             return true; // Accept the first solution
         }
 
@@ -23,6 +24,6 @@ impl AcceptSolution for GreedySolutionAcceptor {
             return *score < worst.score;
         }
 
-        false // If no current solutions, do not accept
+        false
     }
 }

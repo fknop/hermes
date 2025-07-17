@@ -8,7 +8,9 @@ use tracing::info;
 
 use crate::{
     acceptor::{
-        accept_solution::AcceptSolution, greedy_solution_acceptor::GreedySolutionAcceptor,
+        accept_solution::{AcceptSolution, AcceptSolutionContext},
+        greedy_solution_acceptor::GreedySolutionAcceptor,
+        shrimpf_acceptor::ShrimpfAcceptor,
         solution_acceptor::SolutionAcceptor,
     },
     problem::vehicle_routing_problem::VehicleRoutingProblem,
@@ -56,6 +58,7 @@ impl Search {
         };
         let solution_acceptor = match params.solver_acceptor {
             SolverAcceptorStrategy::Greedy => SolutionAcceptor::Greedy(GreedySolutionAcceptor),
+            SolverAcceptorStrategy::Shrimpf => SolutionAcceptor::Shrimpf(ShrimpfAcceptor::new()),
         };
 
         Search {
@@ -106,7 +109,7 @@ impl Search {
                                 );
                             }
 
-                            self.perform_iteration(&mut thread_rng, &best_solutions);
+                            self.perform_iteration(&mut thread_rng, &best_solutions, iteration);
                         }
                     })
                     .unwrap();
@@ -118,6 +121,7 @@ impl Search {
         &self,
         rng: &mut SmallRng,
         best_solutions: &Arc<RwLock<Vec<AcceptedSolution>>>,
+        iteration: usize,
     ) {
         let mut working_solution = {
             let solutions_guard = best_solutions.read();
@@ -135,46 +139,56 @@ impl Search {
 
         self.recreate(&mut working_solution, rng);
 
-        self.store_solution(working_solution, best_solutions);
+        self.store_solution(working_solution, best_solutions, iteration);
     }
 
     fn store_solution(
         &self,
         solution: WorkingSolution,
         best_solutions: &Arc<RwLock<Vec<AcceptedSolution>>>,
+        iteration: usize,
     ) {
         let (score, score_analysis) = self.compute_solution_score(&solution);
 
-        if self
-            .solution_acceptor
-            .accept(&best_solutions.read(), &solution, &score)
-        {
-            let mut guard = best_solutions.write();
-            let is_best = guard.is_empty() || score < guard[0].score;
+        let mut guard = best_solutions.upgradable_read();
 
-            guard.push(AcceptedSolution {
-                solution,
-                score,
-                score_analysis,
-            });
-            guard.sort_by(|a, b| a.score.cmp(&b.score));
+        if self.solution_acceptor.accept(
+            &guard,
+            &solution,
+            &score,
+            AcceptSolutionContext {
+                iteration,
+                max_iterations: self.params.max_iterations,
+                max_solutions: self.params.max_solutions,
+            },
+        ) {
+            guard.with_upgraded(|guard| {
+                let is_best = guard.is_empty() || score < guard[0].score;
 
-            // Evict worst
-            if guard.len() > self.params.max_solutions {
-                guard.pop();
-            }
+                guard.push(AcceptedSolution {
+                    solution,
+                    score,
+                    score_analysis,
+                });
+                guard.sort_by(|a, b| a.score.cmp(&b.score));
 
-            if is_best {
-                info!(
-                    thread = thread::current().name().unwrap_or("main"),
-                    "Score: {:?}", guard[0].score_analysis,
-                );
-                info!("Vehicles {:?}", guard[0].solution.routes().len());
-
-                if let Some(callback) = self.on_best_solution_handler.as_ref() {
-                    callback(&guard[0]);
+                // Evict worst
+                if guard.len() > self.params.max_solutions {
+                    guard.pop();
                 }
-            }
+
+                if is_best {
+                    info!(
+                        thread = thread::current().name().unwrap_or("main"),
+                        "Score: {:?}", guard[0].score_analysis,
+                    );
+                    info!("Vehicles {:?}", guard[0].solution.routes().len());
+
+                    if let Some(callback) = self.on_best_solution_handler.as_ref() {
+                        callback(&guard[0]);
+                    }
+                }
+            })
         }
     }
 
