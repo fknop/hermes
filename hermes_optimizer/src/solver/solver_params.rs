@@ -38,7 +38,7 @@ pub enum Threads {
 #[derive(Clone, Debug)]
 pub enum SolverAcceptorStrategy {
     Greedy,
-    Shrimpf,
+    Schrimpf,
 }
 
 #[derive(Clone, Debug)]
@@ -53,8 +53,8 @@ impl Default for SolverParams {
             max_iterations: 100000,
             max_duration: SignedDuration::from_mins(1),
             max_solutions: 20,
-            solver_acceptor: SolverAcceptorStrategy::Greedy,
-            solver_selector: SolverSelectorStrategy::SelectBest,
+            solver_acceptor: SolverAcceptorStrategy::Schrimpf,
+            solver_selector: SolverSelectorStrategy::SelectRandom,
             ruin: RuinParams::default(),
             recreate: RecreateParams::default(),
             threads: Threads::Auto,

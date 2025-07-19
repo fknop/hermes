@@ -159,7 +159,6 @@ mod tests {
         let score2 = Score::soft(5);
         let score3 = Score::hard(10);
         let score4 = Score::soft(15);
-
         let score5 = Score::new(2, 2);
 
         assert!(score1 > score2);
@@ -172,5 +171,9 @@ mod tests {
         assert!(score5 < score1);
         assert!(score5 < score3);
         assert!(score5 > score2);
+
+        let vector = [score1, score2, score3, score4, score5];
+        let max = vector.iter().max_by_key(|&score| score);
+        assert_eq!(max, Some(&score1));
     }
 }

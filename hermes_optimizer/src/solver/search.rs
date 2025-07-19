@@ -10,7 +10,7 @@ use crate::{
     acceptor::{
         accept_solution::{AcceptSolution, AcceptSolutionContext},
         greedy_solution_acceptor::GreedySolutionAcceptor,
-        shrimpf_acceptor::ShrimpfAcceptor,
+        schrimpf_acceptor::SchrimpfAcceptor,
         solution_acceptor::SolutionAcceptor,
     },
     problem::vehicle_routing_problem::VehicleRoutingProblem,
@@ -58,7 +58,7 @@ impl Search {
         };
         let solution_acceptor = match params.solver_acceptor {
             SolverAcceptorStrategy::Greedy => SolutionAcceptor::Greedy(GreedySolutionAcceptor),
-            SolverAcceptorStrategy::Shrimpf => SolutionAcceptor::Shrimpf(ShrimpfAcceptor::new()),
+            SolverAcceptorStrategy::Schrimpf => SolutionAcceptor::Schrimpf(SchrimpfAcceptor::new()),
         };
 
         Search {
@@ -165,17 +165,17 @@ impl Search {
             guard.with_upgraded(|guard| {
                 let is_best = guard.is_empty() || score < guard[0].score;
 
+                // Evict worst
+                if guard.len() + 1 > self.params.max_solutions {
+                    guard.pop();
+                }
+
                 guard.push(AcceptedSolution {
                     solution,
                     score,
                     score_analysis,
                 });
                 guard.sort_by(|a, b| a.score.cmp(&b.score));
-
-                // Evict worst
-                if guard.len() > self.params.max_solutions {
-                    guard.pop();
-                }
 
                 if is_best {
                     info!(

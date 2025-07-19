@@ -26,6 +26,12 @@ impl RouteConstraint for WaitingDurationConstraint {
             .map(|activity| activity.waiting_duration)
             .sum();
 
-        Score::soft(total_waiting_duration.as_secs() * WAITING_DURATION_WEIGHT)
+        Score::soft(
+            context
+                .solution
+                .problem()
+                .waiting_cost(total_waiting_duration)
+                .round() as i64,
+        )
     }
 }

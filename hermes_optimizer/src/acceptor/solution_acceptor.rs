@@ -5,12 +5,12 @@ use crate::solver::{
 use super::{
     accept_solution::{AcceptSolution, AcceptSolutionContext},
     greedy_solution_acceptor::GreedySolutionAcceptor,
-    shrimpf_acceptor::ShrimpfAcceptor,
+    schrimpf_acceptor::SchrimpfAcceptor,
 };
 
 pub enum SolutionAcceptor {
     Greedy(GreedySolutionAcceptor),
-    Shrimpf(ShrimpfAcceptor),
+    Schrimpf(SchrimpfAcceptor),
 }
 
 impl AcceptSolution for SolutionAcceptor {
@@ -25,7 +25,7 @@ impl AcceptSolution for SolutionAcceptor {
             SolutionAcceptor::Greedy(acceptor) => {
                 acceptor.accept(current_solutions, solution, score, context)
             }
-            SolutionAcceptor::Shrimpf(acceptor) => {
+            SolutionAcceptor::Schrimpf(acceptor) => {
                 acceptor.accept(current_solutions, solution, score, context)
             }
         }

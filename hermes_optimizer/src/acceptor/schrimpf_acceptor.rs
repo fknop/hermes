@@ -4,15 +4,15 @@ use crate::solver::{
 
 use super::accept_solution::{AcceptSolution, AcceptSolutionContext};
 
-pub struct ShrimpfAcceptor {
+pub struct SchrimpfAcceptor {
     initial_threshold: f64,
     alpha: f64,
 }
 
-impl ShrimpfAcceptor {
+impl SchrimpfAcceptor {
     pub fn new() -> Self {
-        ShrimpfAcceptor {
-            initial_threshold: 100.0,
+        SchrimpfAcceptor {
+            initial_threshold: 300.0,
             alpha: 0.3,
         }
     }
@@ -26,7 +26,7 @@ impl ShrimpfAcceptor {
     }
 }
 
-impl AcceptSolution for ShrimpfAcceptor {
+impl AcceptSolution for SchrimpfAcceptor {
     fn accept(
         &self,
         current_solutions: &[AcceptedSolution],
@@ -52,5 +52,55 @@ impl AcceptSolution for ShrimpfAcceptor {
         } else {
             true
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_compute_threshold() {
+        let acceptor = SchrimpfAcceptor::new();
+
+        let mut threshold = acceptor.compute_threshold(&AcceptSolutionContext {
+            iteration: 0,
+            max_solutions: 100,
+            max_iterations: 1000,
+        });
+        println!("{:?}", threshold);
+        threshold = acceptor.compute_threshold(&AcceptSolutionContext {
+            iteration: 1,
+            max_solutions: 100,
+            max_iterations: 1000,
+        });
+
+        println!("{:?}", threshold);
+
+        threshold = acceptor.compute_threshold(&AcceptSolutionContext {
+            iteration: 999,
+            max_solutions: 100,
+            max_iterations: 1000,
+        });
+
+        println!("{:?}", threshold);
+
+        threshold = acceptor.compute_threshold(&AcceptSolutionContext {
+            iteration: 1000,
+            max_solutions: 100,
+            max_iterations: 1000,
+        });
+
+        println!("{:?}", threshold);
+
+        threshold = acceptor.compute_threshold(&AcceptSolutionContext {
+            iteration: 2000,
+            max_solutions: 100,
+            max_iterations: 1000,
+        });
+
+        println!("{:?}", threshold);
+
+        assert!(threshold > 0.0);
     }
 }
