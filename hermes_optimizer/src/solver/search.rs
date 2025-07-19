@@ -99,7 +99,7 @@ impl Search {
                 builder
                     .spawn_scoped(s, move || {
                         for iteration in 0..max_iterations {
-                            if (iteration + 1) % 1000 == 0 {
+                            if (iteration + 1) % 5000 == 0 {
                                 info!(
                                     thread = thread::current().name().unwrap_or("main"),
                                     "Thread {}: Iteration {}/{}",
@@ -176,6 +176,10 @@ impl Search {
                     score_analysis,
                 });
                 guard.sort_by(|a, b| a.score.cmp(&b.score));
+
+                for i in 0..guard.len() - 1 {
+                    assert!(guard[i].score <= guard[i + 1].score);
+                }
 
                 if is_best {
                     info!(

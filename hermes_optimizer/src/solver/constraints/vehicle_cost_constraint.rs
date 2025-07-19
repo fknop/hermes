@@ -10,7 +10,7 @@ use super::route_constraint::RouteConstraint;
 
 pub struct VehicleCostConstraint;
 
-const VEHICLE_COST: i64 = 10000;
+const VEHICLE_COST: i64 = 5000;
 
 impl RouteConstraint for VehicleCostConstraint {
     fn compute_score(&self, _: &VehicleRoutingProblem, _: &WorkingSolutionRoute) -> Score {

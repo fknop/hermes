@@ -175,5 +175,7 @@ mod tests {
         let vector = [score1, score2, score3, score4, score5];
         let max = vector.iter().max_by_key(|&score| score);
         assert_eq!(max, Some(&score1));
+
+        assert_eq!(Score::new(20, 10).cmp(&Score::new(25, 100)), Ordering::Less);
     }
 }

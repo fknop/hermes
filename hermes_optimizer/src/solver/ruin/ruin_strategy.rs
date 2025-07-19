@@ -2,7 +2,7 @@ use crate::solver::working_solution::WorkingSolution;
 
 use super::{
     ruin_context::RuinContext, ruin_radial::RuinRadial, ruin_random::RuinRandom,
-    ruin_solution::RuinSolution, ruin_worst::RuinWorst,
+    ruin_solution::RuinSolution, ruin_string::RuinString, ruin_worst::RuinWorst,
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -10,6 +10,7 @@ pub enum RuinStrategy {
     Random,
     RuinRadial,
     RuinWorst,
+    RuinString,
 }
 
 impl RuinSolution for RuinStrategy {
@@ -25,6 +26,10 @@ impl RuinSolution for RuinStrategy {
             }
             RuinStrategy::RuinWorst => {
                 let strategy = RuinWorst;
+                strategy.ruin_solution(solution, context);
+            }
+            RuinStrategy::RuinString => {
+                let strategy = RuinString::default();
                 strategy.ruin_solution(solution, context);
             }
         }

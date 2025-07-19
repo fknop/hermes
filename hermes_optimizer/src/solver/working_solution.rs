@@ -77,6 +77,14 @@ impl WorkingSolution {
         &self.routes[route_id]
     }
 
+    pub fn route_of_service(&self, service_id: ServiceId) -> Option<usize> {
+        self.routes
+            .iter()
+            .enumerate()
+            .find(|(_, route)| route.contains_service(service_id))
+            .map(|(index, _)| index)
+    }
+
     pub fn insert_service(&mut self, insertion: &Insertion) {
         match insertion {
             Insertion::ExistingRoute(context) => {

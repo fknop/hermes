@@ -12,8 +12,8 @@ pub struct SchrimpfAcceptor {
 impl SchrimpfAcceptor {
     pub fn new() -> Self {
         SchrimpfAcceptor {
-            initial_threshold: 300.0,
-            alpha: 0.3,
+            initial_threshold: 1000.0,
+            alpha: 0.1,
         }
     }
 
