@@ -1,3 +1,5 @@
+use rand::rngs::SmallRng;
+
 use crate::solver::{accepted_solution::AcceptedSolution, score::Score};
 
 use super::select_solution::SelectSolution;
@@ -8,6 +10,7 @@ impl SelectSolution for SelectBestSelector {
     fn select_solution<'a>(
         &self,
         solutions: &'a [AcceptedSolution],
+        _: &mut SmallRng,
     ) -> Option<&'a AcceptedSolution> {
         // TODO
         let mut max_score = Score::MAX;

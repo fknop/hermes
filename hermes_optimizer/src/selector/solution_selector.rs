@@ -1,3 +1,5 @@
+use rand::rngs::SmallRng;
+
 use crate::solver::accepted_solution::AcceptedSolution;
 
 use super::{
@@ -14,10 +16,11 @@ impl SelectSolution for SolutionSelector {
     fn select_solution<'a>(
         &self,
         solutions: &'a [AcceptedSolution],
+        rng: &mut SmallRng,
     ) -> Option<&'a AcceptedSolution> {
         match self {
-            SolutionSelector::SelectBest(selector) => selector.select_solution(solutions),
-            SolutionSelector::SelectRandom(selector) => selector.select_solution(solutions),
+            SolutionSelector::SelectBest(selector) => selector.select_solution(solutions, rng),
+            SolutionSelector::SelectRandom(selector) => selector.select_solution(solutions, rng),
         }
     }
 }

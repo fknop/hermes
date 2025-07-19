@@ -126,8 +126,9 @@ impl Search {
         let mut working_solution = {
             let solutions_guard = best_solutions.read();
             if !solutions_guard.is_empty()
-                && let Some(AcceptedSolution { solution, .. }) =
-                    self.solution_selector.select_solution(&solutions_guard)
+                && let Some(AcceptedSolution { solution, .. }) = self
+                    .solution_selector
+                    .select_solution(&solutions_guard, rng)
             {
                 solution.clone()
             } else {
