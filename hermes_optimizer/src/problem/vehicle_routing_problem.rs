@@ -1,11 +1,10 @@
 use jiff::SignedDuration;
-use serde::Serialize;
 
 use super::{
     location::{Location, LocationId},
     service::{Service, ServiceId},
     service_location_index::ServiceLocationIndex,
-    travel_cost_matrix::{Cost, Distance, Time, TravelCostMatrix},
+    travel_cost_matrix::{Cost, Distance, TravelCostMatrix},
     vehicle::{Vehicle, VehicleId},
 };
 
@@ -59,6 +58,10 @@ impl VehicleRoutingProblem {
         self.travel_costs.travel_distance(from, to)
     }
 
+    pub fn max_cost(&self) -> Cost {
+        self.travel_costs.max_cost()
+    }
+
     pub fn travel_time(&self, from: LocationId, to: LocationId) -> jiff::SignedDuration {
         let travel_time_seconds = self.travel_costs.travel_time(from, to);
         jiff::SignedDuration::from_secs(travel_time_seconds)
@@ -68,12 +71,16 @@ impl VehicleRoutingProblem {
         self.travel_costs.travel_cost(from, to)
     }
 
-    pub fn waiting_cost(&self, waiting_duration: SignedDuration) -> Cost {
-        waiting_duration.as_secs_f64() * 1.0
+    pub fn acceptable_service_waiting_duration_secs(&self) -> i64 {
+        60
     }
 
-    pub fn route_costs(&self) -> Cost {
-        0.0 // Placeholder for the static cost of a route
+    pub fn waiting_cost(&self, waiting_duration: SignedDuration) -> Cost {
+        waiting_duration.as_secs_f64() * 5.0
+    }
+
+    pub fn route_costs(&self) -> f64 {
+        2000.0 // Placeholder for the static cost of a route
     }
 
     pub fn nearest_services(&self, service_id: ServiceId) -> impl Iterator<Item = ServiceId> {

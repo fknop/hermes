@@ -1,6 +1,9 @@
-use crate::solver::{
-    insertion::Insertion, insertion_context::InsertionContext, score::Score,
-    working_solution::WorkingSolution,
+use crate::{
+    problem,
+    solver::{
+        insertion::Insertion, insertion_context::InsertionContext, score::Score,
+        working_solution::WorkingSolution,
+    },
 };
 
 use super::global_constraint::GlobalConstraint;
@@ -12,40 +15,49 @@ impl GlobalConstraint for TransportCostConstraint {
         let problem = solution.problem();
         let mut cost = 0.0;
         for route in solution.routes() {
-            let vehicle = route.vehicle(problem);
-
-            let activities = route.activities();
-
-            if let Some(depot_location_id) = vehicle.depot_location_id() {
-                cost += problem.travel_cost(
-                    depot_location_id,
-                    activities[0].service(problem).location_id(),
-                );
-
-                if vehicle.should_return_to_depot() {
-                    cost += problem.travel_cost(
-                        activities[activities.len() - 1]
-                            .service(problem)
-                            .location_id(),
-                        depot_location_id,
-                    )
-                }
-            }
-
-            for (index, activity) in activities.iter().enumerate() {
-                if index == 0 {
-                    // Skip the first activity, as it is already counted with the depot
-                    continue;
-                }
-
-                cost += problem.travel_cost(
-                    activities[index - 1].service(problem).location_id(),
-                    activity.service(problem).location_id(),
-                )
-            }
+            cost += route
+                .end(problem)
+                .duration_since(route.start(problem))
+                .as_secs_f64()
         }
 
-        Score::soft(cost.round() as i64)
+        // let problem = solution.problem();
+        // let mut cost = 0.0;
+        // for route in solution.routes() {
+        //     let vehicle = route.vehicle(problem);
+
+        //     let activities = route.activities();
+
+        //     if let Some(depot_location_id) = vehicle.depot_location_id() {
+        //         cost += problem.travel_cost(
+        //             depot_location_id,
+        //             activities[0].service(problem).location_id(),
+        //         );
+
+        //         if vehicle.should_return_to_depot() {
+        //             cost += problem.travel_cost(
+        //                 activities[activities.len() - 1]
+        //                     .service(problem)
+        //                     .location_id(),
+        //                 depot_location_id,
+        //             )
+        //         }
+        //     }
+
+        //     for (index, activity) in activities.iter().enumerate() {
+        //         if index == 0 {
+        //             // Skip the first activity, as it is already counted with the depot
+        //             continue;
+        //         }
+
+        //         cost += problem.travel_cost(
+        //             activities[index - 1].service(problem).location_id(),
+        //             activity.service(problem).location_id(),
+        //         )
+        //     }
+        // }
+
+        Score::soft(cost)
     }
 
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
@@ -128,6 +140,6 @@ impl GlobalConstraint for TransportCostConstraint {
 
         let travel_cost_delta = new_cost - old_cost;
 
-        Score::soft(travel_cost_delta.round() as i64)
+        Score::soft(travel_cost_delta)
     }
 }

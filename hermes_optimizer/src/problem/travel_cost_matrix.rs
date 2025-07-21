@@ -70,4 +70,12 @@ impl TravelCostMatrix {
     pub fn travel_cost(&self, from: usize, to: usize) -> Cost {
         self.costs[from][to]
     }
+
+    pub fn max_cost(&self) -> Cost {
+        self.costs
+            .iter()
+            .flat_map(|row| row.iter())
+            .cloned()
+            .fold(0.0, f64::max)
+    }
 }

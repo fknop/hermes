@@ -1,8 +1,6 @@
 use std::{sync::Arc, thread};
 
-use parking_lot::{
-    MappedMutexGuard, MappedRwLockReadGuard, Mutex, MutexGuard, RwLock, RwLockReadGuard,
-};
+use parking_lot::{MappedRwLockReadGuard, RwLock, RwLockReadGuard};
 use rand::{Rng, SeedableRng, rngs::SmallRng};
 use tracing::info;
 
@@ -24,6 +22,7 @@ use super::{
     accepted_solution::AcceptedSolution,
     constraints::constraint::Constraint,
     construction::construct_solution::construct_solution,
+    noise::NoiseGenerator,
     recreate::{
         recreate_context::RecreateContext, recreate_solution::RecreateSolution,
         recreate_strategy::RecreateStrategy,
@@ -42,6 +41,7 @@ pub struct Search {
     solution_selector: SolutionSelector,
     solution_acceptor: SolutionAcceptor,
     on_best_solution_handler: Arc<Option<fn(&AcceptedSolution)>>,
+    noise_generator: NoiseGenerator,
 }
 
 impl Search {
@@ -61,8 +61,15 @@ impl Search {
             SolverAcceptorStrategy::Schrimpf => SolutionAcceptor::Schrimpf(SchrimpfAcceptor::new()),
         };
 
+        let max_cost = problem.max_cost();
+
         Search {
             problem: Arc::new(problem),
+            noise_generator: NoiseGenerator::new(
+                max_cost,
+                params.noise_probability,
+                params.noise_level,
+            ),
             constraints,
             params,
             best_solutions: Arc::new(RwLock::new(Vec::new())),
@@ -89,7 +96,7 @@ impl Search {
         thread::scope(|s| {
             for thread_index in 0..num_threads {
                 let best_solutions = Arc::clone(&self.best_solutions);
-                let on_best_solution_handler = Arc::clone(&self.on_best_solution_handler);
+                // let on_best_solution_handler = Arc::clone(&self.on_best_solution_handler);
 
                 let mut thread_rng = SmallRng::from_rng(&mut rng);
                 let max_iterations = self.params.max_iterations;
@@ -132,7 +139,7 @@ impl Search {
             {
                 solution.clone()
             } else {
-                construct_solution(&self.problem, rng, &self.constraints)
+                construct_solution(&self.problem, rng, &self.constraints, &self.noise_generator)
             }
         }; // Lock is released here
 
@@ -178,10 +185,6 @@ impl Search {
                 });
                 guard.sort_by(|a, b| a.score.cmp(&b.score));
 
-                for i in 0..guard.len() - 1 {
-                    assert!(guard[i].score <= guard[i + 1].score);
-                }
-
                 if is_best {
                     info!(
                         thread = thread::current().name().unwrap_or("main"),
@@ -208,7 +211,7 @@ impl Search {
         let maximum_ruin_size =
             (ruin_maximum_ratio * self.problem.services().len() as f64).floor() as usize;
 
-        let ruin_size = rng.random_range(minimum_ruin_size..maximum_ruin_size);
+        let ruin_size = rng.random_range(minimum_ruin_size..=maximum_ruin_size);
 
         ruin_strategy.ruin_solution(
             solution,
@@ -250,6 +253,7 @@ impl Search {
             RecreateContext {
                 rng,
                 constraints: &self.constraints,
+                noise_generator: &self.noise_generator,
             },
         );
     }

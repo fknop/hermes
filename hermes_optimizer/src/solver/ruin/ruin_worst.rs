@@ -1,8 +1,5 @@
 use crate::{
-    problem::{
-        service::ServiceId, travel_cost_matrix::Cost,
-        vehicle_routing_problem::VehicleRoutingProblem,
-    },
+    problem::{service::ServiceId, vehicle_routing_problem::VehicleRoutingProblem},
     solver::working_solution::WorkingSolution,
 };
 

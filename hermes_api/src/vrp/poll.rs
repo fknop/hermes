@@ -6,7 +6,6 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use geojson::GeoJson;
 use geojson::Value::LineString;
 use geojson::{Feature, Geometry};
 use hermes_core::{
@@ -17,10 +16,8 @@ use hermes_core::{
 use hermes_optimizer::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
-        accepted_solution::AcceptedSolution,
-        score::ScoreAnalysis,
-        solver::SolverStatus,
-        working_solution::{WorkingSolution, WorkingSolutionRoute},
+        accepted_solution::AcceptedSolution, solver::SolverStatus,
+        working_solution::WorkingSolutionRoute,
     },
 };
 use jiff::SignedDuration;
@@ -140,6 +137,7 @@ fn transform_solution(accepted_solution: &AcceptedSolution, hermes: &Hermes) -> 
                 waiting_duration: route.total_waiting_duration(),
                 activities,
                 polyline: compute_polyline(problem, route, hermes),
+                vehicle_max_load: route.max_load(problem),
             }
         })
         .collect();

@@ -15,7 +15,7 @@ impl RecreateSolution for RecreateStrategy {
     fn recreate_solution(&self, solution: &mut WorkingSolution, context: RecreateContext) {
         match self {
             RecreateStrategy::BestInsertion => {
-                let strategy = BestInsertion;
+                let strategy = BestInsertion::default();
                 strategy.recreate_solution(solution, context);
             }
             RecreateStrategy::RegretInsertion => {

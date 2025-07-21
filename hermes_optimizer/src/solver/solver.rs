@@ -1,6 +1,4 @@
-use std::{cell::Cell, ops::DerefMut};
-
-use parking_lot::{MappedRwLockReadGuard, RwLock, RwLockWriteGuard};
+use parking_lot::{MappedRwLockReadGuard, RwLock};
 
 use crate::problem::vehicle_routing_problem::VehicleRoutingProblem;
 
@@ -55,9 +53,9 @@ impl Solver {
         let search = Search::new(final_params, problem, constraints);
 
         Solver {
+            status: RwLock::new(SolverStatus::Pending),
             search,
             params,
-            status: RwLock::new(SolverStatus::Pending),
         }
     }
 

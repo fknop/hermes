@@ -7,57 +7,64 @@ use std::{
 use fxhash::FxHashMap;
 use serde::Serialize;
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Copy, Clone, PartialEq, Serialize)]
 pub struct Score {
-    pub hard_score: i64,
-    pub soft_score: i64,
+    pub hard_score: f64,
+    pub soft_score: f64,
 }
 
 impl Score {
     pub const MAX: Score = Score {
-        hard_score: i64::MAX,
-        soft_score: i64::MAX,
+        hard_score: f64::MAX,
+        soft_score: f64::MAX,
     };
 
     pub const MIN: Score = Score {
-        hard_score: i64::MIN,
-        soft_score: i64::MIN,
+        hard_score: f64::MIN,
+        soft_score: f64::MIN,
     };
 
-    pub fn new(hard_score: i64, soft_score: i64) -> Self {
+    pub const ZERO: Score = Score {
+        hard_score: 0.0,
+        soft_score: 0.0,
+    };
+
+    pub fn new(hard_score: f64, soft_score: f64) -> Self {
         Score {
             hard_score,
             soft_score,
         }
     }
 
-    pub fn hard(hard_score: i64) -> Self {
+    pub fn hard(hard_score: f64) -> Self {
         Score {
             hard_score,
-            soft_score: 0,
+            soft_score: 0.0,
         }
     }
 
-    pub fn soft(soft_score: i64) -> Self {
+    pub fn soft(soft_score: f64) -> Self {
         Score {
-            hard_score: 0,
+            hard_score: 0.0,
             soft_score,
         }
     }
 
     pub fn zero() -> Self {
         Score {
-            hard_score: 0,
-            soft_score: 0,
+            hard_score: 0.0,
+            soft_score: 0.0,
         }
     }
 }
 
+impl Eq for Score {}
+
 impl Ord for Score {
     fn cmp(&self, other: &Self) -> Ordering {
         self.hard_score
-            .cmp(&other.hard_score)
-            .then_with(|| self.soft_score.cmp(&other.soft_score))
+            .total_cmp(&other.hard_score)
+            .then_with(|| self.soft_score.total_cmp(&other.soft_score))
     }
 }
 
@@ -129,37 +136,37 @@ mod tests {
 
     #[test]
     fn test_score_addition() {
-        let score1 = Score::hard(10);
-        let score2 = Score::soft(5);
+        let score1 = Score::hard(10.0);
+        let score2 = Score::soft(5.0);
         let result = score1 + score2;
-        assert_eq!(result.hard_score, 10);
-        assert_eq!(result.soft_score, 5);
+        assert_eq!(result.hard_score, 10.0);
+        assert_eq!(result.soft_score, 5.0);
     }
 
     #[test]
     fn test_score_subtraction() {
-        let score1 = Score::hard(10);
-        let score2 = Score::soft(5);
+        let score1 = Score::hard(10.0);
+        let score2 = Score::soft(5.0);
         let result = score1 - score2;
-        assert_eq!(result.hard_score, 10);
-        assert_eq!(result.soft_score, -5);
+        assert_eq!(result.hard_score, 10.0);
+        assert_eq!(result.soft_score, -5.0);
     }
 
     #[test]
     fn test_score_sum() {
-        let scores = vec![Score::hard(10), Score::soft(5), Score::hard(-3)];
+        let scores = vec![Score::hard(10.0), Score::soft(5.0), Score::hard(-3.0)];
         let total: Score = scores.into_iter().sum();
-        assert_eq!(total.hard_score, 7);
-        assert_eq!(total.soft_score, 5);
+        assert_eq!(total.hard_score, 7.0);
+        assert_eq!(total.soft_score, 5.0);
     }
 
     #[test]
     fn test_score_cmp() {
-        let score1 = Score::hard(10);
-        let score2 = Score::soft(5);
-        let score3 = Score::hard(10);
-        let score4 = Score::soft(15);
-        let score5 = Score::new(2, 2);
+        let score1 = Score::hard(10.0);
+        let score2 = Score::soft(5.0);
+        let score3 = Score::hard(10.0);
+        let score4 = Score::soft(15.0);
+        let score5 = Score::new(2.0, 2.0);
 
         assert!(score1 > score2);
         assert!(score1 == score3);
@@ -176,6 +183,9 @@ mod tests {
         let max = vector.iter().max_by_key(|&score| score);
         assert_eq!(max, Some(&score1));
 
-        assert_eq!(Score::new(20, 10).cmp(&Score::new(25, 100)), Ordering::Less);
+        assert_eq!(
+            Score::new(20.0, 10.0).cmp(&Score::new(25.0, 100.0)),
+            Ordering::Less
+        );
     }
 }

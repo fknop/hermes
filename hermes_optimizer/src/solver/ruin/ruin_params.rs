@@ -1,4 +1,4 @@
-use super::{ruin_radial::RuinRadial, ruin_strategy::RuinStrategy};
+use super::ruin_strategy::RuinStrategy;
 
 #[derive(Clone, Debug)]
 pub struct RuinParams {
@@ -15,13 +15,14 @@ impl Default for RuinParams {
     fn default() -> Self {
         RuinParams {
             ruin_strategies: vec![
-                (RuinStrategy::Random, 50),
-                (RuinStrategy::RuinWorst, 50),
-                (RuinStrategy::RuinRadial, 200),
                 (RuinStrategy::RuinString, 1000),
+                (RuinStrategy::RuinTimeRelated, 500),
+                (RuinStrategy::RuinRadial, 200),
+                (RuinStrategy::Random, 50),
+                (RuinStrategy::RuinWorst, 200),
             ],
             ruin_minimum_ratio: 0.05,
-            ruin_maximum_ratio: 0.3,
+            ruin_maximum_ratio: 0.2,
         }
     }
 }

@@ -2,6 +2,8 @@ use std::ops::Add;
 
 use serde::{Deserialize, Serialize};
 
+use crate::utils::normalize::normalize;
+
 #[derive(Default, Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct Capacity(Vec<f64>);
 
@@ -11,6 +13,51 @@ impl Capacity {
     }
 
     pub const ZERO: Capacity = Capacity(vec![]);
+
+    pub fn iter(&self) -> impl Iterator<Item = f64> {
+        self.0.iter().cloned()
+    }
+
+    pub fn get(&self, index: usize) -> Option<f64> {
+        self.0.get(index).cloned()
+    }
+
+    pub fn compute_min_max_capacities(capacities: &[&Capacity]) -> (Capacity, Capacity) {
+        if capacities.is_empty() {
+            return (Capacity::ZERO, Capacity::ZERO);
+        }
+
+        let max_size = capacities.iter().map(|c| c.0.len()).max().unwrap_or(0);
+        let mut min = vec![0.0; max_size];
+        let mut max = vec![0.0; max_size];
+
+        for i in 0..max_size {
+            min[i] = capacities
+                .iter()
+                .map(|c| c.0.get(i).cloned().unwrap_or(0.0))
+                .fold(f64::INFINITY, |a, b| a.min(b));
+
+            max[i] = capacities
+                .iter()
+                .map(|c| c.0.get(i).cloned().unwrap_or(0.0))
+                .fold(0.0_f64, |a, b| a.max(b));
+        }
+
+        (Capacity(min), Capacity(max))
+    }
+
+    pub fn normalize(&self, min: &Capacity, max: &Capacity) -> Vec<f64> {
+        if self.0.is_empty() {
+            return vec![];
+        }
+        let mut normalized = vec![0.0; self.0.len()];
+
+        for i in 0..self.0.len() {
+            normalized[i] = normalize(self.0[i], min.0[i], max.0[i]);
+        }
+
+        normalized
+    }
 
     pub fn is_empty(&self) -> bool {
         self.0.is_empty() || self.0.iter().all(|&c| c == 0.0)
@@ -83,6 +130,8 @@ impl Add<&Capacity> for &Capacity {
 #[cfg(test)]
 mod tests {
 
+    use std::cmp::Ordering;
+
     use super::*;
 
     #[test]
@@ -132,6 +181,7 @@ mod tests {
         assert_eq!(demand.over_capacity_demand(&total_capacity), 13.0);
     }
 
+    #[test]
     fn test_add_op() {
         let capacity1 = Capacity::new(vec![1.0, 2.0, 3.0]);
         let capacity2 = Capacity::new(vec![4.0, 5.0, 6.0]);
@@ -139,5 +189,47 @@ mod tests {
         let result = &capacity1 + &capacity2;
 
         assert_eq!(result, Capacity::new(vec![5.0, 7.0, 9.0]));
+    }
+
+    #[test]
+    fn test_min_max_capacities() {
+        let capacities = vec![
+            Capacity::new(vec![1.0, 2.0, 3.0]),
+            Capacity::new(vec![4.0, 5.0, 6.0]),
+            Capacity::new(vec![2.0, 3.0, 4.0]),
+        ];
+
+        let (min, max) =
+            Capacity::compute_min_max_capacities(&(capacities.iter().collect::<Vec<&Capacity>>()));
+
+        assert_eq!(min, Capacity::new(vec![1.0, 2.0, 3.0]));
+        assert_eq!(max, Capacity::new(vec![4.0, 5.0, 6.0]));
+    }
+
+    #[test]
+    fn test_normalize() {
+        let capacity = Capacity::new(vec![5.0, 10.0, 15.0]);
+        let min = Capacity::new(vec![0.0, 5.0, 10.0]);
+        let max = Capacity::new(vec![10.0, 15.0, 20.0]);
+
+        let normalized = capacity.normalize(&min, &max);
+
+        // 5 - 0 / 10 - 0 = 0.5
+        // 10 - 5 / 15 - 5 = 5 / 10 = 0.5
+        // 15 - 10 / 20 - 10 = 5 / 10 = 0.5
+
+        assert_eq!(normalized, vec![0.5, 0.5, 0.5]);
+    }
+
+    #[test]
+    fn test_cmp_vectors() {
+        let less = vec![0.5, 0.5, 0.5].partial_cmp(&vec![0.6, 0.6, 0.6]);
+        assert_eq!(less, Some(Ordering::Less));
+
+        let more = vec![0.7, 0.6, 0.7].partial_cmp(&vec![0.6, 0.6, 0.6]);
+        assert_eq!(more, Some(Ordering::Greater));
+
+        let more = vec![0.6, 0.6, 0.6].partial_cmp(&vec![0.6, 0.6, 0.6]);
+        assert_eq!(more, Some(Ordering::Equal));
     }
 }

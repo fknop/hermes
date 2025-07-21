@@ -24,7 +24,12 @@ type Activity =
 export type SolutionResponse = {
   status: 'Pending' | 'Running' | 'Completed'
   solution: {
+    duration: string
     routes: {
+      vehicle_max_load: number
+      duration: string
+      total_demand: number[]
+      waiting_duration: string
       vehicle_id: number
       activities: Activity[]
       polyline: GeoJSON.Feature<GeoJSON.LineString>

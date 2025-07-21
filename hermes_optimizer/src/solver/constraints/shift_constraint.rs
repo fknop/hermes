@@ -2,9 +2,9 @@ use crate::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
         insertion::{ExistingRouteInsertion, Insertion, NewRouteInsertion},
-        insertion_context::{ActivityInsertionContext, InsertionContext},
+        insertion_context::InsertionContext,
         score::Score,
-        working_solution::{WorkingSolution, WorkingSolutionRoute, WorkingSolutionRouteActivity},
+        working_solution::WorkingSolutionRoute,
     },
 };
 
@@ -23,7 +23,7 @@ impl RouteConstraint for ShiftConstraint {
         if let Some(latest_end) = vehicle.latest_end_time()
             && route.end(problem) > latest_end
         {
-            Score::hard(route.end(problem).as_second() - latest_end.as_second())
+            Score::hard((route.end(problem).as_second() - latest_end.as_second()) as f64)
         } else {
             Score::zero()
         }
@@ -40,7 +40,7 @@ impl RouteConstraint for ShiftConstraint {
                 if let Some(latest_end) = vehicle.latest_end_time()
                     && route.end(problem) > latest_end
                 {
-                    Score::hard(context.end.as_second() - latest_end.as_second())
+                    Score::hard((context.end.as_second() - latest_end.as_second()) as f64)
                 } else {
                     Score::zero()
                 }
@@ -51,7 +51,7 @@ impl RouteConstraint for ShiftConstraint {
                 if let Some(latest_end) = vehicle.latest_end_time()
                     && context.end > latest_end
                 {
-                    Score::hard(context.end.as_second() - latest_end.as_second())
+                    Score::hard((context.end.as_second() - latest_end.as_second()) as f64)
                 } else {
                     Score::zero()
                 }

@@ -3,6 +3,7 @@ use rand::rngs::SmallRng;
 use crate::solver::{
     constraints::{compute_insertion_score::compute_insertion_score, constraint::Constraint},
     insertion::Insertion,
+    noise::NoiseGenerator,
     score::Score,
     working_solution::{WorkingSolution, compute_insertion_context},
 };
@@ -10,15 +11,16 @@ use crate::solver::{
 pub struct RecreateContext<'a> {
     pub rng: &'a mut SmallRng,
     pub constraints: &'a Vec<Constraint>,
+    pub noise_generator: &'a NoiseGenerator,
 }
 
 impl<'a> RecreateContext<'a> {
     pub fn compute_insertion_score(
-        &self,
+        &mut self,
         solution: &WorkingSolution,
         insertion: &Insertion,
     ) -> Score {
         let context = compute_insertion_context(solution.problem(), solution, insertion);
-        compute_insertion_score(self.constraints, &context)
+        compute_insertion_score(self.constraints, &context, self.noise_generator, self.rng)
     }
 }

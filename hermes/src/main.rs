@@ -1,9 +1,4 @@
-use hermes_core::{
-    geopoint::GeoPoint,
-    hermes::Hermes,
-    matrix::matrix_request::MatrixRequest,
-    routing::routing_request::{RoutingAlgorithm, RoutingRequest, RoutingRequestOptions},
-};
+use hermes_core::geopoint::GeoPoint;
 use hermes_optimizer::{
     solomon::solomon_parser::SolomonParser,
     solver::{solver::Solver, solver_params::SolverParams},

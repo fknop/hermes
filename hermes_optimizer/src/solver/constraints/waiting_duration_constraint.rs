@@ -19,23 +19,43 @@ impl RouteConstraint for WaitingDurationConstraint {
         problem: &VehicleRoutingProblem,
         route: &WorkingSolutionRoute,
     ) -> Score {
-        let waiting_duration = route.total_waiting_duration();
-        Score::soft(problem.waiting_cost(waiting_duration).round() as i64)
+        let waiting_duration = route
+            .activities()
+            .iter()
+            .map(|activity| {
+                if activity.waiting_duration().as_secs()
+                    > problem.acceptable_service_waiting_duration_secs()
+                {
+                    activity.waiting_duration()
+                } else {
+                    SignedDuration::ZERO
+                }
+            })
+            .sum();
+
+        Score::soft(problem.waiting_cost(waiting_duration))
     }
 
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
         let total_waiting_duration: SignedDuration = context
             .activities
             .iter()
-            .map(|activity| activity.waiting_duration)
+            .map(|activity| {
+                if activity.waiting_duration.as_secs()
+                    > context.problem().acceptable_service_waiting_duration_secs()
+                {
+                    activity.waiting_duration
+                } else {
+                    SignedDuration::ZERO
+                }
+            })
             .sum();
 
         Score::soft(
             context
                 .solution
                 .problem()
-                .waiting_cost(total_waiting_duration)
-                .round() as i64,
+                .waiting_cost(total_waiting_duration),
         )
     }
 }

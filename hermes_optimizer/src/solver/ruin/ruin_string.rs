@@ -1,7 +1,7 @@
 //! Slack Induction by String Removals for Vehicle Routing Problems
 //! Jan Christiaens, Greet Vanden Berghe
 
-use std::{cmp, ops::Sub};
+use std::cmp;
 
 use fxhash::FxHashSet;
 use rand::{Rng, rngs::SmallRng, seq::IndexedRandom};
@@ -146,7 +146,7 @@ impl RuinSolution for RuinString {
             .rng
             .random_range(0..context.problem.services().len());
 
-        while ruined_routes.len() <= k {
+        while ruined_routes.len() < k {
             let route_id = solution.route_of_service(seed_service);
 
             if let Some(route_id) = route_id {

@@ -2,9 +2,9 @@ use crate::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
         insertion::{ExistingRouteInsertion, Insertion, NewRouteInsertion},
-        insertion_context::{ActivityInsertionContext, InsertionContext},
+        insertion_context::InsertionContext,
         score::Score,
-        working_solution::{WorkingSolution, WorkingSolutionRoute, WorkingSolutionRouteActivity},
+        working_solution::WorkingSolutionRoute,
     },
 };
 
@@ -24,12 +24,7 @@ impl RouteConstraint for CapacityConstraint {
         if vehicle.capacity().satisfies_demand(total_demand) {
             Score::zero()
         } else {
-            Score::hard(
-                vehicle
-                    .capacity()
-                    .over_capacity_demand(total_demand)
-                    .round() as i64,
-            )
+            Score::hard(vehicle.capacity().over_capacity_demand(total_demand))
         }
     }
 
@@ -51,7 +46,7 @@ impl RouteConstraint for CapacityConstraint {
                 if vehicle.capacity().satisfies_demand(&new_demand) {
                     Score::zero()
                 } else {
-                    Score::hard(vehicle.capacity().over_capacity_demand(&new_demand).round() as i64)
+                    Score::hard(vehicle.capacity().over_capacity_demand(&new_demand))
                 }
             }
             Insertion::NewRoute(NewRouteInsertion { vehicle_id, .. }) => {
@@ -59,12 +54,7 @@ impl RouteConstraint for CapacityConstraint {
                 if vehicle.capacity().satisfies_demand(service.demand()) {
                     Score::zero()
                 } else {
-                    Score::hard(
-                        vehicle
-                            .capacity()
-                            .over_capacity_demand(service.demand())
-                            .round() as i64,
-                    )
+                    Score::hard(vehicle.capacity().over_capacity_demand(service.demand()))
                 }
             }
         }

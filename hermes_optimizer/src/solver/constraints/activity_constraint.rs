@@ -1,9 +1,8 @@
 use crate::{
-    problem::{time_window::TimeWindow, vehicle_routing_problem::VehicleRoutingProblem},
+    problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
-        insertion_context::{ActivityInsertionContext, InsertionContext},
-        score::Score,
-        working_solution::{WorkingSolution, WorkingSolutionRouteActivity},
+        insertion_context::InsertionContext, score::Score,
+        working_solution::WorkingSolutionRouteActivity,
     },
 };
 

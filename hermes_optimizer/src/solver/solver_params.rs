@@ -14,6 +14,9 @@ pub struct SolverParams {
     pub ruin: RuinParams,
     pub recreate: RecreateParams,
     pub threads: Threads,
+
+    pub noise_probability: f64,
+    pub noise_level: f64,
 }
 
 impl SolverParams {
@@ -52,12 +55,14 @@ impl Default for SolverParams {
         Self {
             max_iterations: 100000,
             max_duration: SignedDuration::from_mins(1),
-            max_solutions: 20,
+            max_solutions: 30,
             solver_acceptor: SolverAcceptorStrategy::Schrimpf,
             solver_selector: SolverSelectorStrategy::SelectRandom,
             ruin: RuinParams::default(),
             recreate: RecreateParams::default(),
             threads: Threads::Auto,
+            noise_level: 0.1,
+            noise_probability: 0.3,
         }
     }
 }

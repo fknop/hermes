@@ -265,6 +265,25 @@ impl WorkingSolutionRoute {
         problem.vehicle(self.vehicle_id)
     }
 
+    pub fn max_load(&self, problem: &VehicleRoutingProblem) -> f64 {
+        let vehicle = problem.vehicle(self.vehicle_id);
+        let mut max_load = 0.0_f64;
+
+        let vehicle_capacity = vehicle.capacity();
+
+        for (index, demand) in self.total_demand.iter().enumerate() {
+            let capacity = vehicle_capacity.get(index).unwrap_or(0.0);
+            if capacity == 0.0 && demand > 0.0 {
+                max_load = 1.0;
+            } else {
+                let load = demand / capacity;
+                max_load = max_load.max(load);
+            }
+        }
+
+        max_load
+    }
+
     fn remove_activity(
         &mut self,
         problem: &VehicleRoutingProblem,

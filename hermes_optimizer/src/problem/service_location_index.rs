@@ -1,15 +1,40 @@
+use geo::{Distance, Haversine, HaversineDistance};
 use rstar::primitives::GeomWithData;
-use rstar::{AABB, PointDistance, RTree, RTreeObject};
+use rstar::{AABB, Envelope, PointDistance, RTree, RTreeObject};
 
-use super::location::{Location, LocationId};
+use super::location::Location;
 use super::service::Service;
-use super::travel_cost_matrix::{Cost, TravelCostMatrix};
 
 pub struct IndexedData {
     service_id: usize,
 }
 
-pub type ServiceLocationIndexObject = GeomWithData<geo::Point, IndexedData>;
+pub struct IndexedPoint {
+    x: f64,
+    y: f64,
+}
+
+impl RTreeObject for IndexedPoint {
+    type Envelope = AABB<[f64; 2]>;
+
+    fn envelope(&self) -> Self::Envelope {
+        AABB::from_point([self.x, self.y])
+    }
+}
+
+impl PointDistance for IndexedPoint {
+    fn distance_2(
+        &self,
+        point: &<Self::Envelope as Envelope>::Point,
+    ) -> <<Self::Envelope as Envelope>::Point as rstar::Point>::Scalar {
+        Haversine.distance(
+            geo::Point::new(self.x, self.y),
+            geo::Point::new(point[0], point[1]),
+        )
+    }
+}
+
+pub type ServiceLocationIndexObject = GeomWithData<IndexedPoint, IndexedData>;
 
 pub struct ServiceLocationIndex {
     tree: RTree<ServiceLocationIndexObject>,
@@ -23,9 +48,14 @@ impl ServiceLocationIndex {
                 .enumerate()
                 .map(|(service_id, service)| {
                     let location = &locations[service.location_id()];
-                    let point = geo::Point::new(location.x(), location.y());
 
-                    ServiceLocationIndexObject::new(point, IndexedData { service_id })
+                    ServiceLocationIndexObject::new(
+                        IndexedPoint {
+                            x: location.x(),
+                            y: location.y(),
+                        },
+                        IndexedData { service_id },
+                    )
                 })
                 .collect(),
         );
@@ -38,7 +68,56 @@ impl ServiceLocationIndex {
         point: geo::Point,
     ) -> impl Iterator<Item = usize> + 'a {
         self.tree
-            .nearest_neighbor_iter(&point)
+            .nearest_neighbor_iter(&[point.x(), point.y()])
             .map(|geom_with_data| geom_with_data.data.service_id)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use std::{fs::File, io::BufReader};
+
+    use serde::Deserialize;
+    use serde_json;
+
+    use crate::problem::service::ServiceId;
+
+    use super::*;
+
+    #[derive(Deserialize)]
+    struct FileData {
+        locations: Vec<Location>,
+        services: Vec<Service>,
+    }
+
+    fn build_locations_and_services() -> (Vec<Location>, Vec<Service>) {
+        let file = "../data/optimizer/data.json";
+        let reader = BufReader::new(File::open(file).unwrap());
+
+        let data: FileData = serde_json::from_reader(reader).unwrap();
+
+        (data.locations, data.services)
+    }
+
+    #[test]
+    fn test_service_location_index() {
+        let (locations, services) = build_locations_and_services();
+        let index = ServiceLocationIndex::new(&locations, &services);
+
+        let nearest: Vec<ServiceId> = index
+            .nearest_neighbor_iter(geo::Point::new(locations[0].x(), locations[0].y()))
+            .collect();
+
+        let mut service_ids: Vec<ServiceId> = (0..services.len()).collect();
+        service_ids.sort_by_key(|&s| {
+            let location_id = services[s].location_id();
+            locations[location_id]
+                .haversine_distance(&locations[0])
+                .round() as i64
+        });
+
+        println!("{:?}", nearest);
+        println!("{:?}", service_ids);
     }
 }

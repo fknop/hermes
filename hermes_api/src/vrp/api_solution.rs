@@ -42,6 +42,7 @@ pub struct ApiSolutionRoute {
     pub vehicle_id: VehicleId,
     pub waiting_duration: SignedDuration,
     pub polyline: Feature,
+    pub vehicle_max_load: f64,
 }
 
 #[derive(Serialize)]

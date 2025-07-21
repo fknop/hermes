@@ -23,7 +23,7 @@ impl RouteConstraint for MaximumWorkingDurationConstraint {
             let working_duration = route.end(problem).duration_since(route.start(problem));
             if working_duration > maximum_working_duration {
                 return Score::hard(
-                    working_duration.as_secs() - maximum_working_duration.as_secs(),
+                    working_duration.as_secs_f64() - maximum_working_duration.as_secs_f64(),
                 );
             }
         }
@@ -44,7 +44,7 @@ impl RouteConstraint for MaximumWorkingDurationConstraint {
                 if let Some(maximum_working_duration) = vehicle.maximum_working_duration() {
                     if working_duration > maximum_working_duration {
                         return Score::hard(
-                            working_duration.as_secs() - maximum_working_duration.as_secs(),
+                            working_duration.as_secs_f64() - maximum_working_duration.as_secs_f64(),
                         );
                     }
                 }
@@ -54,7 +54,7 @@ impl RouteConstraint for MaximumWorkingDurationConstraint {
                 if let Some(maximum_working_duration) = vehicle.maximum_working_duration() {
                     if working_duration > maximum_working_duration {
                         return Score::hard(
-                            working_duration.as_secs() - maximum_working_duration.as_secs(),
+                            working_duration.as_secs_f64() - maximum_working_duration.as_secs_f64(),
                         );
                     }
                 }

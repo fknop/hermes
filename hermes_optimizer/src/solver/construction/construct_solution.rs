@@ -6,6 +6,7 @@ use crate::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
         constraints::constraint::Constraint,
+        noise::NoiseGenerator,
         recreate::{best_insertion::BestInsertion, recreate_context::RecreateContext},
         working_solution::WorkingSolution,
     },
@@ -15,6 +16,7 @@ pub fn construct_solution(
     problem: &Arc<VehicleRoutingProblem>,
     rng: &mut SmallRng,
     constraints: &Vec<Constraint>,
+    noise_generator: &NoiseGenerator,
 ) -> WorkingSolution {
     let mut solution = WorkingSolution::new(Arc::clone(problem));
     let mut services: Vec<_> = (0..problem.services().len()).collect();
@@ -41,7 +43,11 @@ pub fn construct_solution(
     BestInsertion::insert_services(
         &services,
         &mut solution,
-        RecreateContext { rng, constraints },
+        RecreateContext {
+            rng,
+            constraints,
+            noise_generator,
+        },
     );
 
     solution

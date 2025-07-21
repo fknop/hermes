@@ -30,7 +30,7 @@ impl AcceptSolution for SchrimpfAcceptor {
     fn accept(
         &self,
         current_solutions: &[AcceptedSolution],
-        solution: &WorkingSolution,
+        _: &WorkingSolution,
         score: &Score,
         context: AcceptSolutionContext,
     ) -> bool {
@@ -43,7 +43,7 @@ impl AcceptSolution for SchrimpfAcceptor {
         if let Some(worst_solution) = worst_current_solution {
             let threshold = self.compute_threshold(&context);
 
-            let new_score = worst_solution.score + Score::soft(threshold.round() as i64);
+            let new_score = worst_solution.score + Score::soft(threshold);
             if score < &new_score {
                 return true;
             }

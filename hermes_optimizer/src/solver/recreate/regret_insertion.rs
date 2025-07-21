@@ -1,9 +1,9 @@
-use rand::{Rng, seq::SliceRandom};
+use rand::Rng;
 
 use crate::solver::{
     insertion::{ExistingRouteInsertion, Insertion, NewRouteInsertion},
     score::Score,
-    working_solution::{WorkingSolution, compute_insertion_context},
+    working_solution::WorkingSolution,
 };
 
 use super::{recreate_context::RecreateContext, recreate_solution::RecreateSolution};
@@ -41,7 +41,7 @@ impl RegretInsertion {
 }
 
 impl RecreateSolution for RegretInsertion {
-    fn recreate_solution(&self, solution: &mut WorkingSolution, context: RecreateContext) {
+    fn recreate_solution(&self, solution: &mut WorkingSolution, mut context: RecreateContext) {
         // Continue as long as there are services to be assigned
         while !solution.unassigned_services().is_empty() {
             let mut best_insertion_for_max_regret: Option<Insertion> = None;
