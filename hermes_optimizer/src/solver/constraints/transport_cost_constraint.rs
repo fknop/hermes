@@ -1,9 +1,8 @@
-use crate::{
-    problem,
-    solver::{
-        insertion::Insertion, insertion_context::InsertionContext, score::Score,
-        working_solution::WorkingSolution,
-    },
+use jiff::SignedDuration;
+
+use crate::solver::{
+    insertion::Insertion, insertion_context::InsertionContext, score::Score,
+    working_solution::WorkingSolution,
 };
 
 use super::global_constraint::GlobalConstraint;

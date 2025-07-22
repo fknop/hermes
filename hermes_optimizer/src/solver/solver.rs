@@ -26,7 +26,6 @@ pub enum SolverStatus {
 }
 
 pub struct Solver {
-    params: SolverParams,
     search: Search,
     status: RwLock<SolverStatus>,
 }
@@ -47,15 +46,11 @@ impl Solver {
             )),
         ];
 
-        let mut final_params = params.clone();
-        final_params.prepare();
-
-        let search = Search::new(final_params, problem, constraints);
+        let search = Search::new(params, problem, constraints);
 
         Solver {
             status: RwLock::new(SolverStatus::Pending),
             search,
-            params,
         }
     }
 
@@ -66,8 +61,7 @@ impl Solver {
     }
 
     pub fn status(&self) -> SolverStatus {
-        println!("STATUS? {:?}", self.status.read().clone());
-        self.status.read().clone()
+        *self.status.read()
     }
 
     pub fn current_best_solution(&self) -> Option<MappedRwLockReadGuard<'_, AcceptedSolution>> {

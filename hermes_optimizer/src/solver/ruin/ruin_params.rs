@@ -2,7 +2,7 @@ use super::ruin_strategy::RuinStrategy;
 
 #[derive(Clone, Debug)]
 pub struct RuinParams {
-    pub ruin_strategies: Vec<(RuinStrategy, u64)>,
+    pub ruin_strategies: Vec<RuinStrategy>,
 
     /// Between 0.0 and 1.0, where 1.0 means that the ruin will remove up to 100% of the solution
     pub ruin_minimum_ratio: f64,
@@ -15,12 +15,19 @@ impl Default for RuinParams {
     fn default() -> Self {
         RuinParams {
             ruin_strategies: vec![
-                (RuinStrategy::RuinString, 1000),
-                (RuinStrategy::RuinTimeRelated, 500),
-                (RuinStrategy::RuinRadial, 200),
-                (RuinStrategy::Random, 50),
-                (RuinStrategy::RuinWorst, 200),
+                RuinStrategy::RuinString,
+                RuinStrategy::RuinTimeRelated,
+                RuinStrategy::RuinRadial,
+                RuinStrategy::Random,
+                RuinStrategy::RuinWorst,
             ],
+            // ruin_strategies: vec![
+            //     (RuinStrategy::RuinString, 1000),
+            //     (RuinStrategy::RuinTimeRelated, 500),
+            //     (RuinStrategy::RuinRadial, 200),
+            //     (RuinStrategy::Random, 50),
+            //     (RuinStrategy::RuinWorst, 200),
+            // ],
             ruin_minimum_ratio: 0.05,
             ruin_maximum_ratio: 0.2,
         }

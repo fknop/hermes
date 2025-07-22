@@ -38,6 +38,7 @@ pub enum ApiSolutionActivity {
 pub struct ApiSolutionRoute {
     pub duration: SignedDuration,
     pub activities: Vec<ApiSolutionActivity>,
+    pub distance: f64,
     pub total_demand: Capacity,
     pub vehicle_id: VehicleId,
     pub waiting_duration: SignedDuration,

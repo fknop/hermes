@@ -4,8 +4,8 @@ use super::{recreate::recreate_params::RecreateParams, ruin::ruin_params::RuinPa
 
 #[derive(Clone, Debug)]
 pub struct SolverParams {
-    pub max_iterations: usize,
-    pub max_duration: SignedDuration,
+    pub termination_maximum_iterations: usize,
+    pub termination_maximum_duration: Option<SignedDuration>,
     pub solver_acceptor: SolverAcceptorStrategy,
     pub solver_selector: SolverSelectorStrategy,
 
@@ -17,18 +17,12 @@ pub struct SolverParams {
 
     pub noise_probability: f64,
     pub noise_level: f64,
-}
 
-impl SolverParams {
-    pub fn prepare(&mut self) {
-        self.ruin
-            .ruin_strategies
-            .sort_by(|(_, w1), (_, w2)| w1.cmp(w2));
-
-        self.recreate
-            .recreate_strategies
-            .sort_by(|(_, w1), (_, w2)| w1.cmp(w2));
-    }
+    pub alns_segment_iterations: usize,
+    pub alns_reaction_factor: f64,
+    pub alns_best_factor: f64,
+    pub alns_improvement_factor: f64,
+    pub alns_accepted_worst_factor: f64,
 }
 
 #[derive(Clone, Debug)]
@@ -53,8 +47,8 @@ pub enum SolverSelectorStrategy {
 impl Default for SolverParams {
     fn default() -> Self {
         Self {
-            max_iterations: 100000,
-            max_duration: SignedDuration::from_mins(1),
+            termination_maximum_iterations: 100000,
+            termination_maximum_duration: Some(SignedDuration::from_mins(2)),
             max_solutions: 30,
             solver_acceptor: SolverAcceptorStrategy::Schrimpf,
             solver_selector: SolverSelectorStrategy::SelectRandom,
@@ -63,6 +57,12 @@ impl Default for SolverParams {
             threads: Threads::Auto,
             noise_level: 0.1,
             noise_probability: 0.3,
+
+            alns_segment_iterations: 100,
+            alns_reaction_factor: 0.7,
+            alns_best_factor: 33.0,
+            alns_improvement_factor: 9.0,
+            alns_accepted_worst_factor: 13.0,
         }
     }
 }

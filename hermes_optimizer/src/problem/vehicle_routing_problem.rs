@@ -80,7 +80,7 @@ impl VehicleRoutingProblem {
     }
 
     pub fn route_costs(&self) -> f64 {
-        2000.0 // Placeholder for the static cost of a route
+        2500.0 // Placeholder for the static cost of a route
     }
 
     pub fn nearest_services(&self, service_id: ServiceId) -> impl Iterator<Item = ServiceId> {

@@ -695,6 +695,7 @@ name = "hermes_api"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "geo",
  "geojson",
  "hermes_core",
  "hermes_optimizer",

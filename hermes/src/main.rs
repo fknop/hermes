@@ -14,7 +14,7 @@ fn main() {
     let solver = Solver::new(
         vrp,
         SolverParams {
-            max_iterations: 10000,
+            termination_maximum_iterations: 100000,
             ..SolverParams::default()
         },
     );

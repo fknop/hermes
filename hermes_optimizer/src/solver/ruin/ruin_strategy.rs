@@ -6,7 +6,7 @@ use super::{
     ruin_worst::RuinWorst,
 };
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum RuinStrategy {
     Random,
     RuinRadial,

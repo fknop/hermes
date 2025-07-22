@@ -6,6 +6,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
+use geo::{Coord, Simplify};
 use geojson::Value::LineString;
 use geojson::{Feature, Geometry};
 use hermes_core::{
@@ -62,7 +63,7 @@ fn compute_polyline(
 ) -> Feature {
     let location_ids = route.compute_location_ids(problem);
 
-    let mut points: Vec<Vec<f64>> = vec![];
+    let mut points: Vec<Coord<f64>> = vec![];
     for (index, &location_id) in location_ids.iter().enumerate() {
         if index == location_ids.len() - 1 {
             continue;
@@ -86,14 +87,17 @@ fn compute_polyline(
             .unwrap();
 
         points.extend(result.path.legs().iter().flat_map(|leg| {
-            leg.points()
-                .iter()
-                .map(|point| vec![point.lon(), point.lat()])
+            leg.points().iter().map(|point| geo::Coord {
+                x: point.lon(),
+                y: point.lat(),
+            })
         }));
     }
 
+    let geometry = geo::LineString::new(points).simplify(&0.0001);
+
     Feature {
-        geometry: Some(Geometry::new(LineString(points))),
+        geometry: Some(Geometry::from(&geometry)),
         ..Default::default()
     }
 }
@@ -131,6 +135,7 @@ fn transform_solution(accepted_solution: &AcceptedSolution, hermes: &Hermes) -> 
             }
 
             ApiSolutionRoute {
+                distance: route.distance(problem),
                 duration: route.duration(problem),
                 total_demand: route.total_demand().clone(),
                 vehicle_id: route.vehicle_id(),

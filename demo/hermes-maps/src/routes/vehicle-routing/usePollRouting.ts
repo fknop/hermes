@@ -24,8 +24,10 @@ type Activity =
 export type SolutionResponse = {
   status: 'Pending' | 'Running' | 'Completed'
   solution: {
+    score: { soft_score: number; hard_score: number }
     duration: string
     routes: {
+      distance: number
       vehicle_max_load: number
       duration: string
       total_demand: number[]

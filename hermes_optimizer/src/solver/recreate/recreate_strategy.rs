@@ -5,7 +5,7 @@ use super::{
     recreate_solution::RecreateSolution, regret_insertion::RegretInsertion,
 };
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum RecreateStrategy {
     BestInsertion,
     RegretInsertion,

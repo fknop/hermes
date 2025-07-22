@@ -22,7 +22,14 @@ export default function VehicleRoutingScreen() {
 
   const totalTime = solution?.solution.duration
 
-  console.log(totalTime, solution?.solution.score)
+  const totalDistance = solution?.solution.routes.reduce(
+    (acc, route) => acc + route.distance,
+    0
+  )
+
+  if (solution) {
+    console.log(totalTime, totalDistance / 1000, solution?.solution.score)
+  }
 
   return (
     <div className="h-screen w-screen">
@@ -55,7 +62,8 @@ export default function VehicleRoutingScreen() {
                     </span>
 
                     <span>Duration: {route.duration}</span>
-                    <span>Waiting duration: {route.duration}</span>
+                    <span>Distance: {Math.round(route.distance) / 1000}km</span>
+                    <span>Waiting duration: {route.waiting_duration}</span>
                     <span>Activities: {route.activities.length}</span>
                     <span>Load: {route.vehicle_max_load * 100}%</span>
                   </div>
