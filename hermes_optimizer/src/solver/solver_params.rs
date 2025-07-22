@@ -56,7 +56,7 @@ impl Default for SolverParams {
             recreate: RecreateParams::default(),
             threads: Threads::Auto,
             noise_level: 0.1,
-            noise_probability: 0.3,
+            noise_probability: 0.0,
 
             alns_segment_iterations: 100,
             alns_reaction_factor: 0.7,
