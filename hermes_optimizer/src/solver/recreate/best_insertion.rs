@@ -73,7 +73,7 @@ impl BestInsertion {
         (min.clone(), max.clone())
     }
 
-    fn sort_unassigned_services(
+    pub fn sort_unassigned_services(
         &self,
         problem: &VehicleRoutingProblem,
         unassigned_services: &mut [ServiceId],

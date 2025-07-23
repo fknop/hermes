@@ -3,11 +3,16 @@ use std::sync::Arc;
 use rand::rngs::SmallRng;
 
 use crate::{
-    problem::vehicle_routing_problem::VehicleRoutingProblem,
+    problem::{travel_cost_matrix::Distance, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{
         constraints::constraint::Constraint,
         noise::NoiseGenerator,
-        recreate::{best_insertion::BestInsertion, recreate_context::RecreateContext},
+        recreate::{
+            best_insertion::BestInsertion,
+            recreate_context::RecreateContext,
+            recreate_solution::RecreateSolution,
+            regret_insertion::{self, RegretInsertion},
+        },
         working_solution::WorkingSolution,
     },
 };
@@ -39,6 +44,20 @@ pub fn construct_solution(
                 .unwrap()
         });
     }
+
+    services.sort_by_key(|&service| {
+        let distance_from_depot = problem
+            .vehicles()
+            .iter()
+            .filter_map(|vehicle| vehicle.depot_location_id())
+            .map(|depot_location_id| {
+                problem.travel_distance(depot_location_id, problem.service_location(service).id())
+            })
+            .sum::<Distance>()
+            / problem.vehicles().len() as Distance;
+
+        distance_from_depot.round() as i64
+    });
 
     BestInsertion::insert_services(
         &services,

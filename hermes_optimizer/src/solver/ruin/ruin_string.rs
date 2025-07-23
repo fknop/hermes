@@ -29,7 +29,7 @@ impl Default for RuinString {
         RuinString {
             k_min: 1,
             k_max: 6,
-            l_min: 1,
+            l_min: 3,
             l_max: 20,
         }
     }

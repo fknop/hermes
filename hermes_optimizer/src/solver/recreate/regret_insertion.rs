@@ -100,8 +100,8 @@ impl RecreateSolution for RegretInsertion {
                 let limit = self.k.min(potential_insertions.len());
 
                 // Regret = sum of differences between k-th best and the best
-                for i in 1..limit {
-                    regret_value += potential_insertions[i].0 - best_score;
+                for potential_insertion in potential_insertions.iter().skip(1).take(limit) {
+                    regret_value += potential_insertion.0 - best_score;
                 }
 
                 // 3. Check if this service has the highest regret so far

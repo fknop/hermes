@@ -55,8 +55,8 @@ impl Default for SolverParams {
             ruin: RuinParams::default(),
             recreate: RecreateParams::default(),
             threads: Threads::Auto,
-            noise_level: 0.1,
-            noise_probability: 0.0,
+            noise_level: 0.15,
+            noise_probability: 0.2,
 
             alns_segment_iterations: 100,
             alns_reaction_factor: 0.7,

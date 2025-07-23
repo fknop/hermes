@@ -9,6 +9,7 @@ import { POST_BODY, usePostRouting } from './usePostRouting.ts'
 import { PolylineLayer } from '../../PolylineLayer.tsx'
 import { ActivitiesLayer } from './ActivityLayer.tsx'
 import { colors } from './colors.ts'
+import { Temporal } from 'temporal-polyfill'
 
 export default function VehicleRoutingScreen() {
   const [postRouting, { loading, data }] = usePostRouting()
@@ -16,19 +17,28 @@ export default function VehicleRoutingScreen() {
 
   const polling = solution?.status === 'Running'
 
-  const geojson = solution
+  const geojson = solution?.solution
     ? transformSolutionToGeoJson(POST_BODY, solution)
     : null
 
-  const totalTime = solution?.solution.duration
+  const totalTime = solution?.solution?.duration
 
-  const totalDistance = solution?.solution.routes.reduce(
+  const totalDistance = solution?.solution?.routes.reduce(
     (acc, route) => acc + route.distance,
     0
   )
+  const totalTransportDuration = solution?.solution?.routes.reduce(
+    (acc, route) => acc.add(Temporal.Duration.from(route.transport_duration)),
+    Temporal.Duration.from({ seconds: 0 })
+  )
 
-  if (solution) {
-    console.log(totalTime, totalDistance / 1000, solution?.solution.score)
+  if (solution?.solution) {
+    console.log(
+      totalTime,
+      totalTransportDuration?.toLocaleString(),
+      totalDistance / 1000,
+      solution?.solution.score
+    )
   }
 
   return (
@@ -47,7 +57,7 @@ export default function VehicleRoutingScreen() {
             </Button>
 
             <div className="flex flex-col gap-1">
-              {solution?.solution.routes.map((route, index) => {
+              {solution?.solution?.routes.map((route, index) => {
                 return (
                   <div className="flex flex-col">
                     <span className="inline-flex items-center gap-2">
@@ -55,7 +65,7 @@ export default function VehicleRoutingScreen() {
                         className="h-4 w-4 rounded-full"
                         style={{
                           backgroundColor:
-                            colors[index % solution.solution.routes.length],
+                            colors[index % solution.solution!.routes.length],
                         }}
                       />
                       <span>Route {index + 1}</span>
@@ -75,7 +85,7 @@ export default function VehicleRoutingScreen() {
 
         {solution && (
           <>
-            {solution.solution.routes.map((route, index) => {
+            {solution.solution?.routes.map((route, index) => {
               return (
                 <Source
                   key={index}

@@ -37,6 +37,7 @@ pub enum ApiSolutionActivity {
 #[derive(Serialize)]
 pub struct ApiSolutionRoute {
     pub duration: SignedDuration,
+    pub transport_duration: SignedDuration,
     pub activities: Vec<ApiSolutionActivity>,
     pub distance: f64,
     pub total_demand: Capacity,

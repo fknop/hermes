@@ -231,6 +231,41 @@ impl WorkingSolutionRoute {
         end.duration_since(start)
     }
 
+    pub fn transport_duration(&self, problem: &VehicleRoutingProblem) -> SignedDuration {
+        let vehicle = self.vehicle(problem);
+        let mut transport_duration = SignedDuration::ZERO;
+
+        if let Some(depot_location_id) = vehicle.depot_location_id() {
+            if self.has_start(problem) {
+                transport_duration += problem.travel_time(
+                    depot_location_id,
+                    self.first().service(problem).location_id(),
+                );
+            }
+
+            if self.has_end(problem) {
+                transport_duration += problem.travel_time(
+                    self.last().service(problem).location_id(),
+                    depot_location_id,
+                );
+            }
+        }
+
+        for (index, activity) in self.activities.iter().enumerate() {
+            if index == 0 {
+                // Skip the first activity, as it is already counted with the depot
+                continue;
+            }
+
+            transport_duration += problem.travel_time(
+                self.activities[index - 1].service(problem).location_id(),
+                activity.service(problem).location_id(),
+            );
+        }
+
+        transport_duration
+    }
+
     pub fn distance(&self, problem: &VehicleRoutingProblem) -> f64 {
         let vehicle = self.vehicle(problem);
         let mut distance = 0.0;

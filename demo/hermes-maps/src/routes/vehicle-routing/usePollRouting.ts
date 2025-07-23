@@ -30,13 +30,14 @@ export type SolutionResponse = {
       distance: number
       vehicle_max_load: number
       duration: string
+      transport_duration: string
       total_demand: number[]
       waiting_duration: string
       vehicle_id: number
       activities: Activity[]
       polyline: GeoJSON.Feature<GeoJSON.LineString>
     }[]
-  }
+  } | null
 }
 
 export function usePollRouting({ jobId }: { jobId: string | null }) {

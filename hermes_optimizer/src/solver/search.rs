@@ -1,7 +1,8 @@
 use std::{sync::Arc, thread};
 
 use fxhash::FxHashMap;
-use jiff::{SignedDuration, Timestamp};
+use jiff::SignedDuration;
+use jiff::Timestamp;
 use parking_lot::{MappedRwLockReadGuard, RwLock, RwLockReadGuard};
 use rand::{Rng, SeedableRng, rngs::SmallRng, seq::IndexedRandom};
 use tracing::info;
@@ -167,7 +168,8 @@ impl Search {
                             if (iteration + 1) % 5000 == 0 {
                                 info!(
                                     thread = thread::current().name().unwrap_or("main"),
-                                    // weights = ?self.ruin_operators.read(),
+                                    ruin_weights = ?self.ruin_operators.read(),
+                                    recreate_weights = ?self.recreate_operators.read(),
                                     "Thread {}: Iteration {}/{}",
                                     thread_index,
                                     iteration + 1,
@@ -334,10 +336,17 @@ impl Search {
         if iteration_info.iteration > 0
             && iteration_info.iteration % self.params.alns_segment_iterations == 0
         {
-            let mut ruin_operators = self.ruin_operators.write();
-            for operator in ruin_operators.iter_mut() {
-                if let Some(ruin_score) = ruin_scores.scores.get(&operator.strategy) {
+            for operator in self.ruin_operators.write().iter_mut() {
+                if let Some(ruin_score) = ruin_scores.scores.get_mut(&operator.strategy) {
                     operator.update_weight(ruin_score, self.params.alns_reaction_factor);
+                    ruin_score.reset();
+                }
+            }
+
+            for operator in self.recreate_operators.write().iter_mut() {
+                if let Some(recreate_score) = recreate_scores.scores.get_mut(&operator.strategy) {
+                    operator.update_weight(recreate_score, self.params.alns_reaction_factor);
+                    recreate_score.reset();
                 }
             }
         }
@@ -346,11 +355,13 @@ impl Search {
     fn create_num_activities_to_remove(&self, rng: &mut SmallRng) -> usize {
         let ruin_minimum_ratio = self.params.ruin.ruin_minimum_ratio;
         let ruin_maximum_ratio = self.params.ruin.ruin_maximum_ratio;
-        let minimum_ruin_size =
-            (ruin_minimum_ratio * self.problem.services().len() as f64).ceil() as usize;
+        let minimum_ruin_size = ((ruin_minimum_ratio * self.problem.services().len() as f64).ceil()
+            as usize)
+            .max(self.params.ruin.ruin_minimum_size);
 
         let maximum_ruin_size =
-            (ruin_maximum_ratio * self.problem.services().len() as f64).floor() as usize;
+            ((ruin_maximum_ratio * self.problem.services().len() as f64).floor() as usize)
+                .min(self.params.ruin.ruin_maximum_size);
 
         rng.random_range(minimum_ruin_size..=maximum_ruin_size)
     }
@@ -426,6 +437,13 @@ struct RuinRecreateScoreEntry {
     pub iterations: usize,
 }
 
+impl RuinRecreateScoreEntry {
+    pub fn reset(&mut self) {
+        self.score = 0.0;
+        self.iterations = 0;
+    }
+}
+
 #[derive(Debug)]
 pub struct RuinOperator {
     pub strategy: RuinStrategy,
@@ -433,13 +451,15 @@ pub struct RuinOperator {
 }
 
 impl RuinOperator {
-    pub fn update_weight(&mut self, entry: &RuinRecreateScoreEntry, reaction_factor: f64) {
-        if entry.iterations == 0 {
-            self.weight *= (1.0 - reaction_factor);
+    fn update_weight(&mut self, entry: &RuinRecreateScoreEntry, reaction_factor: f64) {
+        let new_weight = if entry.iterations == 0 {
+            (1.0 - reaction_factor) * self.weight
         } else {
-            self.weight = (1.0 - reaction_factor) * self.weight
-                + reaction_factor * (entry.score / entry.iterations as f64);
-        }
+            (1.0 - reaction_factor) * self.weight
+                + reaction_factor * (entry.score / entry.iterations as f64)
+        };
+
+        self.weight = new_weight.max(0.05);
     }
 }
 
@@ -471,13 +491,15 @@ pub struct RecreateOperator {
 }
 
 impl RecreateOperator {
-    pub fn update_weight(&mut self, entry: &RuinRecreateScoreEntry, reaction_factor: f64) {
-        if entry.iterations == 0 {
-            self.weight *= (1.0 - reaction_factor);
+    fn update_weight(&mut self, entry: &RuinRecreateScoreEntry, reaction_factor: f64) {
+        let new_weight = if entry.iterations == 0 {
+            (1.0 - reaction_factor) * self.weight
         } else {
-            self.weight = (1.0 - reaction_factor) * self.weight
-                + reaction_factor * (entry.score / entry.iterations as f64);
-        }
+            (1.0 - reaction_factor) * self.weight
+                + reaction_factor * (entry.score / entry.iterations as f64)
+        };
+
+        self.weight = new_weight.max(0.05);
     }
 }
 

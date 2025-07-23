@@ -12,8 +12,9 @@ pub struct SchrimpfAcceptor {
 impl SchrimpfAcceptor {
     pub fn new() -> Self {
         SchrimpfAcceptor {
-            initial_threshold: 1000.0,
-            alpha: 0.1,
+            // TODO: compute this initial value based on the problem size
+            initial_threshold: 10000.0,
+            alpha: 0.15,
         }
     }
 

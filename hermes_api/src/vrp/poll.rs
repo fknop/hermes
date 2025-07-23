@@ -137,6 +137,7 @@ fn transform_solution(accepted_solution: &AcceptedSolution, hermes: &Hermes) -> 
             ApiSolutionRoute {
                 distance: route.distance(problem),
                 duration: route.duration(problem),
+                transport_duration: route.transport_duration(problem),
                 total_demand: route.total_demand().clone(),
                 vehicle_id: route.vehicle_id(),
                 waiting_duration: route.total_waiting_duration(),

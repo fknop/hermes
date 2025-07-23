@@ -11,50 +11,50 @@ pub struct TransportCostConstraint;
 
 impl GlobalConstraint for TransportCostConstraint {
     fn compute_score(&self, solution: &WorkingSolution) -> Score {
-        let problem = solution.problem();
-        let mut cost = 0.0;
-        for route in solution.routes() {
-            cost += route
-                .end(problem)
-                .duration_since(route.start(problem))
-                .as_secs_f64()
-        }
-
         // let problem = solution.problem();
         // let mut cost = 0.0;
         // for route in solution.routes() {
-        //     let vehicle = route.vehicle(problem);
-
-        //     let activities = route.activities();
-
-        //     if let Some(depot_location_id) = vehicle.depot_location_id() {
-        //         cost += problem.travel_cost(
-        //             depot_location_id,
-        //             activities[0].service(problem).location_id(),
-        //         );
-
-        //         if vehicle.should_return_to_depot() {
-        //             cost += problem.travel_cost(
-        //                 activities[activities.len() - 1]
-        //                     .service(problem)
-        //                     .location_id(),
-        //                 depot_location_id,
-        //             )
-        //         }
-        //     }
-
-        //     for (index, activity) in activities.iter().enumerate() {
-        //         if index == 0 {
-        //             // Skip the first activity, as it is already counted with the depot
-        //             continue;
-        //         }
-
-        //         cost += problem.travel_cost(
-        //             activities[index - 1].service(problem).location_id(),
-        //             activity.service(problem).location_id(),
-        //         )
-        //     }
+        //     cost += route
+        //         .end(problem)
+        //         .duration_since(route.start(problem))
+        //         .as_secs_f64()
         // }
+
+        let problem = solution.problem();
+        let mut cost = 0.0;
+        for route in solution.routes() {
+            let vehicle = route.vehicle(problem);
+
+            let activities = route.activities();
+
+            if let Some(depot_location_id) = vehicle.depot_location_id() {
+                cost += problem.travel_cost(
+                    depot_location_id,
+                    activities[0].service(problem).location_id(),
+                );
+
+                if vehicle.should_return_to_depot() {
+                    cost += problem.travel_cost(
+                        activities[activities.len() - 1]
+                            .service(problem)
+                            .location_id(),
+                        depot_location_id,
+                    )
+                }
+            }
+
+            for (index, activity) in activities.iter().enumerate() {
+                if index == 0 {
+                    // Skip the first activity, as it is already counted with the depot
+                    continue;
+                }
+
+                cost += problem.travel_cost(
+                    activities[index - 1].service(problem).location_id(),
+                    activity.service(problem).location_id(),
+                )
+            }
+        }
 
         Score::soft(cost)
     }
