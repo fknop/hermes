@@ -52,9 +52,9 @@ impl Capacity {
         }
         let mut normalized = vec![0.0; self.0.len()];
 
-        for i in 0..self.0.len() {
+        (0..self.0.len()).for_each(|i| {
             normalized[i] = normalize(self.0[i], min.0[i], max.0[i]);
-        }
+        });
 
         normalized
     }

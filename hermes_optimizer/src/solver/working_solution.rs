@@ -37,6 +37,42 @@ impl WorkingSolution {
         }
     }
 
+    /// To check if two working solutions are identical, we compare:
+    /// 1) the number of routes
+    /// 2) the vehicle IDs of each route
+    /// 3) the service IDs of each activity in the routes
+    ///
+    /// Not perfect as routes that are not in the same order may not match properly
+    pub fn is_identical(&self, other: &WorkingSolution) -> bool {
+        if self.routes.len() != other.routes.len() {
+            return false;
+        }
+
+        for (route, other_route) in self.routes.iter().zip(&other.routes) {
+            if route.vehicle_id != other_route.vehicle_id {
+                return false;
+            }
+
+            if route.activities.len() != other_route.activities.len() {
+                return false;
+            }
+
+            if !route
+                .activities
+                .iter()
+                .map(|activity| activity.service_id)
+                .eq(other_route
+                    .activities
+                    .iter()
+                    .map(|activity| activity.service_id))
+            {
+                return false;
+            }
+        }
+
+        true
+    }
+
     pub fn has_available_vehicle(&self) -> bool {
         self.problem.vehicles().len() > self.routes.len()
     }
@@ -430,6 +466,7 @@ impl WorkingSolutionRoute {
         self.activities.insert(position, activity);
 
         // Update the arrival times and departure times of subsequent activities
+
         for i in position + 1..self.activities().len() {
             let previous_service_id = self.activities[i - 1].service_id;
             let previous_departure_time = self.activities[i - 1].departure_time;
@@ -641,18 +678,31 @@ pub fn compute_insertion_context<'a>(
 
     match insertion {
         Insertion::ExistingRoute(context) => {
-            let route = solution.routes.get(context.route_id).unwrap();
+            let route = &solution.routes[context.route_id];
 
-            for i in 0..context.position {
-                activities.push({
-                    ActivityInsertionContext {
-                        service_id: route.activities[i].service_id,
-                        arrival_time: route.activities[i].arrival_time,
-                        departure_time: route.activities[i].departure_time,
-                        waiting_duration: route.activities[i].waiting_duration,
-                    }
-                })
-            }
+            activities.extend(
+                route
+                    .activities
+                    .iter()
+                    .take(context.position)
+                    .map(|activity| ActivityInsertionContext {
+                        service_id: activity.service_id,
+                        arrival_time: activity.arrival_time,
+                        departure_time: activity.departure_time,
+                        waiting_duration: activity.waiting_duration,
+                    }),
+            );
+
+            // for i in 0..context.position {
+            //     activities.push({
+            //         ActivityInsertionContext {
+            //             service_id: route.activities[i].service_id,
+            //             arrival_time: route.activities[i].arrival_time,
+            //             departure_time: route.activities[i].departure_time,
+            //             waiting_duration: route.activities[i].waiting_duration,
+            //         }
+            //     })
+            // }
 
             let mut arrival_time = if route.is_empty() || context.position == 0 {
                 compute_first_activity_arrival_time(problem, route.vehicle_id, context.service_id)

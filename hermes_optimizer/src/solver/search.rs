@@ -273,61 +273,69 @@ impl Search {
                 max_solutions: self.params.max_solutions,
             },
         ) {
-            guard.with_upgraded(|guard| {
-                let is_best = guard.is_empty() || score < guard[0].score;
+            let is_duplicate = guard.iter().any(|accepted_solution| {
+                accepted_solution.score == score
+                    && accepted_solution.solution.is_identical(&solution)
+            });
 
-                // Evict worst
-                if guard.len() + 1 > self.params.max_solutions {
-                    guard.pop();
-                }
+            let is_best = guard.is_empty() || score < guard[0].score;
 
-                guard.push(AcceptedSolution {
-                    solution,
-                    score,
-                    score_analysis,
-                });
-                guard.sort_by(|a, b| a.score.cmp(&b.score));
-
-                if is_best {
-                    info!(
-                        thread = thread::current().name().unwrap_or("main"),
-                        "Score: {:?}", guard[0].score_analysis,
-                    );
-                    info!("Vehicles {:?}", guard[0].solution.routes().len());
-
-                    if let Some(callback) = self.on_best_solution_handler.as_ref() {
-                        callback(&guard[0]);
+            // Don't store it if it's a duplicate
+            if !is_duplicate {
+                guard.with_upgraded(|guard| {
+                    // Evict worst
+                    if guard.len() + 1 > self.params.max_solutions {
+                        guard.pop();
                     }
-                }
 
-                // Update the scores
-                if is_best {
-                    ruin_scores
-                        .update_score(iteration_info.ruin_strategy, self.params.alns_best_factor);
-                    recreate_scores.update_score(
-                        iteration_info.recreate_strategy,
-                        self.params.alns_best_factor,
-                    );
-                } else if score < iteration_info.current_score {
-                    ruin_scores.update_score(
-                        iteration_info.ruin_strategy,
-                        self.params.alns_improvement_factor,
-                    );
-                    recreate_scores.update_score(
-                        iteration_info.recreate_strategy,
-                        self.params.alns_best_factor,
-                    );
-                } else {
-                    ruin_scores.update_score(
-                        iteration_info.ruin_strategy,
-                        self.params.alns_accepted_worst_factor,
-                    );
-                    recreate_scores.update_score(
-                        iteration_info.recreate_strategy,
-                        self.params.alns_accepted_worst_factor,
-                    );
-                }
-            })
+                    guard.push(AcceptedSolution {
+                        solution,
+                        score,
+                        score_analysis,
+                    });
+                    guard.sort_by(|a, b| a.score.cmp(&b.score));
+
+                    if is_best {
+                        info!(
+                            thread = thread::current().name().unwrap_or("main"),
+                            "Score: {:?}", guard[0].score_analysis,
+                        );
+                        info!("Vehicles {:?}", guard[0].solution.routes().len());
+
+                        if let Some(callback) = self.on_best_solution_handler.as_ref() {
+                            callback(&guard[0]);
+                        }
+                    }
+                });
+            }
+
+            // Update the scores
+            if is_best {
+                ruin_scores
+                    .update_score(iteration_info.ruin_strategy, self.params.alns_best_factor);
+                recreate_scores.update_score(
+                    iteration_info.recreate_strategy,
+                    self.params.alns_best_factor,
+                );
+            } else if score < iteration_info.current_score {
+                ruin_scores.update_score(
+                    iteration_info.ruin_strategy,
+                    self.params.alns_improvement_factor,
+                );
+                recreate_scores.update_score(
+                    iteration_info.recreate_strategy,
+                    self.params.alns_best_factor,
+                );
+            } else {
+                ruin_scores.update_score(
+                    iteration_info.ruin_strategy,
+                    self.params.alns_accepted_worst_factor,
+                );
+                recreate_scores.update_score(
+                    iteration_info.recreate_strategy,
+                    self.params.alns_accepted_worst_factor,
+                );
+            }
         } else {
             ruin_scores.update_score(iteration_info.ruin_strategy, 0.0);
             recreate_scores.update_score(iteration_info.recreate_strategy, 0.0);
