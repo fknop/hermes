@@ -1,7 +1,6 @@
 use std::{sync::Arc, thread};
 
 use fxhash::FxHashMap;
-use jiff::SignedDuration;
 use jiff::Timestamp;
 use parking_lot::{MappedRwLockReadGuard, RwLock, RwLockReadGuard};
 use rand::{Rng, SeedableRng, rngs::SmallRng, seq::IndexedRandom};
@@ -32,7 +31,9 @@ use super::{
     },
     ruin::{ruin_context::RuinContext, ruin_solution::RuinSolution, ruin_strategy::RuinStrategy},
     score::{Score, ScoreAnalysis},
-    solver_params::{SolverAcceptorStrategy, SolverParams, SolverSelectorStrategy, Threads},
+    solver_params::{
+        SolverAcceptorStrategy, SolverParams, SolverSelectorStrategy, Termination, Threads,
+    },
     working_solution::WorkingSolution,
 };
 
@@ -46,8 +47,7 @@ pub struct Search {
     on_best_solution_handler: Arc<Option<fn(&AcceptedSolution)>>,
     noise_generator: NoiseGenerator,
 
-    ruin_operators: Arc<RwLock<Vec<RuinOperator>>>,
-    recreate_operators: Arc<RwLock<Vec<RecreateOperator>>>,
+    operator_weights: Arc<RwLock<OperatorWeights>>,
 }
 
 impl Search {
@@ -56,6 +56,12 @@ impl Search {
         problem: VehicleRoutingProblem,
         constraints: Vec<Constraint>,
     ) -> Self {
+        if params.terminations.is_empty() {
+            panic!(
+                "At least one termination condition must be specified in the solver parameters."
+            );
+        }
+
         let solution_selector = match params.solver_selector {
             SolverSelectorStrategy::SelectBest => SolutionSelector::SelectBest(SelectBestSelector),
             SolverSelectorStrategy::SelectRandom => {
@@ -81,28 +87,7 @@ impl Search {
             solution_selector,
             solution_acceptor,
             on_best_solution_handler: Arc::new(None),
-            ruin_operators: Arc::new(RwLock::new(
-                params
-                    .ruin
-                    .ruin_strategies
-                    .iter()
-                    .map(|&strategy| RuinOperator {
-                        strategy,
-                        weight: 1.0,
-                    })
-                    .collect(),
-            )),
-            recreate_operators: Arc::new(RwLock::new(
-                params
-                    .recreate
-                    .recreate_strategies
-                    .iter()
-                    .map(|&strategy| RecreateOperator {
-                        strategy,
-                        weight: 1.0,
-                    })
-                    .collect(),
-            )),
+            operator_weights: Arc::new(RwLock::new(OperatorWeights::new(&params))),
             params,
         }
     }
@@ -113,34 +98,6 @@ impl Search {
 
     pub fn best_solution(&self) -> Option<MappedRwLockReadGuard<'_, AcceptedSolution>> {
         RwLockReadGuard::try_map(self.best_solutions.read(), |solutions| solutions.first()).ok()
-    }
-
-    fn create_initial_ruin_scores(&self) -> RuinScores {
-        let mut scores = FxHashMap::default();
-        for operator in self.ruin_operators.read().iter() {
-            scores.insert(
-                operator.strategy,
-                RuinRecreateScoreEntry {
-                    score: 0.0,
-                    iterations: 0,
-                },
-            );
-        }
-        RuinScores { scores }
-    }
-
-    fn create_initial_recreate_scores(&self) -> RecreateScores {
-        let mut scores = FxHashMap::default();
-        for operator in self.recreate_operators.read().iter() {
-            scores.insert(
-                operator.strategy,
-                RuinRecreateScoreEntry {
-                    score: 0.0,
-                    iterations: 0,
-                },
-            );
-        }
-        RecreateScores { scores }
     }
 
     pub fn run(&self) {
@@ -154,46 +111,53 @@ impl Search {
                 let best_solutions = Arc::clone(&self.best_solutions);
                 // let on_best_solution_handler = Arc::clone(&self.on_best_solution_handler);
 
+                let max_iterations = self
+                    .params
+                    .terminations
+                    .iter()
+                    .find(|termination| matches!(termination, Termination::Iterations(_)))
+                    .map(|termination| {
+                        if let Termination::Iterations(max_iterations) = termination {
+                            *max_iterations
+                        } else {
+                            0
+                        }
+                    });
+
                 let mut thread_rng = SmallRng::from_rng(&mut rng);
-                let max_iterations = self.params.termination_maximum_iterations;
 
                 let builder = thread::Builder::new().name(thread_index.to_string());
 
-                let mut ruin_scores = self.create_initial_ruin_scores();
-                let mut recreate_scores = self.create_initial_recreate_scores();
+                let operator_scores = OperatorScores::new(&self.params);
                 builder
                     .spawn_scoped(s, move || {
-                        let start = Timestamp::now();
-                        for iteration in 0..max_iterations {
-                            if (iteration + 1) % 5000 == 0 {
+                        let mut state = ThreadedSearchState {
+                            start: Timestamp::now(),
+                            iterations_without_improvement: 0,
+                            operator_scores,
+                            best_solutions,
+                            iteration: 0,
+                            max_iterations,
+                        };
+
+                        loop {
+                            state.iteration += 1;
+
+                            if (state.iteration + 1) % 5000 == 0 {
                                 info!(
                                     thread = thread::current().name().unwrap_or("main"),
-                                    ruin_weights = ?self.ruin_operators.read(),
-                                    recreate_weights = ?self.recreate_operators.read(),
+                                    weights = ?self.operator_weights.read(),
                                     "Thread {}: Iteration {}/{}",
                                     thread_index,
-                                    iteration + 1,
-                                    max_iterations
+                                    state.iteration + 1,
+                                    max_iterations.map(|max| max.to_string()).unwrap_or(String::from("N/A"))
                                 );
                             }
 
-                            self.perform_iteration(
-                                &mut thread_rng,
-                                &best_solutions,
-                                &mut ruin_scores,
-                                &mut recreate_scores,
-                                iteration,
-                            );
+                            self.perform_iteration(&mut state, &mut thread_rng);
 
-                            let search_duration = Timestamp::now().duration_since(start);
-                            if let Some(termination_maximum_duration) =
-                                self.params.termination_maximum_duration
-                                && search_duration > termination_maximum_duration
-                            {
-                                info!(
-                                    thread = thread::current().name().unwrap_or("main"),
-                                    "Thread {} stopped after {} iterations because the maximum duration was reached.", thread_index, iteration + 1
-                                );
+                            let should_terminate = self.should_terminate(&state);
+                            if should_terminate {
                                 break;
                             }
                         }
@@ -203,16 +167,39 @@ impl Search {
         });
     }
 
-    fn perform_iteration(
-        &self,
-        rng: &mut SmallRng,
-        best_solutions: &Arc<RwLock<Vec<AcceptedSolution>>>,
-        ruin_scores: &mut RuinScores,
-        recreate_scores: &mut RecreateScores,
-        iteration: usize,
-    ) {
+    fn check_termination(&self, state: &ThreadedSearchState, termination: &Termination) -> bool {
+        match *termination {
+            Termination::Iterations(max_iterations) => {
+                state.iterations_without_improvement >= max_iterations
+            }
+            Termination::Duration(max_duration) => {
+                Timestamp::now().duration_since(state.start) > max_duration
+            }
+            Termination::IterationsWithoutImprovement(max_iterations_without_improvement) => {
+                state.iterations_without_improvement >= max_iterations_without_improvement
+            }
+        }
+    }
+
+    fn should_terminate(&self, state: &ThreadedSearchState) -> bool {
+        self.params.terminations.iter().any(|termination| {
+            if self.check_termination(state, termination) {
+                info!(
+                    thread = thread::current().name().unwrap_or("main"),
+                    "Thread {}: Termination condition met: {:?}",
+                    thread::current().name().unwrap_or("main"),
+                    termination
+                );
+                true
+            } else {
+                false
+            }
+        })
+    }
+
+    fn perform_iteration(&self, state: &mut ThreadedSearchState, rng: &mut SmallRng) {
         let (mut working_solution, current_score) = {
-            let solutions_guard = best_solutions.read();
+            let solutions_guard = state.best_solutions.read();
             if !solutions_guard.is_empty()
                 && let Some(AcceptedSolution {
                     solution, score, ..
@@ -239,11 +226,9 @@ impl Search {
 
         self.update_solutions(
             working_solution,
-            best_solutions,
-            ruin_scores,
-            recreate_scores,
+            state,
             IterationInfo {
-                iteration,
+                iteration: state.iteration,
                 ruin_strategy,
                 recreate_strategy,
                 current_score,
@@ -254,14 +239,12 @@ impl Search {
     fn update_solutions(
         &self,
         solution: WorkingSolution,
-        best_solutions: &Arc<RwLock<Vec<AcceptedSolution>>>,
-        ruin_scores: &mut RuinScores,
-        recreate_scores: &mut RecreateScores,
+        state: &mut ThreadedSearchState,
         iteration_info: IterationInfo,
     ) {
         let (score, score_analysis) = self.compute_solution_score(&solution);
 
-        let mut guard = best_solutions.upgradable_read();
+        let mut guard = state.best_solutions.upgradable_read();
 
         if self.solution_acceptor.accept(
             &guard,
@@ -269,7 +252,7 @@ impl Search {
             &score,
             AcceptSolutionContext {
                 iteration: iteration_info.iteration,
-                max_iterations: self.params.termination_maximum_iterations,
+                max_iterations: state.max_iterations,
                 max_solutions: self.params.max_solutions,
             },
         ) {
@@ -279,6 +262,11 @@ impl Search {
             });
 
             let is_best = guard.is_empty() || score < guard[0].score;
+            if !is_best {
+                state.iterations_without_improvement += 1;
+            } else {
+                state.iterations_without_improvement = 0;
+            }
 
             // Don't store it if it's a duplicate
             if !is_duplicate {
@@ -311,48 +299,61 @@ impl Search {
 
             // Update the scores
             if is_best {
-                ruin_scores
-                    .update_score(iteration_info.ruin_strategy, self.params.alns_best_factor);
-                recreate_scores.update_score(
+                state
+                    .operator_scores
+                    .update_ruin_score(iteration_info.ruin_strategy, self.params.alns_best_factor);
+                state.operator_scores.update_recreate_score(
                     iteration_info.recreate_strategy,
                     self.params.alns_best_factor,
                 );
             } else if score < iteration_info.current_score {
-                ruin_scores.update_score(
+                state.operator_scores.update_ruin_score(
                     iteration_info.ruin_strategy,
                     self.params.alns_improvement_factor,
                 );
-                recreate_scores.update_score(
+                state.operator_scores.update_recreate_score(
                     iteration_info.recreate_strategy,
-                    self.params.alns_best_factor,
+                    self.params.alns_improvement_factor,
                 );
             } else {
-                ruin_scores.update_score(
+                state.operator_scores.update_ruin_score(
                     iteration_info.ruin_strategy,
                     self.params.alns_accepted_worst_factor,
                 );
-                recreate_scores.update_score(
+                state.operator_scores.update_recreate_score(
                     iteration_info.recreate_strategy,
                     self.params.alns_accepted_worst_factor,
                 );
             }
         } else {
-            ruin_scores.update_score(iteration_info.ruin_strategy, 0.0);
-            recreate_scores.update_score(iteration_info.recreate_strategy, 0.0);
+            state
+                .operator_scores
+                .update_ruin_score(iteration_info.ruin_strategy, 0.0);
+            state
+                .operator_scores
+                .update_recreate_score(iteration_info.recreate_strategy, 0.0);
         }
 
         if iteration_info.iteration > 0
             && iteration_info.iteration % self.params.alns_segment_iterations == 0
         {
-            for operator in self.ruin_operators.write().iter_mut() {
-                if let Some(ruin_score) = ruin_scores.scores.get_mut(&operator.strategy) {
+            for operator in self.operator_weights.write().ruin.iter_mut() {
+                if let Some(ruin_score) = state
+                    .operator_scores
+                    .ruin_scores
+                    .get_mut(&operator.strategy)
+                {
                     operator.update_weight(ruin_score, self.params.alns_reaction_factor);
                     ruin_score.reset();
                 }
             }
 
-            for operator in self.recreate_operators.write().iter_mut() {
-                if let Some(recreate_score) = recreate_scores.scores.get_mut(&operator.strategy) {
+            for operator in self.operator_weights.write().recreate.iter_mut() {
+                if let Some(recreate_score) = state
+                    .operator_scores
+                    .recreate_scores
+                    .get_mut(&operator.strategy)
+                {
                     operator.update_weight(recreate_score, self.params.alns_reaction_factor);
                     recreate_score.reset();
                 }
@@ -389,11 +390,7 @@ impl Search {
     }
 
     fn select_ruin_strategy(&self, rng: &mut SmallRng) -> RuinStrategy {
-        self.ruin_operators
-            .read()
-            .choose_weighted(rng, |operator| operator.weight)
-            .map(|operator| operator.strategy)
-            .expect("No ruin strategy configured on solver")
+        self.operator_weights.read().select_ruin_strategy(rng)
     }
 
     fn recreate(&self, solution: &mut WorkingSolution, rng: &mut SmallRng) -> RecreateStrategy {
@@ -411,11 +408,7 @@ impl Search {
     }
 
     fn select_recreate_strategy(&self, rng: &mut SmallRng) -> RecreateStrategy {
-        self.recreate_operators
-            .read()
-            .choose_weighted(rng, |operator| operator.weight)
-            .map(|operator| operator.strategy)
-            .expect("No recreate strategy configured on solver")
+        self.operator_weights.read().select_recreate_strategy(rng)
     }
 
     fn compute_solution_score(&self, solution: &WorkingSolution) -> (Score, ScoreAnalysis) {
@@ -440,12 +433,67 @@ impl Search {
     }
 }
 
-struct RuinRecreateScoreEntry {
+#[derive(Debug)]
+struct OperatorWeights {
+    ruin: Vec<Operator<RuinStrategy>>,
+    recreate: Vec<Operator<RecreateStrategy>>,
+}
+
+impl OperatorWeights {
+    fn new(params: &SolverParams) -> Self {
+        let ruin = params
+            .ruin
+            .ruin_strategies
+            .iter()
+            .map(|&strategy| Operator {
+                strategy,
+                weight: 1.0,
+            })
+            .collect();
+
+        let recreate = params
+            .recreate
+            .recreate_strategies
+            .iter()
+            .map(|&strategy| Operator {
+                strategy,
+                weight: 1.0,
+            })
+            .collect();
+
+        OperatorWeights { ruin, recreate }
+    }
+
+    fn select_ruin_strategy(&self, rng: &mut SmallRng) -> RuinStrategy {
+        self.ruin
+            .choose_weighted(rng, |operator| operator.weight)
+            .map(|operator| operator.strategy)
+            .expect("No ruin strategy configured on solver")
+    }
+
+    fn select_recreate_strategy(&self, rng: &mut SmallRng) -> RecreateStrategy {
+        self.recreate
+            .choose_weighted(rng, |operator| operator.weight)
+            .map(|operator| operator.strategy)
+            .expect("No recreate strategy configured on solver")
+    }
+
+    fn reset(&mut self) {
+        for operator in self.ruin.iter_mut() {
+            operator.reset();
+        }
+        for operator in self.recreate.iter_mut() {
+            operator.reset();
+        }
+    }
+}
+
+struct ScoreEntry {
     pub score: f64,
     pub iterations: usize,
 }
 
-impl RuinRecreateScoreEntry {
+impl ScoreEntry {
     pub fn reset(&mut self) {
         self.score = 0.0;
         self.iterations = 0;
@@ -453,13 +501,13 @@ impl RuinRecreateScoreEntry {
 }
 
 #[derive(Debug)]
-pub struct RuinOperator {
-    pub strategy: RuinStrategy,
+pub struct Operator<T> {
+    pub strategy: T,
     pub weight: f64,
 }
 
-impl RuinOperator {
-    fn update_weight(&mut self, entry: &RuinRecreateScoreEntry, reaction_factor: f64) {
+impl<T> Operator<T> {
+    fn update_weight(&mut self, entry: &ScoreEntry, reaction_factor: f64) {
         let new_weight = if entry.iterations == 0 {
             (1.0 - reaction_factor) * self.weight
         } else {
@@ -469,61 +517,78 @@ impl RuinOperator {
 
         self.weight = new_weight.max(0.05);
     }
+
+    fn reset(&mut self) {
+        self.weight = 1.0;
+    }
 }
 
-struct RuinScores {
-    pub scores: FxHashMap<RuinStrategy, RuinRecreateScoreEntry>,
+struct OperatorScores {
+    ruin_scores: FxHashMap<RuinStrategy, ScoreEntry>,
+    recreate_scores: FxHashMap<RecreateStrategy, ScoreEntry>,
 }
 
-impl RuinScores {
-    pub fn update_score(&mut self, strategy: RuinStrategy, score: f64) {
-        if let Some(entry) = self.scores.get_mut(&strategy) {
+impl OperatorScores {
+    pub fn new(params: &SolverParams) -> Self {
+        let ruin_scores = params
+            .ruin
+            .ruin_strategies
+            .iter()
+            .map(|&strategy| {
+                (
+                    strategy,
+                    ScoreEntry {
+                        score: 0.0,
+                        iterations: 0,
+                    },
+                )
+            })
+            .collect();
+
+        let recreate_scores = params
+            .recreate
+            .recreate_strategies
+            .iter()
+            .map(|&strategy| {
+                (
+                    strategy,
+                    ScoreEntry {
+                        score: 0.0,
+                        iterations: 0,
+                    },
+                )
+            })
+            .collect();
+
+        OperatorScores {
+            ruin_scores,
+            recreate_scores,
+        }
+    }
+
+    pub fn update_ruin_score(&mut self, strategy: RuinStrategy, score: f64) {
+        if let Some(entry) = self.ruin_scores.get_mut(&strategy) {
             entry.score += score;
             entry.iterations += 1;
         } else {
-            self.scores.insert(
+            self.ruin_scores.insert(
                 strategy,
-                RuinRecreateScoreEntry {
+                ScoreEntry {
                     score,
                     iterations: 1,
                 },
             );
         }
     }
-}
 
-#[derive(Debug)]
-pub struct RecreateOperator {
-    pub strategy: RecreateStrategy,
-    pub weight: f64,
-}
-
-impl RecreateOperator {
-    fn update_weight(&mut self, entry: &RuinRecreateScoreEntry, reaction_factor: f64) {
-        let new_weight = if entry.iterations == 0 {
-            (1.0 - reaction_factor) * self.weight
-        } else {
-            (1.0 - reaction_factor) * self.weight
-                + reaction_factor * (entry.score / entry.iterations as f64)
-        };
-
-        self.weight = new_weight.max(0.05);
-    }
-}
-
-struct RecreateScores {
-    pub scores: FxHashMap<RecreateStrategy, RuinRecreateScoreEntry>,
-}
-
-impl RecreateScores {
-    pub fn update_score(&mut self, strategy: RecreateStrategy, score: f64) {
-        if let Some(entry) = self.scores.get_mut(&strategy) {
+    pub fn update_recreate_score(&mut self, strategy: RecreateStrategy, score: f64) {
+        if let Some(entry) = self.recreate_scores.get_mut(&strategy) {
             entry.score += score;
             entry.iterations += 1;
         } else {
-            self.scores.insert(
+            self.recreate_scores.insert(
                 strategy,
-                RuinRecreateScoreEntry {
+                ScoreEntry {
                     score,
                     iterations: 1,
                 },
@@ -537,4 +602,13 @@ struct IterationInfo {
     pub ruin_strategy: RuinStrategy,
     pub recreate_strategy: RecreateStrategy,
     pub current_score: Score,
+}
+
+struct ThreadedSearchState {
+    start: Timestamp,
+    iterations_without_improvement: usize,
+    operator_scores: OperatorScores,
+    best_solutions: Arc<RwLock<Vec<AcceptedSolution>>>,
+    iteration: usize,
+    max_iterations: Option<usize>,
 }

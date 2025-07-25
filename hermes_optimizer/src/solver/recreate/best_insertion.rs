@@ -155,7 +155,7 @@ impl BestInsertion {
 
             let routes = solution.routes();
             for (route_id, route) in routes.iter().enumerate() {
-                for position in 0..route.activities().len() {
+                for position in 0..=route.activities().len() {
                     let insertion = Insertion::ExistingRoute(ExistingRouteInsertion {
                         route_id,
                         service_id,

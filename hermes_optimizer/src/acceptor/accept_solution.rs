@@ -4,7 +4,7 @@ use crate::solver::{
 
 pub struct AcceptSolutionContext {
     pub iteration: usize,
-    pub max_iterations: usize,
+    pub max_iterations: Option<usize>,
     pub max_solutions: usize,
 }
 

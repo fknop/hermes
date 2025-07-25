@@ -4,8 +4,7 @@ use super::{recreate::recreate_params::RecreateParams, ruin::ruin_params::RuinPa
 
 #[derive(Clone, Debug)]
 pub struct SolverParams {
-    pub termination_maximum_iterations: usize,
-    pub termination_maximum_duration: Option<SignedDuration>,
+    pub terminations: Vec<Termination>,
     pub solver_acceptor: SolverAcceptorStrategy,
     pub solver_selector: SolverSelectorStrategy,
 
@@ -23,6 +22,13 @@ pub struct SolverParams {
     pub alns_best_factor: f64,
     pub alns_improvement_factor: f64,
     pub alns_accepted_worst_factor: f64,
+}
+
+#[derive(Clone, Debug)]
+pub enum Termination {
+    Duration(SignedDuration),
+    Iterations(usize),
+    IterationsWithoutImprovement(usize),
 }
 
 #[derive(Clone, Debug)]
@@ -47,8 +53,11 @@ pub enum SolverSelectorStrategy {
 impl Default for SolverParams {
     fn default() -> Self {
         Self {
-            termination_maximum_iterations: 100000,
-            termination_maximum_duration: Some(SignedDuration::from_mins(2)),
+            terminations: vec![
+                Termination::IterationsWithoutImprovement(5000),
+                Termination::Iterations(100000),
+                Termination::Duration(SignedDuration::from_mins(2)),
+            ],
             max_solutions: 30,
             solver_acceptor: SolverAcceptorStrategy::Schrimpf,
             solver_selector: SolverSelectorStrategy::SelectRandom,
@@ -59,9 +68,9 @@ impl Default for SolverParams {
             noise_probability: 0.2,
 
             alns_segment_iterations: 100,
-            alns_reaction_factor: 0.7,
+            alns_reaction_factor: 0.8,
             alns_best_factor: 33.0,
-            alns_improvement_factor: 9.0,
+            alns_improvement_factor: 20.0,
             alns_accepted_worst_factor: 13.0,
         }
     }

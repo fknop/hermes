@@ -7,12 +7,7 @@ use crate::{
     solver::{
         constraints::constraint::Constraint,
         noise::NoiseGenerator,
-        recreate::{
-            best_insertion::BestInsertion,
-            recreate_context::RecreateContext,
-            recreate_solution::RecreateSolution,
-            regret_insertion::{self, RegretInsertion},
-        },
+        recreate::{best_insertion::BestInsertion, recreate_context::RecreateContext},
         working_solution::WorkingSolution,
     },
 };
@@ -46,17 +41,22 @@ pub fn construct_solution(
     }
 
     services.sort_by_key(|&service| {
-        let distance_from_depot = problem
+        let depot_id = problem
             .vehicles()
             .iter()
             .filter_map(|vehicle| vehicle.depot_location_id())
-            .map(|depot_location_id| {
-                problem.travel_distance(depot_location_id, problem.service_location(service).id())
-            })
-            .sum::<Distance>()
-            / problem.vehicles().len() as Distance;
+            .take(1)
+            .next();
 
-        distance_from_depot.round() as i64
+        if let Some(depot_id) = depot_id {
+            let depot_location = problem.location(depot_id);
+            let service_location = problem.service_location(service);
+            let angle = depot_location.bearing(service_location);
+
+            (angle * 1000.0).round() as i64
+        } else {
+            0 // Fallback if no depot is found
+        }
     });
 
     BestInsertion::insert_services(
