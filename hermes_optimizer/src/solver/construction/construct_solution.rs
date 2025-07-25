@@ -3,7 +3,7 @@ use std::sync::Arc;
 use rand::rngs::SmallRng;
 
 use crate::{
-    problem::{travel_cost_matrix::Distance, vehicle_routing_problem::VehicleRoutingProblem},
+    problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
         constraints::constraint::Constraint,
         noise::NoiseGenerator,
@@ -40,24 +40,17 @@ pub fn construct_solution(
         });
     }
 
-    services.sort_by_key(|&service| {
-        let depot_id = problem
-            .vehicles()
-            .iter()
-            .filter_map(|vehicle| vehicle.depot_location_id())
-            .take(1)
-            .next();
+    // services.sort_by_key(|&service| {
+    //     if let Some(depot_id) = depot_id {
+    //         let depot_location = problem.location(depot_id);
+    //         let service_location = problem.service_location(service);
+    //         let angle = depot_location.bearing(service_location);
 
-        if let Some(depot_id) = depot_id {
-            let depot_location = problem.location(depot_id);
-            let service_location = problem.service_location(service);
-            let angle = depot_location.bearing(service_location);
-
-            (angle * 1000.0).round() as i64
-        } else {
-            0 // Fallback if no depot is found
-        }
-    });
+    //         (angle * 1000.0).round() as i64
+    //     } else {
+    //         0 // Fallback if no depot is found
+    //     }
+    // });
 
     BestInsertion::insert_services(
         &services,
