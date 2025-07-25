@@ -5,7 +5,7 @@ use super::{capacity::Capacity, location::LocationId, time_window::TimeWindow};
 
 pub type ServiceId = usize;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct Service {
     external_id: String,
     location_id: LocationId,
@@ -101,13 +101,13 @@ mod tests {
                     .build(),
             );
 
-        builder.set_demand(Capacity::new(vec![1.0, 2.0, 3.0]));
+        builder.set_demand(Capacity::from_vec(vec![1.0, 2.0, 3.0]));
 
         let service = builder.build();
 
         assert_eq!(service.external_id, String::from("service_id"));
         assert_eq!(service.location_id, 1);
         assert_eq!(service.service_duration, SignedDuration::ZERO);
-        assert_eq!(service.demand, Capacity::new(vec![1.0, 2.0, 3.0]));
+        assert_eq!(service.demand, Capacity::from_vec(vec![1.0, 2.0, 3.0]));
     }
 }

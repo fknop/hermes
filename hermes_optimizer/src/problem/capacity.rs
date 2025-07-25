@@ -1,18 +1,29 @@
 use std::ops::Add;
 
 use serde::{Deserialize, Serialize};
+use smallvec::{SmallVec, smallvec};
 
 use crate::utils::normalize::normalize;
 
+type CapacityVector = SmallVec<[f64; 4]>;
+
 #[derive(Default, Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct Capacity(Vec<f64>);
+pub struct Capacity(CapacityVector);
 
 impl Capacity {
-    pub fn new(capacity: Vec<f64>) -> Self {
+    pub fn from_vec(vec: Vec<f64>) -> Self {
+        Capacity(CapacityVector::from_vec(vec))
+    }
+
+    pub fn new(capacity: CapacityVector) -> Self {
         Capacity(capacity)
     }
 
-    pub const ZERO: Capacity = Capacity(vec![]);
+    pub const ZERO: Capacity = Capacity(CapacityVector::new_const());
+
+    pub fn zero() -> Self {
+        Capacity(CapacityVector::new())
+    }
 
     pub fn iter(&self) -> impl Iterator<Item = f64> {
         self.0.iter().cloned()
@@ -28,8 +39,11 @@ impl Capacity {
         }
 
         let max_size = capacities.iter().map(|c| c.0.len()).max().unwrap_or(0);
-        let mut min = vec![0.0; max_size];
-        let mut max = vec![0.0; max_size];
+        let mut min = CapacityVector::with_capacity(max_size);
+        min.resize(max_size, 0.0);
+
+        let mut max = CapacityVector::with_capacity(max_size);
+        max.resize(max_size, 0.0);
 
         for i in 0..max_size {
             min[i] = capacities
@@ -138,44 +152,44 @@ mod tests {
     fn test_add_mut() {
         let mut total_capacity = Capacity::default();
 
-        total_capacity.add_mut(&Capacity(vec![1.0, 2.0, 3.0]));
+        total_capacity.add_mut(&Capacity(smallvec![1.0, 2.0, 3.0]));
 
-        assert_eq!(total_capacity, Capacity::new(vec![1.0, 2.0, 3.0]));
+        assert_eq!(total_capacity, Capacity::new(smallvec![1.0, 2.0, 3.0]));
 
-        total_capacity.add_mut(&Capacity(vec![1.0, 2.0, 3.0]));
+        total_capacity.add_mut(&Capacity(smallvec![1.0, 2.0, 3.0]));
 
-        assert_eq!(total_capacity, Capacity::new(vec![2.0, 4.0, 6.0]));
+        assert_eq!(total_capacity, Capacity::new(smallvec![2.0, 4.0, 6.0]));
     }
 
     #[test]
     fn test_sub_mut() {
-        let mut total_capacity = Capacity::new(vec![10.0, 4.0, 5.0]);
+        let mut total_capacity = Capacity::new(smallvec![10.0, 4.0, 5.0]);
 
-        total_capacity.sub_mut(&Capacity(vec![1.0, 2.0, 3.0]));
+        total_capacity.sub_mut(&Capacity(smallvec![1.0, 2.0, 3.0]));
 
-        assert_eq!(total_capacity, Capacity::new(vec![9.0, 2.0, 2.0]));
+        assert_eq!(total_capacity, Capacity::new(smallvec![9.0, 2.0, 2.0]));
 
-        total_capacity.sub_mut(&Capacity(vec![1.0, 0.0, 0.0]));
+        total_capacity.sub_mut(&Capacity(smallvec![1.0, 0.0, 0.0]));
 
-        assert_eq!(total_capacity, Capacity::new(vec![8.0, 2.0, 2.0]));
+        assert_eq!(total_capacity, Capacity::new(smallvec![8.0, 2.0, 2.0]));
     }
 
     #[test]
     fn satisfies_demand() {
-        let total_capacity = Capacity::new(vec![10.0, 5.0, 8.0]);
-        let demand = Capacity::new(vec![5.0, 3.0, 2.0]);
+        let total_capacity = Capacity::new(smallvec![10.0, 5.0, 8.0]);
+        let demand = Capacity::new(smallvec![5.0, 3.0, 2.0]);
 
         assert!(total_capacity.satisfies_demand(&demand));
 
-        let insufficient_demand = Capacity::new(vec![11.0, 6.0, 2.0]);
+        let insufficient_demand = Capacity::new(smallvec![11.0, 6.0, 2.0]);
 
         assert!(!total_capacity.satisfies_demand(&insufficient_demand));
     }
 
     #[test]
     pub fn over_capacity_demand() {
-        let total_capacity = Capacity::new(vec![10.0, 5.0, 8.0, 5.0]);
-        let demand = Capacity::new(vec![5.0, 3.0, 2.0, 8.0]);
+        let total_capacity = Capacity::new(smallvec![10.0, 5.0, 8.0, 5.0]);
+        let demand = Capacity::new(smallvec![5.0, 3.0, 2.0, 8.0]);
 
         assert_eq!(total_capacity.over_capacity_demand(&demand), 3.0);
         assert_eq!(demand.over_capacity_demand(&total_capacity), 13.0);
@@ -183,34 +197,34 @@ mod tests {
 
     #[test]
     fn test_add_op() {
-        let capacity1 = Capacity::new(vec![1.0, 2.0, 3.0]);
-        let capacity2 = Capacity::new(vec![4.0, 5.0, 6.0]);
+        let capacity1 = Capacity::new(smallvec![1.0, 2.0, 3.0]);
+        let capacity2 = Capacity::new(smallvec![4.0, 5.0, 6.0]);
 
         let result = &capacity1 + &capacity2;
 
-        assert_eq!(result, Capacity::new(vec![5.0, 7.0, 9.0]));
+        assert_eq!(result, Capacity::new(smallvec![5.0, 7.0, 9.0]));
     }
 
     #[test]
     fn test_min_max_capacities() {
         let capacities = vec![
-            Capacity::new(vec![1.0, 2.0, 3.0]),
-            Capacity::new(vec![4.0, 5.0, 6.0]),
-            Capacity::new(vec![2.0, 3.0, 4.0]),
+            Capacity::new(smallvec![1.0, 2.0, 3.0]),
+            Capacity::new(smallvec![4.0, 5.0, 6.0]),
+            Capacity::new(smallvec![2.0, 3.0, 4.0]),
         ];
 
         let (min, max) =
             Capacity::compute_min_max_capacities(&(capacities.iter().collect::<Vec<&Capacity>>()));
 
-        assert_eq!(min, Capacity::new(vec![1.0, 2.0, 3.0]));
-        assert_eq!(max, Capacity::new(vec![4.0, 5.0, 6.0]));
+        assert_eq!(min, Capacity::new(smallvec![1.0, 2.0, 3.0]));
+        assert_eq!(max, Capacity::new(smallvec![4.0, 5.0, 6.0]));
     }
 
     #[test]
     fn test_normalize() {
-        let capacity = Capacity::new(vec![5.0, 10.0, 15.0]);
-        let min = Capacity::new(vec![0.0, 5.0, 10.0]);
-        let max = Capacity::new(vec![10.0, 15.0, 20.0]);
+        let capacity = Capacity::new(smallvec![5.0, 10.0, 15.0]);
+        let min = Capacity::new(smallvec![0.0, 5.0, 10.0]);
+        let max = Capacity::new(smallvec![10.0, 15.0, 20.0]);
 
         let normalized = capacity.normalize(&min, &max);
 

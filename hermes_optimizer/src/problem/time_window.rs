@@ -3,7 +3,7 @@ use std::cmp;
 use jiff::Timestamp;
 use serde::Deserialize;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct TimeWindow {
     start: Option<Timestamp>,
     end: Option<Timestamp>,

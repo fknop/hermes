@@ -5,7 +5,7 @@ use super::{capacity::Capacity, location::LocationId};
 
 pub type VehicleId = usize;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct Vehicle {
     external_id: String,
     shift: Option<VehicleShift>,
@@ -54,7 +54,7 @@ impl Vehicle {
     }
 
     pub fn end_depot_duration(&self) -> SignedDuration {
-        self.depot_duration.unwrap_or(SignedDuration::ZERO)
+        self.end_depot_duration.unwrap_or(SignedDuration::ZERO)
     }
 
     pub fn set_shift(&mut self, shift: VehicleShift) {
@@ -66,7 +66,7 @@ impl Vehicle {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct VehicleShift {
     earliest_start: Option<Timestamp>,
     latest_end: Option<Timestamp>,

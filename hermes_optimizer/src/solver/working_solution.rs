@@ -170,6 +170,14 @@ impl WorkingSolution {
             self.routes.remove(route_id);
         }
     }
+
+    pub fn remove_route(&mut self, route_id: usize) {
+        for activity in self.routes[route_id].activities.iter() {
+            self.unassigned_services.insert(activity.service_id);
+        }
+
+        self.routes.remove(route_id);
+    }
 }
 
 #[derive(Clone, Serialize)]

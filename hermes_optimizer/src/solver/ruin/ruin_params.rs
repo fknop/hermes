@@ -23,6 +23,7 @@ impl Default for RuinParams {
                 RuinStrategy::RuinRadial,
                 RuinStrategy::Random,
                 RuinStrategy::RuinWorst,
+                // RuinStrategy::RuinRoute,
             ],
             ruin_minimum_ratio: 0.05,
             ruin_maximum_ratio: 0.3,

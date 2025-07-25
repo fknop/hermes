@@ -38,7 +38,7 @@ impl RouteConstraint for ShiftConstraint {
                 let vehicle = route.vehicle(problem);
 
                 if let Some(latest_end) = vehicle.latest_end_time()
-                    && route.end(problem) > latest_end
+                    && context.end > latest_end
                 {
                     Score::hard((context.end.as_second() - latest_end.as_second()) as f64)
                 } else {

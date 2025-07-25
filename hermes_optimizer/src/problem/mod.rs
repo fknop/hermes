@@ -1,4 +1,5 @@
 pub mod capacity;
+pub mod distance_method;
 pub mod location;
 pub mod service;
 mod service_location_index;

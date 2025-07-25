@@ -2,6 +2,7 @@ use geo::{Distance, Haversine, HaversineDistance};
 use rstar::primitives::GeomWithData;
 use rstar::{AABB, Envelope, PointDistance, RTree, RTreeObject};
 
+use super::distance_method::DistanceMethod;
 use super::location::Location;
 use super::service::Service;
 
@@ -9,16 +10,30 @@ pub struct IndexedData {
     service_id: usize,
 }
 
-pub struct IndexedPoint {
-    x: f64,
-    y: f64,
+pub enum IndexedPoint {
+    Haversine { x: f64, y: f64 },
+    Euclidean { x: f64, y: f64 },
+}
+
+impl IndexedPoint {
+    pub fn x(&self) -> f64 {
+        match self {
+            IndexedPoint::Haversine { x, .. } | IndexedPoint::Euclidean { x, .. } => *x,
+        }
+    }
+
+    pub fn y(&self) -> f64 {
+        match self {
+            IndexedPoint::Haversine { y, .. } | IndexedPoint::Euclidean { y, .. } => *y,
+        }
+    }
 }
 
 impl RTreeObject for IndexedPoint {
     type Envelope = AABB<[f64; 2]>;
 
     fn envelope(&self) -> Self::Envelope {
-        AABB::from_point([self.x, self.y])
+        AABB::from_point([self.x(), self.y()])
     }
 }
 
@@ -27,10 +42,19 @@ impl PointDistance for IndexedPoint {
         &self,
         point: &<Self::Envelope as Envelope>::Point,
     ) -> <<Self::Envelope as Envelope>::Point as rstar::Point>::Scalar {
-        Haversine.distance(
-            geo::Point::new(self.x, self.y),
-            geo::Point::new(point[0], point[1]),
-        )
+        match self {
+            IndexedPoint::Haversine { .. } => {
+                let distance = Haversine.distance(
+                    geo::Point::new(self.x(), self.y()),
+                    geo::Point::new(point[0], point[1]),
+                );
+
+                distance * distance
+            }
+            IndexedPoint::Euclidean { .. } => {
+                geo::Point::new(self.x(), self.y()).distance_2(&geo::Point::new(point[0], point[1]))
+            }
+        }
     }
 }
 
@@ -41,7 +65,11 @@ pub struct ServiceLocationIndex {
 }
 
 impl ServiceLocationIndex {
-    pub fn new(locations: &[Location], services: &[Service]) -> ServiceLocationIndex {
+    pub fn new(
+        locations: &[Location],
+        services: &[Service],
+        distance_method: DistanceMethod,
+    ) -> ServiceLocationIndex {
         let tree: RTree<ServiceLocationIndexObject> = RTree::bulk_load(
             services
                 .iter()
@@ -50,9 +78,15 @@ impl ServiceLocationIndex {
                     let location = &locations[service.location_id()];
 
                     ServiceLocationIndexObject::new(
-                        IndexedPoint {
-                            x: location.x(),
-                            y: location.y(),
+                        match distance_method {
+                            DistanceMethod::Haversine => IndexedPoint::Haversine {
+                                x: location.lon(),
+                                y: location.lat(),
+                            },
+                            DistanceMethod::Euclidean => IndexedPoint::Euclidean {
+                                x: location.x(),
+                                y: location.y(),
+                            },
                         },
                         IndexedData { service_id },
                     )
@@ -103,7 +137,7 @@ mod tests {
     #[test]
     fn test_service_location_index() {
         let (locations, services) = build_locations_and_services();
-        let index = ServiceLocationIndex::new(&locations, &services);
+        let index = ServiceLocationIndex::new(&locations, &services, DistanceMethod::Haversine);
 
         let nearest: Vec<ServiceId> = index
             .nearest_neighbor_iter(geo::Point::new(locations[0].x(), locations[0].y()))

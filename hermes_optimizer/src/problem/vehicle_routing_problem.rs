@@ -1,6 +1,7 @@
 use jiff::SignedDuration;
 
 use super::{
+    distance_method::DistanceMethod,
     location::{Location, LocationId},
     service::{Service, ServiceId},
     service_location_index::ServiceLocationIndex,
@@ -97,6 +98,7 @@ pub struct VehicleRoutingProblemBuilder {
     services: Option<Vec<Service>>,
     locations: Option<Vec<Location>>,
     vehicles: Option<Vec<Vehicle>>,
+    distance_method: Option<DistanceMethod>,
 }
 
 impl VehicleRoutingProblemBuilder {
@@ -105,6 +107,14 @@ impl VehicleRoutingProblemBuilder {
         travel_costs: TravelCostMatrix,
     ) -> &mut VehicleRoutingProblemBuilder {
         self.travel_costs = Some(travel_costs);
+        self
+    }
+
+    pub fn set_distance_method(
+        &mut self,
+        distance_method: DistanceMethod,
+    ) -> &mut VehicleRoutingProblemBuilder {
+        self.distance_method = Some(distance_method);
         self
     }
 
@@ -140,7 +150,12 @@ impl VehicleRoutingProblemBuilder {
         }
 
         let travel_costs = self.travel_costs.expect("Expected travel costs matrix");
-        let service_location_index = ServiceLocationIndex::new(&locations, &services);
+        let service_location_index = ServiceLocationIndex::new(
+            &locations,
+            &services,
+            // TODO: benchmark which is best ?
+            self.distance_method.unwrap_or(DistanceMethod::Haversine),
+        );
 
         VehicleRoutingProblem {
             locations,

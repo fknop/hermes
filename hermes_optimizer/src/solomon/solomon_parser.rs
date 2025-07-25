@@ -4,6 +4,7 @@ use jiff::{SignedDuration, Timestamp};
 
 use crate::problem::{
     capacity::Capacity,
+    distance_method::DistanceMethod,
     location::Location,
     service::{Service, ServiceBuilder},
     time_window::TimeWindow,
@@ -53,7 +54,7 @@ impl SolomonParser {
                 let mut builder = VehicleBuilder::default();
                 builder
                     .set_vehicle_id(index.to_string())
-                    .set_capacity(Capacity::new(vec![vehicle_capacity]))
+                    .set_capacity(Capacity::from_vec(vec![vehicle_capacity]))
                     .set_return(true);
                 let vehicle = builder.build();
                 vehicles.push(vehicle);
@@ -121,7 +122,7 @@ impl SolomonParser {
 
                 service_builder
                     .set_external_id(id)
-                    .set_demand(Capacity::new(vec![demand]))
+                    .set_demand(Capacity::from_vec(vec![demand]))
                     .set_service_duration(SignedDuration::from_secs(service_time))
                     .set_location_id(location_id)
                     .set_time_window(TimeWindow::new(Some(start), Some(end)));
@@ -135,6 +136,7 @@ impl SolomonParser {
             .set_vehicles(vehicles)
             .set_locations(locations)
             .set_services(services)
+            .set_distance_method(DistanceMethod::Euclidean)
             .set_travel_costs(travel_costs_matrix);
 
         Ok(builder.build())
@@ -160,7 +162,7 @@ mod tests {
 
         for vehicle in vrp.vehicles() {
             assert_eq!(vehicle.depot_location_id(), Some(0));
-            assert_eq!(*vehicle.capacity(), Capacity::new(vec![200.0]));
+            assert_eq!(*vehicle.capacity(), Capacity::from_vec(vec![200.0]));
         }
 
         for (index, service) in vrp.services().iter().enumerate() {

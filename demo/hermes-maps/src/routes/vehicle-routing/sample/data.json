@@ -355,7 +355,7 @@
       "capacity": [40000, 5000, 12320],
       "depot_location_id": 0,
       "depot_duration": "PT3900S",
-      "warehouseReturnDuration": 900,
+      "end_depot_duration": "PT90S",
       "should_return_to_depot": true,
       "shift": {
         "earliest_start": "2025-07-19T02:00:00Z",
@@ -370,7 +370,7 @@
       "capacity": [60000, 10000, 14720],
       "depot_location_id": 0,
       "depot_duration": "PT3900S",
-      "warehouseReturnDuration": 900,
+      "end_depot_duration": "PT90S",
       "should_return_to_depot": true,
       "shift": {
         "earliest_start": "2025-07-19T02:00:00Z",
@@ -385,7 +385,7 @@
       "capacity": [60000, 10000, 14720],
       "depot_location_id": 0,
       "depot_duration": "PT3900S",
-      "warehouseReturnDuration": 900,
+      "end_depot_duration": "PT90S",
       "should_return_to_depot": true,
       "shift": {
         "earliest_start": "2025-07-19T02:00:00Z",
@@ -400,7 +400,7 @@
       "capacity": [60000, 10000, 14720],
       "depot_location_id": 0,
       "depot_duration": "PT3900S",
-      "warehouseReturnDuration": 900,
+      "end_depot_duration": "PT90S",
       "should_return_to_depot": true,
       "shift": {
         "earliest_start": "2025-07-19T02:00:00Z",
@@ -415,7 +415,7 @@
       "capacity": [60000, 10000, 14720],
       "depot_location_id": 0,
       "depot_duration": "PT3900S",
-      "warehouseReturnDuration": 900,
+      "end_depot_duration": "PT90S",
       "should_return_to_depot": true,
       "shift": {
         "earliest_start": "2025-07-19T02:00:00Z",
@@ -430,7 +430,7 @@
       "capacity": [60000, 10000, 14720],
       "depot_location_id": 0,
       "depot_duration": "PT3900S",
-      "warehouseReturnDuration": 900,
+      "end_depot_duration": "PT90S",
       "should_return_to_depot": true,
       "shift": {
         "earliest_start": "2025-07-19T02:00:00Z",
@@ -445,7 +445,7 @@
       "capacity": [40000, 5000, 12320],
       "depot_location_id": 0,
       "depot_duration": "PT3900S",
-      "warehouseReturnDuration": 900,
+      "end_depot_duration": "PT90S",
       "should_return_to_depot": true,
       "shift": {
         "earliest_start": "2025-07-19T02:00:00Z",
@@ -460,7 +460,7 @@
       "capacity": [60000, 10000, 14720],
       "depot_location_id": 0,
       "depot_duration": "PT3900S",
-      "warehouseReturnDuration": 900,
+      "end_depot_duration": "PT90S",
       "should_return_to_depot": true,
       "shift": {
         "earliest_start": "2025-07-19T02:00:00Z",
@@ -475,7 +475,7 @@
       "capacity": [40000, 5000, 12320],
       "depot_location_id": 0,
       "depot_duration": "PT3900S",
-      "warehouseReturnDuration": 900,
+      "end_depot_duration": "PT90S",
       "should_return_to_depot": true,
       "shift": {
         "earliest_start": "2025-07-19T02:00:00Z",
@@ -490,7 +490,7 @@
       "capacity": [40000, 5000, 12320],
       "depot_location_id": 0,
       "depot_duration": "PT3900S",
-      "warehouseReturnDuration": 900,
+      "end_depot_duration": "PT90S",
       "should_return_to_depot": true,
       "shift": {
         "earliest_start": "2025-07-19T02:00:00Z",
@@ -505,7 +505,7 @@
       "capacity": [60000, 10000, 14720],
       "depot_location_id": 0,
       "depot_duration": "PT3900S",
-      "warehouseReturnDuration": 900,
+      "end_depot_duration": "PT90S",
       "should_return_to_depot": true,
       "shift": {
         "earliest_start": "2025-07-19T02:00:00Z",
@@ -520,7 +520,7 @@
       "capacity": [60000, 10000, 14720],
       "depot_location_id": 0,
       "depot_duration": "PT3900S",
-      "warehouseReturnDuration": 900,
+      "end_depot_duration": "PT90S",
       "should_return_to_depot": true,
       "shift": {
         "earliest_start": "2025-07-19T02:00:00Z",
@@ -535,7 +535,7 @@
       "capacity": [60000, 10000, 14720],
       "depot_location_id": 0,
       "depot_duration": "PT3900S",
-      "warehouseReturnDuration": 900,
+      "end_depot_duration": "PT90S",
       "should_return_to_depot": true,
       "shift": {
         "earliest_start": "2025-07-19T02:00:00Z",
@@ -550,7 +550,7 @@
       "capacity": [60000, 10000, 14720],
       "depot_location_id": 0,
       "depot_duration": "PT3900S",
-      "warehouseReturnDuration": 900,
+      "end_depot_duration": "PT90S",
       "should_return_to_depot": true,
       "shift": {
         "earliest_start": "2025-07-19T02:00:00Z",
@@ -565,7 +565,7 @@
       "capacity": [60000, 10000, 14720],
       "depot_location_id": 0,
       "depot_duration": "PT3900S",
-      "warehouseReturnDuration": 900,
+      "end_depot_duration": "PT90S",
       "should_return_to_depot": true,
       "shift": {
         "earliest_start": "2025-07-19T02:00:00Z",
@@ -580,7 +580,7 @@
       "capacity": [60000, 10000, 14720],
       "depot_location_id": 0,
       "depot_duration": "PT3900S",
-      "warehouseReturnDuration": 900,
+      "end_depot_duration": "PT90S",
       "should_return_to_depot": true,
       "shift": {
         "earliest_start": "2025-07-19T02:00:00Z",
