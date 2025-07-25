@@ -7,7 +7,10 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use hermes_optimizer::problem::{
-    location::Location, service::Service, travel_cost_matrix::TravelCostMatrix, vehicle::Vehicle,
+    location::Location,
+    service::Service,
+    travel_cost_matrix::{Time, TravelCostMatrix},
+    vehicle::Vehicle,
     vehicle_routing_problem::VehicleRoutingProblemBuilder,
 };
 use serde::{Deserialize, Serialize};
@@ -16,11 +19,24 @@ use uuid::Uuid;
 use crate::{error::ApiError, state::AppState};
 
 #[derive(Deserialize)]
+pub struct PostRequestTravelCosts {
+    pub distances: Vec<Vec<f64>>,
+    pub times: Vec<Vec<Time>>,
+    pub costs: Vec<Vec<f64>>,
+}
+
+impl PostRequestTravelCosts {
+    pub fn flatten(self) -> TravelCostMatrix {
+        TravelCostMatrix::new(self.distances, self.times, self.costs)
+    }
+}
+
+#[derive(Deserialize)]
 pub struct PostRequestBody {
     locations: Vec<Location>,
     vehicles: Vec<Vehicle>,
     services: Vec<Service>,
-    travel_costs: TravelCostMatrix,
+    travel_costs: PostRequestTravelCosts,
 }
 
 #[derive(Serialize)]
@@ -48,7 +64,7 @@ pub async fn post_handler(
         .set_services(body.services)
         .set_vehicles(body.vehicles)
         .set_locations(body.locations)
-        .set_travel_costs(body.travel_costs);
+        .set_travel_costs(body.travel_costs.flatten());
 
     let vrp = builder.build();
 
