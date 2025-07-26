@@ -38,13 +38,15 @@ impl RuinSolution for RuinCluster {
                 .map(|activity| activity.service_id())
                 .collect::<Vec<_>>();
 
+            let mut removed_service_ids = vec![];
             if let Some(clusters) = kruskal_cluster(solution.problem(), &service_ids)
                 && !clusters.is_empty()
             {
                 let cluster = clusters.choose(rng).unwrap();
-                for service_id in cluster {
-                    let removed = solution.remove_service(*service_id);
+                for &service_id in cluster {
+                    let removed = solution.remove_service(service_id);
                     if removed {
+                        removed_service_ids.push(service_id);
                         remaining_to_remove -= 1;
                         if remaining_to_remove == 0 {
                             break;
@@ -53,12 +55,14 @@ impl RuinSolution for RuinCluster {
                 }
 
                 ruined_routes.insert(route_id);
+            } else {
+                break;
             }
 
             if remaining_to_remove > 0 {
                 if let Some(new_service_id) = solution
                     .problem()
-                    .nearest_services(target_service_id)
+                    .nearest_services(removed_service_ids.choose(rng).cloned().unwrap())
                     .find(|&service_id| {
                         let route_id = solution.route_of_service(service_id);
                         if let Some(route_id) = route_id {
