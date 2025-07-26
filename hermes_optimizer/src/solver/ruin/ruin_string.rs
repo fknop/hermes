@@ -78,7 +78,7 @@ impl RuinString {
     fn ruin_string(&self, solution: &mut WorkingSolution, rng: &mut SmallRng, route_id: usize) {
         let route = solution.route(route_id);
         let route_length = route.activities().len();
-        let string_length = cmp::min(rng.random_range(self.l_min..=self.l_max), route_length);
+        let string_length = rng.random_range(self.l_min..=self.l_max).min(route_length);
 
         let random_activity = rng.random_range(0..route_length);
         let possible_starts =
@@ -102,7 +102,7 @@ impl RuinString {
     ) {
         let route = solution.route(route_id);
         let route_length = route.activities().len();
-        let string_length = cmp::min(rng.random_range(self.l_min..=self.l_max), route_length);
+        let string_length = rng.random_range(self.l_min..=self.l_max).min(route_length);
         let preserved_string_length =
             Self::compute_preserved_length(string_length, route_length, rng);
 
@@ -136,10 +136,10 @@ impl RuinString {
 
 impl RuinSolution for RuinString {
     fn ruin_solution(&self, solution: &mut WorkingSolution, context: RuinContext) {
-        let k = cmp::min(
-            context.rng.random_range(self.k_min..=self.k_max),
-            solution.routes().len(),
-        );
+        let k = context
+            .rng
+            .random_range(self.k_min..=self.k_max)
+            .min(solution.routes().len());
 
         let mut ruined_routes = FxHashSet::<usize>::default();
         let mut seed_service = context

@@ -152,16 +152,21 @@ impl WorkingSolution {
         }
     }
 
-    pub fn remove_service(&mut self, service_id: ServiceId) {
+    pub fn remove_service(&mut self, service_id: ServiceId) -> bool {
         let mut route_to_remove = None;
+        let mut removed = false;
         for (route_id, route) in self.routes.iter_mut().enumerate() {
             if route.contains_service(service_id) {
-                route.remove_service(&self.problem, service_id);
+                removed = route.remove_service(&self.problem, service_id);
 
                 self.unassigned_services.insert(service_id);
 
                 if route.is_empty() {
                     route_to_remove = Some(route_id);
+                }
+
+                if removed {
+                    break;
                 }
             }
         }
@@ -169,6 +174,8 @@ impl WorkingSolution {
         if let Some(route_id) = route_to_remove {
             self.routes.remove(route_id);
         }
+
+        removed
     }
 
     pub fn remove_route(&mut self, route_id: usize) {
@@ -424,9 +431,9 @@ impl WorkingSolutionRoute {
         Some(service_id)
     }
 
-    fn remove_service(&mut self, problem: &VehicleRoutingProblem, service_id: ServiceId) {
+    fn remove_service(&mut self, problem: &VehicleRoutingProblem, service_id: ServiceId) -> bool {
         if !self.contains_service(service_id) {
-            return; // Service is not in the route
+            return false; // Service is not in the route
         }
 
         let activity = self
@@ -441,6 +448,8 @@ impl WorkingSolutionRoute {
 
         self.activities
             .retain(|activity| activity.service_id != service_id);
+
+        true
     }
 
     fn insert_service(

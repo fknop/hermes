@@ -1,0 +1,79 @@
+use fxhash::FxHashSet;
+use rand::{Rng, seq::IndexedRandom};
+
+use crate::{
+    problem::service::ServiceId, solver::working_solution::WorkingSolution,
+    utils::kruskal::kruskal_cluster,
+};
+
+use super::{ruin_context::RuinContext, ruin_solution::RuinSolution};
+
+pub struct RuinCluster;
+
+impl RuinSolution for RuinCluster {
+    fn ruin_solution(
+        &self,
+        solution: &mut WorkingSolution,
+        RuinContext {
+            rng,
+            num_activities_to_remove,
+            ..
+        }: RuinContext,
+    ) {
+        if solution.routes().is_empty() {
+            return;
+        }
+        let mut ruined_routes: FxHashSet<usize> = FxHashSet::default();
+
+        let mut target_service_id = rng.random_range(0..solution.problem().services().len());
+        let mut remaining_to_remove = num_activities_to_remove;
+
+        while remaining_to_remove > 0 {
+            let route_id = solution.route_of_service(target_service_id).unwrap();
+
+            let service_ids = solution
+                .route(route_id)
+                .activities()
+                .iter()
+                .map(|activity| activity.service_id())
+                .collect::<Vec<_>>();
+
+            if let Some(clusters) = kruskal_cluster(solution.problem(), &service_ids)
+                && !clusters.is_empty()
+            {
+                let cluster = clusters.choose(rng).unwrap();
+                for service_id in cluster {
+                    let removed = solution.remove_service(*service_id);
+                    if removed {
+                        remaining_to_remove -= 1;
+                        if remaining_to_remove == 0 {
+                            break;
+                        }
+                    }
+                }
+
+                ruined_routes.insert(route_id);
+            }
+
+            if remaining_to_remove > 0 {
+                if let Some(new_service_id) = solution
+                    .problem()
+                    .nearest_services(target_service_id)
+                    .find(|&service_id| {
+                        let route_id = solution.route_of_service(service_id);
+                        if let Some(route_id) = route_id {
+                            !ruined_routes.contains(&route_id)
+                        } else {
+                            false
+                        }
+                    })
+                {
+                    target_service_id = new_service_id;
+                } else {
+                    // No more services to ruin, exit the loop
+                    break;
+                }
+            }
+        }
+    }
+}
