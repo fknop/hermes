@@ -1,4 +1,3 @@
-
 use crate::solver::{
     insertion::Insertion, insertion_context::InsertionContext, score::Score,
     working_solution::WorkingSolution,

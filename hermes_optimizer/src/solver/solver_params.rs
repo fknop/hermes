@@ -22,6 +22,8 @@ pub struct SolverParams {
     pub alns_best_factor: f64,
     pub alns_improvement_factor: f64,
     pub alns_accepted_worst_factor: f64,
+    pub tabu_size: usize,
+    pub tabu_iterations: usize,
 }
 
 #[derive(Clone, Debug)]
@@ -48,6 +50,7 @@ pub enum SolverAcceptorStrategy {
 pub enum SolverSelectorStrategy {
     SelectBest,
     SelectRandom,
+    SelectWeighted,
 }
 
 impl Default for SolverParams {
@@ -59,8 +62,10 @@ impl Default for SolverParams {
                 Termination::Duration(SignedDuration::from_mins(2)),
             ],
             max_solutions: 30,
+            tabu_size: 30,
+            tabu_iterations: 1000,
             solver_acceptor: SolverAcceptorStrategy::Schrimpf,
-            solver_selector: SolverSelectorStrategy::SelectRandom,
+            solver_selector: SolverSelectorStrategy::SelectWeighted,
             ruin: RuinParams::default(),
             recreate: RecreateParams::default(),
             threads: Threads::Auto,

@@ -32,14 +32,14 @@ impl Ord for KruskalEdge {
 }
 
 // Disjoint set union
-struct DSU {
+struct Dsu {
     parent: FxHashMap<usize, usize>,
     num_components: usize,
 }
 
-impl DSU {
+impl Dsu {
     fn new(ids: &[usize]) -> Self {
-        DSU {
+        Dsu {
             parent: ids.iter().fold(FxHashMap::default(), |mut acc, &id| {
                 acc.insert(id, id);
                 acc
@@ -99,7 +99,7 @@ pub fn kruskal_cluster(
     }
 
     // Initialize disjoint set union
-    let mut dsu = DSU::new(service_ids);
+    let mut dsu = Dsu::new(service_ids);
 
     let mut clusters: FxHashMap<usize, Vec<usize>> = FxHashMap::default();
 

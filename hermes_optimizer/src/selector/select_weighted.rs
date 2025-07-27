@@ -1,0 +1,32 @@
+use rand::{rngs::SmallRng, seq::IndexedRandom};
+
+use crate::solver::accepted_solution::AcceptedSolution;
+
+use super::select_solution::SelectSolution;
+
+pub struct SelestWeightedSelector;
+
+impl SelectSolution for SelestWeightedSelector {
+    fn select_solution<'a>(
+        &self,
+        solutions: &'a [AcceptedSolution],
+        rng: &mut SmallRng,
+    ) -> Option<&'a AcceptedSolution> {
+        if solutions.is_empty() {
+            return None; // No solutions to select from
+        }
+
+        let wieghts = (0..solutions.len()).collect::<Vec<_>>();
+        let index = wieghts
+            .choose_weighted(rng, |index| {
+                1.3_f64.powf((solutions.len() - 1 - index) as f64)
+            })
+            .ok();
+
+        if let Some(selected_index) = index {
+            Some(&solutions[*selected_index])
+        } else {
+            None // In case of an error in weighted selection
+        }
+    }
+}

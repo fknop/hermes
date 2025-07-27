@@ -6,8 +6,12 @@ use crate::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
         constraints::constraint::Constraint,
+        insertion::{ExistingRouteInsertion, Insertion, NewRouteInsertion},
         noise::NoiseGenerator,
-        recreate::{best_insertion::BestInsertion, recreate_context::RecreateContext},
+        recreate::{
+            best_insertion::BestInsertion, recreate_context::RecreateContext,
+            regret_insertion::RegretInsertion,
+        },
         working_solution::WorkingSolution,
     },
 };
@@ -51,9 +55,10 @@ pub fn construct_solution(
     //         0 // Fallback if no depot is found
     //     }
     // });
+    //
 
-    BestInsertion::insert_services(
-        &services,
+    let regret = RegretInsertion::new(2);
+    regret.insert_services(
         &mut solution,
         RecreateContext {
             rng,

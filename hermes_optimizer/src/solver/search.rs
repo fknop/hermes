@@ -1,4 +1,4 @@
-use std::{sync::Arc, thread};
+use std::{collections::VecDeque, sync::Arc, thread};
 
 use fxhash::FxHashMap;
 use jiff::Timestamp;
@@ -16,7 +16,8 @@ use crate::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     selector::{
         select_best_selector::SelectBestSelector, select_random_selector::SelectRandomSelector,
-        select_solution::SelectSolution, solution_selector::SolutionSelector,
+        select_solution::SelectSolution, select_weighted::SelestWeightedSelector,
+        solution_selector::SolutionSelector,
     },
 };
 
@@ -34,7 +35,7 @@ use super::{
     solver_params::{
         SolverAcceptorStrategy, SolverParams, SolverSelectorStrategy, Termination, Threads,
     },
-    working_solution::WorkingSolution,
+    working_solution::{self, WorkingSolution},
 };
 
 pub struct Search {
@@ -42,6 +43,7 @@ pub struct Search {
     constraints: Vec<Constraint>,
     params: SolverParams,
     best_solutions: Arc<RwLock<Vec<AcceptedSolution>>>,
+    tabu: Arc<RwLock<VecDeque<AcceptedSolution>>>,
     solution_selector: SolutionSelector,
     solution_acceptor: SolutionAcceptor,
     on_best_solution_handler: Arc<Option<fn(&AcceptedSolution)>>,
@@ -67,6 +69,9 @@ impl Search {
             SolverSelectorStrategy::SelectRandom => {
                 SolutionSelector::SelectRandom(SelectRandomSelector)
             }
+            SolverSelectorStrategy::SelectWeighted => {
+                SolutionSelector::SelectWeighted(SelestWeightedSelector)
+            }
         };
         let solution_acceptor = match params.solver_acceptor {
             SolverAcceptorStrategy::Greedy => SolutionAcceptor::Greedy(GreedySolutionAcceptor),
@@ -83,7 +88,8 @@ impl Search {
                 params.noise_level,
             ),
             constraints,
-            best_solutions: Arc::new(RwLock::new(Vec::new())),
+            best_solutions: Arc::new(RwLock::new(Vec::with_capacity(params.max_solutions))),
+            tabu: Arc::new(RwLock::new(VecDeque::with_capacity(params.tabu_size))),
             solution_selector,
             solution_acceptor,
             on_best_solution_handler: Arc::new(None),
@@ -109,6 +115,25 @@ impl Search {
         thread::scope(|s| {
             for thread_index in 0..num_threads {
                 let best_solutions = Arc::clone(&self.best_solutions);
+                let tabu = Arc::clone(&self.tabu);
+
+                let initial_solution = construct_solution(
+                    &self.problem,
+                    &mut rng,
+                    &self.constraints,
+                    &self.noise_generator,
+                );
+
+                let (score, score_analysis) = self.compute_solution_score(&initial_solution);
+
+                println!("Construction heuristic score {score_analysis:?}");
+
+                best_solutions.write().push(AcceptedSolution {
+                    solution: initial_solution,
+                    score,
+                    score_analysis,
+                });
+
                 // let on_best_solution_handler = Arc::clone(&self.on_best_solution_handler);
 
                 let max_iterations = self
@@ -136,6 +161,7 @@ impl Search {
                             iterations_without_improvement: 0,
                             operator_scores,
                             best_solutions,
+                            tabu,
                             iteration: 0,
                             max_iterations,
                         };
@@ -209,14 +235,7 @@ impl Search {
             {
                 (solution.clone(), *score)
             } else {
-                let solution = construct_solution(
-                    &self.problem,
-                    rng,
-                    &self.constraints,
-                    &self.noise_generator,
-                );
-                let (score, _) = self.compute_solution_score(&solution);
-                (solution, score)
+                panic!("No solutions selected");
             }
         }; // Lock is released here
 
@@ -242,6 +261,12 @@ impl Search {
         state: &mut ThreadedSearchState,
         iteration_info: IterationInfo,
     ) {
+        if iteration_info.iteration > 0
+            && iteration_info.iteration % self.params.tabu_iterations == 0
+        {
+            state.tabu.write().clear();
+        }
+
         let (score, score_analysis) = self.compute_solution_score(&solution);
 
         let mut guard = state.best_solutions.upgradable_read();
@@ -268,12 +293,23 @@ impl Search {
                 state.iterations_without_improvement = 0;
             }
 
+            let is_tabu = state.tabu.read().iter().any(|accepted_solution| {
+                accepted_solution.score == score
+                    && accepted_solution.solution.is_identical(&solution)
+            });
+
             // Don't store it if it's a duplicate
-            if !is_duplicate {
+            if !is_duplicate && !is_tabu {
                 guard.with_upgraded(|guard| {
                     // Evict worst
                     if guard.len() + 1 > self.params.max_solutions {
-                        guard.pop();
+                        if let Some(worst_solution) = guard.pop() {
+                            let mut guard = state.tabu.write();
+                            guard.push_front(worst_solution);
+                            if guard.len() > self.params.tabu_size {
+                                guard.pop_back();
+                            }
+                        }
                     }
 
                     guard.push(AcceptedSolution {
@@ -609,6 +645,7 @@ struct ThreadedSearchState {
     iterations_without_improvement: usize,
     operator_scores: OperatorScores,
     best_solutions: Arc<RwLock<Vec<AcceptedSolution>>>,
+    tabu: Arc<RwLock<VecDeque<AcceptedSolution>>>,
     iteration: usize,
     max_iterations: Option<usize>,
 }
