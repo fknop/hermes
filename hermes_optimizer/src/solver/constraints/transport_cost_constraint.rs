@@ -1,4 +1,3 @@
-use jiff::SignedDuration;
 
 use crate::solver::{
     insertion::Insertion, insertion_context::InsertionContext, score::Score,

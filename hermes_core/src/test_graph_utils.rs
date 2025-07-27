@@ -283,8 +283,7 @@ pub mod test_graph {
             }
 
             panic!(
-                "Node {} is neither the start nor the end of edge {}",
-                start, edge_id
+                "Node {start} is neither the start nor the end of edge {edge_id}"
             )
         }
     }

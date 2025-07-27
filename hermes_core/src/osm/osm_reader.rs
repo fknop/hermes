@@ -203,8 +203,7 @@ impl OsmReader {
                                     self.geometry_nodes[node_id].coordinates
                                 } else {
                                     panic!(
-                                        "Unknown node type osm_node_id={}, node_id={}",
-                                        osm_node_id, node_id
+                                        "Unknown node type osm_node_id={osm_node_id}, node_id={node_id}"
                                     );
                                 }
                             })
@@ -240,8 +239,7 @@ impl OsmReader {
                 .get(osm_id)
                 .unwrap_or_else(|| {
                     panic!(
-                        "Node {} in way is missing from osm_node_id_to_node_type",
-                        osm_id
+                        "Node {osm_id} in way is missing from osm_node_id_to_node_type"
                     )
                 });
 

@@ -9,7 +9,7 @@ use crate::problem::{
     service::{Service, ServiceBuilder},
     time_window::TimeWindow,
     travel_cost_matrix::TravelCostMatrix,
-    vehicle::{Vehicle, VehicleBuilder, VehicleShift, VehicleShiftBuilder},
+    vehicle::{Vehicle, VehicleBuilder, VehicleShiftBuilder},
     vehicle_routing_problem::{VehicleRoutingProblem, VehicleRoutingProblemBuilder},
 };
 
@@ -17,7 +17,7 @@ pub struct SolomonParser;
 
 impl SolomonParser {
     pub fn from_file(file: &str) -> Result<VehicleRoutingProblem, Box<dyn Error>> {
-        println!("{}", file);
+        println!("{file}");
         let file_content = std::fs::read_to_string(file)?;
         Self::from_solomon(&file_content)
     }
@@ -86,8 +86,7 @@ impl SolomonParser {
             let parts: Vec<&str> = trimmed_line.split_whitespace().collect();
             if parts.len() != 7 {
                 eprintln!(
-                    "Warning: Skipping malformed customer line: '{}'",
-                    trimmed_line
+                    "Warning: Skipping malformed customer line: '{trimmed_line}'"
                 );
                 continue;
             }
@@ -145,7 +144,7 @@ impl SolomonParser {
 
 #[cfg(test)]
 mod tests {
-    use std::{env, path::Path};
+    use std::env;
 
     use super::*;
 

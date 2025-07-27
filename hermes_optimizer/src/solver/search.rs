@@ -207,7 +207,7 @@ impl Search {
                     .solution_selector
                     .select_solution(&solutions_guard, rng)
             {
-                (solution.clone(), score.clone())
+                (solution.clone(), *score)
             } else {
                 let solution = construct_solution(
                     &self.problem,

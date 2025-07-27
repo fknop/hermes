@@ -1,4 +1,4 @@
-use geojson::{Feature, GeoJson};
+use geojson::Feature;
 use hermes_optimizer::{
     problem::{capacity::Capacity, service::ServiceId, vehicle::VehicleId},
     solver::score::{Score, ScoreAnalysis},

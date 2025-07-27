@@ -241,8 +241,7 @@ impl<'a> Graph for CHPreparationGraph<'a> {
             }
 
             panic!(
-                "Node {} is neither the start nor the end of edge {}",
-                start, edge_id
+                "Node {start} is neither the start nor the end of edge {edge_id}"
             )
         } else {
             self.base_graph.edge_direction(edge_id, start)

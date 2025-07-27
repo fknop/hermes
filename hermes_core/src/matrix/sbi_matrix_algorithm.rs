@@ -1,4 +1,4 @@
-use std::{collections::BinaryHeap, default};
+use std::collections::BinaryHeap;
 
 use fxhash::{FxHashMap, FxHashSet};
 
@@ -8,7 +8,7 @@ use crate::{
     distance::{Distance, Meters},
     graph::{DirectedEdgeAccess, Graph},
     graph_edge::GraphEdge,
-    routing::search_direction::{self, SearchDirection},
+    routing::search_direction::SearchDirection,
     stopwatch::Stopwatch,
     types::{EdgeId, NodeId},
     weighting::{Milliseconds, Weight, Weighting},

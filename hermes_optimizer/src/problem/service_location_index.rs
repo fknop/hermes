@@ -1,4 +1,4 @@
-use geo::{Distance, Haversine, HaversineDistance};
+use geo::{Distance, Haversine};
 use rstar::primitives::GeomWithData;
 use rstar::{AABB, Envelope, PointDistance, RTree, RTreeObject};
 
@@ -151,7 +151,7 @@ mod tests {
                 .round() as i64
         });
 
-        println!("{:?}", nearest);
-        println!("{:?}", service_ids);
+        println!("{nearest:?}");
+        println!("{service_ids:?}");
     }
 }

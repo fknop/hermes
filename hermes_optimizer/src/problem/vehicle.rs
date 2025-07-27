@@ -184,7 +184,7 @@ impl VehicleBuilder {
         Vehicle {
             external_id: self.external_id.expect("External ID is required"),
             shift: self.shift,
-            capacity: self.capacity.unwrap_or_else(|| Capacity::ZERO),
+            capacity: self.capacity.unwrap_or(Capacity::ZERO),
             depot_location_id: self.depot_location_id,
             should_return_to_depot: self.should_return_to_depot.unwrap_or(false),
             depot_duration: self.depot_duration,

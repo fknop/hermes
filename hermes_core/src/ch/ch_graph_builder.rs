@@ -19,7 +19,7 @@ use crate::{
 
 use super::{
     preparation_graph::{
-        self, CHPreparationGraph, CHPreparationGraphEdge, PreparationGraphWeighting,
+        CHPreparationGraph, CHPreparationGraphEdge, PreparationGraphWeighting,
     },
     shortcut::PreparationShortcut,
     witness_search::WitnessSearch,
@@ -283,7 +283,7 @@ impl<'a> CHGraphBuilder<'a> {
 
     fn format_percentage(total: &Duration, duration: &Duration) -> String {
         let percentage = duration.as_millis() as f64 / total.as_millis() as f64 * 100.0;
-        format!("{:.2}%", percentage)
+        format!("{percentage:.2}%")
     }
 
     fn contract_node(

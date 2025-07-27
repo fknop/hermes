@@ -1,6 +1,6 @@
 use std::collections::BinaryHeap;
 
-use fxhash::{FxHashMap, FxHashSet};
+use fxhash::FxHashMap;
 
 use crate::problem::vehicle_routing_problem::VehicleRoutingProblem;
 

@@ -16,15 +16,12 @@ use crate::matrix::sbi_matrix_algorithm::SBIMatrixAlgorithm;
 use crate::query::query_graph::QueryGraph;
 use crate::routing::astar::AStar;
 use crate::routing::bidirectional_astar::BidirectionalAStar;
-use crate::routing::ch_bidirectional_dijkstra::{
-    self, CHBidirectionalAStar, CHBidirectionalDijkstra, CHLMAstar,
-};
+use crate::routing::ch_bidirectional_dijkstra::CHBidirectionalAStar;
 use crate::routing::dijkstra::Dijkstra;
 use crate::routing::routing_request::{RoutingAlgorithm, RoutingRequest};
 
 use crate::routing::shortest_path_algorithm::{CalcPath, CalcPathOptions, CalcPathResult};
 use crate::snap::Snap;
-use crate::stopwatch::Stopwatch;
 use crate::storage::binary_file_path;
 use crate::types::NodeId;
 use crate::weighting::{CarWeighting, Weighting};
@@ -231,7 +228,7 @@ impl Hermes {
     pub fn matrix(&self, request: MatrixRequest) -> Result<MatrixAlgorithmResult, String> {
         let base_graph_weighting = self.create_weighting(&request.profile);
 
-        let mut source_snaps: Vec<Snap> = request
+        let source_snaps: Vec<Snap> = request
             .sources
             .iter()
             .map(|source| {
@@ -241,7 +238,7 @@ impl Hermes {
             })
             .collect();
 
-        let mut target_snaps: Vec<Snap> = request
+        let target_snaps: Vec<Snap> = request
             .targets
             .iter()
             .map(|target| {

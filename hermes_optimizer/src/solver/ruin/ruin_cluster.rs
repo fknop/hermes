@@ -1,10 +1,7 @@
 use fxhash::FxHashSet;
 use rand::{Rng, seq::IndexedRandom};
 
-use crate::{
-    problem::service::ServiceId, solver::working_solution::WorkingSolution,
-    utils::kruskal::kruskal_cluster,
-};
+use crate::{solver::working_solution::WorkingSolution, utils::kruskal::kruskal_cluster};
 
 use super::{ruin_context::RuinContext, ruin_solution::RuinSolution};
 

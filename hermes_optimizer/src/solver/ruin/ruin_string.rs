@@ -1,8 +1,6 @@
 //! Slack Induction by String Removals for Vehicle Routing Problems
 //! Jan Christiaens, Greet Vanden Berghe
 
-use std::cmp;
-
 use fxhash::FxHashSet;
 use rand::{Rng, rngs::SmallRng, seq::IndexedRandom};
 

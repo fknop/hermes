@@ -77,7 +77,7 @@ impl ServiceBuilder {
             location_id: self.location_id.expect("Expected location id"),
             demand: self.demand.unwrap_or_default(),
             service_duration: self.service_time.unwrap_or(SignedDuration::ZERO),
-            time_windows: self.time_windows.unwrap_or(vec![]),
+            time_windows: self.time_windows.unwrap_or_default(),
         }
     }
 }

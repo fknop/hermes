@@ -70,14 +70,14 @@ mod tests {
             max_solutions: 100,
             max_iterations: Some(1000),
         });
-        println!("{:?}", threshold);
+        println!("{threshold:?}");
         threshold = acceptor.compute_threshold(&AcceptSolutionContext {
             iteration: 1,
             max_solutions: 100,
             max_iterations: Some(1000),
         });
 
-        println!("{:?}", threshold);
+        println!("{threshold:?}");
 
         threshold = acceptor.compute_threshold(&AcceptSolutionContext {
             iteration: 999,
@@ -85,7 +85,7 @@ mod tests {
             max_iterations: Some(1000),
         });
 
-        println!("{:?}", threshold);
+        println!("{threshold:?}");
 
         threshold = acceptor.compute_threshold(&AcceptSolutionContext {
             iteration: 1000,
@@ -93,7 +93,7 @@ mod tests {
             max_iterations: Some(1000),
         });
 
-        println!("{:?}", threshold);
+        println!("{threshold:?}");
 
         threshold = acceptor.compute_threshold(&AcceptSolutionContext {
             iteration: 2000,
@@ -101,7 +101,7 @@ mod tests {
             max_iterations: Some(1000),
         });
 
-        println!("{:?}", threshold);
+        println!("{threshold:?}");
 
         assert!(threshold > 0.0);
     }

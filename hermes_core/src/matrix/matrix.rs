@@ -1,4 +1,4 @@
-use std::{fmt, path::Display, time::Duration};
+use std::{fmt, time::Duration};
 
 use crate::{
     constants::MAX_WEIGHT,

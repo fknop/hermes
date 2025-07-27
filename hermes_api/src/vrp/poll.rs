@@ -7,7 +7,6 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use geo::{Coord, Simplify};
-use geojson::Value::LineString;
 use geojson::{Feature, Geometry};
 use hermes_core::{
     geopoint::GeoPoint,

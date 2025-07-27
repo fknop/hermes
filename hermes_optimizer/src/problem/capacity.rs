@@ -1,7 +1,7 @@
 use std::ops::Add;
 
 use serde::{Deserialize, Serialize};
-use smallvec::{SmallVec, smallvec};
+use smallvec::SmallVec;
 
 use crate::utils::normalize::normalize;
 
@@ -147,6 +147,7 @@ mod tests {
     use std::cmp::Ordering;
 
     use super::*;
+    use smallvec::smallvec;
 
     #[test]
     fn test_add_mut() {
@@ -207,11 +208,9 @@ mod tests {
 
     #[test]
     fn test_min_max_capacities() {
-        let capacities = vec![
-            Capacity::new(smallvec![1.0, 2.0, 3.0]),
+        let capacities = [Capacity::new(smallvec![1.0, 2.0, 3.0]),
             Capacity::new(smallvec![4.0, 5.0, 6.0]),
-            Capacity::new(smallvec![2.0, 3.0, 4.0]),
-        ];
+            Capacity::new(smallvec![2.0, 3.0, 4.0])];
 
         let (min, max) =
             Capacity::compute_min_max_capacities(&(capacities.iter().collect::<Vec<&Capacity>>()));

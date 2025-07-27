@@ -13,7 +13,6 @@ use axum::{Router, serve};
 use hermes_core::hermes::Hermes;
 use hermes_optimizer::solver::solver_manager::SolverManager;
 use landmarks::get_landmarks;
-use parking_lot::RwLock;
 use std::sync::Arc;
 use tower::ServiceBuilder;
 use tower_http::cors::{Any, CorsLayer};

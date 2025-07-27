@@ -1,6 +1,6 @@
 use rand::{rngs::SmallRng, seq::IndexedRandom};
 
-use crate::solver::{accepted_solution::AcceptedSolution, score::Score};
+use crate::solver::accepted_solution::AcceptedSolution;
 
 use super::select_solution::SelectSolution;
 

@@ -250,8 +250,7 @@ where
             }
 
             panic!(
-                "Node {} is neither the start nor the end of edge {}",
-                start_node_id, edge_id
+                "Node {start_node_id} is neither the start nor the end of edge {edge_id}"
             )
         } else {
             self.graph.edge_direction(edge_id, start_node_id)

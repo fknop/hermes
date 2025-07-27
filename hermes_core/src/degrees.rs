@@ -117,7 +117,7 @@ mod tests {
     #[test]
     fn test_display() {
         let d = Degrees(1_000_000);
-        assert_eq!(format!("{}", d), "0.1°");
-        assert_eq!(format!("{:?}", d), "0.1°");
+        assert_eq!(format!("{d}"), "0.1°");
+        assert_eq!(format!("{d:?}"), "0.1°");
     }
 }

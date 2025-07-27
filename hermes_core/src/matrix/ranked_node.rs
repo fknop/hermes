@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-use crate::{types::NodeId, weighting::Weight};
+use crate::types::NodeId;
 
 #[derive(Eq, PartialEq, Copy, Clone, Debug)]
 pub struct RankedNode {
