@@ -1,0 +1,1107 @@
+{
+  "configuration": {
+    "termination": {
+      "spentLimit": 120,
+      "unimprovedSpentLimit": 120
+    },
+    "considerTraffic": true
+  },
+  "constraints": {
+    "maximumVehiclePickupsPerTimeWindow": [
+      {
+        "start": "2025-07-29T02:00:00Z",
+        "end": "2025-07-29T07:30:00Z",
+        "maximum": 4
+      },
+      {
+        "start": "2025-07-29T07:30:00Z",
+        "end": "2025-07-29T08:00:00Z",
+        "maximum": 1
+      },
+      {
+        "start": "2025-07-29T08:00:00Z",
+        "end": "2025-07-29T08:30:00Z",
+        "maximum": 1
+      },
+      {
+        "start": "2025-07-29T08:30:00Z",
+        "end": "2025-07-29T09:00:00Z",
+        "maximum": 1
+      },
+      {
+        "start": "2025-07-29T09:00:00Z",
+        "end": "2025-07-29T20:00:00Z",
+        "maximum": 2
+      }
+    ]
+  },
+  "vehicles": [
+    {
+      "id": "0",
+      "capacity": [60000, 10000, 14720],
+      "warehouse": {
+        "id": "46a96da7-8122-457b-ad72-e2f2fe1db8c6",
+        "latitude": 50.4921999,
+        "longitude": 4.5932809
+      },
+      "warehouseDuration": 3900,
+      "warehouseReturnDuration": 900,
+      "shouldReturnToWarehouse": true,
+      "shouldReturnBeforeEnd": true,
+      "shift": {
+        "earliestStartTime": "2025-07-29T02:00:00Z",
+        "latestStartTime": "2025-07-29T20:00:00Z",
+        "latestEndTime": null,
+        "maximumShiftDuration": 32400,
+        "maximumTransportDuration": 25200
+      }
+    },
+    {
+      "id": "1",
+      "capacity": [60000, 10000, 14720],
+      "warehouse": {
+        "id": "46a96da7-8122-457b-ad72-e2f2fe1db8c6",
+        "latitude": 50.4921999,
+        "longitude": 4.5932809
+      },
+      "warehouseDuration": 3900,
+      "warehouseReturnDuration": 900,
+      "shouldReturnToWarehouse": true,
+      "shouldReturnBeforeEnd": true,
+      "shift": {
+        "earliestStartTime": "2025-07-29T02:00:00Z",
+        "latestStartTime": "2025-07-29T20:00:00Z",
+        "latestEndTime": null,
+        "maximumShiftDuration": 32400,
+        "maximumTransportDuration": 25200
+      }
+    },
+    {
+      "id": "2",
+      "capacity": [60000, 10000, 14720],
+      "warehouse": {
+        "id": "46a96da7-8122-457b-ad72-e2f2fe1db8c6",
+        "latitude": 50.4921999,
+        "longitude": 4.5932809
+      },
+      "warehouseDuration": 3900,
+      "warehouseReturnDuration": 900,
+      "shouldReturnToWarehouse": true,
+      "shouldReturnBeforeEnd": true,
+      "shift": {
+        "earliestStartTime": "2025-07-29T02:00:00Z",
+        "latestStartTime": "2025-07-29T20:00:00Z",
+        "latestEndTime": null,
+        "maximumShiftDuration": 32400,
+        "maximumTransportDuration": 25200
+      }
+    },
+    {
+      "id": "3",
+      "capacity": [60000, 10000, 14720],
+      "warehouse": {
+        "id": "46a96da7-8122-457b-ad72-e2f2fe1db8c6",
+        "latitude": 50.4921999,
+        "longitude": 4.5932809
+      },
+      "warehouseDuration": 3900,
+      "warehouseReturnDuration": 900,
+      "shouldReturnToWarehouse": true,
+      "shouldReturnBeforeEnd": true,
+      "shift": {
+        "earliestStartTime": "2025-07-29T02:00:00Z",
+        "latestStartTime": "2025-07-29T20:00:00Z",
+        "latestEndTime": null,
+        "maximumShiftDuration": 32400,
+        "maximumTransportDuration": 25200
+      }
+    },
+    {
+      "id": "4",
+      "capacity": [60000, 10000, 14720],
+      "warehouse": {
+        "id": "46a96da7-8122-457b-ad72-e2f2fe1db8c6",
+        "latitude": 50.4921999,
+        "longitude": 4.5932809
+      },
+      "warehouseDuration": 3900,
+      "warehouseReturnDuration": 900,
+      "shouldReturnToWarehouse": true,
+      "shouldReturnBeforeEnd": true,
+      "shift": {
+        "earliestStartTime": "2025-07-29T02:00:00Z",
+        "latestStartTime": "2025-07-29T20:00:00Z",
+        "latestEndTime": null,
+        "maximumShiftDuration": 32400,
+        "maximumTransportDuration": 25200
+      }
+    },
+    {
+      "id": "5",
+      "capacity": [60000, 10000, 14720],
+      "warehouse": {
+        "id": "46a96da7-8122-457b-ad72-e2f2fe1db8c6",
+        "latitude": 50.4921999,
+        "longitude": 4.5932809
+      },
+      "warehouseDuration": 3900,
+      "warehouseReturnDuration": 900,
+      "shouldReturnToWarehouse": true,
+      "shouldReturnBeforeEnd": true,
+      "shift": {
+        "earliestStartTime": "2025-07-29T02:00:00Z",
+        "latestStartTime": "2025-07-29T20:00:00Z",
+        "latestEndTime": null,
+        "maximumShiftDuration": 32400,
+        "maximumTransportDuration": 25200
+      }
+    },
+    {
+      "id": "6",
+      "capacity": [40000, 5000, 12320],
+      "warehouse": {
+        "id": "46a96da7-8122-457b-ad72-e2f2fe1db8c6",
+        "latitude": 50.4921999,
+        "longitude": 4.5932809
+      },
+      "warehouseDuration": 3900,
+      "warehouseReturnDuration": 900,
+      "shouldReturnToWarehouse": true,
+      "shouldReturnBeforeEnd": true,
+      "shift": {
+        "earliestStartTime": "2025-07-29T02:00:00Z",
+        "latestStartTime": "2025-07-29T20:00:00Z",
+        "latestEndTime": null,
+        "maximumShiftDuration": 32400,
+        "maximumTransportDuration": 25200
+      }
+    },
+    {
+      "id": "7",
+      "capacity": [40000, 5000, 12320],
+      "warehouse": {
+        "id": "46a96da7-8122-457b-ad72-e2f2fe1db8c6",
+        "latitude": 50.4921999,
+        "longitude": 4.5932809
+      },
+      "warehouseDuration": 3900,
+      "warehouseReturnDuration": 900,
+      "shouldReturnToWarehouse": true,
+      "shouldReturnBeforeEnd": true,
+      "shift": {
+        "earliestStartTime": "2025-07-29T02:00:00Z",
+        "latestStartTime": "2025-07-29T20:00:00Z",
+        "latestEndTime": null,
+        "maximumShiftDuration": 32400,
+        "maximumTransportDuration": 25200
+      }
+    },
+    {
+      "id": "8",
+      "capacity": [60000, 10000, 14720],
+      "warehouse": {
+        "id": "46a96da7-8122-457b-ad72-e2f2fe1db8c6",
+        "latitude": 50.4921999,
+        "longitude": 4.5932809
+      },
+      "warehouseDuration": 3900,
+      "warehouseReturnDuration": 900,
+      "shouldReturnToWarehouse": true,
+      "shouldReturnBeforeEnd": true,
+      "shift": {
+        "earliestStartTime": "2025-07-29T02:00:00Z",
+        "latestStartTime": "2025-07-29T20:00:00Z",
+        "latestEndTime": null,
+        "maximumShiftDuration": 32400,
+        "maximumTransportDuration": 25200
+      }
+    },
+    {
+      "id": "9",
+      "capacity": [60000, 10000, 14720],
+      "warehouse": {
+        "id": "46a96da7-8122-457b-ad72-e2f2fe1db8c6",
+        "latitude": 50.4921999,
+        "longitude": 4.5932809
+      },
+      "warehouseDuration": 3900,
+      "warehouseReturnDuration": 900,
+      "shouldReturnToWarehouse": true,
+      "shouldReturnBeforeEnd": true,
+      "shift": {
+        "earliestStartTime": "2025-07-29T02:00:00Z",
+        "latestStartTime": "2025-07-29T20:00:00Z",
+        "latestEndTime": null,
+        "maximumShiftDuration": 32400,
+        "maximumTransportDuration": 25200
+      }
+    }
+  ],
+  "services": [
+    {
+      "id": "382f1636-14a3-4b93-b4aa-44fe7b0bb5dd",
+      "duration": 1200,
+      "location": {
+        "id": "382f1636-14a3-4b93-b4aa-44fe7b0bb5dd",
+        "latitude": 50.8167841,
+        "longitude": 4.4248001
+      },
+      "demand": [9600, 0, 4000],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T03:00:00Z",
+          "end": "2025-07-29T06:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "9fa8c245-ee75-4f0f-ad4b-ca203fccdff9",
+      "duration": 480,
+      "location": {
+        "id": "9fa8c245-ee75-4f0f-ad4b-ca203fccdff9",
+        "latitude": 50.8303637,
+        "longitude": 4.3906886
+      },
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T04:00:00Z",
+          "end": "2025-07-29T05:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "ab1db5ac-8b60-46b4-b3a5-471cd62c9433",
+      "duration": 1200,
+      "location": {
+        "id": "ab1db5ac-8b60-46b4-b3a5-471cd62c9433",
+        "latitude": 50.8376412,
+        "longitude": 4.3955566
+      },
+      "demand": [9600, 0, 4000],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T06:00:00Z",
+          "end": "2025-07-29T06:15:00Z"
+        }
+      ]
+    },
+    {
+      "id": "85934b3a-28aa-40d7-ae05-5988db21270d",
+      "duration": 840,
+      "location": {
+        "id": "85934b3a-28aa-40d7-ae05-5988db21270d",
+        "latitude": 50.8534481,
+        "longitude": 4.3954331
+      },
+      "demand": [5760, 0, 2400],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T05:30:00Z",
+          "end": "2025-07-29T06:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "afb11f08-baf6-40fb-a996-6456805e0ee5",
+      "duration": 840,
+      "location": {
+        "id": "afb11f08-baf6-40fb-a996-6456805e0ee5",
+        "latitude": 50.8487582,
+        "longitude": 4.4294633
+      },
+      "demand": [3499, 0, 1599],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T07:00:00Z",
+          "end": "2025-07-29T08:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "b5293471-4e64-4503-98fa-c35a4b7df7f3",
+      "duration": 660,
+      "location": {
+        "id": "b5293471-4e64-4503-98fa-c35a4b7df7f3",
+        "latitude": 50.846167,
+        "longitude": 4.4394698
+      },
+      "demand": [3840, 0, 1600],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T04:00:00Z",
+          "end": "2025-07-29T08:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "fd26304a-d8c3-4ea3-9268-56bb8bb77a81",
+      "duration": 480,
+      "location": {
+        "id": "fd26304a-d8c3-4ea3-9268-56bb8bb77a81",
+        "latitude": 50.8282592,
+        "longitude": 4.4615364
+      },
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T07:30:00Z",
+          "end": "2025-07-29T09:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "f152eca6-6ca7-4c5c-ab5d-6d1947eb4c8d",
+      "duration": 660,
+      "location": {
+        "id": "f152eca6-6ca7-4c5c-ab5d-6d1947eb4c8d",
+        "latitude": 50.6651562,
+        "longitude": 4.6164431
+      },
+      "demand": [3840, 0, 1600],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T07:00:00Z",
+          "end": "2025-07-29T09:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "589c2c71-f86e-469d-a548-e5d5724eec52",
+      "duration": 1560,
+      "location": {
+        "id": "589c2c71-f86e-469d-a548-e5d5724eec52",
+        "latitude": 50.8737218,
+        "longitude": 4.32386
+      },
+      "demand": [13440, 0, 5600],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T05:30:00Z",
+          "end": "2025-07-29T06:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "57ec51ba-e82c-41cc-bb7c-59b8b661ce70",
+      "duration": 1200,
+      "location": {
+        "id": "57ec51ba-e82c-41cc-bb7c-59b8b661ce70",
+        "latitude": 50.8716172,
+        "longitude": 4.3914777
+      },
+      "demand": [5832, 0, 2665],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T03:00:00Z",
+          "end": "2025-07-29T06:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "88848971-f24b-4f53-a25f-6d90a0f565a3",
+      "duration": 660,
+      "location": {
+        "id": "88848971-f24b-4f53-a25f-6d90a0f565a3",
+        "latitude": 50.8683882,
+        "longitude": 4.3758006
+      },
+      "demand": [2333, 0, 1066],
+      "timeWindows": [
+        {
+          "start": "2025-07-28T22:00:00Z",
+          "end": "2025-07-29T06:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "1324ad46-ea5d-467d-806a-4a82b1e1f19f",
+      "duration": 1380,
+      "location": {
+        "id": "1324ad46-ea5d-467d-806a-4a82b1e1f19f",
+        "latitude": 50.8286586,
+        "longitude": 4.356867
+      },
+      "demand": [11520, 0, 4800],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T06:00:00Z",
+          "end": "2025-07-29T06:15:00Z"
+        }
+      ]
+    },
+    {
+      "id": "68456ebe-f880-4948-89da-bb2a034f6407",
+      "duration": 480,
+      "location": {
+        "id": "68456ebe-f880-4948-89da-bb2a034f6407",
+        "latitude": 50.8000897,
+        "longitude": 4.3356392
+      },
+      "demand": [1166, 0, 533],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T04:00:00Z",
+          "end": "2025-07-29T08:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "12be22fb-e11d-4750-8720-113b366d6bfd",
+      "duration": 480,
+      "location": {
+        "id": "12be22fb-e11d-4750-8720-113b366d6bfd",
+        "latitude": 50.8230557,
+        "longitude": 4.3586559
+      },
+      "demand": [1166, 0, 533],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T07:00:00Z",
+          "end": "2025-07-29T09:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "947e9d42-8db8-4196-9a93-b371d17449f2",
+      "duration": 480,
+      "location": {
+        "id": "947e9d42-8db8-4196-9a93-b371d17449f2",
+        "latitude": 50.8313929,
+        "longitude": 4.344877
+      },
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T06:30:00Z",
+          "end": "2025-07-29T08:30:00Z"
+        }
+      ]
+    },
+    {
+      "id": "63773367-c01a-4600-9c13-3fd91ad2dbcc",
+      "duration": 1920,
+      "location": {
+        "id": "63773367-c01a-4600-9c13-3fd91ad2dbcc",
+        "latitude": 50.8341269,
+        "longitude": 4.3668331
+      },
+      "demand": [17280, 0, 7200],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T05:00:00Z",
+          "end": "2025-07-29T06:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "3eac3c02-643f-49ff-80ee-26124365d341",
+      "duration": 1740,
+      "location": {
+        "id": "3eac3c02-643f-49ff-80ee-26124365d341",
+        "latitude": 50.8146744,
+        "longitude": 4.3462861
+      },
+      "demand": [15360, 0, 6400],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T04:00:00Z",
+          "end": "2025-07-29T06:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "e5fc2770-0631-429b-acd3-b51b423c5c31",
+      "duration": 480,
+      "location": {
+        "id": "e5fc2770-0631-429b-acd3-b51b423c5c31",
+        "latitude": 50.1574987,
+        "longitude": 5.2216365
+      },
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T08:00:00Z",
+          "end": "2025-07-29T14:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "a6505d03-63e4-4124-8102-3e79fb75caee",
+      "duration": 660,
+      "location": {
+        "id": "a6505d03-63e4-4124-8102-3e79fb75caee",
+        "latitude": 50.0812976,
+        "longitude": 5.2167851
+      },
+      "demand": [2333, 0, 1066],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T08:00:00Z",
+          "end": "2025-07-29T14:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "4931f438-5d28-41c1-991a-967636f19df4",
+      "duration": 480,
+      "location": {
+        "id": "4931f438-5d28-41c1-991a-967636f19df4",
+        "latitude": 49.8408011,
+        "longitude": 5.4356218
+      },
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T08:00:00Z",
+          "end": "2025-07-29T14:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "ec2676e2-336b-43c2-b680-ed2e78e0ba57",
+      "duration": 660,
+      "location": {
+        "id": "ec2676e2-336b-43c2-b680-ed2e78e0ba57",
+        "latitude": 49.6734002,
+        "longitude": 5.5955606
+      },
+      "demand": [2333, 0, 1066],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T08:00:00Z",
+          "end": "2025-07-29T14:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "b32d2c00-f4b3-4d4d-8fcf-34f23e4fb696",
+      "duration": 660,
+      "location": {
+        "id": "b32d2c00-f4b3-4d4d-8fcf-34f23e4fb696",
+        "latitude": 49.675166,
+        "longitude": 5.476386
+      },
+      "demand": [3840, 0, 1600],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T08:00:00Z",
+          "end": "2025-07-29T14:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "7d345c90-b6a0-4417-8202-fd2241c0c7ca",
+      "duration": 480,
+      "location": {
+        "id": "7d345c90-b6a0-4417-8202-fd2241c0c7ca",
+        "latitude": 49.6749297,
+        "longitude": 5.4359487
+      },
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T06:00:00Z",
+          "end": "2025-07-29T12:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "e0d2d349-fff8-402f-b17c-a71a8f8dacb5",
+      "duration": 480,
+      "location": {
+        "id": "e0d2d349-fff8-402f-b17c-a71a8f8dacb5",
+        "latitude": 49.7184621,
+        "longitude": 5.4937727
+      },
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T08:00:00Z",
+          "end": "2025-07-29T14:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "4ef42463-c9b7-4296-864a-fd4d9302c5ad",
+      "duration": 660,
+      "location": {
+        "id": "4ef42463-c9b7-4296-864a-fd4d9302c5ad",
+        "latitude": 49.6029186,
+        "longitude": 5.4814507
+      },
+      "demand": [3840, 0, 1600],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T08:00:00Z",
+          "end": "2025-07-29T13:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "f52983c8-a691-47d0-b2e9-8ca08a7c3e70",
+      "duration": 480,
+      "location": {
+        "id": "f52983c8-a691-47d0-b2e9-8ca08a7c3e70",
+        "latitude": 50.4884472,
+        "longitude": 5.0971453
+      },
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T08:00:00Z",
+          "end": "2025-07-29T14:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "df8a026e-9c79-4b4a-a105-85c189329156",
+      "duration": 480,
+      "location": {
+        "id": "df8a026e-9c79-4b4a-a105-85c189329156",
+        "latitude": 50.4773839,
+        "longitude": 5.0450305
+      },
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T06:00:00Z",
+          "end": "2025-07-29T11:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "22e3d23f-a02c-45ae-b58c-f0d53a26d707",
+      "duration": 660,
+      "location": {
+        "id": "22e3d23f-a02c-45ae-b58c-f0d53a26d707",
+        "latitude": 50.4310861,
+        "longitude": 5.1289729
+      },
+      "demand": [3840, 0, 1600],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T07:00:00Z",
+          "end": "2025-07-29T14:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "cfd299a0-c615-4c63-bc17-13523005ee27",
+      "duration": 480,
+      "location": {
+        "id": "cfd299a0-c615-4c63-bc17-13523005ee27",
+        "latitude": 50.4451914,
+        "longitude": 5.1808251
+      },
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T08:00:00Z",
+          "end": "2025-07-29T14:01:00Z"
+        }
+      ]
+    },
+    {
+      "id": "081cae2d-6303-4534-8d97-31ecbe918860",
+      "duration": 480,
+      "location": {
+        "id": "081cae2d-6303-4534-8d97-31ecbe918860",
+        "latitude": 50.3571369,
+        "longitude": 5.3177589
+      },
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T08:00:00Z",
+          "end": "2025-07-29T14:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "252605f4-80b9-4e5b-a6f2-0f92c92c799a",
+      "duration": 660,
+      "location": {
+        "id": "252605f4-80b9-4e5b-a6f2-0f92c92c799a",
+        "latitude": 50.2876908,
+        "longitude": 5.1094711
+      },
+      "demand": [3840, 0, 1600],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T07:00:00Z",
+          "end": "2025-07-29T15:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "ca689776-0800-4053-aa08-8bd03950c634",
+      "duration": 480,
+      "location": {
+        "id": "ca689776-0800-4053-aa08-8bd03950c634",
+        "latitude": 50.3507841,
+        "longitude": 5.4866402
+      },
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T07:00:00Z",
+          "end": "2025-07-29T13:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "a8c0e77f-954a-46ed-b801-b62fec84127d",
+      "duration": 660,
+      "location": {
+        "id": "a8c0e77f-954a-46ed-b801-b62fec84127d",
+        "latitude": 50.0031179,
+        "longitude": 5.7180966
+      },
+      "demand": [2333, 0, 1066],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T08:00:00Z",
+          "end": "2025-07-29T14:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "1473133f-fcd4-4e82-a797-1ebd227d6939",
+      "duration": 480,
+      "location": {
+        "id": "1473133f-fcd4-4e82-a797-1ebd227d6939",
+        "latitude": 50.2257792,
+        "longitude": 5.3456521
+      },
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T08:00:00Z",
+          "end": "2025-07-29T14:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "8462657e-2251-4095-8cd2-7c214944bc0b",
+      "duration": 660,
+      "location": {
+        "id": "8462657e-2251-4095-8cd2-7c214944bc0b",
+        "latitude": 50.2357515,
+        "longitude": 5.2378647
+      },
+      "demand": [2333, 0, 1066],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T08:00:00Z",
+          "end": "2025-07-29T14:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "0b0b5d90-1b2d-4221-8517-59289db83f1a",
+      "duration": 840,
+      "location": {
+        "id": "0b0b5d90-1b2d-4221-8517-59289db83f1a",
+        "latitude": 50.2469357,
+        "longitude": 5.2275545
+      },
+      "demand": [3499, 0, 1599],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T08:00:00Z",
+          "end": "2025-07-29T14:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "7a9a74f2-5a47-45f6-b792-d6652c8ee321",
+      "duration": 660,
+      "location": {
+        "id": "7a9a74f2-5a47-45f6-b792-d6652c8ee321",
+        "latitude": 50.3256589,
+        "longitude": 5.1699284
+      },
+      "demand": [3840, 0, 1600],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T08:00:00Z",
+          "end": "2025-07-29T14:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "531e3e5e-895a-4d5b-8750-bfdb13fbc8bf",
+      "duration": 840,
+      "location": {
+        "id": "531e3e5e-895a-4d5b-8750-bfdb13fbc8bf",
+        "latitude": 50.5332049,
+        "longitude": 4.9692706
+      },
+      "demand": [5760, 0, 2400],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T08:00:00Z",
+          "end": "2025-07-29T14:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "ca35feeb-99ad-4632-8f1d-9af8c6ed37db",
+      "duration": 480,
+      "location": {
+        "id": "ca35feeb-99ad-4632-8f1d-9af8c6ed37db",
+        "latitude": 50.5600735,
+        "longitude": 5.035803
+      },
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T08:00:00Z",
+          "end": "2025-07-29T14:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "0b1a678f-c427-49f8-a1b9-437e3abe7dbe",
+      "duration": 480,
+      "location": {
+        "id": "0b1a678f-c427-49f8-a1b9-437e3abe7dbe",
+        "latitude": 50.6208726,
+        "longitude": 5.1168038
+      },
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T08:00:00Z",
+          "end": "2025-07-29T14:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "bb16cbab-e53a-4934-adb0-cbc10fe7e710",
+      "duration": 480,
+      "location": {
+        "id": "bb16cbab-e53a-4934-adb0-cbc10fe7e710",
+        "latitude": 50.6119406,
+        "longitude": 5.3058613
+      },
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T06:00:00Z",
+          "end": "2025-07-29T14:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "a2903f45-26e0-4a99-9cf6-1a26d6e9212d",
+      "duration": 480,
+      "location": {
+        "id": "a2903f45-26e0-4a99-9cf6-1a26d6e9212d",
+        "latitude": 50.707407,
+        "longitude": 5.4167515
+      },
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T08:00:00Z",
+          "end": "2025-07-29T14:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "53183f99-208c-4833-afdd-a50d0ad5ee32",
+      "duration": 480,
+      "location": {
+        "id": "53183f99-208c-4833-afdd-a50d0ad5ee32",
+        "latitude": 50.612985,
+        "longitude": 5.6144447
+      },
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T08:00:00Z",
+          "end": "2025-07-29T12:30:00Z"
+        }
+      ]
+    },
+    {
+      "id": "b40bbd4b-2c32-49c9-9675-984d417bad38",
+      "duration": 660,
+      "location": {
+        "id": "b40bbd4b-2c32-49c9-9675-984d417bad38",
+        "latitude": 50.5970695,
+        "longitude": 5.2632525
+      },
+      "demand": [3840, 0, 1600],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T11:00:00Z",
+          "end": "2025-07-30T05:01:00Z"
+        }
+      ]
+    },
+    {
+      "id": "28145623-fa71-45da-9dad-bd83a9b8a37a",
+      "duration": 1020,
+      "location": {
+        "id": "28145623-fa71-45da-9dad-bd83a9b8a37a",
+        "latitude": 50.5970695,
+        "longitude": 5.2632525
+      },
+      "demand": [-7680, 0, -3200],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T11:00:00Z",
+          "end": "2025-07-30T05:01:00Z"
+        }
+      ]
+    },
+    {
+      "id": "28d3cc8b-e366-4d69-834a-8ff3cc0a89c2",
+      "duration": 840,
+      "location": {
+        "id": "28d3cc8b-e366-4d69-834a-8ff3cc0a89c2",
+        "latitude": 50.6700911,
+        "longitude": 5.2281274
+      },
+      "demand": [-5760, 0, -2400],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T08:00:00Z",
+          "end": "2025-07-29T13:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "09a7736f-de23-4f40-a5d9-601bf198b652",
+      "duration": 2460,
+      "location": {
+        "id": "09a7736f-de23-4f40-a5d9-601bf198b652",
+        "latitude": 50.4754659,
+        "longitude": 4.5836981
+      },
+      "demand": [-23040, 0, -9600],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T13:00:00Z",
+          "end": "2025-07-29T16:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "22e2bf78-2523-4b39-9b1c-92fc545933be",
+      "duration": 480,
+      "location": {
+        "id": "22e2bf78-2523-4b39-9b1c-92fc545933be",
+        "latitude": 50.615476,
+        "longitude": 4.4562337
+      },
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T04:00:00Z",
+          "end": "2025-07-29T13:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "46befe08-433b-44aa-aa1d-7eb26963e768",
+      "duration": 660,
+      "location": {
+        "id": "46befe08-433b-44aa-aa1d-7eb26963e768",
+        "latitude": 50.71931,
+        "longitude": 4.3847668
+      },
+      "demand": [2333, 0, 1066],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T10:00:00Z",
+          "end": "2025-07-29T16:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "75181523-3dbb-4bea-9f7e-c68699b95d4a",
+      "duration": 480,
+      "location": {
+        "id": "75181523-3dbb-4bea-9f7e-c68699b95d4a",
+        "latitude": 50.8147007,
+        "longitude": 4.3657894
+      },
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T10:00:00Z",
+          "end": "2025-07-29T16:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "1b4930b0-59e1-4cd5-a3b3-7c47f6d6fd56",
+      "duration": 480,
+      "location": {
+        "id": "1b4930b0-59e1-4cd5-a3b3-7c47f6d6fd56",
+        "latitude": 50.8197349,
+        "longitude": 4.3272294
+      },
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T10:00:00Z",
+          "end": "2025-07-29T16:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "920f32ae-1708-49f6-a810-0751d69b939b",
+      "duration": 480,
+      "location": {
+        "id": "920f32ae-1708-49f6-a810-0751d69b939b",
+        "latitude": 50.8199343,
+        "longitude": 4.3258958
+      },
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T10:00:00Z",
+          "end": "2025-07-29T16:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "ee6e7106-8342-4ee0-a0a4-efa2ca96a6ae",
+      "duration": 480,
+      "location": {
+        "id": "ee6e7106-8342-4ee0-a0a4-efa2ca96a6ae",
+        "latitude": 50.8657882,
+        "longitude": 4.2875259
+      },
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T10:00:00Z",
+          "end": "2025-07-29T16:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "f2852fe4-a98e-485a-bb59-68d23596b546",
+      "duration": 660,
+      "location": {
+        "id": "f2852fe4-a98e-485a-bb59-68d23596b546",
+        "latitude": 50.8735458,
+        "longitude": 4.3262595
+      },
+      "demand": [2333, 0, 1066],
+      "timeWindows": [
+        {
+          "start": "2025-07-29T10:00:00Z",
+          "end": "2025-07-29T16:00:00Z"
+        }
+      ]
+    }
+  ],
+  "relations": []
+}

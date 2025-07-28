@@ -62,7 +62,7 @@ impl Default for SolverParams {
                 Termination::Duration(SignedDuration::from_mins(2)),
             ],
             max_solutions: 30,
-            tabu_size: 30,
+            tabu_size: 10,
             tabu_iterations: 1000,
             solver_acceptor: SolverAcceptorStrategy::Schrimpf,
             solver_selector: SolverSelectorStrategy::SelectWeighted,

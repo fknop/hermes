@@ -71,6 +71,7 @@ export default function VehicleRoutingScreen() {
                       <span>Route {index + 1}</span>
                     </span>
 
+                    <span>Start: {route.activities[0].arrival_time}</span>
                     <span>Duration: {route.duration}</span>
                     <span>Distance: {Math.round(route.distance) / 1000}km</span>
                     <span>Waiting duration: {route.waiting_duration}</span>
