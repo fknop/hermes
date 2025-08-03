@@ -1,7 +1,7 @@
 use std::{
     cmp::Ordering,
     iter,
-    ops::{Add, AddAssign, Sub, SubAssign},
+    ops::{Add, AddAssign, Div, Mul, Sub, SubAssign},
 };
 
 use fxhash::FxHashMap;
@@ -56,6 +56,13 @@ impl Score {
             soft_score: 0.0,
         }
     }
+
+    pub fn round(&self) -> Self {
+        Score {
+            hard_score: self.hard_score.round(),
+            soft_score: self.soft_score.round(),
+        }
+    }
 }
 
 impl Eq for Score {}
@@ -108,6 +115,28 @@ impl Sub<Score> for Score {
         Score {
             hard_score: self.hard_score - other.hard_score,
             soft_score: self.soft_score - other.soft_score,
+        }
+    }
+}
+
+impl Div<f64> for Score {
+    type Output = Self;
+
+    fn div(self, divisor: f64) -> Self::Output {
+        Score {
+            hard_score: self.hard_score / divisor,
+            soft_score: self.soft_score / divisor,
+        }
+    }
+}
+
+impl Mul<f64> for Score {
+    type Output = Self;
+
+    fn mul(self, scalar: f64) -> Self::Output {
+        Score {
+            hard_score: self.hard_score * scalar,
+            soft_score: self.soft_score * scalar,
         }
     }
 }
@@ -187,5 +216,7 @@ mod tests {
             Score::new(20.0, 10.0).cmp(&Score::new(25.0, 100.0)),
             Ordering::Less
         );
+
+        assert!(Score::soft(828.9368669428342) <= Score::soft(828.94));
     }
 }

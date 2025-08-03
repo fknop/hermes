@@ -4,7 +4,7 @@ use fxhash::FxHashMap;
 use jiff::Timestamp;
 use parking_lot::{MappedRwLockReadGuard, RwLock, RwLockReadGuard};
 use rand::{Rng, SeedableRng, rngs::SmallRng, seq::IndexedRandom};
-use tracing::info;
+use tracing::{debug, info};
 
 use crate::{
     acceptor::{
@@ -35,7 +35,7 @@ use super::{
     solver_params::{
         SolverAcceptorStrategy, SolverParams, SolverSelectorStrategy, Termination, Threads,
     },
-    working_solution::{self, WorkingSolution},
+    working_solution::WorkingSolution,
 };
 
 pub struct Search {
@@ -126,7 +126,7 @@ impl Search {
             score_analysis,
         });
 
-        info!("Running search on {} threads", num_threads);
+        debug!("Running search on {} threads", num_threads);
         thread::scope(|s| {
             for thread_index in 0..num_threads {
                 let best_solutions = Arc::clone(&self.best_solutions);
@@ -168,7 +168,7 @@ impl Search {
                             state.iteration += 1;
 
                             if (state.iteration + 1) % 5000 == 0 {
-                                info!(
+                                debug!(
                                     thread = thread::current().name().unwrap_or("main"),
                                     weights = ?self.operator_weights.read(),
                                     "Thread {}: Iteration {}/{}",
@@ -193,14 +193,19 @@ impl Search {
 
     fn check_termination(&self, state: &ThreadedSearchState, termination: &Termination) -> bool {
         match *termination {
-            Termination::Iterations(max_iterations) => {
-                state.iterations_without_improvement >= max_iterations
-            }
+            Termination::Iterations(max_iterations) => state.iteration >= max_iterations,
             Termination::Duration(max_duration) => {
                 Timestamp::now().duration_since(state.start) > max_duration
             }
             Termination::IterationsWithoutImprovement(max_iterations_without_improvement) => {
                 state.iterations_without_improvement >= max_iterations_without_improvement
+            }
+            Termination::Score(target_score) => {
+                if let Some(best_solution) = state.best_solutions.read().first() {
+                    (best_solution.score * 100.0).round() / 100.0 <= target_score
+                } else {
+                    false
+                }
             }
         }
     }
@@ -208,7 +213,7 @@ impl Search {
     fn should_terminate(&self, state: &ThreadedSearchState) -> bool {
         self.params.terminations.iter().any(|termination| {
             if self.check_termination(state, termination) {
-                info!(
+                debug!(
                     thread = thread::current().name().unwrap_or("main"),
                     "Thread {}: Termination condition met: {:?}",
                     thread::current().name().unwrap_or("main"),
@@ -322,11 +327,11 @@ impl Search {
                     guard.sort_by(|a, b| a.score.cmp(&b.score));
 
                     if is_best {
-                        info!(
-                            thread = thread::current().name().unwrap_or("main"),
-                            "Score: {:?}", guard[0].score_analysis,
-                        );
-                        info!("Vehicles {:?}", guard[0].solution.routes().len());
+                        // info!(
+                        //     thread = thread::current().name().unwrap_or("main"),
+                        //     "Score: {:?}", guard[0].score_analysis,
+                        // );
+                        // info!("Vehicles {:?}", guard[0].solution.routes().len());
 
                         if let Some(callback) = self.on_best_solution_handler.as_ref() {
                             callback(&guard[0]);

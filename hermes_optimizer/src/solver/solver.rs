@@ -54,6 +54,10 @@ impl Solver {
         }
     }
 
+    pub fn on_best_solution(&mut self, callback: fn(&AcceptedSolution)) {
+        self.search.on_best_solution(callback);
+    }
+
     pub fn solve(&self) {
         *self.status.write() = SolverStatus::Running;
         self.search.run();

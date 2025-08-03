@@ -687,6 +687,7 @@ dependencies = [
  "geojson",
  "hermes_core",
  "hermes_optimizer",
+ "tracing",
  "tracing-subscriber",
 ]
 

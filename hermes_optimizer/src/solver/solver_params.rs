@@ -1,6 +1,8 @@
 use jiff::SignedDuration;
 
-use super::{recreate::recreate_params::RecreateParams, ruin::ruin_params::RuinParams};
+use super::{
+    recreate::recreate_params::RecreateParams, ruin::ruin_params::RuinParams, score::Score,
+};
 
 #[derive(Clone, Debug)]
 pub struct SolverParams {
@@ -32,6 +34,7 @@ pub enum Termination {
     Duration(SignedDuration),
     Iterations(usize),
     IterationsWithoutImprovement(usize),
+    Score(Score),
 }
 
 #[derive(Clone, Debug)]
@@ -71,7 +74,7 @@ impl Default for SolverParams {
             solver_selector: SolverSelectorStrategy::SelectWeighted,
             ruin: RuinParams::default(),
             recreate: RecreateParams::default(),
-            threads: Threads::Auto,
+            threads: Threads::Multi(4),
             noise_level: 0.15,
             noise_probability: 0.2,
 

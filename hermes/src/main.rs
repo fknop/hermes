@@ -1,18 +1,153 @@
+use std::{
+    sync::{Arc, RwLock},
+    thread,
+};
+
 use hermes_core::geopoint::GeoPoint;
 use hermes_optimizer::{
     solomon::solomon_parser::SolomonParser,
     solver::{
+        score::Score,
         solver::Solver,
-        solver_params::{SolverParams, Termination},
+        solver_params::{SolverParams, Termination, Threads},
     },
 };
+use tracing::{info, warn};
+
+struct SolomonDataset {
+    file: &'static str,
+    vehicles: usize,
+    optimal_cost: f64,
+}
+
+fn create_solomon_dataset() -> Vec<SolomonDataset> {
+    vec![
+        SolomonDataset {
+            file: "./data/solomon/c1/c101.txt",
+            vehicles: 10,
+            optimal_cost: 828.94,
+        },
+        SolomonDataset {
+            file: "./data/solomon/c1/c102.txt",
+            vehicles: 10,
+            optimal_cost: 828.94,
+        },
+        SolomonDataset {
+            file: "./data/solomon/c1/c103.txt",
+            vehicles: 10,
+            optimal_cost: 828.06,
+        },
+        SolomonDataset {
+            file: "./data/solomon/c1/c104.txt",
+            vehicles: 10,
+            optimal_cost: 874.78,
+        },
+        SolomonDataset {
+            file: "./data/solomon/c1/c105.txt",
+            vehicles: 10,
+            optimal_cost: 828.94,
+        },
+        SolomonDataset {
+            file: "./data/solomon/c1/c106.txt",
+            vehicles: 10,
+            optimal_cost: 828.94,
+        },
+        SolomonDataset {
+            file: "./data/solomon/c1/c107.txt",
+            vehicles: 10,
+            optimal_cost: 828.94,
+        },
+        SolomonDataset {
+            file: "./data/solomon/c1/c108.txt",
+            vehicles: 10,
+            optimal_cost: 828.94,
+        },
+        SolomonDataset {
+            file: "./data/solomon/c1/c109.txt",
+            vehicles: 10,
+            optimal_cost: 828.94,
+        },
+        // C2
+        SolomonDataset {
+            file: "./data/solomon/c2/c201.txt",
+            vehicles: 3,
+            optimal_cost: 591.56,
+        },
+        SolomonDataset {
+            file: "./data/solomon/c2/c202.txt",
+            vehicles: 3,
+            optimal_cost: 591.56,
+        },
+        SolomonDataset {
+            file: "./data/solomon/c2/c203.txt",
+            vehicles: 3,
+            optimal_cost: 591.17,
+        },
+        SolomonDataset {
+            file: "./data/solomon/c2/c204.txt",
+            vehicles: 3,
+            optimal_cost: 590.60,
+        },
+        SolomonDataset {
+            file: "./data/solomon/c2/c205.txt",
+            vehicles: 3,
+            optimal_cost: 588.88,
+        },
+        SolomonDataset {
+            file: "./data/solomon/c2/c206.txt",
+            vehicles: 3,
+            optimal_cost: 588.49,
+        },
+        SolomonDataset {
+            file: "./data/solomon/c2/c207.txt",
+            vehicles: 3,
+            optimal_cost: 588.29,
+        },
+        SolomonDataset {
+            file: "./data/solomon/c2/c208.txt",
+            vehicles: 3,
+            optimal_cost: 588.32,
+        },
+    ]
+}
 
 fn main() {
     tracing_subscriber::fmt::init();
 
-    let file = "./data/solomon/c1/c102.txt";
+    let datasets = create_solomon_dataset();
 
-    let vrp = SolomonParser::from_file(file).unwrap();
+    for dataset in datasets {
+        let vrp = SolomonParser::from_file(dataset.file).unwrap();
+        let route_cost = vrp.route_costs();
+        let target_score =
+            Score::soft(dataset.optimal_cost + (route_cost * dataset.vehicles as f64));
+        let solver = Solver::new(
+            vrp,
+            SolverParams {
+                terminations: vec![
+                    Termination::Iterations(5000),
+                    Termination::Score(target_score),
+                ],
+                threads: Threads::Multi(8),
+                ..SolverParams::default()
+            },
+        );
+
+        solver.solve();
+
+        let best_score = solver.current_best_solution().unwrap().score;
+        if (best_score * 100.0).round() / 100.0 <= target_score {
+            info!(
+                "Found optimal solution for {} - Score = {:?}",
+                dataset.file, best_score
+            );
+        } else {
+            warn!(
+                "Could not find optimal solution for {} - Score = {:?}",
+                dataset.file, best_score
+            );
+        }
+    }
 
     /*
     * Route #1: 20 22 24 27 30 29 6 32 33 31 35 37 38 39 36 34 28 26 23 18 19 16 14 12 15 17 13 25 9 11 10 8 21
@@ -21,15 +156,15 @@ fn main() {
     Cost 589.1
     */
 
-    let solver = Solver::new(
-        vrp,
-        SolverParams {
-            terminations: vec![Termination::Iterations(100000)],
-            ..SolverParams::default()
-        },
-    );
+    // solver.on_best_solution(|solution| {
+    //     info!(
+    //         thread = thread::current().name().unwrap_or("main"),
+    //         "Score: {:?}", solution.score_analysis,
+    //     );
+    //     info!("Vehicles {:?}", solution.solution.routes().len());
+    // });
 
-    solver.solve();
+    // solver.solve();
 
     // let hermes = Hermes::from_osm_file("./data/osm/united-kingdom-latest.osm.pbf");
     // let hermes = Hermes::from_osm_file("./data/osm/belgium-latest.osm.pbf");
