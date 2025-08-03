@@ -1,8 +1,9 @@
 use crate::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
-        insertion_context::InsertionContext, score::Score,
-        working_solution::WorkingSolutionRouteActivity,
+        insertion_context::InsertionContext,
+        score::Score,
+        working_solution::{WorkingSolutionRoute, WorkingSolutionRouteActivity},
     },
 };
 
@@ -12,6 +13,7 @@ pub trait ActivityConstraint {
     fn compute_score(
         &self,
         problem: &VehicleRoutingProblem,
+        route: &WorkingSolutionRoute,
         activity: &WorkingSolutionRouteActivity,
     ) -> Score;
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score;
@@ -39,10 +41,11 @@ impl ActivityConstraint for ActivityConstraintType {
     fn compute_score(
         &self,
         problem: &VehicleRoutingProblem,
+        route: &WorkingSolutionRoute,
         activity: &WorkingSolutionRouteActivity,
     ) -> Score {
         match self {
-            Self::TimeWindow(constraint) => constraint.compute_score(problem, activity),
+            Self::TimeWindow(constraint) => constraint.compute_score(problem, route, activity),
         }
     }
 }

@@ -22,6 +22,7 @@ pub struct SolverParams {
     pub alns_best_factor: f64,
     pub alns_improvement_factor: f64,
     pub alns_accepted_worst_factor: f64,
+    pub tabu_enabled: bool,
     pub tabu_size: usize,
     pub tabu_iterations: usize,
 }
@@ -62,6 +63,8 @@ impl Default for SolverParams {
                 Termination::Duration(SignedDuration::from_mins(2)),
             ],
             max_solutions: 30,
+
+            tabu_enabled: false,
             tabu_size: 10,
             tabu_iterations: 1000,
             solver_acceptor: SolverAcceptorStrategy::Schrimpf,

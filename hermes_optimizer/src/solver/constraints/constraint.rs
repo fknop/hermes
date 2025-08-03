@@ -54,7 +54,7 @@ impl Constraint {
                         .activities()
                         .iter()
                         .fold(Score::zero(), |acc, activity| {
-                            acc + constraint.compute_score(problem, activity)
+                            acc + constraint.compute_score(problem, route, activity)
                         })
                 })
             }

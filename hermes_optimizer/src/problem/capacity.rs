@@ -1,4 +1,4 @@
-use std::ops::Add;
+use std::ops::{Add, Sub};
 
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
@@ -141,6 +141,19 @@ impl Add<&Capacity> for &Capacity {
     }
 }
 
+impl Sub<&Capacity> for &Capacity {
+    type Output = Capacity;
+
+    fn sub(self, rhs: &Capacity) -> Self::Output {
+        let mut output = Capacity::ZERO;
+
+        output.add_mut(self);
+        output.sub_mut(rhs);
+
+        output
+    }
+}
+
 #[cfg(test)]
 mod tests {
 
@@ -208,9 +221,11 @@ mod tests {
 
     #[test]
     fn test_min_max_capacities() {
-        let capacities = [Capacity::new(smallvec![1.0, 2.0, 3.0]),
+        let capacities = [
+            Capacity::new(smallvec![1.0, 2.0, 3.0]),
             Capacity::new(smallvec![4.0, 5.0, 6.0]),
-            Capacity::new(smallvec![2.0, 3.0, 4.0])];
+            Capacity::new(smallvec![2.0, 3.0, 4.0]),
+        ];
 
         let (min, max) =
             Capacity::compute_min_max_capacities(&(capacities.iter().collect::<Vec<&Capacity>>()));

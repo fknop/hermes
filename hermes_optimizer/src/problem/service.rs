@@ -5,6 +5,13 @@ use super::{capacity::Capacity, location::LocationId, time_window::TimeWindow};
 
 pub type ServiceId = usize;
 
+#[derive(Deserialize, Debug, Copy, Clone, Default, PartialEq, Eq)]
+pub enum ServiceType {
+    Pickup,
+    #[default]
+    Delivery,
+}
+
 #[derive(Deserialize, Debug)]
 pub struct Service {
     external_id: String,
@@ -12,6 +19,9 @@ pub struct Service {
     time_windows: Vec<TimeWindow>,
     demand: Capacity,
     service_duration: SignedDuration,
+
+    #[serde(default = "ServiceType::default")]
+    service_type: ServiceType,
 }
 
 impl Service {
@@ -31,6 +41,10 @@ impl Service {
         self.service_duration
     }
 
+    pub fn service_type(&self) -> ServiceType {
+        self.service_type
+    }
+
     pub fn time_windows(&self) -> &Vec<TimeWindow> {
         &self.time_windows
     }
@@ -42,12 +56,18 @@ pub struct ServiceBuilder {
     location_id: Option<LocationId>,
     time_windows: Option<Vec<TimeWindow>>,
     demand: Option<Capacity>,
-    service_time: Option<SignedDuration>,
+    service_duration: Option<SignedDuration>,
+    service_type: Option<ServiceType>,
 }
 
 impl ServiceBuilder {
     pub fn set_external_id(&mut self, external_id: String) -> &mut ServiceBuilder {
         self.external_id = Some(external_id);
+        self
+    }
+
+    pub fn set_service_type(&mut self, service_type: ServiceType) -> &mut ServiceBuilder {
+        self.service_type = Some(service_type);
         self
     }
 
@@ -57,7 +77,17 @@ impl ServiceBuilder {
     }
 
     pub fn set_time_window(&mut self, time_window: TimeWindow) -> &mut ServiceBuilder {
-        self.time_windows = Some(vec![time_window]);
+        if let Some(time_windows) = &mut self.time_windows {
+            time_windows.push(time_window)
+        } else {
+            self.time_windows = Some(vec![time_window]);
+        }
+
+        self
+    }
+
+    pub fn set_time_windows(&mut self, time_window: Vec<TimeWindow>) -> &mut ServiceBuilder {
+        self.time_windows = Some(time_window);
         self
     }
 
@@ -67,7 +97,7 @@ impl ServiceBuilder {
     }
 
     pub fn set_service_duration(&mut self, service_time: SignedDuration) -> &mut ServiceBuilder {
-        self.service_time = Some(service_time);
+        self.service_duration = Some(service_time);
         self
     }
 
@@ -76,8 +106,9 @@ impl ServiceBuilder {
             external_id: self.external_id.expect("Expected service id"),
             location_id: self.location_id.expect("Expected location id"),
             demand: self.demand.unwrap_or_default(),
-            service_duration: self.service_time.unwrap_or(SignedDuration::ZERO),
+            service_duration: self.service_duration.unwrap_or(SignedDuration::ZERO),
             time_windows: self.time_windows.unwrap_or_default(),
+            service_type: self.service_type.unwrap_or(ServiceType::Delivery),
         }
     }
 }

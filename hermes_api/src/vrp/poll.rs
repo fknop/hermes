@@ -137,7 +137,7 @@ fn transform_solution(accepted_solution: &AcceptedSolution, hermes: &Hermes) -> 
                 distance: route.distance(problem),
                 duration: route.duration(problem),
                 transport_duration: route.transport_duration(problem),
-                total_demand: route.total_demand().clone(),
+                total_demand: route.total_initial_load().clone(),
                 vehicle_id: route.vehicle_id(),
                 waiting_duration: route.total_waiting_duration(),
                 activities,

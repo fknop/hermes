@@ -261,7 +261,8 @@ impl Search {
         state: &mut ThreadedSearchState,
         iteration_info: IterationInfo,
     ) {
-        if iteration_info.iteration > 0
+        if self.params.tabu_enabled
+            && iteration_info.iteration > 0
             && iteration_info.iteration % self.params.tabu_iterations == 0
         {
             state.tabu.write().clear();
@@ -293,10 +294,11 @@ impl Search {
                 state.iterations_without_improvement = 0;
             }
 
-            let is_tabu = state.tabu.read().iter().any(|accepted_solution| {
-                accepted_solution.score == score
-                    && accepted_solution.solution.is_identical(&solution)
-            });
+            let is_tabu = self.params.tabu_enabled
+                && state.tabu.read().iter().any(|accepted_solution| {
+                    accepted_solution.score == score
+                        && accepted_solution.solution.is_identical(&solution)
+                });
 
             // Don't store it if it's a duplicate
             if !is_duplicate && !is_tabu {
@@ -304,10 +306,12 @@ impl Search {
                     // Evict worst
                     if guard.len() + 1 > self.params.max_solutions {
                         if let Some(worst_solution) = guard.pop() {
-                            let mut guard = state.tabu.write();
-                            guard.push_front(worst_solution);
-                            if guard.len() > self.params.tabu_size {
-                                guard.pop_back();
+                            if self.params.tabu_enabled {
+                                let mut guard = state.tabu.write();
+                                guard.push_front(worst_solution);
+                                if guard.len() > self.params.tabu_size {
+                                    guard.pop_back();
+                                }
                             }
                         }
                     }

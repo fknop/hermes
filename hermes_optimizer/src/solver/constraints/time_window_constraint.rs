@@ -3,8 +3,9 @@ use jiff::Timestamp;
 use crate::{
     problem::{time_window::TimeWindow, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{
-        insertion_context::InsertionContext, score::Score,
-        working_solution::WorkingSolutionRouteActivity,
+        insertion_context::InsertionContext,
+        score::Score,
+        working_solution::{WorkingSolutionRoute, WorkingSolutionRouteActivity},
     },
 };
 
@@ -15,6 +16,11 @@ pub struct TimeWindowConstraint;
 impl TimeWindowConstraint {
     fn compute_time_window_score(time_windows: &[TimeWindow], arrival_time: Timestamp) -> Score {
         if time_windows.is_empty() {
+            return Score::zero();
+        }
+
+        // If at least one time window is satisfied, the constraint is satisfied
+        if time_windows.iter().any(|tw| tw.is_satisfied(arrival_time)) {
             return Score::zero();
         }
 
@@ -32,6 +38,7 @@ impl ActivityConstraint for TimeWindowConstraint {
     fn compute_score(
         &self,
         problem: &VehicleRoutingProblem,
+        _route: &WorkingSolutionRoute,
         activity: &WorkingSolutionRouteActivity,
     ) -> Score {
         TimeWindowConstraint::compute_time_window_score(

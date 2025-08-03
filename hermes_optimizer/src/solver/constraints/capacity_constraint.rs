@@ -1,5 +1,7 @@
+use std::ops::Add;
+
 use crate::{
-    problem::vehicle_routing_problem::VehicleRoutingProblem,
+    problem::{capacity::Capacity, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{
         insertion::{ExistingRouteInsertion, Insertion, NewRouteInsertion},
         insertion_context::InsertionContext,
@@ -12,6 +14,21 @@ use super::route_constraint::RouteConstraint;
 
 pub struct CapacityConstraint;
 
+impl CapacityConstraint {
+    fn compute_capacity_score(
+        vehicle_capacity: &Capacity,
+        initial_load: &Capacity,
+        cumulative_load: &Capacity,
+    ) -> Score {
+        let load = initial_load.add(cumulative_load);
+        if vehicle_capacity.satisfies_demand(&load) {
+            Score::zero()
+        } else {
+            Score::hard(vehicle_capacity.over_capacity_demand(&load))
+        }
+    }
+}
+
 impl RouteConstraint for CapacityConstraint {
     fn compute_score(
         &self,
@@ -19,13 +36,22 @@ impl RouteConstraint for CapacityConstraint {
         route: &WorkingSolutionRoute,
     ) -> Score {
         let vehicle = route.vehicle(problem);
-        let total_demand = route.total_demand();
+        let initial_load = route.total_initial_load();
 
-        if vehicle.capacity().satisfies_demand(total_demand) {
-            Score::zero()
-        } else {
-            Score::hard(vehicle.capacity().over_capacity_demand(total_demand))
+        let mut score = Score::zero();
+        if !vehicle.capacity().satisfies_demand(initial_load) {
+            score += Score::hard(vehicle.capacity().over_capacity_demand(initial_load));
         }
+
+        for activity in route.activities() {
+            score += CapacityConstraint::compute_capacity_score(
+                vehicle.capacity(),
+                initial_load,
+                activity.cumulative_load(),
+            );
+        }
+
+        score
     }
 
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
@@ -36,27 +62,32 @@ impl RouteConstraint for CapacityConstraint {
             return Score::zero();
         }
 
-        match *context.insertion {
+        let vehicle = match *context.insertion {
             Insertion::ExistingRoute(ExistingRouteInsertion { route_id, .. }) => {
-                let route = context.solution.route(route_id);
-                let vehicle = route.vehicle(problem);
-                let current_demand = route.total_demand();
-
-                let new_demand = current_demand + service.demand();
-                if vehicle.capacity().satisfies_demand(&new_demand) {
-                    Score::zero()
-                } else {
-                    Score::hard(vehicle.capacity().over_capacity_demand(&new_demand))
-                }
+                context.solution.route(route_id).vehicle(problem)
             }
             Insertion::NewRoute(NewRouteInsertion { vehicle_id, .. }) => {
-                let vehicle = problem.vehicle(vehicle_id);
-                if vehicle.capacity().satisfies_demand(service.demand()) {
-                    Score::zero()
-                } else {
-                    Score::hard(vehicle.capacity().over_capacity_demand(service.demand()))
-                }
+                problem.vehicle(vehicle_id)
             }
+        };
+
+        let mut score = Score::zero();
+        if !vehicle.capacity().satisfies_demand(&context.initial_load) {
+            score += Score::hard(
+                vehicle
+                    .capacity()
+                    .over_capacity_demand(&context.initial_load),
+            );
         }
+
+        for activity in context.activities.iter().skip(context.insertion.position()) {
+            score += CapacityConstraint::compute_capacity_score(
+                vehicle.capacity(),
+                &context.initial_load,
+                &activity.cumulative_load,
+            );
+        }
+
+        score
     }
 }

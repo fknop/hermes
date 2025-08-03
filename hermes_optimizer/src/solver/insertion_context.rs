@@ -1,6 +1,8 @@
 use jiff::{SignedDuration, Timestamp};
 
-use crate::problem::{service::ServiceId, vehicle_routing_problem::VehicleRoutingProblem};
+use crate::problem::{
+    capacity::Capacity, service::ServiceId, vehicle_routing_problem::VehicleRoutingProblem,
+};
 
 use super::{insertion::Insertion, working_solution::WorkingSolution};
 
@@ -9,6 +11,7 @@ pub struct ActivityInsertionContext {
     pub arrival_time: Timestamp,
     pub departure_time: Timestamp,
     pub waiting_duration: SignedDuration,
+    pub cumulative_load: Capacity,
 }
 
 impl ActivityInsertionContext {
@@ -21,6 +24,7 @@ pub struct InsertionContext<'a> {
     pub problem: &'a VehicleRoutingProblem,
     pub solution: &'a WorkingSolution,
     pub insertion: &'a Insertion,
+    pub initial_load: Capacity,
     pub activities: Vec<ActivityInsertionContext>,
     pub start: Timestamp,
     pub end: Timestamp,
