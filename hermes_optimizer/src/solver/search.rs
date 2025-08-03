@@ -111,28 +111,26 @@ impl Search {
 
         let num_threads = self.number_of_threads();
 
+        let initial_solution = construct_solution(
+            &self.problem,
+            &mut rng,
+            &self.constraints,
+            &self.noise_generator,
+        );
+
+        let (score, score_analysis) = self.compute_solution_score(&initial_solution);
+
+        self.best_solutions.write().push(AcceptedSolution {
+            solution: initial_solution,
+            score,
+            score_analysis,
+        });
+
         info!("Running search on {} threads", num_threads);
         thread::scope(|s| {
             for thread_index in 0..num_threads {
                 let best_solutions = Arc::clone(&self.best_solutions);
                 let tabu = Arc::clone(&self.tabu);
-
-                let initial_solution = construct_solution(
-                    &self.problem,
-                    &mut rng,
-                    &self.constraints,
-                    &self.noise_generator,
-                );
-
-                let (score, score_analysis) = self.compute_solution_score(&initial_solution);
-
-                println!("Construction heuristic score {score_analysis:?}");
-
-                best_solutions.write().push(AcceptedSolution {
-                    solution: initial_solution,
-                    score,
-                    score_analysis,
-                });
 
                 // let on_best_solution_handler = Arc::clone(&self.on_best_solution_handler);
 

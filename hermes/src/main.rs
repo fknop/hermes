@@ -10,7 +10,7 @@ use hermes_optimizer::{
 fn main() {
     tracing_subscriber::fmt::init();
 
-    let file = "./data/solomon/c2/c208.txt";
+    let file = "./data/solomon/c1/c102.txt";
 
     let vrp = SolomonParser::from_file(file).unwrap();
 
