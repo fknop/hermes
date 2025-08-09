@@ -64,6 +64,11 @@ impl Solver {
         *self.status.write() = SolverStatus::Completed;
     }
 
+    pub fn stop(&self) {
+        self.search.stop();
+        *self.status.write() = SolverStatus::Completed;
+    }
+
     pub fn status(&self) -> SolverStatus {
         *self.status.read()
     }

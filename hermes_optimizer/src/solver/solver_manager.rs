@@ -36,6 +36,12 @@ impl SolverManager {
             .map(|solver| solver.status())
     }
 
+    pub async fn stop(&self, job_id: &str) {
+        if let Some(solver) = self.solvers.write().await.remove(job_id) {
+            solver.stop();
+        }
+    }
+
     pub async fn get_solution(&self, job_id: &str) -> Option<AcceptedSolution> {
         self.solvers
             .read()

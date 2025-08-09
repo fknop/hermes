@@ -1,4 +1,4 @@
-import { colors } from './colors'
+import { VRP_COLORS } from './colors'
 import { SolutionResponse } from './usePollRouting'
 import { POST_BODY } from './usePostRouting'
 
@@ -28,7 +28,7 @@ export function transformSolutionToGeoJson(
             properties: {
               routeId: routeIndex.toString(),
               activityId: (index + 1).toString(),
-              color: colors[routeIndex % solution.routes.length],
+              color: VRP_COLORS[routeIndex % solution.routes.length],
             },
           }
         })

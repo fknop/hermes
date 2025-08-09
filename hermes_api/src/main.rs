@@ -40,6 +40,22 @@ async fn main() {
         .route("/vrp/ws", any(vrp::ws::handler))
         .route("/vrp", post(vrp::post::post_handler))
         .route("/vrp/poll/{job_id}", get(vrp::poll::poll_handler))
+        .route(
+            "/vrp/benchmark",
+            post(vrp::benchmark::post_benchmark::post_benchmark_handler),
+        )
+        .route(
+            "/vrp/benchmark/{category}/{name}",
+            get(vrp::benchmark::get_benchmark::get_benchmark_handler),
+        )
+        .route(
+            "/vrp/benchmark/poll/{job_id}",
+            get(vrp::benchmark::poll_benchmark::poll_handler),
+        )
+        .route(
+            "/vrp/benchmark/stop/{job_id}",
+            post(vrp::benchmark::stop_benchmark::stop_benchmark_handler),
+        )
         .layer(ServiceBuilder::new().layer(cors_layer))
         .with_state(app_state);
 

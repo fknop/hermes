@@ -16,12 +16,15 @@ type Pages = {
   "/vehicle-routing": {
     params: {};
   };
+  "/benchmarks": {
+    params: {};
+  };
 };
 
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/vehicle-routing";
+    page: "/" | "/vehicle-routing" | "/benchmarks";
   };
   "./routes/home.tsx": {
     id: "routes/home";
@@ -30,5 +33,9 @@ type RouteFiles = {
   "./routes/vehicle-routing/route.tsx": {
     id: "routes/vehicle-routing/route";
     page: "/vehicle-routing";
+  };
+  "./routes/benchmarks/route.tsx": {
+    id: "routes/benchmarks/route";
+    page: "/benchmarks";
   };
 };

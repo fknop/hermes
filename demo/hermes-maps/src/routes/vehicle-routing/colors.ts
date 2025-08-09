@@ -1,4 +1,4 @@
-export const colors = [
+export const VRP_COLORS = [
   '#a6cee3',
   '#1f78b4',
   '#b2df8a',

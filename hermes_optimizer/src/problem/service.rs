@@ -1,18 +1,18 @@
 use jiff::SignedDuration;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use super::{capacity::Capacity, location::LocationId, time_window::TimeWindow};
 
 pub type ServiceId = usize;
 
-#[derive(Deserialize, Debug, Copy, Clone, Default, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Debug, Copy, Clone, Default, PartialEq, Eq)]
 pub enum ServiceType {
     Pickup,
     #[default]
     Delivery,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Service {
     external_id: String,
     location_id: LocationId,

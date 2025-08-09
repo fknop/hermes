@@ -8,7 +8,7 @@ import { usePollRouting } from './usePollRouting.ts'
 import { POST_BODY, usePostRouting } from './usePostRouting.ts'
 import { PolylineLayer } from '../../PolylineLayer.tsx'
 import { ActivitiesLayer } from './ActivityLayer.tsx'
-import { colors } from './colors.ts'
+import { VRP_COLORS } from './colors.ts'
 import { Temporal } from 'temporal-polyfill'
 
 export default function VehicleRoutingScreen() {
@@ -65,7 +65,9 @@ export default function VehicleRoutingScreen() {
                         className="h-4 w-4 rounded-full"
                         style={{
                           backgroundColor:
-                            colors[index % solution.solution!.routes.length],
+                            VRP_COLORS[
+                              index % solution.solution!.routes.length
+                            ],
                         }}
                       />
                       <span>Route {index + 1}</span>
@@ -96,7 +98,7 @@ export default function VehicleRoutingScreen() {
                 >
                   <PolylineLayer
                     id={`polyline-${index}`}
-                    color={colors[index % colors.length]}
+                    color={VRP_COLORS[index % VRP_COLORS.length]}
                     sourceId={`polyline-${index}`}
                     lineWidth={3}
                   />

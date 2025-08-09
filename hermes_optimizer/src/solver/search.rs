@@ -48,8 +48,8 @@ pub struct Search {
     solution_acceptor: SolutionAcceptor,
     on_best_solution_handler: Arc<Option<fn(&AcceptedSolution)>>,
     noise_generator: NoiseGenerator,
-
     operator_weights: Arc<RwLock<OperatorWeights>>,
+    is_stopped: Arc<RwLock<bool>>,
 }
 
 impl Search {
@@ -95,6 +95,7 @@ impl Search {
             on_best_solution_handler: Arc::new(None),
             operator_weights: Arc::new(RwLock::new(OperatorWeights::new(&params))),
             params,
+            is_stopped: Arc::new(RwLock::new(false)),
         }
     }
 
@@ -104,6 +105,10 @@ impl Search {
 
     pub fn best_solution(&self) -> Option<MappedRwLockReadGuard<'_, AcceptedSolution>> {
         RwLockReadGuard::try_map(self.best_solutions.read(), |solutions| solutions.first()).ok()
+    }
+
+    pub fn stop(&self) {
+        *self.is_stopped.write() = true;
     }
 
     pub fn run(&self) {
@@ -131,6 +136,7 @@ impl Search {
             for thread_index in 0..num_threads {
                 let best_solutions = Arc::clone(&self.best_solutions);
                 let tabu = Arc::clone(&self.tabu);
+                let is_stopped = Arc::clone(&self.is_stopped);
 
                 // let on_best_solution_handler = Arc::clone(&self.on_best_solution_handler);
 
@@ -180,7 +186,7 @@ impl Search {
 
                             self.perform_iteration(&mut state, &mut thread_rng);
 
-                            let should_terminate = self.should_terminate(&state);
+                            let should_terminate = *is_stopped.read() || self.should_terminate(&state);
                             if should_terminate {
                                 break;
                             }
