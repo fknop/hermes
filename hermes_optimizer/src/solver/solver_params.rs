@@ -74,7 +74,7 @@ impl Default for SolverParams {
             solver_selector: SolverSelectorStrategy::SelectWeighted,
             ruin: RuinParams::default(),
             recreate: RecreateParams::default(),
-            threads: Threads::Multi(8),
+            threads: Threads::Single,
             noise_level: 0.15,
             noise_probability: 0.2,
 

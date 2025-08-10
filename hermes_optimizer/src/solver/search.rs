@@ -173,13 +173,13 @@ impl Search {
                         loop {
                             state.iteration += 1;
 
-                            if (state.iteration + 1) % 5000 == 0 {
-                                debug!(
+                            if (state.iteration) % 1000 == 0 {
+                                info!(
                                     thread = thread::current().name().unwrap_or("main"),
                                     weights = ?self.operator_weights.read(),
                                     "Thread {}: Iteration {}/{}",
                                     thread_index,
-                                    state.iteration + 1,
+                                    state.iteration,
                                     max_iterations.map(|max| max.to_string()).unwrap_or(String::from("N/A"))
                                 );
                             }
@@ -564,7 +564,7 @@ impl<T> Operator<T> {
                 + reaction_factor * (entry.score / entry.iterations as f64)
         };
 
-        self.weight = new_weight.max(0.05);
+        self.weight = new_weight.max(0.1);
     }
 
     fn reset(&mut self) {

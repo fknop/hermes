@@ -208,6 +208,13 @@ impl WorkingSolution {
 
         self.routes.remove(route_id);
     }
+
+    pub fn distance(&self) -> f64 {
+        self.routes
+            .iter()
+            .map(|route| route.distance(&self.problem))
+            .sum()
+    }
 }
 
 #[derive(Clone, Serialize)]

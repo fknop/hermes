@@ -54,7 +54,7 @@ impl GlobalConstraint for TransportCostConstraint {
             }
         }
 
-        Score::soft(cost)
+        Score::soft(cost * 50.0)
     }
 
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
@@ -137,6 +137,6 @@ impl GlobalConstraint for TransportCostConstraint {
 
         let travel_cost_delta = new_cost - old_cost;
 
-        Score::soft(travel_cost_delta)
+        Score::soft(travel_cost_delta * 50.0)
     }
 }

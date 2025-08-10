@@ -1,8 +1,3 @@
-use std::{
-    sync::{Arc, RwLock},
-    thread,
-};
-
 use hermes_core::geopoint::GeoPoint;
 use hermes_optimizer::{
     solomon::solomon_parser::SolomonParser,
@@ -12,7 +7,11 @@ use hermes_optimizer::{
         solver_params::{SolverParams, Termination, Threads},
     },
 };
+use mimalloc::MiMalloc;
 use tracing::{info, warn};
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
 
 struct SolomonDataset {
     file: &'static str,
@@ -119,8 +118,9 @@ fn main() {
     for dataset in datasets {
         let vrp = SolomonParser::from_file(dataset.file).unwrap();
         let route_cost = vrp.route_costs();
-        let target_score =
-            Score::soft(dataset.optimal_cost + (route_cost * dataset.vehicles as f64));
+        let target_score = Score::soft(
+            (dataset.optimal_cost * 50.0) + (route_cost * dataset.vehicles as f64) + 0.5,
+        );
         let solver = Solver::new(
             vrp,
             SolverParams {
@@ -128,23 +128,25 @@ fn main() {
                     Termination::Iterations(5000),
                     Termination::Score(target_score),
                 ],
-                threads: Threads::Multi(8),
+                threads: Threads::Multi(4),
                 ..SolverParams::default()
             },
         );
 
         solver.solve();
 
-        let best_score = solver.current_best_solution().unwrap().score;
+        let best_solution = solver.current_best_solution().unwrap();
+        let best_score = best_solution.score;
+        let distance = best_solution.solution.distance();
         if (best_score * 100.0).round() / 100.0 <= target_score {
             info!(
-                "Found optimal solution for {} - Score = {:?}",
-                dataset.file, best_score
+                "Found optimal solution for {} - Costs = {}",
+                dataset.file, distance
             );
         } else {
             warn!(
-                "Could not find optimal solution for {} - Score = {:?}",
-                dataset.file, best_score
+                "Could not find optimal solution for {} - Costs = {:?}",
+                dataset.file, distance
             );
         }
     }

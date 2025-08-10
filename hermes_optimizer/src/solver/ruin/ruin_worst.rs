@@ -1,3 +1,5 @@
+use std::f64;
+
 use crate::{
     problem::{service::ServiceId, vehicle_routing_problem::VehicleRoutingProblem},
     solver::working_solution::WorkingSolution,
@@ -7,11 +9,9 @@ use super::{ruin_context::RuinContext, ruin_solution::RuinSolution};
 
 pub struct RuinWorst;
 
-fn compute_savings(
-    problem: &VehicleRoutingProblem,
-    solution: &WorkingSolution,
-) -> Vec<(ServiceId, i64)> {
-    let mut savings = Vec::new();
+fn get_worst(problem: &VehicleRoutingProblem, solution: &WorkingSolution) -> Option<ServiceId> {
+    let mut worst_service: Option<usize> = None;
+    let mut best_savings = f64::MIN;
 
     for route in solution.routes() {
         let vehicle = route.vehicle(problem);
@@ -60,15 +60,16 @@ fn compute_savings(
                 0.0
             };
 
-            let service_savings: i64 =
-                (new_travel_cost - (travel_cost_previous + travel_cost_next)).round() as i64;
-            savings.push((activity.service_id(), service_savings))
+            let service_savings: f64 = new_travel_cost - (travel_cost_previous + travel_cost_next);
+
+            if service_savings > best_savings {
+                best_savings = service_savings;
+                worst_service = Some(activity.service_id());
+            }
         }
     }
 
-    savings.sort();
-
-    savings
+    worst_service
 }
 
 impl RuinSolution for RuinWorst {
@@ -78,12 +79,11 @@ impl RuinSolution for RuinWorst {
                 return;
             }
 
-            // Compute savings for the current solution
-            let mut savings = compute_savings(context.problem, solution);
-
             // Remove the activity with the worst savings
-            if let Some((service_id, _)) = savings.pop() {
+            if let Some(service_id) = get_worst(context.problem, solution) {
                 solution.remove_service(service_id);
+            } else {
+                break;
             }
         }
     }
