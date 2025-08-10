@@ -19,3 +19,4 @@ uuid = { version = "1.17.0", features = ["serde"] }
 parking_lot = "0.12.4"
 jiff = "0.2.15"
 geo = "0.30.0"
+mimalloc = "0.1.47"

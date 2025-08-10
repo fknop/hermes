@@ -60,7 +60,7 @@ impl RuinSolution for RuinTimeRelated {
 
                 related_activities.push(RelatednessToTargetActivity {
                     route_id: route_index,
-                    activity_id: activity_index,
+                    service_id: activity.service_id(),
                     time: time_difference,
                     distance,
                 });
@@ -86,15 +86,18 @@ impl RuinSolution for RuinTimeRelated {
                 break;
             }
 
-            solution.remove_activity(related_activity.route_id, related_activity.activity_id);
-            remaining_to_remove -= 1;
+            if solution.remove_service(related_activity.service_id) {
+                remaining_to_remove -= 1;
+            }
+            // solution
+            // .remove_service_from_route(related_activity.route_id, related_activity.service_id);
         }
     }
 }
 
 struct RelatednessToTargetActivity {
     route_id: usize,
-    activity_id: usize,
+    service_id: usize,
     time: SignedDuration,
     distance: Distance,
 }

@@ -87,8 +87,9 @@ impl RuinString {
 
         let start = possible_starts.choose(rng).cloned().unwrap();
 
-        for i in start..(start + string_length) {
-            solution.remove_activity(route_id, i);
+        for _ in start..(start + string_length) {
+            // Always remove the start, as the start+1 becomes the start once start is removed
+            solution.remove_activity(route_id, start);
         }
     }
 
@@ -117,16 +118,20 @@ impl RuinString {
         let start_of_preserved_string = rng.random_range(0..string_length);
 
         let mut string_position = 0;
+        let mut preserved = 0;
 
         for i in start..(start + total_string_length) {
             if string_position >= start_of_preserved_string
                 && string_position < start_of_preserved_string + preserved_string_length
             {
                 string_position += 1;
+                preserved += 1;
                 continue;
             }
 
-            solution.remove_activity(route_id, i);
+            // s, s+1, p, p+1, s+4
+
+            solution.remove_activity(route_id, start + preserved);
             string_position += 1;
         }
     }
