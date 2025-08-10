@@ -67,7 +67,7 @@ impl Default for SolverParams {
             ],
             max_solutions: 30,
 
-            tabu_enabled: false,
+            tabu_enabled: true,
             tabu_size: 10,
             tabu_iterations: 1000,
             solver_acceptor: SolverAcceptorStrategy::Schrimpf,
@@ -79,7 +79,7 @@ impl Default for SolverParams {
             noise_probability: 0.2,
 
             alns_segment_iterations: 100,
-            alns_reaction_factor: 0.8,
+            alns_reaction_factor: 0.7,
             alns_best_factor: 33.0,
             alns_improvement_factor: 20.0,
             alns_accepted_worst_factor: 13.0,

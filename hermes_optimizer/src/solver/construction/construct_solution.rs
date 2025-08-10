@@ -55,10 +55,9 @@ pub fn construct_solution(
     //         0 // Fallback if no depot is found
     //     }
     // });
-    //
 
-    let regret = RegretInsertion::new(2);
-    regret.insert_services(
+    BestInsertion::insert_services(
+        &services,
         &mut solution,
         RecreateContext {
             rng,
@@ -66,6 +65,16 @@ pub fn construct_solution(
             noise_generator,
         },
     );
+
+    // let regret = RegretInsertion::new(3);
+    // regret.insert_services(
+    //     &mut solution,
+    //     RecreateContext {
+    //         rng,
+    //         constraints,
+    //         noise_generator,
+    //     },
+    // );
 
     solution
 }

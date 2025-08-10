@@ -179,9 +179,14 @@ export default function SolomonRoute() {
 
       <div className="flex flex-row gap-10">
         {problem && <ProblemChart data={problem} />}
-        {solution?.solution && problem && (
-          <SolutionChart solution={solution.solution} problem={problem} />
-        )}
+        <div className="flex flex-col gap-4">
+          {solution?.solution && (
+            <span>Total distance: {solution.solution.distance}</span>
+          )}
+          {solution?.solution && problem && (
+            <SolutionChart solution={solution.solution} problem={problem} />
+          )}
+        </div>
       </div>
     </div>
   )
