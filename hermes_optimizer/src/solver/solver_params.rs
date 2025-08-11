@@ -65,7 +65,7 @@ impl Default for SolverParams {
                 Termination::Iterations(100000),
                 Termination::Duration(SignedDuration::from_mins(2)),
             ],
-            max_solutions: 30,
+            max_solutions: 20,
 
             tabu_enabled: true,
             tabu_size: 10,
@@ -74,7 +74,7 @@ impl Default for SolverParams {
             solver_selector: SolverSelectorStrategy::SelectWeighted,
             ruin: RuinParams::default(),
             recreate: RecreateParams::default(),
-            threads: Threads::Single,
+            threads: Threads::Multi(4),
             noise_level: 0.15,
             noise_probability: 0.2,
 

@@ -4,13 +4,13 @@ use crate::solver::accepted_solution::AcceptedSolution;
 
 use super::{
     select_best_selector::SelectBestSelector, select_random_selector::SelectRandomSelector,
-    select_solution::SelectSolution, select_weighted::SelestWeightedSelector,
+    select_solution::SelectSolution, select_weighted::SelectWeightedSelector,
 };
 
 pub enum SolutionSelector {
     SelectBest(SelectBestSelector),
     SelectRandom(SelectRandomSelector),
-    SelectWeighted(SelestWeightedSelector),
+    SelectWeighted(SelectWeightedSelector),
 }
 
 impl SelectSolution for SolutionSelector {

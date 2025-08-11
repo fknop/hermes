@@ -7,6 +7,8 @@ use super::global_constraint::GlobalConstraint;
 
 pub struct TransportCostConstraint;
 
+const TRANSPORT_COST_WEIGHT: f64 = 70.0;
+
 impl GlobalConstraint for TransportCostConstraint {
     fn compute_score(&self, solution: &WorkingSolution) -> Score {
         // let problem = solution.problem();
@@ -54,7 +56,7 @@ impl GlobalConstraint for TransportCostConstraint {
             }
         }
 
-        Score::soft(cost * 50.0)
+        Score::soft(cost * TRANSPORT_COST_WEIGHT)
     }
 
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
@@ -137,6 +139,6 @@ impl GlobalConstraint for TransportCostConstraint {
 
         let travel_cost_delta = new_cost - old_cost;
 
-        Score::soft(travel_cost_delta * 50.0)
+        Score::soft(travel_cost_delta * TRANSPORT_COST_WEIGHT)
     }
 }

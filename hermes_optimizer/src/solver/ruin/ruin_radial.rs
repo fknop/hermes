@@ -1,6 +1,6 @@
 use rand::Rng;
 
-use crate::{problem::service::ServiceId, solver::working_solution::WorkingSolution};
+use crate::solver::working_solution::WorkingSolution;
 
 use super::{ruin_context::RuinContext, ruin_solution::RuinSolution};
 
@@ -13,6 +13,7 @@ impl RuinSolution for RuinRadial {
         RuinContext {
             rng,
             num_activities_to_remove,
+            problem,
             ..
         }: RuinContext,
     ) {
@@ -20,15 +21,12 @@ impl RuinSolution for RuinRadial {
             return;
         }
 
-        let problem = solution.problem();
         let random_service_id = rng.random_range(0..problem.services().len());
 
-        let service_ids: Vec<ServiceId> = problem
+        for service_id in problem
             .nearest_services(random_service_id)
             .take(num_activities_to_remove)
-            .collect();
-
-        for service_id in service_ids {
+        {
             solution.remove_service(service_id);
         }
     }

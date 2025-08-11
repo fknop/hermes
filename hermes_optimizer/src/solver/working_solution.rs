@@ -767,11 +767,10 @@ pub fn compute_insertion_context<'a>(
     solution: &'a WorkingSolution,
     insertion: &'a Insertion,
 ) -> InsertionContext<'a> {
-    let mut activities = Vec::new();
-
     match insertion {
         Insertion::ExistingRoute(context) => {
             let route = &solution.routes[context.route_id];
+            let mut activities = Vec::with_capacity(route.activities.len() + 1);
 
             activities.extend(
                 route
@@ -906,7 +905,7 @@ pub fn compute_insertion_context<'a>(
             let waiting_duration =
                 compute_waiting_duration(problem.service(context.service_id), arrival_time);
 
-            activities.push(ActivityInsertionContext {
+            let activities = vec![ActivityInsertionContext {
                 service_id: context.service_id,
                 arrival_time,
                 departure_time,
@@ -915,7 +914,7 @@ pub fn compute_insertion_context<'a>(
                     problem.service(context.service_id),
                     &Capacity::ZERO,
                 ),
-            });
+            }];
 
             InsertionContext {
                 problem,

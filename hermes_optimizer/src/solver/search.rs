@@ -16,7 +16,7 @@ use crate::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     selector::{
         select_best_selector::SelectBestSelector, select_random_selector::SelectRandomSelector,
-        select_solution::SelectSolution, select_weighted::SelestWeightedSelector,
+        select_solution::SelectSolution, select_weighted::SelectWeightedSelector,
         solution_selector::SolutionSelector,
     },
 };
@@ -70,7 +70,7 @@ impl Search {
                 SolutionSelector::SelectRandom(SelectRandomSelector)
             }
             SolverSelectorStrategy::SelectWeighted => {
-                SolutionSelector::SelectWeighted(SelestWeightedSelector)
+                SolutionSelector::SelectWeighted(SelectWeightedSelector)
             }
         };
         let solution_acceptor = match params.solver_acceptor {

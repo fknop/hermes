@@ -4,9 +4,9 @@ use crate::solver::accepted_solution::AcceptedSolution;
 
 use super::select_solution::SelectSolution;
 
-pub struct SelestWeightedSelector;
+pub struct SelectWeightedSelector;
 
-impl SelectSolution for SelestWeightedSelector {
+impl SelectSolution for SelectWeightedSelector {
     fn select_solution<'a>(
         &self,
         solutions: &'a [AcceptedSolution],
@@ -16,8 +16,8 @@ impl SelectSolution for SelestWeightedSelector {
             return None; // No solutions to select from
         }
 
-        let wieghts = (0..solutions.len()).collect::<Vec<_>>();
-        let index = wieghts
+        let weights = (0..solutions.len()).collect::<Vec<_>>();
+        let index = weights
             .choose_weighted(rng, |index| {
                 1.3_f64.powf((solutions.len() - 1 - index) as f64)
             })
