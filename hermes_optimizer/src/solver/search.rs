@@ -248,7 +248,7 @@ impl Search {
             }
         }; // Lock is released here
 
-        let ruin_strategy = self.ruin(&mut working_solution, rng);
+        let ruin_strategy = self.ruin(&mut working_solution, state, rng);
 
         let recreate_strategy = self.recreate(&mut working_solution, rng);
 
@@ -375,6 +375,7 @@ impl Search {
                 );
             }
         } else {
+            state.iterations_without_improvement += 1;
             state
                 .operator_scores
                 .update_ruin_score(iteration_info.ruin_strategy, 0.0);
@@ -410,9 +411,14 @@ impl Search {
         }
     }
 
-    fn create_num_activities_to_remove(&self, rng: &mut SmallRng) -> usize {
+    fn create_num_activities_to_remove(
+        &self,
+        state: &ThreadedSearchState,
+        rng: &mut SmallRng,
+    ) -> usize {
         let ruin_minimum_ratio = self.params.ruin.ruin_minimum_ratio;
         let ruin_maximum_ratio = self.params.ruin.ruin_maximum_ratio;
+
         let minimum_ruin_size = ((ruin_minimum_ratio * self.problem.services().len() as f64).ceil()
             as usize)
             .max(self.params.ruin.ruin_minimum_size);
@@ -424,13 +430,18 @@ impl Search {
         rng.random_range(minimum_ruin_size..=maximum_ruin_size)
     }
 
-    fn ruin(&self, solution: &mut WorkingSolution, rng: &mut SmallRng) -> RuinStrategy {
+    fn ruin(
+        &self,
+        solution: &mut WorkingSolution,
+        state: &ThreadedSearchState,
+        rng: &mut SmallRng,
+    ) -> RuinStrategy {
         let ruin_strategy = self.select_ruin_strategy(rng);
         ruin_strategy.ruin_solution(
             solution,
             RuinContext {
                 problem: &self.problem,
-                num_activities_to_remove: self.create_num_activities_to_remove(rng),
+                num_activities_to_remove: self.create_num_activities_to_remove(state, rng),
                 rng,
             },
         );

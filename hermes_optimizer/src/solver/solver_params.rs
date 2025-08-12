@@ -80,9 +80,9 @@ impl Default for SolverParams {
 
             alns_segment_iterations: 100,
             alns_reaction_factor: 0.7,
-            alns_best_factor: 33.0,
-            alns_improvement_factor: 20.0,
-            alns_accepted_worst_factor: 13.0,
+            alns_best_factor: 12.0,
+            alns_improvement_factor: 6.0,
+            alns_accepted_worst_factor: 3.0,
         }
     }
 }
