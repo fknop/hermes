@@ -575,7 +575,7 @@ impl<T> Operator<T> {
                 + reaction_factor * (entry.score / entry.iterations as f64)
         };
 
-        self.weight = new_weight.max(0.1);
+        self.weight = new_weight.max(0.08);
     }
 
     fn reset(&mut self) {

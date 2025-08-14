@@ -8,3 +8,4 @@ pub mod ruin_strategy;
 pub mod ruin_string;
 pub mod ruin_time_related;
 pub mod ruin_worst;
+pub mod ruin_route;

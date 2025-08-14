@@ -32,6 +32,7 @@ type SolutionData = {
     vehicle_id: number
   }[]
   distance: number
+  score: { hard_score: number; soft_score: number }
 }
 
 export type SolutionResponse = {
@@ -181,7 +182,14 @@ export default function SolomonRoute() {
         {problem && <ProblemChart data={problem} />}
         <div className="flex flex-col gap-4">
           {solution?.solution && (
-            <span>Total distance: {solution.solution.distance}</span>
+            <div className="flex flex-row gap-2">
+              <span>Total distance: {solution.solution.distance}</span>
+              <span>Vehicles: {solution.solution.routes.length}</span>
+              <span>
+                Score: hard/{solution.solution.score.hard_score} soft/
+                {solution.solution.score.soft_score}
+              </span>
+            </div>
           )}
           {solution?.solution && problem && (
             <SolutionChart solution={solution.solution} problem={problem} />
