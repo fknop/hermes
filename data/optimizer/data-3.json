@@ -1,0 +1,1240 @@
+{
+  "configuration": {
+    "termination": {
+      "spentLimit": 133,
+      "unimprovedSpentLimit": 150
+    },
+    "considerTraffic": true
+  },
+  "constraints": {
+    "maximumVehiclePickupsPerTimeWindow": [
+      {
+        "start": "2025-08-19T13:00:00Z",
+        "end": "2025-08-20T07:00:00Z",
+        "maximum": 5
+      },
+      {
+        "start": "2025-08-19T07:00:00Z",
+        "end": "2025-08-19T10:00:00Z",
+        "maximum": 2
+      },
+      {
+        "start": "2025-08-20T07:00:00Z",
+        "end": "2025-08-20T10:00:00Z",
+        "maximum": 2
+      },
+      {
+        "start": "2025-08-19T10:00:00Z",
+        "end": "2025-08-19T12:00:00Z",
+        "maximum": 2
+      },
+      {
+        "start": "2025-08-20T10:00:00Z",
+        "end": "2025-08-20T12:00:00Z",
+        "maximum": 2
+      }
+    ]
+  },
+  "vehicles": [
+    {
+      "id": "0",
+      "capacity": [40000, 5000, 12320],
+      "warehouse": {
+        "id": "cb1f8ece-fd7a-49eb-8536-fa74be7f6962",
+        "latitude": 50.4921999,
+        "longitude": 4.5932809
+      },
+      "warehouseDuration": 3900,
+      "warehouseReturnDuration": 900,
+      "shouldReturnToWarehouse": true,
+      "shouldReturnBeforeEnd": true,
+      "shift": {
+        "earliestStartTime": "2025-08-19T13:00:00Z",
+        "latestStartTime": "2025-08-20T12:59:00Z",
+        "latestEndTime": null,
+        "maximumShiftDuration": 32400,
+        "maximumTransportDuration": 25200
+      }
+    },
+    {
+      "id": "1",
+      "capacity": [60000, 10000, 14720],
+      "warehouse": {
+        "id": "cb1f8ece-fd7a-49eb-8536-fa74be7f6962",
+        "latitude": 50.4921999,
+        "longitude": 4.5932809
+      },
+      "warehouseDuration": 3900,
+      "warehouseReturnDuration": 900,
+      "shouldReturnToWarehouse": true,
+      "shouldReturnBeforeEnd": true,
+      "shift": {
+        "earliestStartTime": "2025-08-19T13:00:00Z",
+        "latestStartTime": "2025-08-20T12:59:00Z",
+        "latestEndTime": null,
+        "maximumShiftDuration": 32400,
+        "maximumTransportDuration": 25200
+      }
+    },
+    {
+      "id": "2",
+      "capacity": [60000, 10000, 14720],
+      "warehouse": {
+        "id": "cb1f8ece-fd7a-49eb-8536-fa74be7f6962",
+        "latitude": 50.4921999,
+        "longitude": 4.5932809
+      },
+      "warehouseDuration": 3900,
+      "warehouseReturnDuration": 900,
+      "shouldReturnToWarehouse": true,
+      "shouldReturnBeforeEnd": true,
+      "shift": {
+        "earliestStartTime": "2025-08-19T13:00:00Z",
+        "latestStartTime": "2025-08-20T12:59:00Z",
+        "latestEndTime": null,
+        "maximumShiftDuration": 32400,
+        "maximumTransportDuration": 25200
+      }
+    },
+    {
+      "id": "3",
+      "capacity": [60000, 10000, 14720],
+      "warehouse": {
+        "id": "cb1f8ece-fd7a-49eb-8536-fa74be7f6962",
+        "latitude": 50.4921999,
+        "longitude": 4.5932809
+      },
+      "warehouseDuration": 3900,
+      "warehouseReturnDuration": 900,
+      "shouldReturnToWarehouse": true,
+      "shouldReturnBeforeEnd": true,
+      "shift": {
+        "earliestStartTime": "2025-08-19T13:00:00Z",
+        "latestStartTime": "2025-08-20T12:59:00Z",
+        "latestEndTime": null,
+        "maximumShiftDuration": 32400,
+        "maximumTransportDuration": 25200
+      }
+    },
+    {
+      "id": "4",
+      "capacity": [60000, 10000, 14720],
+      "warehouse": {
+        "id": "cb1f8ece-fd7a-49eb-8536-fa74be7f6962",
+        "latitude": 50.4921999,
+        "longitude": 4.5932809
+      },
+      "warehouseDuration": 3900,
+      "warehouseReturnDuration": 900,
+      "shouldReturnToWarehouse": true,
+      "shouldReturnBeforeEnd": true,
+      "shift": {
+        "earliestStartTime": "2025-08-19T13:00:00Z",
+        "latestStartTime": "2025-08-20T12:59:00Z",
+        "latestEndTime": null,
+        "maximumShiftDuration": 32400,
+        "maximumTransportDuration": 25200
+      }
+    },
+    {
+      "id": "5",
+      "capacity": [60000, 10000, 14720],
+      "warehouse": {
+        "id": "cb1f8ece-fd7a-49eb-8536-fa74be7f6962",
+        "latitude": 50.4921999,
+        "longitude": 4.5932809
+      },
+      "warehouseDuration": 3900,
+      "warehouseReturnDuration": 900,
+      "shouldReturnToWarehouse": true,
+      "shouldReturnBeforeEnd": true,
+      "shift": {
+        "earliestStartTime": "2025-08-19T13:00:00Z",
+        "latestStartTime": "2025-08-20T12:59:00Z",
+        "latestEndTime": null,
+        "maximumShiftDuration": 32400,
+        "maximumTransportDuration": 25200
+      }
+    },
+    {
+      "id": "6",
+      "capacity": [40000, 5000, 12320],
+      "warehouse": {
+        "id": "cb1f8ece-fd7a-49eb-8536-fa74be7f6962",
+        "latitude": 50.4921999,
+        "longitude": 4.5932809
+      },
+      "warehouseDuration": 3900,
+      "warehouseReturnDuration": 900,
+      "shouldReturnToWarehouse": true,
+      "shouldReturnBeforeEnd": true,
+      "shift": {
+        "earliestStartTime": "2025-08-19T13:00:00Z",
+        "latestStartTime": "2025-08-20T12:59:00Z",
+        "latestEndTime": null,
+        "maximumShiftDuration": 32400,
+        "maximumTransportDuration": 25200
+      }
+    },
+    {
+      "id": "7",
+      "capacity": [60000, 10000, 14720],
+      "warehouse": {
+        "id": "cb1f8ece-fd7a-49eb-8536-fa74be7f6962",
+        "latitude": 50.4921999,
+        "longitude": 4.5932809
+      },
+      "warehouseDuration": 3900,
+      "warehouseReturnDuration": 900,
+      "shouldReturnToWarehouse": true,
+      "shouldReturnBeforeEnd": true,
+      "shift": {
+        "earliestStartTime": "2025-08-19T13:00:00Z",
+        "latestStartTime": "2025-08-20T12:59:00Z",
+        "latestEndTime": null,
+        "maximumShiftDuration": 32400,
+        "maximumTransportDuration": 25200
+      }
+    }
+  ],
+  "services": [
+    {
+      "id": "edcbe772-524c-4522-86a6-632c321fe728",
+      "duration": 480,
+      "location": {
+        "id": "edcbe772-524c-4522-86a6-632c321fe728",
+        "latitude": 50.5427684,
+        "longitude": 5.7640145
+      },
+      "type": "DELIVERY",
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-08-19T10:00:00Z",
+          "end": "2025-08-19T16:02:00Z"
+        }
+      ]
+    },
+    {
+      "id": "ec8e1b02-cc8f-43c4-bbfa-9921911ea801",
+      "duration": 840,
+      "location": {
+        "id": "ec8e1b02-cc8f-43c4-bbfa-9921911ea801",
+        "latitude": 50.6846938,
+        "longitude": 5.5250223
+      },
+      "type": "DELIVERY",
+      "demand": [5760, 0, 2400],
+      "timeWindows": [
+        {
+          "start": "2025-08-19T13:00:00Z",
+          "end": "2025-08-20T04:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "cf64f51b-d143-4c4d-af33-d8fb2278238f",
+      "duration": 480,
+      "location": {
+        "id": "cf64f51b-d143-4c4d-af33-d8fb2278238f",
+        "latitude": 50.4925905,
+        "longitude": 5.8616558
+      },
+      "type": "DELIVERY",
+      "demand": [1166, 0, 533],
+      "timeWindows": [
+        {
+          "start": "2025-08-19T12:00:00Z",
+          "end": "2025-08-19T16:30:00Z"
+        }
+      ]
+    },
+    {
+      "id": "b7c133d5-f1f4-4f6a-8bb5-15210a10aa61",
+      "duration": 480,
+      "location": {
+        "id": "b7c133d5-f1f4-4f6a-8bb5-15210a10aa61",
+        "latitude": 50.5364386,
+        "longitude": 5.4846998
+      },
+      "type": "DELIVERY",
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-08-19T13:00:00Z",
+          "end": "2025-08-20T04:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "7636592c-b180-47dc-b13a-37bdfc09780f",
+      "duration": 480,
+      "location": {
+        "id": "7636592c-b180-47dc-b13a-37bdfc09780f",
+        "latitude": 50.6785179,
+        "longitude": 5.438633
+      },
+      "type": "DELIVERY",
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-08-19T13:00:00Z",
+          "end": "2025-08-20T04:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "aa095fcf-b370-46f7-ac50-94c8e0d1ad4d",
+      "duration": 480,
+      "location": {
+        "id": "aa095fcf-b370-46f7-ac50-94c8e0d1ad4d",
+        "latitude": 50.6558918,
+        "longitude": 5.675464
+      },
+      "type": "DELIVERY",
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-08-19T13:00:00Z",
+          "end": "2025-08-19T16:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "5d1b8598-ee98-4015-a9f7-28d9b1141873",
+      "duration": 480,
+      "location": {
+        "id": "5d1b8598-ee98-4015-a9f7-28d9b1141873",
+        "latitude": 50.5743962,
+        "longitude": 5.7252537
+      },
+      "type": "DELIVERY",
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-08-19T13:00:00Z",
+          "end": "2025-08-19T20:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "792fc4e9-d7b6-460f-bf61-41caed9d07b6",
+      "duration": 480,
+      "location": {
+        "id": "792fc4e9-d7b6-460f-bf61-41caed9d07b6",
+        "latitude": 50.641822,
+        "longitude": 5.7924819
+      },
+      "type": "DELIVERY",
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-08-19T13:00:00Z",
+          "end": "2025-08-19T16:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "f17b75a7-73f3-452f-a59e-87af92c01095",
+      "duration": 660,
+      "location": {
+        "id": "f17b75a7-73f3-452f-a59e-87af92c01095",
+        "latitude": 50.379994,
+        "longitude": 5.6844169
+      },
+      "type": "DELIVERY",
+      "demand": [2333, 0, 1066],
+      "timeWindows": [
+        {
+          "start": "2025-08-19T13:00:00Z",
+          "end": "2025-08-19T21:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "4078e192-de5c-4699-8eb1-75efea5b8f5a",
+      "duration": 480,
+      "location": {
+        "id": "4078e192-de5c-4699-8eb1-75efea5b8f5a",
+        "latitude": 50.4259379,
+        "longitude": 5.5270445
+      },
+      "type": "DELIVERY",
+      "demand": [1166, 0, 533],
+      "timeWindows": [
+        {
+          "start": "2025-08-19T13:00:00Z",
+          "end": "2025-08-20T04:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "85669202-b134-4d8a-900c-4c97ee420089",
+      "duration": 480,
+      "location": {
+        "id": "85669202-b134-4d8a-900c-4c97ee420089",
+        "latitude": 50.9011767,
+        "longitude": 4.4221921
+      },
+      "type": "DELIVERY",
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-08-19T17:00:00Z",
+          "end": "2025-08-19T20:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "022ece37-23fb-4d88-bd2c-b69882f18bf1",
+      "duration": 840,
+      "location": {
+        "id": "022ece37-23fb-4d88-bd2c-b69882f18bf1",
+        "latitude": 50.7111452,
+        "longitude": 4.519598
+      },
+      "type": "DELIVERY",
+      "demand": [3499, 0, 1599],
+      "timeWindows": [
+        {
+          "start": "2025-08-19T13:00:00Z",
+          "end": "2025-08-20T04:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "d8b474f6-1229-48ce-a72d-36d5d7c70f64",
+      "duration": 660,
+      "location": {
+        "id": "d8b474f6-1229-48ce-a72d-36d5d7c70f64",
+        "latitude": 50.7360315,
+        "longitude": 4.6530741
+      },
+      "type": "DELIVERY",
+      "demand": [2333, 0, 1066],
+      "timeWindows": [
+        {
+          "start": "2025-08-19T13:00:00Z",
+          "end": "2025-08-20T04:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "b6fd40a8-3168-4327-bb29-5f6880c09915",
+      "duration": 840,
+      "location": {
+        "id": "b6fd40a8-3168-4327-bb29-5f6880c09915",
+        "latitude": 50.6474555,
+        "longitude": 4.6426451
+      },
+      "type": "DELIVERY",
+      "demand": [3499, 0, 1599],
+      "timeWindows": [
+        {
+          "start": "2025-08-19T15:00:00Z",
+          "end": "2025-08-20T04:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "b1666458-943f-47de-8b9d-5d7b6fddd5ef",
+      "duration": 660,
+      "location": {
+        "id": "b1666458-943f-47de-8b9d-5d7b6fddd5ef",
+        "latitude": 50.6378471,
+        "longitude": 4.7821849
+      },
+      "type": "DELIVERY",
+      "demand": [2333, 0, 1066],
+      "timeWindows": [
+        {
+          "start": "2025-08-19T13:00:00Z",
+          "end": "2025-08-20T04:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "50d6c6cb-651f-4bca-bc71-791e469be5d2",
+      "duration": 840,
+      "location": {
+        "id": "50d6c6cb-651f-4bca-bc71-791e469be5d2",
+        "latitude": 50.8142684,
+        "longitude": 4.3403778
+      },
+      "type": "DELIVERY",
+      "demand": [3499, 0, 1599],
+      "timeWindows": [
+        {
+          "start": "2025-08-19T17:00:00Z",
+          "end": "2025-08-20T05:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "4830af27-7d27-4123-9521-c67fde67da47",
+      "duration": 660,
+      "location": {
+        "id": "4830af27-7d27-4123-9521-c67fde67da47",
+        "latitude": 50.7562381,
+        "longitude": 4.7150757
+      },
+      "type": "DELIVERY",
+      "demand": [3840, 0, 1600],
+      "timeWindows": [
+        {
+          "start": "2025-08-19T13:00:00Z",
+          "end": "2025-08-20T04:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "0db9f06a-e36d-4e14-87ad-aa030b38b3c2",
+      "duration": 480,
+      "location": {
+        "id": "0db9f06a-e36d-4e14-87ad-aa030b38b3c2",
+        "latitude": 50.8169929,
+        "longitude": 4.3059763
+      },
+      "type": "DELIVERY",
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-08-19T16:00:00Z",
+          "end": "2025-08-19T21:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "47213342-1ce6-41bb-ac12-35932ba42c2c",
+      "duration": 480,
+      "location": {
+        "id": "47213342-1ce6-41bb-ac12-35932ba42c2c",
+        "latitude": 50.6864243,
+        "longitude": 4.3855881
+      },
+      "type": "DELIVERY",
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-08-19T13:00:00Z",
+          "end": "2025-08-20T04:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "3e733151-9dc5-414f-811a-7cde46c6d29d",
+      "duration": 480,
+      "location": {
+        "id": "3e733151-9dc5-414f-811a-7cde46c6d29d",
+        "latitude": 50.616729,
+        "longitude": 4.325316
+      },
+      "type": "DELIVERY",
+      "demand": [1166, 0, 533],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T07:00:00Z",
+          "end": "2025-08-20T09:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "365f21d5-72bc-4618-8999-1db01d21ffe0",
+      "duration": 480,
+      "location": {
+        "id": "365f21d5-72bc-4618-8999-1db01d21ffe0",
+        "latitude": 50.7760742,
+        "longitude": 4.3263816
+      },
+      "type": "DELIVERY",
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T06:00:00Z",
+          "end": "2025-08-20T09:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "fd1c43f7-650b-4c82-b23b-8ccb382de155",
+      "duration": 480,
+      "location": {
+        "id": "fd1c43f7-650b-4c82-b23b-8ccb382de155",
+        "latitude": 50.8213699,
+        "longitude": 4.3128378
+      },
+      "type": "DELIVERY",
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T04:00:00Z",
+          "end": "2025-08-20T08:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "5ad014ce-63ad-492a-94d3-0c5ac50b9199",
+      "duration": 1020,
+      "location": {
+        "id": "5ad014ce-63ad-492a-94d3-0c5ac50b9199",
+        "latitude": 50.8324417,
+        "longitude": 4.3446509
+      },
+      "type": "DELIVERY",
+      "demand": [7680, 0, 3200],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T07:00:00Z",
+          "end": "2025-08-20T09:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "f717c41d-299a-44c6-bb1a-37b026f20def",
+      "duration": 480,
+      "location": {
+        "id": "f717c41d-299a-44c6-bb1a-37b026f20def",
+        "latitude": 50.8323346,
+        "longitude": 4.3428275
+      },
+      "type": "DELIVERY",
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T07:00:00Z",
+          "end": "2025-08-20T09:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "2fb1b774-2ad9-4d3e-88e7-1e120cd9fa34",
+      "duration": 840,
+      "location": {
+        "id": "2fb1b774-2ad9-4d3e-88e7-1e120cd9fa34",
+        "latitude": 50.8304144,
+        "longitude": 4.3491646
+      },
+      "type": "PICKUP",
+      "demand": [5760, 0, 2400],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T07:00:00Z",
+          "end": "2025-08-20T12:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "90ac5cc6-eeb1-477b-ad72-08a2700ba36a",
+      "duration": 480,
+      "location": {
+        "id": "90ac5cc6-eeb1-477b-ad72-08a2700ba36a",
+        "latitude": 50.8261703,
+        "longitude": 4.3482985
+      },
+      "type": "DELIVERY",
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T07:00:00Z",
+          "end": "2025-08-20T08:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "53c60bf8-df34-4055-a23f-ecf07d49ee4f",
+      "duration": 480,
+      "location": {
+        "id": "53c60bf8-df34-4055-a23f-ecf07d49ee4f",
+        "latitude": 50.8195779,
+        "longitude": 4.3617516
+      },
+      "type": "DELIVERY",
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T07:00:00Z",
+          "end": "2025-08-20T09:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "420e4594-a30d-4f35-94e4-a9a6e4ee0b14",
+      "duration": 660,
+      "location": {
+        "id": "420e4594-a30d-4f35-94e4-a9a6e4ee0b14",
+        "latitude": 50.8574569,
+        "longitude": 4.4442956
+      },
+      "type": "DELIVERY",
+      "demand": [3840, 0, 1600],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T04:30:00Z",
+          "end": "2025-08-20T05:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "b57e4f36-29c6-4973-8951-3a112a960b08",
+      "duration": 480,
+      "location": {
+        "id": "b57e4f36-29c6-4973-8951-3a112a960b08",
+        "latitude": 50.8534481,
+        "longitude": 4.3954331
+      },
+      "type": "DELIVERY",
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T05:00:00Z",
+          "end": "2025-08-20T06:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "42b65255-c131-43f5-b6f5-1c93c4fe36f1",
+      "duration": 480,
+      "location": {
+        "id": "42b65255-c131-43f5-b6f5-1c93c4fe36f1",
+        "latitude": 50.8167841,
+        "longitude": 4.4248001
+      },
+      "type": "DELIVERY",
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T05:00:00Z",
+          "end": "2025-08-20T06:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "7703e5f9-ed2e-43e0-8282-b02fff53d606",
+      "duration": 660,
+      "location": {
+        "id": "7703e5f9-ed2e-43e0-8282-b02fff53d606",
+        "latitude": 50.8147007,
+        "longitude": 4.3657894
+      },
+      "type": "DELIVERY",
+      "demand": [3840, 0, 1600],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T07:00:00Z",
+          "end": "2025-08-20T09:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "6c72fea7-8d6a-4d27-b554-56ec2a4e2c21",
+      "duration": 480,
+      "location": {
+        "id": "6c72fea7-8d6a-4d27-b554-56ec2a4e2c21",
+        "latitude": 50.8062189,
+        "longitude": 4.3404957
+      },
+      "type": "DELIVERY",
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T04:00:00Z",
+          "end": "2025-08-20T10:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "a7966550-2233-46c1-a6a9-e0588754a49d",
+      "duration": 480,
+      "location": {
+        "id": "a7966550-2233-46c1-a6a9-e0588754a49d",
+        "latitude": 50.8002798,
+        "longitude": 4.3361285
+      },
+      "type": "DELIVERY",
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T07:00:00Z",
+          "end": "2025-08-20T09:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "cf561ba9-febe-44f9-abc2-0401915a77bb",
+      "duration": 480,
+      "location": {
+        "id": "cf561ba9-febe-44f9-abc2-0401915a77bb",
+        "latitude": 50.8264608,
+        "longitude": 4.2689921
+      },
+      "type": "DELIVERY",
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T07:00:00Z",
+          "end": "2025-08-20T09:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "fcb899e8-2683-49de-bc71-e6b756b4597d",
+      "duration": 480,
+      "location": {
+        "id": "fcb899e8-2683-49de-bc71-e6b756b4597d",
+        "latitude": 50.8264608,
+        "longitude": 4.2689921
+      },
+      "type": "DELIVERY",
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T07:00:00Z",
+          "end": "2025-08-20T09:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "fd864d5b-5fc5-4bb5-84e8-b24d19b7b685",
+      "duration": 480,
+      "location": {
+        "id": "fd864d5b-5fc5-4bb5-84e8-b24d19b7b685",
+        "latitude": 50.5562025,
+        "longitude": 4.0194886
+      },
+      "type": "DELIVERY",
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T06:00:00Z",
+          "end": "2025-08-20T10:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "a0c12894-490d-42b4-945e-ae2984ba8ded",
+      "duration": 660,
+      "location": {
+        "id": "a0c12894-490d-42b4-945e-ae2984ba8ded",
+        "latitude": 50.6254006,
+        "longitude": 4.1569672
+      },
+      "type": "DELIVERY",
+      "demand": [3840, 0, 1600],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T06:00:00Z",
+          "end": "2025-08-20T11:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "77e5649a-64b1-45c7-b9d4-2d2264a9876d",
+      "duration": 480,
+      "location": {
+        "id": "77e5649a-64b1-45c7-b9d4-2d2264a9876d",
+        "latitude": 50.6075677,
+        "longitude": 4.636778
+      },
+      "type": "DELIVERY",
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T04:00:00Z",
+          "end": "2025-08-20T10:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "99f1fc9c-e13e-45c3-aaf2-58a1382d4494",
+      "duration": 1020,
+      "location": {
+        "id": "99f1fc9c-e13e-45c3-aaf2-58a1382d4494",
+        "latitude": 50.5726476,
+        "longitude": 4.6918054
+      },
+      "type": "DELIVERY",
+      "demand": [4666, 0, 2132],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T07:00:00Z",
+          "end": "2025-08-20T08:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "9bfe287a-fdb1-450f-ae6a-a269dfea5c63",
+      "duration": 660,
+      "location": {
+        "id": "9bfe287a-fdb1-450f-ae6a-a269dfea5c63",
+        "latitude": 50.7240619,
+        "longitude": 4.8720103
+      },
+      "type": "DELIVERY",
+      "demand": [2333, 0, 1066],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T09:00:00Z",
+          "end": "2025-08-20T11:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "fdfb3fc0-a252-4796-baff-91737df7164b",
+      "duration": 480,
+      "location": {
+        "id": "fdfb3fc0-a252-4796-baff-91737df7164b",
+        "latitude": 50.7235641,
+        "longitude": 4.866862
+      },
+      "type": "DELIVERY",
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T07:00:00Z",
+          "end": "2025-08-20T09:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "a4072205-ce40-4af3-b516-039798d4647f",
+      "duration": 480,
+      "location": {
+        "id": "a4072205-ce40-4af3-b516-039798d4647f",
+        "latitude": 50.6847772,
+        "longitude": 4.8142633
+      },
+      "type": "DELIVERY",
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T07:00:00Z",
+          "end": "2025-08-20T09:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "cbb94e4b-3ac9-4637-8a30-d51c23e8b9e9",
+      "duration": 480,
+      "location": {
+        "id": "cbb94e4b-3ac9-4637-8a30-d51c23e8b9e9",
+        "latitude": 50.3928522,
+        "longitude": 3.9163076
+      },
+      "type": "DELIVERY",
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T09:00:00Z",
+          "end": "2025-08-20T13:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "6c136c98-16c7-40b4-8301-e46706c0697c",
+      "duration": 480,
+      "location": {
+        "id": "6c136c98-16c7-40b4-8301-e46706c0697c",
+        "latitude": 50.3681808,
+        "longitude": 3.8840506
+      },
+      "type": "DELIVERY",
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T09:00:00Z",
+          "end": "2025-08-20T14:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "dcc53288-5327-4ebb-ba7c-2a21c6755cc9",
+      "duration": 480,
+      "location": {
+        "id": "dcc53288-5327-4ebb-ba7c-2a21c6755cc9",
+        "latitude": 50.391921,
+        "longitude": 3.6952772
+      },
+      "type": "DELIVERY",
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T09:00:00Z",
+          "end": "2025-08-20T14:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "3caaf861-6063-4c2d-a2dd-56a0466e0c10",
+      "duration": 1020,
+      "location": {
+        "id": "3caaf861-6063-4c2d-a2dd-56a0466e0c10",
+        "latitude": 50.4035376,
+        "longitude": 3.751836
+      },
+      "type": "DELIVERY",
+      "demand": [7680, 0, 3200],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T09:00:00Z",
+          "end": "2025-08-20T11:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "23540469-f708-43ca-b029-6ecb081c1a62",
+      "duration": 480,
+      "location": {
+        "id": "23540469-f708-43ca-b029-6ecb081c1a62",
+        "latitude": 50.5157883,
+        "longitude": 3.6716803
+      },
+      "type": "DELIVERY",
+      "demand": [1166, 0, 533],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T09:00:00Z",
+          "end": "2025-08-20T14:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "168bce1b-5fab-4630-94d9-cff5c94f60ae",
+      "duration": 480,
+      "location": {
+        "id": "168bce1b-5fab-4630-94d9-cff5c94f60ae",
+        "latitude": 50.5959106,
+        "longitude": 3.5101428
+      },
+      "type": "DELIVERY",
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T09:00:00Z",
+          "end": "2025-08-20T14:02:00Z"
+        }
+      ]
+    },
+    {
+      "id": "cda0ab63-0374-4137-b735-4d3b190ce6c1",
+      "duration": 480,
+      "location": {
+        "id": "cda0ab63-0374-4137-b735-4d3b190ce6c1",
+        "latitude": 50.7413164,
+        "longitude": 3.2205073
+      },
+      "type": "DELIVERY",
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T12:00:00Z",
+          "end": "2025-08-20T15:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "92818ccd-7c0a-4fac-af03-974ca484c505",
+      "duration": 480,
+      "location": {
+        "id": "92818ccd-7c0a-4fac-af03-974ca484c505",
+        "latitude": 50.7314444,
+        "longitude": 3.6891039
+      },
+      "type": "DELIVERY",
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T13:00:00Z",
+          "end": "2025-08-20T15:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "f292a05a-0b25-410a-9d57-c2a9c8d996fe",
+      "duration": 480,
+      "location": {
+        "id": "f292a05a-0b25-410a-9d57-c2a9c8d996fe",
+        "latitude": 50.4754659,
+        "longitude": 4.5836981
+      },
+      "type": "DELIVERY",
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T14:00:00Z",
+          "end": "2025-08-20T17:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "bce76f6b-949a-4aee-8c17-107862d34f76",
+      "duration": 2460,
+      "location": {
+        "id": "bce76f6b-949a-4aee-8c17-107862d34f76",
+        "latitude": 50.4754659,
+        "longitude": 4.5836981
+      },
+      "type": "PICKUP",
+      "demand": [23040, 0, 9600],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T14:00:00Z",
+          "end": "2025-08-20T17:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "48396cf4-0aa4-4a42-bc78-c7eaf955b5d1",
+      "duration": 480,
+      "location": {
+        "id": "48396cf4-0aa4-4a42-bc78-c7eaf955b5d1",
+        "latitude": 50.5805418,
+        "longitude": 3.5421039
+      },
+      "type": "DELIVERY",
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T06:00:00Z",
+          "end": "2025-08-20T18:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "3feffe6d-e891-4ada-b378-4f7b7097fb39",
+      "duration": 660,
+      "location": {
+        "id": "3feffe6d-e891-4ada-b378-4f7b7097fb39",
+        "latitude": 50.7177712,
+        "longitude": 3.2301468
+      },
+      "type": "PICKUP",
+      "demand": [3840, 0, 1600],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T10:00:00Z",
+          "end": "2025-08-20T16:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "54ce1b86-133c-47fb-92fe-c87f5023dba3",
+      "duration": 480,
+      "location": {
+        "id": "54ce1b86-133c-47fb-92fe-c87f5023dba3",
+        "latitude": 50.5063109,
+        "longitude": 4.267532
+      },
+      "type": "DELIVERY",
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T08:00:00Z",
+          "end": "2025-08-20T12:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "77dbb793-64f7-4181-a282-7a06f99ebf34",
+      "duration": 480,
+      "location": {
+        "id": "77dbb793-64f7-4181-a282-7a06f99ebf34",
+        "latitude": 50.0966096,
+        "longitude": 4.5113026
+      },
+      "type": "DELIVERY",
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T10:00:00Z",
+          "end": "2025-08-20T15:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "4ee52e1b-faf2-4a0e-a34d-8e7611d2ac80",
+      "duration": 660,
+      "location": {
+        "id": "4ee52e1b-faf2-4a0e-a34d-8e7611d2ac80",
+        "latitude": 50.1813558,
+        "longitude": 4.6932883
+      },
+      "type": "DELIVERY",
+      "demand": [3840, 0, 1600],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T07:00:00Z",
+          "end": "2025-08-20T16:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "a586a227-ec01-44ac-9c18-c93702ef50e7",
+      "duration": 1020,
+      "location": {
+        "id": "a586a227-ec01-44ac-9c18-c93702ef50e7",
+        "latitude": 50.3896756,
+        "longitude": 4.3316617
+      },
+      "type": "DELIVERY",
+      "demand": [7680, 0, 3200],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T10:00:00Z",
+          "end": "2025-08-20T12:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "81defe72-fb20-4aa4-a593-b44df2e736ba",
+      "duration": 480,
+      "location": {
+        "id": "81defe72-fb20-4aa4-a593-b44df2e736ba",
+        "latitude": 50.2493326,
+        "longitude": 4.7699208
+      },
+      "type": "DELIVERY",
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T10:00:00Z",
+          "end": "2025-08-20T15:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "52bdeffd-f91f-4a3c-93f6-939cf322a603",
+      "duration": 480,
+      "location": {
+        "id": "52bdeffd-f91f-4a3c-93f6-939cf322a603",
+        "latitude": 50.0688649,
+        "longitude": 4.3453738
+      },
+      "type": "DELIVERY",
+      "demand": [1920, 0, 800],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T10:00:00Z",
+          "end": "2025-08-20T15:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "b8b1fe7e-04f6-4108-9cb5-33b0e3793823",
+      "duration": 2100,
+      "location": {
+        "id": "b8b1fe7e-04f6-4108-9cb5-33b0e3793823",
+        "latitude": 50.1357114,
+        "longitude": 4.7399972
+      },
+      "type": "PICKUP",
+      "demand": [19200, 0, 8000],
+      "timeWindows": [
+        {
+          "start": "2025-08-20T10:00:00Z",
+          "end": "2025-08-20T16:00:00Z"
+        }
+      ]
+    }
+  ],
+  "relations": []
+}

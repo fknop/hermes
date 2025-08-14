@@ -61,7 +61,7 @@ impl Default for SolverParams {
     fn default() -> Self {
         Self {
             terminations: vec![
-                Termination::IterationsWithoutImprovement(5000),
+                Termination::IterationsWithoutImprovement(10000),
                 Termination::Iterations(100000),
                 Termination::Duration(SignedDuration::from_mins(2)),
             ],
@@ -74,7 +74,7 @@ impl Default for SolverParams {
             solver_selector: SolverSelectorStrategy::SelectWeighted,
             ruin: RuinParams::default(),
             recreate: RecreateParams::default(),
-            threads: Threads::Multi(4),
+            threads: Threads::Multi(8),
             noise_level: 0.15,
             noise_probability: 0.2,
 

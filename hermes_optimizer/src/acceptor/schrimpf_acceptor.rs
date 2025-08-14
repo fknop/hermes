@@ -13,7 +13,7 @@ impl SchrimpfAcceptor {
     pub fn new() -> Self {
         SchrimpfAcceptor {
             // TODO: compute this initial value based on the problem size
-            initial_threshold: 1000.0,
+            initial_threshold: 5000.0,
             alpha: 0.15,
         }
     }

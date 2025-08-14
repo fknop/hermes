@@ -80,7 +80,7 @@ impl WorkingSolution {
         self.problem.vehicles().len() > self.routes.len()
     }
 
-    pub fn available_vehicles(&self) -> Vec<VehicleId> {
+    pub fn available_vehicles_iter(&self) -> impl std::iter::Iterator<Item = usize> {
         // Find the first vehicle that has no routes assigned
         self.problem
             .vehicles()
@@ -93,7 +93,6 @@ impl WorkingSolution {
                     .iter()
                     .any(|route| route.vehicle_id == vehicle_id)
             })
-            .collect()
     }
 
     pub fn unassigned_services(&self) -> &FxHashSet<ServiceId> {

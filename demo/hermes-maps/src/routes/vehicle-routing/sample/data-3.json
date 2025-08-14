@@ -314,11 +314,7 @@
   "vehicles": [
     {
       "external_id": "0",
-      "capacity": [
-        40000,
-        5000,
-        12320
-      ],
+      "capacity": [40000, 5000, 12320],
       "depot_location_id": 0,
       "depot_duration": "PT3900S",
       "end_depot_duration": "PT900S",
@@ -332,11 +328,7 @@
     },
     {
       "external_id": "1",
-      "capacity": [
-        60000,
-        10000,
-        14720
-      ],
+      "capacity": [60000, 10000, 14720],
       "depot_location_id": 0,
       "depot_duration": "PT3900S",
       "end_depot_duration": "PT900S",
@@ -350,11 +342,7 @@
     },
     {
       "external_id": "2",
-      "capacity": [
-        60000,
-        10000,
-        14720
-      ],
+      "capacity": [60000, 10000, 14720],
       "depot_location_id": 0,
       "depot_duration": "PT3900S",
       "end_depot_duration": "PT900S",
@@ -368,11 +356,7 @@
     },
     {
       "external_id": "3",
-      "capacity": [
-        60000,
-        10000,
-        14720
-      ],
+      "capacity": [60000, 10000, 14720],
       "depot_location_id": 0,
       "depot_duration": "PT3900S",
       "end_depot_duration": "PT900S",
@@ -386,11 +370,7 @@
     },
     {
       "external_id": "4",
-      "capacity": [
-        60000,
-        10000,
-        14720
-      ],
+      "capacity": [60000, 10000, 14720],
       "depot_location_id": 0,
       "depot_duration": "PT3900S",
       "end_depot_duration": "PT900S",
@@ -404,11 +384,7 @@
     },
     {
       "external_id": "5",
-      "capacity": [
-        60000,
-        10000,
-        14720
-      ],
+      "capacity": [60000, 10000, 14720],
       "depot_location_id": 0,
       "depot_duration": "PT3900S",
       "end_depot_duration": "PT900S",
@@ -422,11 +398,7 @@
     },
     {
       "external_id": "6",
-      "capacity": [
-        40000,
-        5000,
-        12320
-      ],
+      "capacity": [40000, 5000, 12320],
       "depot_location_id": 0,
       "depot_duration": "PT3900S",
       "end_depot_duration": "PT900S",
@@ -440,11 +412,7 @@
     },
     {
       "external_id": "7",
-      "capacity": [
-        60000,
-        10000,
-        14720
-      ],
+      "capacity": [60000, 10000, 14720],
       "depot_location_id": 0,
       "depot_duration": "PT3900S",
       "end_depot_duration": "PT900S",
@@ -461,11 +429,7 @@
     {
       "external_id": "edcbe772-524c-4522-86a6-632c321fe728",
       "service_duration": "PT480S",
-      "demand": [
-        1920,
-        0,
-        800
-      ],
+      "demand": [1920, 0, 800],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -478,11 +442,7 @@
     {
       "external_id": "ec8e1b02-cc8f-43c4-bbfa-9921911ea801",
       "service_duration": "PT840S",
-      "demand": [
-        5760,
-        0,
-        2400
-      ],
+      "demand": [5760, 0, 2400],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -495,11 +455,7 @@
     {
       "external_id": "cf64f51b-d143-4c4d-af33-d8fb2278238f",
       "service_duration": "PT480S",
-      "demand": [
-        1166,
-        0,
-        533
-      ],
+      "demand": [1166, 0, 533],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -512,11 +468,7 @@
     {
       "external_id": "b7c133d5-f1f4-4f6a-8bb5-15210a10aa61",
       "service_duration": "PT480S",
-      "demand": [
-        1920,
-        0,
-        800
-      ],
+      "demand": [1920, 0, 800],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -529,11 +481,7 @@
     {
       "external_id": "7636592c-b180-47dc-b13a-37bdfc09780f",
       "service_duration": "PT480S",
-      "demand": [
-        1920,
-        0,
-        800
-      ],
+      "demand": [1920, 0, 800],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -546,11 +494,7 @@
     {
       "external_id": "aa095fcf-b370-46f7-ac50-94c8e0d1ad4d",
       "service_duration": "PT480S",
-      "demand": [
-        1920,
-        0,
-        800
-      ],
+      "demand": [1920, 0, 800],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -563,11 +507,7 @@
     {
       "external_id": "5d1b8598-ee98-4015-a9f7-28d9b1141873",
       "service_duration": "PT480S",
-      "demand": [
-        1920,
-        0,
-        800
-      ],
+      "demand": [1920, 0, 800],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -580,11 +520,7 @@
     {
       "external_id": "792fc4e9-d7b6-460f-bf61-41caed9d07b6",
       "service_duration": "PT480S",
-      "demand": [
-        1920,
-        0,
-        800
-      ],
+      "demand": [1920, 0, 800],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -597,11 +533,7 @@
     {
       "external_id": "f17b75a7-73f3-452f-a59e-87af92c01095",
       "service_duration": "PT660S",
-      "demand": [
-        2333,
-        0,
-        1066
-      ],
+      "demand": [2333, 0, 1066],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -614,11 +546,7 @@
     {
       "external_id": "4078e192-de5c-4699-8eb1-75efea5b8f5a",
       "service_duration": "PT480S",
-      "demand": [
-        1166,
-        0,
-        533
-      ],
+      "demand": [1166, 0, 533],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -631,11 +559,7 @@
     {
       "external_id": "85669202-b134-4d8a-900c-4c97ee420089",
       "service_duration": "PT480S",
-      "demand": [
-        1920,
-        0,
-        800
-      ],
+      "demand": [1920, 0, 800],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -648,11 +572,7 @@
     {
       "external_id": "022ece37-23fb-4d88-bd2c-b69882f18bf1",
       "service_duration": "PT840S",
-      "demand": [
-        3499,
-        0,
-        1599
-      ],
+      "demand": [3499, 0, 1599],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -665,11 +585,7 @@
     {
       "external_id": "d8b474f6-1229-48ce-a72d-36d5d7c70f64",
       "service_duration": "PT660S",
-      "demand": [
-        2333,
-        0,
-        1066
-      ],
+      "demand": [2333, 0, 1066],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -682,11 +598,7 @@
     {
       "external_id": "b6fd40a8-3168-4327-bb29-5f6880c09915",
       "service_duration": "PT840S",
-      "demand": [
-        3499,
-        0,
-        1599
-      ],
+      "demand": [3499, 0, 1599],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -699,11 +611,7 @@
     {
       "external_id": "b1666458-943f-47de-8b9d-5d7b6fddd5ef",
       "service_duration": "PT660S",
-      "demand": [
-        2333,
-        0,
-        1066
-      ],
+      "demand": [2333, 0, 1066],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -716,11 +624,7 @@
     {
       "external_id": "50d6c6cb-651f-4bca-bc71-791e469be5d2",
       "service_duration": "PT840S",
-      "demand": [
-        3499,
-        0,
-        1599
-      ],
+      "demand": [3499, 0, 1599],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -733,11 +637,7 @@
     {
       "external_id": "4830af27-7d27-4123-9521-c67fde67da47",
       "service_duration": "PT660S",
-      "demand": [
-        3840,
-        0,
-        1600
-      ],
+      "demand": [3840, 0, 1600],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -750,11 +650,7 @@
     {
       "external_id": "0db9f06a-e36d-4e14-87ad-aa030b38b3c2",
       "service_duration": "PT480S",
-      "demand": [
-        1920,
-        0,
-        800
-      ],
+      "demand": [1920, 0, 800],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -767,11 +663,7 @@
     {
       "external_id": "47213342-1ce6-41bb-ac12-35932ba42c2c",
       "service_duration": "PT480S",
-      "demand": [
-        1920,
-        0,
-        800
-      ],
+      "demand": [1920, 0, 800],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -784,11 +676,7 @@
     {
       "external_id": "3e733151-9dc5-414f-811a-7cde46c6d29d",
       "service_duration": "PT480S",
-      "demand": [
-        1166,
-        0,
-        533
-      ],
+      "demand": [1166, 0, 533],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -801,11 +689,7 @@
     {
       "external_id": "365f21d5-72bc-4618-8999-1db01d21ffe0",
       "service_duration": "PT480S",
-      "demand": [
-        1920,
-        0,
-        800
-      ],
+      "demand": [1920, 0, 800],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -818,11 +702,7 @@
     {
       "external_id": "fd1c43f7-650b-4c82-b23b-8ccb382de155",
       "service_duration": "PT480S",
-      "demand": [
-        1920,
-        0,
-        800
-      ],
+      "demand": [1920, 0, 800],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -835,11 +715,7 @@
     {
       "external_id": "5ad014ce-63ad-492a-94d3-0c5ac50b9199",
       "service_duration": "PT1020S",
-      "demand": [
-        7680,
-        0,
-        3200
-      ],
+      "demand": [7680, 0, 3200],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -852,11 +728,7 @@
     {
       "external_id": "f717c41d-299a-44c6-bb1a-37b026f20def",
       "service_duration": "PT480S",
-      "demand": [
-        1920,
-        0,
-        800
-      ],
+      "demand": [1920, 0, 800],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -869,11 +741,7 @@
     {
       "external_id": "2fb1b774-2ad9-4d3e-88e7-1e120cd9fa34",
       "service_duration": "PT840S",
-      "demand": [
-        5760,
-        0,
-        2400
-      ],
+      "demand": [5760, 0, 2400],
       "service_type": "Pickup",
       "time_windows": [
         {
@@ -886,11 +754,7 @@
     {
       "external_id": "90ac5cc6-eeb1-477b-ad72-08a2700ba36a",
       "service_duration": "PT480S",
-      "demand": [
-        1920,
-        0,
-        800
-      ],
+      "demand": [1920, 0, 800],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -903,11 +767,7 @@
     {
       "external_id": "53c60bf8-df34-4055-a23f-ecf07d49ee4f",
       "service_duration": "PT480S",
-      "demand": [
-        1920,
-        0,
-        800
-      ],
+      "demand": [1920, 0, 800],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -920,11 +780,7 @@
     {
       "external_id": "420e4594-a30d-4f35-94e4-a9a6e4ee0b14",
       "service_duration": "PT660S",
-      "demand": [
-        3840,
-        0,
-        1600
-      ],
+      "demand": [3840, 0, 1600],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -937,11 +793,7 @@
     {
       "external_id": "b57e4f36-29c6-4973-8951-3a112a960b08",
       "service_duration": "PT480S",
-      "demand": [
-        1920,
-        0,
-        800
-      ],
+      "demand": [1920, 0, 800],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -954,11 +806,7 @@
     {
       "external_id": "42b65255-c131-43f5-b6f5-1c93c4fe36f1",
       "service_duration": "PT480S",
-      "demand": [
-        1920,
-        0,
-        800
-      ],
+      "demand": [1920, 0, 800],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -971,11 +819,7 @@
     {
       "external_id": "7703e5f9-ed2e-43e0-8282-b02fff53d606",
       "service_duration": "PT660S",
-      "demand": [
-        3840,
-        0,
-        1600
-      ],
+      "demand": [3840, 0, 1600],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -988,11 +832,7 @@
     {
       "external_id": "6c72fea7-8d6a-4d27-b554-56ec2a4e2c21",
       "service_duration": "PT480S",
-      "demand": [
-        1920,
-        0,
-        800
-      ],
+      "demand": [1920, 0, 800],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -1005,11 +845,7 @@
     {
       "external_id": "a7966550-2233-46c1-a6a9-e0588754a49d",
       "service_duration": "PT480S",
-      "demand": [
-        1920,
-        0,
-        800
-      ],
+      "demand": [1920, 0, 800],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -1022,11 +858,7 @@
     {
       "external_id": "cf561ba9-febe-44f9-abc2-0401915a77bb",
       "service_duration": "PT480S",
-      "demand": [
-        1920,
-        0,
-        800
-      ],
+      "demand": [1920, 0, 800],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -1039,11 +871,7 @@
     {
       "external_id": "fcb899e8-2683-49de-bc71-e6b756b4597d",
       "service_duration": "PT480S",
-      "demand": [
-        1920,
-        0,
-        800
-      ],
+      "demand": [1920, 0, 800],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -1056,11 +884,7 @@
     {
       "external_id": "fd864d5b-5fc5-4bb5-84e8-b24d19b7b685",
       "service_duration": "PT480S",
-      "demand": [
-        1920,
-        0,
-        800
-      ],
+      "demand": [1920, 0, 800],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -1073,11 +897,7 @@
     {
       "external_id": "a0c12894-490d-42b4-945e-ae2984ba8ded",
       "service_duration": "PT660S",
-      "demand": [
-        3840,
-        0,
-        1600
-      ],
+      "demand": [3840, 0, 1600],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -1090,11 +910,7 @@
     {
       "external_id": "77e5649a-64b1-45c7-b9d4-2d2264a9876d",
       "service_duration": "PT480S",
-      "demand": [
-        1920,
-        0,
-        800
-      ],
+      "demand": [1920, 0, 800],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -1107,11 +923,7 @@
     {
       "external_id": "99f1fc9c-e13e-45c3-aaf2-58a1382d4494",
       "service_duration": "PT1020S",
-      "demand": [
-        4666,
-        0,
-        2132
-      ],
+      "demand": [4666, 0, 2132],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -1124,11 +936,7 @@
     {
       "external_id": "9bfe287a-fdb1-450f-ae6a-a269dfea5c63",
       "service_duration": "PT660S",
-      "demand": [
-        2333,
-        0,
-        1066
-      ],
+      "demand": [2333, 0, 1066],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -1141,11 +949,7 @@
     {
       "external_id": "fdfb3fc0-a252-4796-baff-91737df7164b",
       "service_duration": "PT480S",
-      "demand": [
-        1920,
-        0,
-        800
-      ],
+      "demand": [1920, 0, 800],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -1158,11 +962,7 @@
     {
       "external_id": "a4072205-ce40-4af3-b516-039798d4647f",
       "service_duration": "PT480S",
-      "demand": [
-        1920,
-        0,
-        800
-      ],
+      "demand": [1920, 0, 800],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -1175,11 +975,7 @@
     {
       "external_id": "cbb94e4b-3ac9-4637-8a30-d51c23e8b9e9",
       "service_duration": "PT480S",
-      "demand": [
-        1920,
-        0,
-        800
-      ],
+      "demand": [1920, 0, 800],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -1192,11 +988,7 @@
     {
       "external_id": "6c136c98-16c7-40b4-8301-e46706c0697c",
       "service_duration": "PT480S",
-      "demand": [
-        1920,
-        0,
-        800
-      ],
+      "demand": [1920, 0, 800],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -1209,11 +1001,7 @@
     {
       "external_id": "dcc53288-5327-4ebb-ba7c-2a21c6755cc9",
       "service_duration": "PT480S",
-      "demand": [
-        1920,
-        0,
-        800
-      ],
+      "demand": [1920, 0, 800],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -1226,11 +1014,7 @@
     {
       "external_id": "3caaf861-6063-4c2d-a2dd-56a0466e0c10",
       "service_duration": "PT1020S",
-      "demand": [
-        7680,
-        0,
-        3200
-      ],
+      "demand": [7680, 0, 3200],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -1243,11 +1027,7 @@
     {
       "external_id": "23540469-f708-43ca-b029-6ecb081c1a62",
       "service_duration": "PT480S",
-      "demand": [
-        1166,
-        0,
-        533
-      ],
+      "demand": [1166, 0, 533],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -1260,11 +1040,7 @@
     {
       "external_id": "168bce1b-5fab-4630-94d9-cff5c94f60ae",
       "service_duration": "PT480S",
-      "demand": [
-        1920,
-        0,
-        800
-      ],
+      "demand": [1920, 0, 800],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -1277,11 +1053,7 @@
     {
       "external_id": "cda0ab63-0374-4137-b735-4d3b190ce6c1",
       "service_duration": "PT480S",
-      "demand": [
-        1920,
-        0,
-        800
-      ],
+      "demand": [1920, 0, 800],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -1294,11 +1066,7 @@
     {
       "external_id": "92818ccd-7c0a-4fac-af03-974ca484c505",
       "service_duration": "PT480S",
-      "demand": [
-        1920,
-        0,
-        800
-      ],
+      "demand": [1920, 0, 800],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -1311,11 +1079,7 @@
     {
       "external_id": "f292a05a-0b25-410a-9d57-c2a9c8d996fe",
       "service_duration": "PT480S",
-      "demand": [
-        1920,
-        0,
-        800
-      ],
+      "demand": [1920, 0, 800],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -1328,11 +1092,7 @@
     {
       "external_id": "bce76f6b-949a-4aee-8c17-107862d34f76",
       "service_duration": "PT2460S",
-      "demand": [
-        23040,
-        0,
-        9600
-      ],
+      "demand": [23040, 0, 9600],
       "service_type": "Pickup",
       "time_windows": [
         {
@@ -1345,11 +1105,7 @@
     {
       "external_id": "48396cf4-0aa4-4a42-bc78-c7eaf955b5d1",
       "service_duration": "PT480S",
-      "demand": [
-        1920,
-        0,
-        800
-      ],
+      "demand": [1920, 0, 800],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -1362,11 +1118,7 @@
     {
       "external_id": "3feffe6d-e891-4ada-b378-4f7b7097fb39",
       "service_duration": "PT660S",
-      "demand": [
-        3840,
-        0,
-        1600
-      ],
+      "demand": [3840, 0, 1600],
       "service_type": "Pickup",
       "time_windows": [
         {
@@ -1379,11 +1131,7 @@
     {
       "external_id": "54ce1b86-133c-47fb-92fe-c87f5023dba3",
       "service_duration": "PT480S",
-      "demand": [
-        1920,
-        0,
-        800
-      ],
+      "demand": [1920, 0, 800],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -1396,11 +1144,7 @@
     {
       "external_id": "77dbb793-64f7-4181-a282-7a06f99ebf34",
       "service_duration": "PT480S",
-      "demand": [
-        1920,
-        0,
-        800
-      ],
+      "demand": [1920, 0, 800],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -1413,11 +1157,7 @@
     {
       "external_id": "4ee52e1b-faf2-4a0e-a34d-8e7611d2ac80",
       "service_duration": "PT660S",
-      "demand": [
-        3840,
-        0,
-        1600
-      ],
+      "demand": [3840, 0, 1600],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -1430,11 +1170,7 @@
     {
       "external_id": "a586a227-ec01-44ac-9c18-c93702ef50e7",
       "service_duration": "PT1020S",
-      "demand": [
-        7680,
-        0,
-        3200
-      ],
+      "demand": [7680, 0, 3200],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -1447,11 +1183,7 @@
     {
       "external_id": "81defe72-fb20-4aa4-a593-b44df2e736ba",
       "service_duration": "PT480S",
-      "demand": [
-        1920,
-        0,
-        800
-      ],
+      "demand": [1920, 0, 800],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -1464,11 +1196,7 @@
     {
       "external_id": "52bdeffd-f91f-4a3c-93f6-939cf322a603",
       "service_duration": "PT480S",
-      "demand": [
-        1920,
-        0,
-        800
-      ],
+      "demand": [1920, 0, 800],
       "service_type": "Delivery",
       "time_windows": [
         {
@@ -1481,11 +1209,7 @@
     {
       "external_id": "b8b1fe7e-04f6-4108-9cb5-33b0e3793823",
       "service_duration": "PT2100S",
-      "demand": [
-        19200,
-        0,
-        8000
-      ],
+      "demand": [19200, 0, 8000],
       "service_type": "Pickup",
       "time_windows": [
         {

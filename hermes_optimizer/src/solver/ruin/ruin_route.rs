@@ -1,6 +1,7 @@
 use std::f64;
 
 use rand::seq::{IndexedRandom, IteratorRandom};
+use smallvec::SmallVec;
 
 use crate::solver::working_solution::WorkingSolution;
 
@@ -10,31 +11,18 @@ pub struct RuinRoute;
 
 impl RuinSolution for RuinRoute {
     fn ruin_solution(&self, solution: &mut WorkingSolution, context: RuinContext) {
-        // let mut route_to_ruin = None;
-        // let mut max = f64::MIN;
+        let route_ids: Vec<usize> = (0..solution.routes().len()).collect();
 
-        // for (route_id, route) in solution.routes().iter().enumerate() {
-        //     let cost = route.duration(context.problem).as_secs_f64() * 0.7
-        //         + route.total_waiting_duration().as_secs_f64() * 0.3;
+        let route_id = route_ids
+            .choose_weighted(context.rng, |&route_id| {
+                let route = solution.route(route_id);
+                route.duration(context.problem).as_secs_f64() * 0.7
+                    + route.total_waiting_duration().as_secs_f64() * 0.3
+            })
+            .ok();
 
-        //     if cost > max {
-        //         max = cost;
-        //         route_to_ruin = Some(route_id);
-        //     }
-        // }
-
-        if let Some(route_id) = solution
-            .routes()
-            .iter()
-            .enumerate()
-            .map(|(route_id, _)| route_id)
-            .choose(context.rng)
-        {
+        if let Some(&route_id) = route_id {
             solution.remove_route(route_id);
         }
-
-        // if let Some(route_to_ruin) = route_to_ruin {
-        //     solution.remove_route(route_to_ruin);
-        // }
     }
 }

@@ -79,7 +79,7 @@ impl RegretInsertion {
 
                 // Consider creating a new route if a vehicle is available
                 if solution.has_available_vehicle() {
-                    for vehicle_id in solution.available_vehicles() {
+                    for vehicle_id in solution.available_vehicles_iter() {
                         let insertion = Insertion::NewRoute(NewRouteInsertion {
                             service_id,
                             vehicle_id,

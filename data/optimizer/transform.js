@@ -1,4 +1,4 @@
-import data from "./sample-2.json" with { type: "json" };
+import data from "./data-3.json" with { type: "json" };
 import { writeFileSync } from "node:fs";
 
 const transformDuration = (seconds) => {
@@ -48,6 +48,7 @@ const services = data.services.map((service, index) => {
     external_id: service.id,
     service_duration: transformDuration(service.duration),
     demand: service.demand,
+    service_type: service.type === "PICKUP" ? "Pickup" : "Delivery",
     time_windows: service.timeWindows.map((timeWindow) => {
       return {
         start: timeWindow.start,

@@ -219,7 +219,7 @@ impl Search {
     fn should_terminate(&self, state: &ThreadedSearchState) -> bool {
         self.params.terminations.iter().any(|termination| {
             if self.check_termination(state, termination) {
-                debug!(
+                info!(
                     thread = thread::current().name().unwrap_or("main"),
                     "Thread {}: Termination condition met: {:?}",
                     thread::current().name().unwrap_or("main"),

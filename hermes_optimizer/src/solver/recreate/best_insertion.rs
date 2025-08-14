@@ -1,5 +1,6 @@
 use parking_lot::RwLock;
 use rand::{
+    Rng,
     rngs::SmallRng,
     seq::{IndexedRandom, SliceRandom},
 };
@@ -172,7 +173,7 @@ impl BestInsertion {
             }
 
             if solution.has_available_vehicle() {
-                for vehicle_id in solution.available_vehicles() {
+                for vehicle_id in solution.available_vehicles_iter() {
                     let new_route_insertion = Insertion::NewRoute(NewRouteInsertion {
                         service_id,
                         vehicle_id,
