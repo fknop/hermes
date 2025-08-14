@@ -145,9 +145,8 @@ impl RuinSolution for RuinString {
             .min(solution.routes().len());
 
         let mut ruined_routes = FxHashSet::<usize>::default();
-        let mut seed_service = context
-            .rng
-            .random_range(0..context.problem.services().len());
+
+        let mut seed_service = context.problem.random_service(context.rng);
 
         while ruined_routes.len() < k {
             let route_id = solution.route_of_service(seed_service);

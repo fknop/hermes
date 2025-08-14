@@ -461,6 +461,7 @@ impl Search {
                 rng,
                 constraints: &self.constraints,
                 noise_generator: &self.noise_generator,
+                problem: &self.problem,
             },
         );
 
@@ -575,7 +576,7 @@ impl<T> Operator<T> {
                 + reaction_factor * (entry.score / entry.iterations as f64)
         };
 
-        self.weight = new_weight.max(0.08);
+        self.weight = new_weight.max(0.01);
     }
 
     fn reset(&mut self) {

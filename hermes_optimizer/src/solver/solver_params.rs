@@ -78,11 +78,11 @@ impl Default for SolverParams {
             noise_level: 0.15,
             noise_probability: 0.2,
 
-            alns_segment_iterations: 100,
-            alns_reaction_factor: 0.7,
+            alns_segment_iterations: 250,
+            alns_reaction_factor: 0.8,
             alns_best_factor: 12.0,
             alns_improvement_factor: 6.0,
-            alns_accepted_worst_factor: 3.0,
+            alns_accepted_worst_factor: 1.0,
         }
     }
 }

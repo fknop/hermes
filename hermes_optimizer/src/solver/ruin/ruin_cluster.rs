@@ -14,6 +14,7 @@ impl RuinSolution for RuinCluster {
         RuinContext {
             rng,
             num_activities_to_remove,
+            problem,
             ..
         }: RuinContext,
     ) {
@@ -22,7 +23,7 @@ impl RuinSolution for RuinCluster {
         }
         let mut ruined_routes: FxHashSet<usize> = FxHashSet::default();
 
-        let mut target_service_id = rng.random_range(0..solution.problem().services().len());
+        let mut target_service_id = problem.random_service(rng);
         let mut remaining_to_remove = num_activities_to_remove;
 
         while remaining_to_remove > 0 {
@@ -36,7 +37,7 @@ impl RuinSolution for RuinCluster {
                 .collect::<Vec<_>>();
 
             let mut removed_service_ids = vec![];
-            if let Some(clusters) = kruskal_cluster(solution.problem(), &service_ids)
+            if let Some(clusters) = kruskal_cluster(problem, &service_ids)
                 && !clusters.is_empty()
             {
                 let cluster = clusters.choose(rng).unwrap();

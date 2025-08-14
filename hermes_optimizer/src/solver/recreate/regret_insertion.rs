@@ -44,21 +44,27 @@ impl RegretInsertion {
 
     pub fn insert_services(&self, solution: &mut WorkingSolution, mut context: RecreateContext) {
         // Create vectors with predefined capacities to avoid reallocations in each loop
-        let mut unassigned_services: Vec<ServiceId> =
-            Vec::with_capacity(solution.unassigned_services().len());
-        let mut potential_insertions: Vec<(Score, Insertion)> =
-            Vec::with_capacity(solution.unassigned_services().len());
+        // let mut unassigned_services: Vec<ServiceId> =
+        //     Vec::with_capacity(solution.unassigned_services().len());
+        let mut potential_insertions: Vec<(Score, Insertion)> = Vec::with_capacity(
+            // One insertion after each activity
+            (context.problem.services().len() - solution.unassigned_services().len())
+                // One insertion at the start of every route
+                + solution.routes().len()
+                // One insertion per available vehicle
+                + solution.num_available_vehicles(),
+        );
 
         while !solution.unassigned_services().is_empty() {
             let mut best_insertion_for_max_regret: Option<Insertion> = None;
             let mut max_regret = Score::MIN;
 
-            unassigned_services.clear();
+            // unassigned_services.clear();
             // Take a snapshot of unassigned services for this iteration
-            unassigned_services.extend(solution.unassigned_services().iter());
+            // unassigned_services.extend(solution.unassigned_services().iter());
 
             // 1. Calculate regret for EACH unassigned service
-            for &service_id in &unassigned_services {
+            for &service_id in solution.unassigned_services().iter() {
                 potential_insertions.clear();
 
                 // Find all possible insertions in existing routes

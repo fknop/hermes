@@ -6,12 +6,8 @@ use crate::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
         constraints::constraint::Constraint,
-        insertion::{ExistingRouteInsertion, Insertion, NewRouteInsertion},
         noise::NoiseGenerator,
-        recreate::{
-            best_insertion::BestInsertion, recreate_context::RecreateContext,
-            regret_insertion::RegretInsertion,
-        },
+        recreate::{best_insertion::BestInsertion, recreate_context::RecreateContext},
         working_solution::WorkingSolution,
     },
 };
@@ -63,6 +59,7 @@ pub fn construct_solution(
             rng,
             constraints,
             noise_generator,
+            problem,
         },
     );
 

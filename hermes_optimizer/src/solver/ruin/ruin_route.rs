@@ -1,7 +1,4 @@
-use std::f64;
-
-use rand::seq::{IndexedRandom, IteratorRandom};
-use smallvec::SmallVec;
+use rand::seq::IndexedRandom;
 
 use crate::solver::working_solution::WorkingSolution;
 

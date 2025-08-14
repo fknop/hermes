@@ -5,6 +5,7 @@ use std::{
 
 use fxhash::FxHashSet;
 use jiff::{SignedDuration, Timestamp};
+use rand::{Rng, rngs::SmallRng};
 use serde::Serialize;
 
 use crate::problem::{
@@ -76,6 +77,10 @@ impl WorkingSolution {
         true
     }
 
+    pub fn num_available_vehicles(&self) -> usize {
+        self.problem.vehicles().len() - self.routes.len()
+    }
+
     pub fn has_available_vehicle(&self) -> bool {
         self.problem.vehicles().len() > self.routes.len()
     }
@@ -113,6 +118,10 @@ impl WorkingSolution {
 
     pub fn route(&self, route_id: usize) -> &WorkingSolutionRoute {
         &self.routes[route_id]
+    }
+
+    pub fn random_route(&self, rng: &mut SmallRng) -> usize {
+        rng.random_range(0..self.routes.len())
     }
 
     pub fn route_of_service(&self, service_id: ServiceId) -> Option<usize> {
@@ -218,7 +227,6 @@ impl WorkingSolution {
 
 #[derive(Clone, Serialize)]
 pub struct WorkingSolutionRoute {
-    // problem: &'a VehicleRoutingProblem,
     vehicle_id: VehicleId,
     services: FxHashSet<ServiceId>,
     activities: Vec<WorkingSolutionRouteActivity>,
@@ -568,6 +576,10 @@ impl WorkingSolutionRoute {
             self.total_initial_load
                 .add_mut(problem.service(service_id).demand());
         }
+    }
+
+    pub fn random_activity(&self, rng: &mut SmallRng) -> usize {
+        rng.random_range(0..self.activities.len())
     }
 }
 

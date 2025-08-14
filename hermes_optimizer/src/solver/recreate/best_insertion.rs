@@ -202,7 +202,7 @@ impl RecreateSolution for BestInsertion {
         let mut unassigned_services: Vec<_> =
             solution.unassigned_services().iter().copied().collect();
 
-        self.sort_unassigned_services(solution.problem(), &mut unassigned_services, context.rng);
+        self.sort_unassigned_services(context.problem, &mut unassigned_services, context.rng);
         // unassigned_services.shuffle(context.rng);
 
         BestInsertion::insert_services(&unassigned_services, solution, context);

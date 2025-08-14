@@ -11,15 +11,6 @@ const TRANSPORT_COST_WEIGHT: f64 = 70.0;
 
 impl GlobalConstraint for TransportCostConstraint {
     fn compute_score(&self, solution: &WorkingSolution) -> Score {
-        // let problem = solution.problem();
-        // let mut cost = 0.0;
-        // for route in solution.routes() {
-        //     cost += route
-        //         .end(problem)
-        //         .duration_since(route.start(problem))
-        //         .as_secs_f64()
-        // }
-
         let problem = solution.problem();
         let mut cost = 0.0;
         for route in solution.routes() {

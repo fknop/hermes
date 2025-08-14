@@ -17,11 +17,7 @@ impl RuinSolution for RuinRadial {
             ..
         }: RuinContext,
     ) {
-        if solution.routes().is_empty() {
-            return;
-        }
-
-        let random_service_id = rng.random_range(0..problem.services().len());
+        let random_service_id = problem.random_service(rng);
 
         for service_id in problem
             .nearest_services(random_service_id)

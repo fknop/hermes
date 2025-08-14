@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
-import body from './sample/data-3.json'
-import travel_costs from './sample/travel_costs-3.json'
+import body from './sample/data.json'
+import travel_costs from './sample/travel_costs.json'
 import { useFetch } from '../../hooks/useFetch'
 
 export const POST_BODY = {

@@ -1,4 +1,5 @@
 use jiff::SignedDuration;
+use rand::{Rng, rngs::SmallRng};
 
 use super::{
     distance_method::DistanceMethod,
@@ -24,6 +25,10 @@ impl VehicleRoutingProblem {
 
     pub fn service(&self, index: usize) -> &Service {
         &self.services[index]
+    }
+
+    pub fn random_service(&self, rng: &mut SmallRng) -> usize {
+        rng.random_range(0..self.services.len())
     }
 
     pub fn vehicle(&self, index: usize) -> &Vehicle {
@@ -77,7 +82,7 @@ impl VehicleRoutingProblem {
     }
 
     pub fn waiting_cost(&self, waiting_duration: SignedDuration) -> Cost {
-        waiting_duration.as_secs_f64() * 100.0
+        waiting_duration.as_secs_f64() * 7.0
     }
 
     pub fn route_costs(&self) -> f64 {

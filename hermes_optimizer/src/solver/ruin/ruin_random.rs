@@ -16,13 +16,9 @@ impl RuinSolution for RuinRandom {
             ..
         }: RuinContext,
     ) {
-        if solution.routes().is_empty() {
-            return;
-        }
-
         for _ in 0..num_activities_to_remove {
-            let route_id = rng.random_range(0..solution.routes().len());
-            let position = rng.random_range(0..solution.route(route_id).activities().len());
+            let route_id = solution.random_route(rng);
+            let position = solution.route(route_id).random_activity(rng);
             solution.remove_activity(route_id, position);
         }
     }
