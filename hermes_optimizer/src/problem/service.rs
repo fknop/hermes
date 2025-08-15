@@ -1,5 +1,6 @@
 use jiff::SignedDuration;
 use serde::{Deserialize, Serialize};
+use smallvec::SmallVec;
 
 use super::{capacity::Capacity, location::LocationId, time_window::TimeWindow};
 
@@ -12,11 +13,13 @@ pub enum ServiceType {
     Delivery,
 }
 
+type TimeWindows = SmallVec<[TimeWindow; 2]>;
+
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Service {
     external_id: String,
     location_id: LocationId,
-    time_windows: Vec<TimeWindow>,
+    time_windows: TimeWindows,
     demand: Capacity,
     service_duration: SignedDuration,
 
@@ -45,7 +48,7 @@ impl Service {
         self.service_type
     }
 
-    pub fn time_windows(&self) -> &Vec<TimeWindow> {
+    pub fn time_windows(&self) -> &[TimeWindow] {
         &self.time_windows
     }
 }
@@ -107,7 +110,7 @@ impl ServiceBuilder {
             location_id: self.location_id.expect("Expected location id"),
             demand: self.demand.unwrap_or_default(),
             service_duration: self.service_duration.unwrap_or(SignedDuration::ZERO),
-            time_windows: self.time_windows.unwrap_or_default(),
+            time_windows: SmallVec::from_vec(self.time_windows.unwrap_or_default()),
             service_type: self.service_type.unwrap_or(ServiceType::Delivery),
         }
     }
