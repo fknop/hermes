@@ -4,7 +4,7 @@ use fxhash::FxHashMap;
 use jiff::Timestamp;
 use parking_lot::{MappedRwLockReadGuard, RwLock, RwLockReadGuard};
 use rand::{Rng, SeedableRng, rngs::SmallRng, seq::IndexedRandom};
-use tracing::{debug, info};
+use tracing::debug;
 
 use crate::{
     acceptor::{
@@ -19,6 +19,7 @@ use crate::{
         select_solution::SelectSolution, select_weighted::SelectWeightedSelector,
         solution_selector::SolutionSelector,
     },
+    solver::statistics::SearchStatisticsIteration,
 };
 
 use super::{
@@ -35,8 +36,11 @@ use super::{
     solver_params::{
         SolverAcceptorStrategy, SolverParams, SolverSelectorStrategy, Termination, Threads,
     },
+    statistics::{GlobalStatistics, ScoreEvolutionRow},
     working_solution::WorkingSolution,
 };
+
+use super::statistics::{SearchStatistics, ThreadSearchStatistics};
 
 pub struct Search {
     problem: Arc<VehicleRoutingProblem>,
@@ -50,6 +54,7 @@ pub struct Search {
     noise_generator: NoiseGenerator,
     operator_weights: Arc<RwLock<OperatorWeights>>,
     is_stopped: Arc<RwLock<bool>>,
+    statistics: SearchStatistics,
 }
 
 impl Search {
@@ -94,8 +99,9 @@ impl Search {
             solution_acceptor,
             on_best_solution_handler: Arc::new(None),
             operator_weights: Arc::new(RwLock::new(OperatorWeights::new(&params))),
-            params,
             is_stopped: Arc::new(RwLock::new(false)),
+            statistics: SearchStatistics::new(params.threads.number_of_threads()),
+            params,
         }
     }
 
@@ -113,8 +119,8 @@ impl Search {
 
     pub fn run(&self) {
         let mut rng = SmallRng::seed_from_u64(2427121);
-
-        let num_threads = self.number_of_threads();
+        let start = Timestamp::now();
+        let num_threads = self.params.threads.number_of_threads();
 
         let initial_solution = construct_solution(
             &self.problem,
@@ -124,6 +130,19 @@ impl Search {
         );
 
         let (score, score_analysis) = self.compute_solution_score(&initial_solution);
+
+        #[cfg(feature = "statistics")]
+        {
+            self.statistics
+                .global_statistics()
+                .write()
+                .add_best_score(ScoreEvolutionRow {
+                    timestamp: Timestamp::now(),
+                    score,
+                    score_analysis: score_analysis.clone(),
+                    thread: 0,
+                });
+        }
 
         self.best_solutions.write().push(AcceptedSolution {
             solution: initial_solution,
@@ -137,6 +156,9 @@ impl Search {
                 let best_solutions = Arc::clone(&self.best_solutions);
                 let tabu = Arc::clone(&self.tabu);
                 let is_stopped = Arc::clone(&self.is_stopped);
+
+                let global_statistics = Arc::clone(self.statistics.global_statistics());
+                let thread_statistics = Arc::clone(self.statistics.thread_statistics(thread_index));
 
                 // let on_best_solution_handler = Arc::clone(&self.on_best_solution_handler);
 
@@ -158,23 +180,27 @@ impl Search {
                 let builder = thread::Builder::new().name(thread_index.to_string());
 
                 let operator_scores = OperatorScores::new(&self.params);
+
                 builder
                     .spawn_scoped(s, move || {
                         let mut state = ThreadedSearchState {
-                            start: Timestamp::now(),
+                            start,
+                            thread: thread_index,
                             iterations_without_improvement: 0,
                             operator_scores,
                             best_solutions,
                             tabu,
                             iteration: 0,
                             max_iterations,
+                            global_statistics,
+                            thread_statistics
                         };
 
                         loop {
                             state.iteration += 1;
 
-                            if (state.iteration) % 1000 == 0 {
-                                info!(
+                            if (state.iteration) % 500 == 0 {
+                                debug!(
                                     thread = thread::current().name().unwrap_or("main"),
                                     weights = ?self.operator_weights.read(),
                                     "Thread {}: Iteration {}/{}",
@@ -213,13 +239,21 @@ impl Search {
                     false
                 }
             }
+            Termination::VehiclesAndCosts { vehicles, costs } => {
+                if let Some(best_solution) = state.best_solutions.read().first() {
+                    best_solution.solution.total_transport_costs() <= costs
+                        && best_solution.solution.routes().len() <= vehicles
+                } else {
+                    false
+                }
+            }
         }
     }
 
     fn should_terminate(&self, state: &ThreadedSearchState) -> bool {
         self.params.terminations.iter().any(|termination| {
             if self.check_termination(state, termination) {
-                info!(
+                debug!(
                     thread = thread::current().name().unwrap_or("main"),
                     "Thread {}: Termination condition met: {:?}",
                     thread::current().name().unwrap_or("main"),
@@ -301,6 +335,32 @@ impl Search {
                 state.iterations_without_improvement += 1;
             } else {
                 state.iterations_without_improvement = 0;
+                #[cfg(feature = "statistics")]
+                {
+                    state
+                        .global_statistics
+                        .write()
+                        .add_best_score(ScoreEvolutionRow {
+                            score,
+                            score_analysis: score_analysis.clone(),
+                            thread: state.thread,
+                            timestamp: Timestamp::now(),
+                        });
+                }
+            }
+
+            #[cfg(feature = "statistics")]
+            {
+                state
+                    .thread_statistics
+                    .write()
+                    .add_iteration_info(SearchStatisticsIteration {
+                        timestamp: Timestamp::now(),
+                        improved: score < iteration_info.current_score,
+                        is_best,
+                        recreate_strategy: iteration_info.recreate_strategy,
+                        ruin_strategy: iteration_info.ruin_strategy,
+                    });
             }
 
             let is_tabu = self.params.tabu_enabled
@@ -346,42 +406,25 @@ impl Search {
                 });
             }
 
-            // Update the scores
-            if is_best {
-                state
-                    .operator_scores
-                    .update_ruin_score(iteration_info.ruin_strategy, self.params.alns_best_factor);
-                state.operator_scores.update_recreate_score(
-                    iteration_info.recreate_strategy,
-                    self.params.alns_best_factor,
-                );
-            } else if score < iteration_info.current_score {
-                state.operator_scores.update_ruin_score(
-                    iteration_info.ruin_strategy,
-                    self.params.alns_improvement_factor,
-                );
-                state.operator_scores.update_recreate_score(
-                    iteration_info.recreate_strategy,
-                    self.params.alns_improvement_factor,
-                );
-            } else {
-                state.operator_scores.update_ruin_score(
-                    iteration_info.ruin_strategy,
-                    self.params.alns_accepted_worst_factor,
-                );
-                state.operator_scores.update_recreate_score(
-                    iteration_info.recreate_strategy,
-                    self.params.alns_accepted_worst_factor,
-                );
-            }
+            state.operator_scores.update_scores(
+                &iteration_info,
+                &self.params,
+                UpdateScoreParams {
+                    is_best,
+                    improved: score < iteration_info.current_score,
+                    accepted: true,
+                },
+            );
         } else {
-            state.iterations_without_improvement += 1;
-            state
-                .operator_scores
-                .update_ruin_score(iteration_info.ruin_strategy, 0.0);
-            state
-                .operator_scores
-                .update_recreate_score(iteration_info.recreate_strategy, 0.0);
+            state.operator_scores.update_scores(
+                &iteration_info,
+                &self.params,
+                UpdateScoreParams {
+                    is_best: false,
+                    improved: false,
+                    accepted: false,
+                },
+            );
         }
 
         if iteration_info.iteration > 0
@@ -589,6 +632,12 @@ struct OperatorScores {
     recreate_scores: FxHashMap<RecreateStrategy, ScoreEntry>,
 }
 
+struct UpdateScoreParams {
+    is_best: bool,
+    improved: bool,
+    accepted: bool,
+}
+
 impl OperatorScores {
     pub fn new(params: &SolverParams) -> Self {
         let ruin_scores = params
@@ -656,6 +705,40 @@ impl OperatorScores {
             );
         }
     }
+
+    pub fn update_scores(
+        &mut self,
+        iteration_info: &IterationInfo,
+        params: &SolverParams,
+        UpdateScoreParams {
+            accepted,
+            is_best,
+            improved,
+        }: UpdateScoreParams,
+    ) {
+        if !accepted {
+            self.update_ruin_score(iteration_info.ruin_strategy, 0.0);
+            self.update_recreate_score(iteration_info.recreate_strategy, 0.0);
+        } else if is_best {
+            self.update_ruin_score(iteration_info.ruin_strategy, params.alns_best_factor);
+            self.update_recreate_score(iteration_info.recreate_strategy, params.alns_best_factor);
+        } else if improved {
+            self.update_ruin_score(iteration_info.ruin_strategy, params.alns_improvement_factor);
+            self.update_recreate_score(
+                iteration_info.recreate_strategy,
+                params.alns_improvement_factor,
+            );
+        } else {
+            self.update_ruin_score(
+                iteration_info.ruin_strategy,
+                params.alns_accepted_worst_factor,
+            );
+            self.update_recreate_score(
+                iteration_info.recreate_strategy,
+                params.alns_accepted_worst_factor,
+            );
+        }
+    }
 }
 
 struct IterationInfo {
@@ -667,10 +750,13 @@ struct IterationInfo {
 
 struct ThreadedSearchState {
     start: Timestamp,
+    thread: usize,
     iterations_without_improvement: usize,
     operator_scores: OperatorScores,
     best_solutions: Arc<RwLock<Vec<AcceptedSolution>>>,
     tabu: Arc<RwLock<VecDeque<AcceptedSolution>>>,
     iteration: usize,
     max_iterations: Option<usize>,
+    global_statistics: Arc<RwLock<GlobalStatistics>>,
+    thread_statistics: Arc<RwLock<ThreadSearchStatistics>>,
 }

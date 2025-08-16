@@ -11,4 +11,5 @@ pub mod search;
 pub mod solver;
 pub mod solver_manager;
 pub mod solver_params;
+pub mod statistics;
 pub mod working_solution;

@@ -35,6 +35,7 @@ pub enum Termination {
     Iterations(usize),
     IterationsWithoutImprovement(usize),
     Score(Score),
+    VehiclesAndCosts { vehicles: usize, costs: f64 },
 }
 
 #[derive(Clone, Debug)]
@@ -42,6 +43,16 @@ pub enum Threads {
     Single,
     Auto,
     Multi(usize),
+}
+
+impl Threads {
+    pub fn number_of_threads(&self) -> usize {
+        match self {
+            Threads::Single => 1,
+            Threads::Multi(num) => *num,
+            Threads::Auto => std::thread::available_parallelism().map_or(1, |n| n.get()),
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -74,9 +85,9 @@ impl Default for SolverParams {
             solver_selector: SolverSelectorStrategy::SelectWeighted,
             ruin: RuinParams::default(),
             recreate: RecreateParams::default(),
-            threads: Threads::Multi(8),
+            threads: Threads::Multi(4),
             noise_level: 0.15,
-            noise_probability: 0.2,
+            noise_probability: 0.15,
 
             alns_segment_iterations: 250,
             alns_reaction_factor: 0.8,

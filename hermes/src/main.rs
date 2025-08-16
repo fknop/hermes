@@ -2,6 +2,7 @@ use hermes_core::geopoint::GeoPoint;
 use hermes_optimizer::{
     solomon::solomon_parser::SolomonParser,
     solver::{
+        constraints::transport_cost_constraint::TRANSPORT_COST_WEIGHT,
         score::Score,
         solver::Solver,
         solver_params::{SolverParams, Termination, Threads},
@@ -107,6 +108,108 @@ fn create_solomon_dataset() -> Vec<SolomonDataset> {
             vehicles: 3,
             optimal_cost: 588.32,
         },
+        // r1
+        SolomonDataset {
+            file: "./data/solomon/r1/r101.txt",
+            vehicles: 19,
+            optimal_cost: 1650.80,
+        },
+        SolomonDataset {
+            file: "./data/solomon/r1/r102.txt",
+            vehicles: 17,
+            optimal_cost: 1486.12,
+        },
+        SolomonDataset {
+            file: "./data/solomon/r1/r103.txt",
+            vehicles: 13,
+            optimal_cost: 1292.68,
+        },
+        SolomonDataset {
+            file: "./data/solomon/r1/r104.txt",
+            vehicles: 9,
+            optimal_cost: 1007.31,
+        },
+        SolomonDataset {
+            file: "./data/solomon/r1/r105.txt",
+            vehicles: 14,
+            optimal_cost: 1377.11,
+        },
+        SolomonDataset {
+            file: "./data/solomon/r1/r106.txt",
+            vehicles: 12,
+            optimal_cost: 1252.03,
+        },
+        SolomonDataset {
+            file: "./data/solomon/r1/r107.txt",
+            vehicles: 10,
+            optimal_cost: 1104.66,
+        },
+        SolomonDataset {
+            file: "./data/solomon/r1/r108.txt",
+            vehicles: 9,
+            optimal_cost: 960.88,
+        },
+        SolomonDataset {
+            file: "./data/solomon/r1/r109.txt",
+            vehicles: 11,
+            optimal_cost: 1194.84,
+        },
+        SolomonDataset {
+            file: "./data/solomon/r1/r110.txt",
+            vehicles: 10,
+            optimal_cost: 1118.84,
+        },
+        SolomonDataset {
+            file: "./data/solomon/r1/r111.txt",
+            vehicles: 10,
+            optimal_cost: 1096.72,
+        },
+        SolomonDataset {
+            file: "./data/solomon/r1/r112.txt",
+            vehicles: 9,
+            optimal_cost: 982.14,
+        },
+        // r2
+        SolomonDataset {
+            file: "./data/solomon/r2/r201.txt",
+            vehicles: 4,
+            optimal_cost: 1252.37,
+        },
+        SolomonDataset {
+            file: "./data/solomon/r2/r202.txt",
+            vehicles: 3,
+            optimal_cost: 1191.70,
+        },
+        SolomonDataset {
+            file: "./data/solomon/r2/r203.txt",
+            vehicles: 3,
+            optimal_cost: 939.50,
+        },
+        SolomonDataset {
+            file: "./data/solomon/r2/r204.txt",
+            vehicles: 2,
+            optimal_cost: 825.52,
+        },
+        SolomonDataset {
+            file: "./data/solomon/r2/r205.txt",
+            vehicles: 3,
+            optimal_cost: 994.43,
+        },
+        SolomonDataset {
+            file: "./data/solomon/r2/r206.txt",
+            vehicles: 3,
+            optimal_cost: 906.14,
+        },
+        SolomonDataset {
+            file: "./data/solomon/r2/r207.txt",
+            vehicles: 2,
+            optimal_cost: 890.61,
+        },
+        SolomonDataset {
+            file: "./data/solomon/r2/r208.txt",
+            vehicles: 2,
+            optimal_cost: 726.82,
+        },
     ]
 }
 
@@ -117,16 +220,17 @@ fn main() {
 
     for dataset in datasets {
         let vrp = SolomonParser::from_file(dataset.file).unwrap();
-        let route_cost = vrp.route_costs();
-        let target_score = Score::soft(
-            (dataset.optimal_cost * 50.0) + (route_cost * dataset.vehicles as f64) + 0.5,
-        );
+
         let solver = Solver::new(
             vrp,
             SolverParams {
                 terminations: vec![
-                    Termination::Iterations(5000),
-                    Termination::Score(target_score),
+                    Termination::Iterations(10000),
+                    Termination::VehiclesAndCosts {
+                        vehicles: dataset.vehicles,
+                        costs: dataset.optimal_cost + 0.5,
+                    },
+                    Termination::IterationsWithoutImprovement(5000),
                 ],
                 threads: Threads::Multi(4),
                 ..SolverParams::default()
@@ -136,17 +240,21 @@ fn main() {
         solver.solve();
 
         let best_solution = solver.current_best_solution().unwrap();
-        let best_score = best_solution.score;
-        let distance = best_solution.solution.distance();
-        if (best_score * 100.0).round() / 100.0 <= target_score {
+        if best_solution.solution.total_transport_costs() <= dataset.optimal_cost + 0.5
+            && best_solution.solution.routes().len() <= dataset.vehicles
+        {
             info!(
-                "Found optimal solution for {} - Costs = {}",
-                dataset.file, distance
+                "Found optimal solution for {} - Costs = {}, Vehicles = {}",
+                dataset.file,
+                best_solution.solution.total_transport_costs(),
+                best_solution.solution.routes().len()
             );
         } else {
             warn!(
-                "Could not find optimal solution for {} - Costs = {:?}",
-                dataset.file, distance
+                "Could not find optimal solution for {} - Costs = {:?}, Vehicles = {}",
+                dataset.file,
+                best_solution.solution.total_transport_costs(),
+                best_solution.solution.routes().len()
             );
         }
     }

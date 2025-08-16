@@ -7,7 +7,7 @@ use super::global_constraint::GlobalConstraint;
 
 pub struct TransportCostConstraint;
 
-const TRANSPORT_COST_WEIGHT: f64 = 70.0;
+pub const TRANSPORT_COST_WEIGHT: f64 = 70.0;
 
 impl GlobalConstraint for TransportCostConstraint {
     fn compute_score(&self, solution: &WorkingSolution) -> Score {

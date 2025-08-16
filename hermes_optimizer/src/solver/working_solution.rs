@@ -41,6 +41,13 @@ impl WorkingSolution {
         }
     }
 
+    pub fn total_transport_costs(&self) -> f64 {
+        self.routes
+            .iter()
+            .map(|route| route.transport_costs(&self.problem))
+            .sum()
+    }
+
     /// To check if two working solutions are identical, we compare:
     /// 1) the number of routes
     /// 2) the vehicle IDs of each route
@@ -209,12 +216,15 @@ impl WorkingSolution {
         removed
     }
 
-    pub fn remove_route(&mut self, route_id: usize) {
+    pub fn remove_route(&mut self, route_id: usize) -> usize {
+        let removed = self.routes[route_id].activities.len();
         for activity in self.routes[route_id].activities.iter() {
             self.unassigned_services.insert(activity.service_id);
         }
 
         self.routes.remove(route_id);
+
+        removed
     }
 
     pub fn distance(&self) -> f64 {
@@ -352,6 +362,41 @@ impl WorkingSolutionRoute {
         }
 
         transport_duration
+    }
+
+    pub fn transport_costs(&self, problem: &VehicleRoutingProblem) -> f64 {
+        let vehicle = self.vehicle(problem);
+        let mut costs = 0.0;
+
+        if let Some(depot_location_id) = vehicle.depot_location_id() {
+            if self.has_start(problem) {
+                costs += problem.travel_cost(
+                    depot_location_id,
+                    self.first().service(problem).location_id(),
+                );
+            }
+
+            if self.has_end(problem) {
+                costs += problem.travel_cost(
+                    self.last().service(problem).location_id(),
+                    depot_location_id,
+                );
+            }
+        }
+
+        for (index, activity) in self.activities.iter().enumerate() {
+            if index == 0 {
+                // Skip the first activity, as it is already counted with the depot
+                continue;
+            }
+
+            costs += problem.travel_cost(
+                self.activities[index - 1].service(problem).location_id(),
+                activity.service(problem).location_id(),
+            );
+        }
+
+        costs
     }
 
     pub fn distance(&self, problem: &VehicleRoutingProblem) -> f64 {

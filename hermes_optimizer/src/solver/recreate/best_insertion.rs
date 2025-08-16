@@ -1,3 +1,4 @@
+use jiff::Timestamp;
 use parking_lot::RwLock;
 use rand::{
     Rng,
@@ -22,34 +23,46 @@ use super::{recreate_context::RecreateContext, recreate_solution::RecreateSoluti
 #[derive(Default)]
 pub struct BestInsertion {
     cached_min_max_demand: RwLock<Option<(Capacity, Capacity)>>,
+    sort_method: BestInsertionSortMethod,
 }
 
-enum SortMethod {
+#[derive(Default, Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub enum BestInsertionSortMethod {
+    #[default]
     Random,
     Demand,
     Far,
     Close,
+    TimeWindow,
 }
 
-impl SortMethod {
+impl BestInsertionSortMethod {
     fn weight(&self) -> usize {
         match self {
-            SortMethod::Random => 4,
-            SortMethod::Demand => 4,
-            SortMethod::Far => 2,
-            SortMethod::Close => 1,
+            BestInsertionSortMethod::Random => 4,
+            BestInsertionSortMethod::Demand => 4,
+            BestInsertionSortMethod::Far => 2,
+            BestInsertionSortMethod::Close => 1,
+            BestInsertionSortMethod::TimeWindow => 1,
         }
     }
 }
 
-const METHODS: [SortMethod; 4] = [
-    SortMethod::Random,
-    SortMethod::Demand,
-    SortMethod::Far,
-    SortMethod::Close,
+const METHODS: [BestInsertionSortMethod; 4] = [
+    BestInsertionSortMethod::Random,
+    BestInsertionSortMethod::Demand,
+    BestInsertionSortMethod::Far,
+    BestInsertionSortMethod::Close,
 ];
 
 impl BestInsertion {
+    pub fn new(sort_method: BestInsertionSortMethod) -> Self {
+        BestInsertion {
+            sort_method,
+            ..Default::default()
+        }
+    }
+
     fn min_max_demand(&self, problem: &VehicleRoutingProblem) -> (Capacity, Capacity) {
         let is_none;
         {
@@ -80,16 +93,11 @@ impl BestInsertion {
         unassigned_services: &mut [ServiceId],
         rng: &mut SmallRng,
     ) {
-        let method = METHODS
-            .choose_weighted(rng, |method| method.weight())
-            .ok()
-            .unwrap();
-
-        match method {
-            SortMethod::Random => {
+        match self.sort_method {
+            BestInsertionSortMethod::Random => {
                 unassigned_services.shuffle(rng);
             }
-            SortMethod::Demand => {
+            BestInsertionSortMethod::Demand => {
                 let (min_demand, max_demand) = self.min_max_demand(problem);
                 unassigned_services.sort_by(|a, b| {
                     let demand_a = problem
@@ -106,7 +114,7 @@ impl BestInsertion {
                         .unwrap_or(std::cmp::Ordering::Equal)
                 })
             }
-            SortMethod::Far => {
+            BestInsertionSortMethod::Far => {
                 unassigned_services.sort_by_key(|&service| {
                     let distance_from_depot = problem
                         .vehicles()
@@ -124,7 +132,7 @@ impl BestInsertion {
                     -distance_from_depot.round() as i64
                 });
             }
-            SortMethod::Close => {
+            BestInsertionSortMethod::Close => {
                 unassigned_services.sort_by_key(|&service| {
                     let distance_from_depot = problem
                         .vehicles()
@@ -140,6 +148,19 @@ impl BestInsertion {
                         / problem.vehicles().len() as Distance;
 
                     distance_from_depot.round() as i64
+                });
+            }
+            BestInsertionSortMethod::TimeWindow => {
+                unassigned_services.sort_by_key(|&service_id| {
+                    let service = problem.service(service_id);
+
+                    let end = service
+                        .time_windows()
+                        .iter()
+                        .filter_map(|tw| tw.end())
+                        .max();
+
+                    end.unwrap_or(Timestamp::MAX)
                 });
             }
         }

@@ -1,3 +1,6 @@
+[features]
+statistics = []
+
 [package]
 name = "hermes_optimizer"
 version = "0.1.0"

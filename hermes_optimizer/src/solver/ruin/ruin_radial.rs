@@ -17,13 +17,22 @@ impl RuinSolution for RuinRadial {
             ..
         }: RuinContext,
     ) {
-        let random_service_id = problem.random_service(rng);
+        let random_location_id = problem.random_location(rng);
 
         for service_id in problem
-            .nearest_services(random_service_id)
+            .nearest_services_of_location(random_location_id)
             .take(num_activities_to_remove)
         {
             solution.remove_service(service_id);
         }
+
+        // let random_service_id = problem.random_service(rng);
+
+        // for service_id in problem
+        //     .nearest_services(random_service_id)
+        //     .take(num_activities_to_remove)
+        // {
+        //     solution.remove_service(service_id);
+        // }
     }
 }

@@ -8,18 +8,25 @@ pub struct RuinRoute;
 
 impl RuinSolution for RuinRoute {
     fn ruin_solution(&self, solution: &mut WorkingSolution, context: RuinContext) {
-        let route_ids: Vec<usize> = (0..solution.routes().len()).collect();
+        let mut remaining: i64 = context.num_activities_to_remove as i64;
 
-        let route_id = route_ids
-            .choose_weighted(context.rng, |&route_id| {
-                let route = solution.route(route_id);
-                route.duration(context.problem).as_secs_f64() * 0.7
-                    + route.total_waiting_duration().as_secs_f64() * 0.3
-            })
-            .ok();
+        while remaining > 0 {
+            let route_ids: Vec<usize> = (0..solution.routes().len()).collect();
 
-        if let Some(&route_id) = route_id {
-            solution.remove_route(route_id);
+            let route_id = route_ids
+                .choose_weighted(context.rng, |&route_id| {
+                    let route = solution.route(route_id);
+                    route.duration(context.problem).as_secs_f64() * 0.7
+                        + route.total_waiting_duration().as_secs_f64() * 0.3
+                })
+                .ok();
+
+            if let Some(&route_id) = route_id {
+                let removed = solution.remove_route(route_id);
+                remaining -= removed as i64;
+            } else {
+                break;
+            }
         }
     }
 }

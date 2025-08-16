@@ -27,6 +27,10 @@ impl VehicleRoutingProblem {
         &self.services[index]
     }
 
+    pub fn random_location(&self, rng: &mut SmallRng) -> usize {
+        rng.random_range(0..self.locations.len())
+    }
+
     pub fn random_service(&self, rng: &mut SmallRng) -> usize {
         rng.random_range(0..self.services.len())
     }
@@ -82,18 +86,25 @@ impl VehicleRoutingProblem {
     }
 
     pub fn waiting_cost(&self, waiting_duration: SignedDuration) -> Cost {
-        waiting_duration.as_secs_f64() * 7.0
+        waiting_duration.as_secs_f64() * 15.0
     }
 
     pub fn route_costs(&self) -> f64 {
         10000.0 // Placeholder for the static cost of a route
     }
 
-    pub fn nearest_services(&self, service_id: ServiceId) -> impl Iterator<Item = ServiceId> {
-        let location_id = self.service(service_id).location_id();
+    pub fn nearest_services_of_location(
+        &self,
+        location_id: usize,
+    ) -> impl Iterator<Item = ServiceId> {
         let location = &self.locations[location_id];
         self.service_location_index
             .nearest_neighbor_iter(geo::Point::new(location.x(), location.y()))
+    }
+
+    pub fn nearest_services(&self, service_id: ServiceId) -> impl Iterator<Item = ServiceId> {
+        let location_id = self.service(service_id).location_id();
+        self.nearest_services_of_location(location_id)
     }
 }
 
