@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use fxhash::FxHashMap;
 use jiff::Timestamp;
 use parking_lot::RwLock;
 
@@ -65,10 +66,22 @@ pub struct SearchStatisticsIteration {
 #[derive(Default)]
 pub struct ThreadSearchStatistics {
     iterations: Vec<SearchStatisticsIteration>,
+    ruin_strategies: FxHashMap<RuinStrategy, usize>,
+    recreate_strategies: FxHashMap<RecreateStrategy, usize>,
 }
 
 impl ThreadSearchStatistics {
     pub fn add_iteration_info(&mut self, iteration: SearchStatisticsIteration) {
-        self.iterations.push(iteration)
+        self.ruin_strategies
+            .entry(iteration.ruin_strategy)
+            .and_modify(|entry| *entry += 1)
+            .or_insert(1);
+
+        self.recreate_strategies
+            .entry(iteration.recreate_strategy)
+            .and_modify(|entry| *entry += 1)
+            .or_insert(1);
+
+        self.iterations.push(iteration);
     }
 }
