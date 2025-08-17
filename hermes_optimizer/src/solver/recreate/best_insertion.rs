@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use jiff::Timestamp;
 use parking_lot::RwLock;
 use rand::{
@@ -5,6 +7,7 @@ use rand::{
     rngs::SmallRng,
     seq::{IndexedRandom, SliceRandom},
 };
+use serde::Serialize;
 
 use crate::{
     problem::{
@@ -26,7 +29,7 @@ pub struct BestInsertion {
     sort_method: BestInsertionSortMethod,
 }
 
-#[derive(Default, Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Default, Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize)]
 pub enum BestInsertionSortMethod {
     #[default]
     Random,
@@ -34,6 +37,18 @@ pub enum BestInsertionSortMethod {
     Far,
     Close,
     TimeWindow,
+}
+
+impl Display for BestInsertionSortMethod {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Random => write!(f, "Random"),
+            Self::Demand => write!(f, "Demand"),
+            Self::Far => write!(f, "Far"),
+            Self::Close => write!(f, "Close"),
+            Self::TimeWindow => write!(f, "TimeWindow"),
+        }
+    }
 }
 
 impl BestInsertionSortMethod {

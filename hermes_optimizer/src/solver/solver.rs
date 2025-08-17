@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use parking_lot::{MappedRwLockReadGuard, RwLock};
 
 use crate::problem::vehicle_routing_problem::VehicleRoutingProblem;
@@ -16,6 +18,7 @@ use super::{
     },
     search::Search,
     solver_params::SolverParams,
+    statistics::SearchStatistics,
 };
 
 #[derive(Copy, Clone, Debug)]
@@ -75,6 +78,10 @@ impl Solver {
 
     pub fn current_best_solution(&self) -> Option<MappedRwLockReadGuard<'_, AcceptedSolution>> {
         self.search.best_solution()
+    }
+
+    pub fn statistics(&self) -> Arc<SearchStatistics> {
+        self.search.statistics()
     }
 }
 

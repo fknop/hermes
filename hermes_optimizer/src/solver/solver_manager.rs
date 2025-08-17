@@ -8,6 +8,7 @@ use super::{
     accepted_solution::AcceptedSolution,
     solver::{Solver, SolverStatus},
     solver_params::SolverParams,
+    statistics::SearchStatistics,
 };
 
 #[derive(Default)]
@@ -49,5 +50,13 @@ impl SolverManager {
             .get(job_id)
             .and_then(|solver| solver.current_best_solution())
             .map(|solution| solution.clone())
+    }
+
+    pub async fn get_statistics(&self, job_id: &str) -> Option<Arc<SearchStatistics>> {
+        self.solvers
+            .read()
+            .await
+            .get(job_id)
+            .map(|solver| solver.statistics())
     }
 }

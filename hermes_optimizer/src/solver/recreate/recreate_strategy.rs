@@ -1,3 +1,7 @@
+use std::fmt::Display;
+
+use serde::Serialize;
+
 use crate::solver::working_solution::WorkingSolution;
 
 use super::{
@@ -7,10 +11,19 @@ use super::{
     regret_insertion::RegretInsertion,
 };
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize)]
 pub enum RecreateStrategy {
     BestInsertion(BestInsertionSortMethod),
     RegretInsertion,
+}
+
+impl Display for RecreateStrategy {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::BestInsertion(sort_method) => write!(f, "BestInsertion({sort_method})"),
+            Self::RegretInsertion => write!(f, "RegretInsertion"),
+        }
+    }
 }
 
 impl RecreateSolution for RecreateStrategy {

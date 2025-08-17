@@ -3,6 +3,8 @@ use std::sync::Arc;
 use fxhash::FxHashMap;
 use jiff::Timestamp;
 use parking_lot::RwLock;
+use serde::Serialize;
+use serde_with::{DisplayFromStr, serde_as};
 
 use super::{
     recreate::recreate_strategy::RecreateStrategy,
@@ -10,6 +12,7 @@ use super::{
     score::{Score, ScoreAnalysis},
 };
 
+#[derive(Serialize)]
 pub struct SearchStatistics {
     global_statistics: Arc<RwLock<GlobalStatistics>>,
     thread_search_statistics: Vec<Arc<RwLock<ThreadSearchStatistics>>>,
@@ -37,6 +40,7 @@ impl SearchStatistics {
     }
 }
 
+#[derive(Serialize)]
 pub struct ScoreEvolutionRow {
     pub timestamp: Timestamp,
     pub score: Score,
@@ -44,7 +48,7 @@ pub struct ScoreEvolutionRow {
     pub thread: usize,
 }
 
-#[derive(Default)]
+#[derive(Default, Serialize)]
 pub struct GlobalStatistics {
     score_evolution: Vec<ScoreEvolutionRow>,
 }
@@ -55,6 +59,7 @@ impl GlobalStatistics {
     }
 }
 
+#[derive(Serialize)]
 pub struct SearchStatisticsIteration {
     pub timestamp: Timestamp,
     pub ruin_strategy: RuinStrategy,
@@ -63,10 +68,15 @@ pub struct SearchStatisticsIteration {
     pub is_best: bool,
 }
 
-#[derive(Default)]
+#[serde_as]
+#[derive(Default, Serialize)]
 pub struct ThreadSearchStatistics {
+    #[serde(skip_serializing)]
     iterations: Vec<SearchStatisticsIteration>,
+
+    #[serde_as(as = "FxHashMap<DisplayFromStr, _>")]
     ruin_strategies: FxHashMap<RuinStrategy, usize>,
+    #[serde_as(as = "FxHashMap<DisplayFromStr, _>")]
     recreate_strategies: FxHashMap<RecreateStrategy, usize>,
 }
 

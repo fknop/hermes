@@ -1,3 +1,7 @@
+use std::fmt::Display;
+
+use serde::Serialize;
+
 use crate::solver::working_solution::WorkingSolution;
 
 use super::{
@@ -6,7 +10,7 @@ use super::{
     ruin_string::RuinString, ruin_time_related::RuinTimeRelated, ruin_worst::RuinWorst,
 };
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize)]
 pub enum RuinStrategy {
     Random,
     RuinRadial,
@@ -15,6 +19,20 @@ pub enum RuinStrategy {
     RuinTimeRelated,
     RuinCluster,
     RuinRoute,
+}
+
+impl Display for RuinStrategy {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Random => write!(f, "Random"),
+            Self::RuinRadial => write!(f, "RuinRadial"),
+            Self::RuinWorst => write!(f, "RuinWorst"),
+            Self::RuinString => write!(f, "RuinString"),
+            Self::RuinTimeRelated => write!(f, "RuinTimeRelated"),
+            Self::RuinCluster => write!(f, "RuinCluster"),
+            Self::RuinRoute => write!(f, "RuinRoute"),
+        }
+    }
 }
 
 impl RuinSolution for RuinStrategy {

@@ -4,8 +4,13 @@ use axum::{
     extract::{Path, State},
     response::IntoResponse,
 };
-use hermes_optimizer::solver::{accepted_solution::AcceptedSolution, solver::SolverStatus};
+use hermes_optimizer::solver::{
+    accepted_solution::AcceptedSolution,
+    solver::SolverStatus,
+    statistics::{GlobalStatistics, SearchStatistics, ThreadSearchStatistics},
+};
 use jiff::SignedDuration;
+use parking_lot::{MappedRwLockReadGuard, RwLockReadGuard};
 use serde::Serialize;
 use uuid::Uuid;
 
@@ -18,11 +23,13 @@ use super::benchmark_solution::{
 #[derive(Serialize)]
 pub struct PollSolverRunning {
     solution: Option<BenchmarkSolution>,
+    statistics: Option<Arc<SearchStatistics>>,
 }
 
 #[derive(Serialize)]
 pub struct PollSolverCompleted {
     solution: Option<BenchmarkSolution>,
+    statistics: Option<Arc<SearchStatistics>>,
 }
 
 #[derive(Serialize)]
@@ -83,14 +90,19 @@ pub async fn poll_handler(
             SolverStatus::Pending => Ok(PollBenchmarkResponse::Pending),
             SolverStatus::Running => {
                 let solution = solver_manager.get_solution(&job_id.to_string()).await;
+                let statistics = solver_manager.get_statistics(&job_id.to_string()).await;
+
                 Ok(PollBenchmarkResponse::Running(PollSolverRunning {
                     solution: solution.map(|solution| transform_solution(&solution)),
+                    statistics,
                 }))
             }
             SolverStatus::Completed => {
                 let solution = solver_manager.get_solution(&job_id.to_string()).await;
+                let statistics = solver_manager.get_statistics(&job_id.to_string()).await;
                 Ok(PollBenchmarkResponse::Completed(PollSolverCompleted {
                     solution: solution.map(|solution| transform_solution(&solution)),
+                    statistics,
                 }))
             }
         }

@@ -54,7 +54,7 @@ pub struct Search {
     noise_generator: NoiseGenerator,
     operator_weights: Arc<RwLock<OperatorWeights>>,
     is_stopped: Arc<RwLock<bool>>,
-    statistics: SearchStatistics,
+    statistics: Arc<SearchStatistics>,
 }
 
 impl Search {
@@ -100,7 +100,7 @@ impl Search {
             on_best_solution_handler: Arc::new(None),
             operator_weights: Arc::new(RwLock::new(OperatorWeights::new(&params))),
             is_stopped: Arc::new(RwLock::new(false)),
-            statistics: SearchStatistics::new(params.threads.number_of_threads()),
+            statistics: Arc::new(SearchStatistics::new(params.threads.number_of_threads())),
             params,
         }
     }
@@ -111,6 +111,10 @@ impl Search {
 
     pub fn best_solution(&self) -> Option<MappedRwLockReadGuard<'_, AcceptedSolution>> {
         RwLockReadGuard::try_map(self.best_solutions.read(), |solutions| solutions.first()).ok()
+    }
+
+    pub fn statistics(&self) -> Arc<SearchStatistics> {
+        Arc::clone(&self.statistics)
     }
 
     pub fn stop(&self) {
