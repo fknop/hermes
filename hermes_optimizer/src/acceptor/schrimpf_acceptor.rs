@@ -10,11 +10,10 @@ pub struct SchrimpfAcceptor {
 }
 
 impl SchrimpfAcceptor {
-    pub fn new() -> Self {
+    pub fn new(initial_threshold: f64) -> Self {
         SchrimpfAcceptor {
-            // TODO: compute this initial value based on the problem size
-            initial_threshold: 5000.0,
-            alpha: 0.15,
+            initial_threshold,
+            alpha: 0.5,
         }
     }
 
@@ -63,7 +62,7 @@ mod tests {
 
     #[test]
     fn test_compute_threshold() {
-        let acceptor = SchrimpfAcceptor::new();
+        let acceptor = SchrimpfAcceptor::new(5000.0);
 
         let mut threshold = acceptor.compute_threshold(&AcceptSolutionContext {
             iteration: 0,

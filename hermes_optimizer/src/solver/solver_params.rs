@@ -59,6 +59,7 @@ impl Threads {
 pub enum SolverAcceptorStrategy {
     Greedy,
     Schrimpf,
+    Any,
 }
 
 #[derive(Clone, Debug)]

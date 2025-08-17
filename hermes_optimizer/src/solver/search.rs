@@ -19,7 +19,19 @@ use crate::{
         select_solution::SelectSolution, select_weighted::SelectWeightedSelector,
         solution_selector::SolutionSelector,
     },
-    solver::statistics::SearchStatisticsIteration,
+    solver::{
+        constraints::{
+            activity_constraint::ActivityConstraintType, capacity_constraint::CapacityConstraint,
+            global_constraint::GlobalConstraintType,
+            maximum_working_duration_constraint::MaximumWorkingDurationConstraint,
+            route_constraint::RouteConstraintType, shift_constraint::ShiftConstraint,
+            time_window_constraint::TimeWindowConstraint,
+            transport_cost_constraint::TransportCostConstraint,
+            vehicle_cost_constraint::VehicleCostConstraint,
+            waiting_duration_constraint::WaitingDurationConstraint,
+        },
+        statistics::SearchStatisticsIteration,
+    },
 };
 
 use super::{
@@ -58,11 +70,7 @@ pub struct Search {
 }
 
 impl Search {
-    pub fn new(
-        params: SolverParams,
-        problem: VehicleRoutingProblem,
-        constraints: Vec<Constraint>,
-    ) -> Self {
+    pub fn new(params: SolverParams, problem: Arc<VehicleRoutingProblem>) -> Self {
         if params.terminations.is_empty() {
             panic!(
                 "At least one termination condition must be specified in the solver parameters."
@@ -80,19 +88,65 @@ impl Search {
         };
         let solution_acceptor = match params.solver_acceptor {
             SolverAcceptorStrategy::Greedy => SolutionAcceptor::Greedy(GreedySolutionAcceptor),
-            SolverAcceptorStrategy::Schrimpf => SolutionAcceptor::Schrimpf(SchrimpfAcceptor::new()),
+            SolverAcceptorStrategy::Schrimpf => {
+                let random_walks = 100;
+
+                // Create a random walk search that accepts any solution.
+                // Runs for *random_walk* iterations and compute the standard variation of the scores
+                // The initial threshold is set to half of the standard variation
+                let shrimpf_initial_threshold_search = Self::new(
+                    SolverParams {
+                        terminations: vec![Termination::Iterations(random_walks)],
+                        max_solutions: random_walks,
+                        solver_acceptor: SolverAcceptorStrategy::Any,
+                        threads: Threads::Single,
+                        solver_selector: SolverSelectorStrategy::SelectBest,
+                        tabu_enabled: false,
+                        ..params.clone()
+                    },
+                    Arc::clone(&problem),
+                );
+
+                shrimpf_initial_threshold_search.run();
+
+                let total_score = shrimpf_initial_threshold_search
+                    .best_solutions
+                    .read()
+                    .iter()
+                    .map(|accepted_solution| accepted_solution.score.soft_score)
+                    .sum::<f64>();
+                let mean = total_score / random_walks as f64;
+
+                let variance = shrimpf_initial_threshold_search
+                    .best_solutions
+                    .read()
+                    .iter()
+                    .map(|accepted_solution| (accepted_solution.score.soft_score - mean).powf(2.0))
+                    .sum::<f64>()
+                    / ((random_walks - 1) as f64);
+
+                let std = variance.sqrt();
+                let initial_threshold = std / 2.0;
+
+                debug!(
+                    "Schrimpf initial: total_score = {total_score}, mean = {mean}, variance = {variance}, std = {std}, initial_threshold = {initial_threshold}",
+                );
+
+                SolutionAcceptor::Schrimpf(SchrimpfAcceptor::new(initial_threshold))
+            }
+            SolverAcceptorStrategy::Any => SolutionAcceptor::Any,
         };
 
         let max_cost = problem.max_cost();
 
         Search {
-            problem: Arc::new(problem),
+            problem: Arc::clone(&problem),
             noise_generator: NoiseGenerator::new(
                 max_cost,
                 params.noise_probability,
                 params.noise_level,
             ),
-            constraints,
+            constraints: Self::create_constraints(),
             best_solutions: Arc::new(RwLock::new(Vec::with_capacity(params.max_solutions))),
             tabu: Arc::new(RwLock::new(VecDeque::with_capacity(params.tabu_size))),
             solution_selector,
@@ -103,6 +157,22 @@ impl Search {
             statistics: Arc::new(SearchStatistics::new(params.threads.number_of_threads())),
             params,
         }
+    }
+
+    fn create_constraints() -> Vec<Constraint> {
+        vec![
+            Constraint::Global(GlobalConstraintType::TransportCost(TransportCostConstraint)),
+            Constraint::Activity(ActivityConstraintType::TimeWindow(TimeWindowConstraint)),
+            Constraint::Route(RouteConstraintType::Capacity(CapacityConstraint)),
+            Constraint::Route(RouteConstraintType::Shift(ShiftConstraint)),
+            Constraint::Route(RouteConstraintType::WaitingDuration(
+                WaitingDurationConstraint,
+            )),
+            Constraint::Route(RouteConstraintType::VehicleCost(VehicleCostConstraint)),
+            Constraint::Route(RouteConstraintType::MaximumWorkingDuration(
+                MaximumWorkingDurationConstraint,
+            )),
+        ]
     }
 
     pub fn on_best_solution(&mut self, callback: fn(&AcceptedSolution)) {

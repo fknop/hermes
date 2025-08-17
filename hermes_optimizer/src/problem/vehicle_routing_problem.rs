@@ -86,7 +86,7 @@ impl VehicleRoutingProblem {
     }
 
     pub fn waiting_cost(&self, waiting_duration: SignedDuration) -> Cost {
-        waiting_duration.as_secs_f64() * 15.0
+        waiting_duration.as_secs_f64() * 30.0
     }
 
     pub fn route_costs(&self) -> f64 {

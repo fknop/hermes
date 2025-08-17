@@ -11,6 +11,7 @@ use super::{
 pub enum SolutionAcceptor {
     Greedy(GreedySolutionAcceptor),
     Schrimpf(SchrimpfAcceptor),
+    Any,
 }
 
 impl AcceptSolution for SolutionAcceptor {
@@ -28,6 +29,7 @@ impl AcceptSolution for SolutionAcceptor {
             SolutionAcceptor::Schrimpf(acceptor) => {
                 acceptor.accept(current_solutions, solution, score, context)
             }
+            SolutionAcceptor::Any => true,
         }
     }
 }

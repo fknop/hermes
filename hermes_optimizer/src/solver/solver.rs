@@ -35,21 +35,7 @@ pub struct Solver {
 
 impl Solver {
     pub fn new(problem: VehicleRoutingProblem, params: SolverParams) -> Self {
-        let constraints = vec![
-            Constraint::Global(GlobalConstraintType::TransportCost(TransportCostConstraint)),
-            Constraint::Activity(ActivityConstraintType::TimeWindow(TimeWindowConstraint)),
-            Constraint::Route(RouteConstraintType::Capacity(CapacityConstraint)),
-            Constraint::Route(RouteConstraintType::Shift(ShiftConstraint)),
-            Constraint::Route(RouteConstraintType::WaitingDuration(
-                WaitingDurationConstraint,
-            )),
-            Constraint::Route(RouteConstraintType::VehicleCost(VehicleCostConstraint)),
-            Constraint::Route(RouteConstraintType::MaximumWorkingDuration(
-                MaximumWorkingDurationConstraint,
-            )),
-        ];
-
-        let search = Search::new(params, problem, constraints);
+        let search = Search::new(params, Arc::new(problem));
 
         Solver {
             status: RwLock::new(SolverStatus::Pending),
