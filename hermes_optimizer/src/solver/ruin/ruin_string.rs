@@ -26,9 +26,9 @@ impl Default for RuinString {
     fn default() -> Self {
         RuinString {
             k_min: 1,
-            k_max: 6,
+            k_max: 3,
             l_min: 3,
-            l_max: 20,
+            l_max: 10,
         }
     }
 }
