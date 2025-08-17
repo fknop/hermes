@@ -13,17 +13,21 @@ import {
   Scatter,
   XAxis,
   YAxis,
+  Line,
+  LineChart,
 } from 'recharts'
 import { VRP_COLORS } from '../vehicle-routing/colors'
 import { useFetch } from '../../hooks/useFetch'
 import { isNil } from '../../utils/isNil'
 import { Button } from '../../components/Button'
+import { useDurationFormatter } from '../../hooks/useDurationFormatter'
 
 type ProblemData = {
   locations: { x: number; y: number }[]
   services: { location_id: number }[]
   vehicles: { depot_location_id: number | null }[]
 }
+type Score = { hard_score: number; soft_score: number }
 
 type SolutionData = {
   routes: {
@@ -32,12 +36,28 @@ type SolutionData = {
     vehicle_id: number
   }[]
   distance: number
-  score: { hard_score: number; soft_score: number }
+  score: Score
 }
 
 export type SolutionResponse = {
   status: 'Pending' | 'Running' | 'Completed'
   solution: SolutionData | null
+  statistics: {
+    global_statistics: {
+      score_evolution: {
+        timestamp: string
+        thread: number
+        score: Score
+        score_analysis: {
+          scores: { [key: string]: Score }
+        }
+      }[]
+    }
+    thread_statistics: {
+      ruin_strategies: { [key: string]: number }
+      recreate_strategies: { [key: string]: number }
+    }[]
+  } | null
 }
 
 const usePostBenchmark = () => {
@@ -178,23 +198,27 @@ export default function SolomonRoute() {
         Stop Benchmark
       </Button>
 
-      <div className="flex flex-row gap-10">
-        {problem && <ProblemChart data={problem} />}
-        <div className="flex flex-col gap-4">
-          {solution?.solution && (
-            <div className="flex flex-row gap-2">
-              <span>Total distance: {solution.solution.distance}</span>
-              <span>Vehicles: {solution.solution.routes.length}</span>
-              <span>
-                Score: hard/{solution.solution.score.hard_score} soft/
-                {solution.solution.score.soft_score}
-              </span>
-            </div>
-          )}
-          {solution?.solution && problem && (
-            <SolutionChart solution={solution.solution} problem={problem} />
-          )}
+      <div className="flex flex-col gap-10">
+        <div className="flex flex-row gap-10">
+          {problem && <ProblemChart data={problem} />}
+          <div className="flex flex-col gap-4">
+            {solution?.solution && (
+              <div className="flex flex-row gap-2">
+                <span>Total distance: {solution.solution.distance}</span>
+                <span>Vehicles: {solution.solution.routes.length}</span>
+                <span>
+                  Score: hard/{solution.solution.score.hard_score} soft/
+                  {solution.solution.score.soft_score}
+                </span>
+              </div>
+            )}
+            {solution?.solution && problem && (
+              <SolutionChart solution={solution.solution} problem={problem} />
+            )}
+          </div>
         </div>
+
+        <ScoreEvolutionChart statistics={solution?.statistics ?? null} />
       </div>
     </div>
   )
@@ -285,6 +309,61 @@ function SolutionChart({
           />
         ))}
       </ScatterChart>
+    </ResponsiveContainer>
+  )
+}
+
+function ScoreEvolutionChart({
+  statistics,
+}: {
+  statistics: SolutionResponse['statistics']
+}) {
+  const data = useMemo(() => {
+    return statistics?.global_statistics.score_evolution.map(
+      ({ score, timestamp }) => {
+        return {
+          x: new Date(timestamp).getTime() / 1000,
+          soft: score.soft_score,
+          hard: score.hard_score,
+        }
+      }
+    )
+  }, [statistics])
+
+  console.log(data)
+
+  const formatDuration = useDurationFormatter()
+
+  const formatXAxis = (value: number) => {
+    const first = data?.[0].x
+
+    if (isNil(first)) {
+      return ''
+    }
+
+    const duration = value - first
+    return `${Math.round(duration * 100.0) / 100.0}s`
+  }
+
+  if (isNil(data)) {
+    return null
+  }
+
+  return (
+    <ResponsiveContainer width={600} height={300}>
+      <LineChart data={data}>
+        <CartesianGrid />
+        <XAxis
+          type="number"
+          dataKey="x"
+          scale="time"
+          domain={['dataMin', 'dataMax']}
+          tickFormatter={formatXAxis}
+        />
+        <YAxis type="number" />
+        <Line type="monotone" dataKey="soft" stroke="blue" />
+        <Line type="monotone" dataKey="hard" stroke="red" />
+      </LineChart>
     </ResponsiveContainer>
   )
 }

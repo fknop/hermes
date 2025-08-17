@@ -15,14 +15,14 @@ use super::{
 #[derive(Serialize)]
 pub struct SearchStatistics {
     global_statistics: Arc<RwLock<GlobalStatistics>>,
-    thread_search_statistics: Vec<Arc<RwLock<ThreadSearchStatistics>>>,
+    thread_statistics: Vec<Arc<RwLock<ThreadSearchStatistics>>>,
 }
 
 impl SearchStatistics {
     pub fn new(number_of_threads: usize) -> Self {
         Self {
             global_statistics: Arc::new(RwLock::new(GlobalStatistics::default())),
-            thread_search_statistics: {
+            thread_statistics: {
                 let mut v = Vec::with_capacity(number_of_threads);
                 (0..number_of_threads)
                     .for_each(|_| v.push(Arc::new(RwLock::new(ThreadSearchStatistics::default()))));
@@ -36,7 +36,7 @@ impl SearchStatistics {
     }
 
     pub fn thread_statistics(&self, thread: usize) -> &Arc<RwLock<ThreadSearchStatistics>> {
-        &self.thread_search_statistics[thread]
+        &self.thread_statistics[thread]
     }
 }
 
