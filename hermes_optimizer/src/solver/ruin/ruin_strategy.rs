@@ -67,5 +67,7 @@ impl RuinSolution for RuinStrategy {
                 strategy.ruin_solution(solution, context);
             }
         }
+
+        solution.resync();
     }
 }

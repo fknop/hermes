@@ -216,6 +216,12 @@ impl WorkingSolution {
         removed
     }
 
+    pub fn resync(&mut self) {
+        for route in &mut self.routes {
+            route.resync(&self.problem);
+        }
+    }
+
     pub fn remove_route(&mut self, route_id: usize) -> usize {
         let removed = self.routes[route_id].activities.len();
         for activity in self.routes[route_id].activities.iter() {
@@ -514,7 +520,7 @@ impl WorkingSolutionRoute {
 
         self.activities.remove(activity_id);
 
-        self.update_next_activities(problem, activity_id);
+        // self.update_next_activities(problem, activity_id);
 
         Some(service_id)
     }
@@ -577,6 +583,54 @@ impl WorkingSolutionRoute {
 
         if problem.service(service_id).service_type() == ServiceType::Delivery {
             self.total_initial_load += problem.service(service_id).demand();
+        }
+    }
+
+    fn resync(&mut self, problem: &VehicleRoutingProblem) {
+        self.waiting_duration = SignedDuration::ZERO;
+        self.total_initial_load = Capacity::ZERO;
+
+        for activity_index in 0..self.activities.len() {
+            let (before, after) = self.activities.split_at_mut(activity_index);
+            let previous_activity = before.last();
+            let activity = &mut after[0];
+
+            let service = activity.service(problem);
+            self.waiting_duration += activity.waiting_duration();
+            if service.service_type() == ServiceType::Delivery {
+                self.total_initial_load += service.demand();
+            }
+
+            if let Some(previous_activity) = previous_activity {
+                activity.update_arrival_time(
+                    problem,
+                    compute_activity_arrival_time(
+                        problem,
+                        previous_activity.service_id,
+                        previous_activity.departure_time,
+                        activity.service_id,
+                    ),
+                );
+
+                activity.cumulative_load = compute_activity_cumulative_load(
+                    problem.service(activity.service_id),
+                    &previous_activity.cumulative_load,
+                );
+            } else {
+                activity.update_arrival_time(
+                    problem,
+                    compute_first_activity_arrival_time(
+                        problem,
+                        self.vehicle_id,
+                        activity.service_id,
+                    ),
+                );
+
+                activity.cumulative_load = compute_activity_cumulative_load(
+                    problem.service(activity.service_id),
+                    &Capacity::ZERO,
+                );
+            }
         }
     }
 
