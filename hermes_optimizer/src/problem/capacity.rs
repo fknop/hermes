@@ -1,4 +1,4 @@
-use std::ops::{Add, Sub};
+use std::ops::{Add, AddAssign, Sub, SubAssign};
 
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
@@ -81,26 +81,6 @@ impl Capacity {
         self.0.fill(0.0);
     }
 
-    pub fn add_mut(&mut self, other: &Capacity) {
-        if self.0.len() < other.0.len() {
-            self.0.resize(other.0.len(), 0.0);
-        }
-
-        for i in 0..other.0.len() {
-            self.0[i] += other.0[i];
-        }
-    }
-
-    pub fn sub_mut(&mut self, other: &Capacity) {
-        if self.0.len() < other.0.len() {
-            self.0.resize(other.0.len(), 0.0);
-        }
-
-        for i in 0..other.0.len() {
-            self.0[i] -= other.0[i];
-        }
-    }
-
     pub fn satisfies_demand(&self, demand: &Capacity) -> bool {
         if self.0.len() < demand.0.len() {
             return false;
@@ -128,14 +108,37 @@ impl Capacity {
     }
 }
 
+impl AddAssign<&Capacity> for Capacity {
+    fn add_assign(&mut self, rhs: &Capacity) {
+        if self.0.len() < rhs.0.len() {
+            self.0.resize(rhs.0.len(), 0.0);
+        }
+
+        for (a, b) in self.0.iter_mut().zip(rhs.0.iter()) {
+            *a += *b;
+        }
+    }
+}
+
+impl SubAssign<&Capacity> for Capacity {
+    fn sub_assign(&mut self, rhs: &Capacity) {
+        if self.0.len() < rhs.0.len() {
+            self.0.resize(rhs.0.len(), 0.0);
+        }
+
+        for (a, b) in self.0.iter_mut().zip(rhs.0.iter()) {
+            *a -= *b;
+        }
+    }
+}
+
 impl Add<&Capacity> for &Capacity {
     type Output = Capacity;
 
     fn add(self, rhs: &Capacity) -> Self::Output {
-        let mut output = Capacity::ZERO;
+        let mut output = self.clone();
 
-        output.add_mut(self);
-        output.add_mut(rhs);
+        output += rhs;
 
         output
     }
@@ -145,10 +148,9 @@ impl Sub<&Capacity> for &Capacity {
     type Output = Capacity;
 
     fn sub(self, rhs: &Capacity) -> Self::Output {
-        let mut output = Capacity::ZERO;
+        let mut output = self.clone();
 
-        output.add_mut(self);
-        output.sub_mut(rhs);
+        output -= rhs;
 
         output
     }
@@ -166,11 +168,11 @@ mod tests {
     fn test_add_mut() {
         let mut total_capacity = Capacity::default();
 
-        total_capacity.add_mut(&Capacity(smallvec![1.0, 2.0, 3.0]));
+        total_capacity.add_assign(&Capacity(smallvec![1.0, 2.0, 3.0]));
 
         assert_eq!(total_capacity, Capacity::new(smallvec![1.0, 2.0, 3.0]));
 
-        total_capacity.add_mut(&Capacity(smallvec![1.0, 2.0, 3.0]));
+        total_capacity.add_assign(&Capacity(smallvec![1.0, 2.0, 3.0]));
 
         assert_eq!(total_capacity, Capacity::new(smallvec![2.0, 4.0, 6.0]));
     }
@@ -179,11 +181,11 @@ mod tests {
     fn test_sub_mut() {
         let mut total_capacity = Capacity::new(smallvec![10.0, 4.0, 5.0]);
 
-        total_capacity.sub_mut(&Capacity(smallvec![1.0, 2.0, 3.0]));
+        total_capacity.sub_assign(&Capacity(smallvec![1.0, 2.0, 3.0]));
 
         assert_eq!(total_capacity, Capacity::new(smallvec![9.0, 2.0, 2.0]));
 
-        total_capacity.sub_mut(&Capacity(smallvec![1.0, 0.0, 0.0]));
+        total_capacity.sub_assign(&Capacity(smallvec![1.0, 0.0, 0.0]));
 
         assert_eq!(total_capacity, Capacity::new(smallvec![8.0, 2.0, 2.0]));
     }

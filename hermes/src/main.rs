@@ -67,7 +67,7 @@ fn create_solomon_dataset() -> Vec<SolomonDataset> {
             vehicles: 10,
             optimal_cost: 828.94,
         },
-        // C2
+        // // C2
         SolomonDataset {
             file: "./data/solomon/c2/c201.txt",
             vehicles: 3,
@@ -108,7 +108,7 @@ fn create_solomon_dataset() -> Vec<SolomonDataset> {
             vehicles: 3,
             optimal_cost: 588.32,
         },
-        // r1
+        // // r1
         SolomonDataset {
             file: "./data/solomon/r1/r101.txt",
             vehicles: 19,
