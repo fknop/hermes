@@ -17,6 +17,7 @@ pub fn construct_solution(
     rng: &mut SmallRng,
     constraints: &Vec<Constraint>,
     noise_generator: &NoiseGenerator,
+    thread_pool: &rayon::ThreadPool,
 ) -> WorkingSolution {
     let mut solution = WorkingSolution::new(Arc::clone(problem));
     let mut services: Vec<_> = (0..problem.services().len()).collect();
@@ -60,6 +61,7 @@ pub fn construct_solution(
             constraints,
             noise_generator,
             problem,
+            thread_pool,
         },
     );
 

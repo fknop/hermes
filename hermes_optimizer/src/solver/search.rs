@@ -63,10 +63,11 @@ pub struct Search {
     solution_selector: SolutionSelector,
     solution_acceptor: SolutionAcceptor,
     on_best_solution_handler: Arc<Option<fn(&AcceptedSolution)>>,
-    noise_generator: NoiseGenerator,
     operator_weights: Arc<RwLock<OperatorWeights>>,
     is_stopped: Arc<RwLock<bool>>,
     statistics: Arc<SearchStatistics>,
+
+    thread_pool: rayon::ThreadPool,
 }
 
 impl Search {
@@ -99,7 +100,7 @@ impl Search {
                         terminations: vec![Termination::Iterations(random_walks)],
                         max_solutions: random_walks,
                         solver_acceptor: SolverAcceptorStrategy::Any,
-                        threads: Threads::Single,
+                        search_threads: Threads::Single,
                         solver_selector: SolverSelectorStrategy::SelectBest,
                         tabu_enabled: false,
                         ..params.clone()
@@ -137,15 +138,9 @@ impl Search {
             SolverAcceptorStrategy::Any => SolutionAcceptor::Any,
         };
 
-        let max_cost = problem.max_cost();
-
         Search {
             problem: Arc::clone(&problem),
-            noise_generator: NoiseGenerator::new(
-                max_cost,
-                params.noise_probability,
-                params.noise_level,
-            ),
+
             constraints: Self::create_constraints(),
             best_solutions: Arc::new(RwLock::new(Vec::with_capacity(params.max_solutions))),
             tabu: Arc::new(RwLock::new(VecDeque::with_capacity(params.tabu_size))),
@@ -154,7 +149,13 @@ impl Search {
             on_best_solution_handler: Arc::new(None),
             operator_weights: Arc::new(RwLock::new(OperatorWeights::new(&params))),
             is_stopped: Arc::new(RwLock::new(false)),
-            statistics: Arc::new(SearchStatistics::new(params.threads.number_of_threads())),
+            statistics: Arc::new(SearchStatistics::new(
+                params.search_threads.number_of_threads(),
+            )),
+            thread_pool: rayon::ThreadPoolBuilder::new()
+                .num_threads(params.insertion_threads.number_of_threads())
+                .build()
+                .unwrap(),
             params,
         }
     }
@@ -194,13 +195,23 @@ impl Search {
     pub fn run(&self) {
         let mut rng = SmallRng::seed_from_u64(2427121);
         let start = Timestamp::now();
-        let num_threads = self.params.threads.number_of_threads();
+        let num_threads = self.params.search_threads.number_of_threads();
+
+        let max_cost = self.problem.max_cost();
+        let noise_generator = Arc::new(NoiseGenerator::new(
+            self.problem.services().len(),
+            max_cost,
+            self.params.noise_probability,
+            self.params.noise_level,
+            &mut rng,
+        ));
 
         let initial_solution = construct_solution(
             &self.problem,
             &mut rng,
             &self.constraints,
-            &self.noise_generator,
+            &noise_generator,
+            &self.thread_pool,
         );
 
         let (score, score_analysis) = self.compute_solution_score(&initial_solution);
@@ -233,6 +244,13 @@ impl Search {
 
                 let global_statistics = Arc::clone(self.statistics.global_statistics());
                 let thread_statistics = Arc::clone(self.statistics.thread_statistics(thread_index));
+                let thread_noise_generator = NoiseGenerator::new(
+                    self.problem.services().len(),
+                    max_cost,
+                    self.params.noise_probability,
+                    self.params.noise_level,
+                    &mut rng,
+                );
 
                 // let on_best_solution_handler = Arc::clone(&self.on_best_solution_handler);
 
@@ -250,7 +268,6 @@ impl Search {
                     });
 
                 let mut thread_rng = SmallRng::from_rng(&mut rng);
-
                 let builder = thread::Builder::new().name(thread_index.to_string());
 
                 let operator_scores = OperatorScores::new(&self.params);
@@ -267,7 +284,8 @@ impl Search {
                             iteration: 0,
                             max_iterations,
                             global_statistics,
-                            thread_statistics
+                            thread_statistics,
+                            noise_generator: thread_noise_generator
                         };
 
                         loop {
@@ -358,7 +376,7 @@ impl Search {
 
         let ruin_strategy = self.ruin(&mut working_solution, state, rng);
 
-        let recreate_strategy = self.recreate(&mut working_solution, rng);
+        let recreate_strategy = self.recreate(&mut working_solution, state, rng);
 
         self.update_solutions(
             working_solution,
@@ -570,15 +588,21 @@ impl Search {
         self.operator_weights.read().select_ruin_strategy(rng)
     }
 
-    fn recreate(&self, solution: &mut WorkingSolution, rng: &mut SmallRng) -> RecreateStrategy {
+    fn recreate(
+        &self,
+        solution: &mut WorkingSolution,
+        state: &mut ThreadedSearchState,
+        rng: &mut SmallRng,
+    ) -> RecreateStrategy {
         let recreate_strategy = self.select_recreate_strategy(rng);
         recreate_strategy.recreate_solution(
             solution,
             RecreateContext {
                 rng,
                 constraints: &self.constraints,
-                noise_generator: &self.noise_generator,
+                noise_generator: &state.noise_generator,
                 problem: &self.problem,
+                thread_pool: &self.thread_pool,
             },
         );
 
@@ -600,14 +624,6 @@ impl Search {
         }
 
         (score_analysis.total_score(), score_analysis)
-    }
-
-    fn number_of_threads(&self) -> usize {
-        match self.params.threads {
-            Threads::Single => 1,
-            Threads::Multi(num) => num,
-            Threads::Auto => std::thread::available_parallelism().map_or(1, |n| n.get()),
-        }
     }
 }
 
@@ -833,4 +849,5 @@ struct ThreadedSearchState {
     max_iterations: Option<usize>,
     global_statistics: Arc<RwLock<GlobalStatistics>>,
     thread_statistics: Arc<RwLock<ThreadSearchStatistics>>,
+    noise_generator: NoiseGenerator,
 }

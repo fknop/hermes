@@ -16,16 +16,17 @@ pub struct RecreateContext<'a> {
     pub constraints: &'a Vec<Constraint>,
     pub problem: &'a VehicleRoutingProblem,
     pub noise_generator: &'a NoiseGenerator,
+    pub thread_pool: &'a rayon::ThreadPool,
 }
 
 impl<'a> RecreateContext<'a> {
     pub fn compute_insertion_score(
-        &mut self,
+        &self,
         solution: &WorkingSolution,
         insertion: &Insertion,
     ) -> Score {
         // TODO: reuse context/activities vector?
         let context = compute_insertion_context(self.problem, solution, insertion);
-        compute_insertion_score(self.constraints, &context, self.noise_generator, self.rng)
+        compute_insertion_score(self.constraints, &context, self.noise_generator)
     }
 }

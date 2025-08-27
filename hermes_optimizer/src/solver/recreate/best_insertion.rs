@@ -7,6 +7,7 @@ use rand::{
     rngs::SmallRng,
     seq::{IndexedRandom, SliceRandom},
 };
+use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use serde::Serialize;
 
 use crate::{
@@ -191,6 +192,7 @@ impl BestInsertion {
             let mut best_score = Score::MAX;
 
             let routes = solution.routes();
+
             for (route_id, route) in routes.iter().enumerate() {
                 for position in 0..=route.activities().len() {
                     let insertion = Insertion::ExistingRoute(ExistingRouteInsertion {

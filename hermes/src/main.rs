@@ -232,7 +232,8 @@ fn main() {
                     },
                     Termination::IterationsWithoutImprovement(5000),
                 ],
-                threads: Threads::Multi(4),
+                insertion_threads: Threads::Multi(4),
+                search_threads: Threads::Multi(4),
                 ..SolverParams::default()
             },
         );

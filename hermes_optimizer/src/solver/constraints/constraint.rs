@@ -25,7 +25,6 @@ impl Constraint {
         &self,
         context: &InsertionContext,
         noise_generator: &NoiseGenerator,
-        rng: &mut SmallRng,
     ) -> Score {
         let insertion_score = match self {
             Constraint::Global(constraint) => constraint.compute_insertion_score(context),
@@ -33,7 +32,7 @@ impl Constraint {
             Constraint::Activity(constraint) => constraint.compute_insertion_score(context),
         };
 
-        insertion_score + Score::soft(noise_generator.create_noise(rng))
+        insertion_score + Score::soft(noise_generator.create_noise(context.insertion.service_id()))
     }
 
     pub fn compute_score(

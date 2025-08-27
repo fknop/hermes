@@ -14,7 +14,9 @@ pub struct SolverParams {
 
     pub ruin: RuinParams,
     pub recreate: RecreateParams,
-    pub threads: Threads,
+
+    pub insertion_threads: Threads,
+    pub search_threads: Threads,
 
     pub noise_probability: f64,
     pub noise_level: f64,
@@ -86,7 +88,8 @@ impl Default for SolverParams {
             solver_selector: SolverSelectorStrategy::SelectWeighted,
             ruin: RuinParams::default(),
             recreate: RecreateParams::default(),
-            threads: Threads::Multi(4),
+            search_threads: Threads::Single,
+            insertion_threads: Threads::Multi(4),
             noise_level: 0.15,
             noise_probability: 0.15,
 
