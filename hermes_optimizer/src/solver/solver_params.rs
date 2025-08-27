@@ -79,7 +79,7 @@ impl Default for SolverParams {
                 Termination::Iterations(100000),
                 Termination::Duration(SignedDuration::from_mins(2)),
             ],
-            max_solutions: 20,
+            max_solutions: 10,
 
             tabu_enabled: true,
             tabu_size: 10,
@@ -94,7 +94,7 @@ impl Default for SolverParams {
             noise_probability: 0.15,
 
             alns_segment_iterations: 250,
-            alns_reaction_factor: 0.8,
+            alns_reaction_factor: 0.7,
             alns_best_factor: 12.0,
             alns_improvement_factor: 6.0,
             alns_accepted_worst_factor: 1.0,

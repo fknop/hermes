@@ -185,7 +185,7 @@ impl BestInsertion {
     pub fn insert_services(
         unassigned_services: &Vec<ServiceId>,
         solution: &mut WorkingSolution,
-        mut context: RecreateContext,
+        context: RecreateContext,
     ) {
         for &service_id in unassigned_services {
             let mut best_insertion: Option<Insertion> = None;

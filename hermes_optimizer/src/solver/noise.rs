@@ -1,6 +1,4 @@
-use std::cell::RefCell;
-
-use parking_lot::{Mutex, lock_api::Mutex};
+use parking_lot::Mutex;
 use rand::{Rng, SeedableRng, rngs::SmallRng};
 
 use crate::problem::service::ServiceId;

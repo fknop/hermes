@@ -225,15 +225,15 @@ fn main() {
             vrp,
             SolverParams {
                 terminations: vec![
-                    Termination::Iterations(10000),
+                    Termination::Iterations(20000),
                     Termination::VehiclesAndCosts {
                         vehicles: dataset.vehicles,
                         costs: dataset.optimal_cost + 0.5,
                     },
-                    Termination::IterationsWithoutImprovement(5000),
+                    Termination::IterationsWithoutImprovement(10000),
                 ],
-                insertion_threads: Threads::Multi(4),
-                search_threads: Threads::Multi(4),
+                insertion_threads: Threads::Multi(8),
+                search_threads: Threads::Single,
                 ..SolverParams::default()
             },
         );
