@@ -1,10 +1,10 @@
 use rand::Rng;
-use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 use crate::{
     problem::service::ServiceId,
     solver::{
-        insertion::{self, ExistingRouteInsertion, Insertion, NewRouteInsertion},
+        insertion::{ExistingRouteInsertion, Insertion, NewRouteInsertion},
         score::Score,
         working_solution::WorkingSolution,
     },
@@ -50,12 +50,20 @@ impl RegretInsertion {
         solution: &mut WorkingSolution,
         context: &mut RecreateContext,
     ) -> Option<Insertion> {
-        let insertions: Vec<Insertion> = solution
+        let regret_values: Vec<(Score, Insertion)> = solution
             .unassigned_services()
-            .iter()
-            .flat_map(|&service_id| {
-                let mut insertions: Vec<Insertion> = Vec::new();
+            .par_iter()
+            .filter_map(|&service_id| {
+                let mut potential_insertions: Vec<(Score, Insertion)> = Vec::with_capacity(
+                    // One insertion after each activity
+                    (context.problem.services().len() - solution.unassigned_services().len())
+                    // One insertion at the start of every route
+                    + solution.routes().len()
+                    // One insertion per available vehicle
+                    + solution.num_available_vehicles(),
+                );
 
+                // Find all possible insertions in existing routes
                 for (route_id, route) in solution.routes().iter().enumerate() {
                     // We can insert at any position, including the end
                     for position in 0..=route.activities().len() {
@@ -64,8 +72,10 @@ impl RegretInsertion {
                             service_id,
                             position,
                         });
+                        let score = context.compute_insertion_score(solution, &insertion);
 
-                        insertions.push(insertion);
+                        // Only consider valid insertions
+                        potential_insertions.push((score, insertion));
                     }
                 }
 
@@ -76,128 +86,47 @@ impl RegretInsertion {
                             service_id,
                             vehicle_id,
                         });
-                        insertions.push(insertion);
+                        let score = context.compute_insertion_score(solution, &insertion);
+                        potential_insertions.push((score, insertion));
                     }
                 }
 
-                insertions
-            })
-            .collect();
+                // If no valid insertion was found for this service, skip it
+                if potential_insertions.is_empty() {
+                    return None;
+                }
 
-        let insertion_scores: Vec<(Insertion, Score)> = insertions
-            .into_par_iter()
-            .map(|insertion| {
-                let score = context.compute_insertion_score(solution, &insertion);
-                (insertion, score)
+                // Sort insertions by score to find the best ones
+                potential_insertions.sort_by(|a, b| a.0.cmp(&b.0));
+
+                // 2. Calculate the regret value for this service
+                let best_insertion = &potential_insertions[0];
+                let best_score = best_insertion.0;
+                let mut regret_value = Score::zero();
+
+                // The number of insertions to consider for the regret sum
+                let limit = self.k.min(potential_insertions.len());
+
+                // Regret = sum of differences between k-th best and the best
+                for potential_insertion in potential_insertions.iter().skip(1).take(limit) {
+                    regret_value += potential_insertion.0 - best_score;
+                }
+
+                Some((regret_value, best_insertion.1.clone()))
             })
             .collect();
 
         let mut best_insertion_for_max_regret: Option<Insertion> = None;
         let mut max_regret = Score::MIN;
-        for &unassigned_service in solution.unassigned_services() {
-            let mut service_insertions: Vec<&(Insertion, Score)> = insertion_scores
-                .iter()
-                .filter(|(insertion, _)| insertion.service_id() == unassigned_service)
-                .collect();
 
-            service_insertions.sort_by(|a, b| a.1.cmp(&b.1));
-
-            let best_insertion = &service_insertions[0].0;
-            let best_score = service_insertions[0].1;
-            let mut regret_value = Score::zero();
-
-            // The number of insertions to consider for the regret sum
-            let limit = self.k.min(service_insertions.len());
-
-            // Regret = sum of differences between k-th best and the best
-            for potential_insertion in service_insertions.iter().skip(1).take(limit) {
-                regret_value += potential_insertion.1 - best_score;
-            }
-
+        for (regret_value, insertion) in regret_values {
             if regret_value > max_regret
                 || (regret_value == max_regret && context.rng.random_bool(0.5))
             {
                 max_regret = regret_value;
-                best_insertion_for_max_regret = Some(best_insertion.clone());
+                best_insertion_for_max_regret = Some(insertion);
             }
         }
-
-        // .par_bridge(|insertion| {
-        //     let mut potential_insertions: Vec<(Score, Insertion)> = Vec::with_capacity(
-        //         // One insertion after each activity
-        //         (context.problem.services().len() - solution.unassigned_services().len())
-        //         // One insertion at the start of every route
-        //         + solution.routes().len()
-        //         // One insertion per available vehicle
-        //         + solution.num_available_vehicles(),
-        //     );
-
-        //     let score = context.compute_insertion_score(solution, &insertion);
-
-        //     // Find all possible insertions in existing routes
-        //     for (route_id, route) in solution.routes().iter().enumerate() {
-        //         // We can insert at any position, including the end
-        //         for position in 0..=route.activities().len() {
-        //             let insertion = Insertion::ExistingRoute(ExistingRouteInsertion {
-        //                 route_id,
-        //                 service_id,
-        //                 position,
-        //             });
-        //             let score = context.compute_insertion_score(solution, &insertion);
-
-        //             // Only consider valid insertions
-        //             potential_insertions.push((score, insertion));
-        //         }
-        //     }
-
-        //     // Consider creating a new route if a vehicle is available
-        //     if solution.has_available_vehicle() {
-        //         for vehicle_id in solution.available_vehicles_iter() {
-        //             let insertion = Insertion::NewRoute(NewRouteInsertion {
-        //                 service_id,
-        //                 vehicle_id,
-        //             });
-        //             let score = context.compute_insertion_score(solution, &insertion);
-        //             potential_insertions.push((score, insertion));
-        //         }
-        //     }
-
-        //     // If no valid insertion was found for this service, skip it
-        //     if potential_insertions.is_empty() {
-        //         return None;
-        //     }
-
-        //     // Sort insertions by score to find the best ones
-        //     potential_insertions.sort_by(|a, b| a.0.cmp(&b.0));
-
-        //     // 2. Calculate the regret value for this service
-        //     let best_insertion = &potential_insertions[0];
-        //     let best_score = best_insertion.0;
-        //     let mut regret_value = Score::zero();
-
-        //     // The number of insertions to consider for the regret sum
-        //     let limit = self.k.min(potential_insertions.len());
-
-        //     // Regret = sum of differences between k-th best and the best
-        //     for potential_insertion in potential_insertions.iter().skip(1).take(limit) {
-        //         regret_value += potential_insertion.0 - best_score;
-        //     }
-
-        //     Some((regret_value, best_insertion.1.clone()))
-        // })
-        // .collect();
-
-        // let mut best_insertion_for_max_regret: Option<Insertion> = None;
-        // let mut max_regret = Score::MIN;
-
-        // for (regret_value, insertion) in regret_values {
-        //     if regret_value > max_regret
-        //         || (regret_value == max_regret && context.rng.random_bool(0.5))
-        //     {
-        //         max_regret = regret_value;
-        //         best_insertion_for_max_regret = Some(insertion);
-        //     }
-        // }
 
         best_insertion_for_max_regret
     }

@@ -787,6 +787,7 @@ dependencies = [
  "geojson",
  "hermes_core",
  "hermes_optimizer",
+ "jiff",
  "mimalloc",
  "tracing",
  "tracing-subscriber",

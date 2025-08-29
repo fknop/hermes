@@ -15,7 +15,7 @@ pub struct RecreateContext<'a> {
     pub rng: &'a mut SmallRng,
     pub constraints: &'a Vec<Constraint>,
     pub problem: &'a VehicleRoutingProblem,
-    pub noise_generator: &'a NoiseGenerator,
+    pub noise_generator: Option<&'a NoiseGenerator>,
     pub thread_pool: &'a rayon::ThreadPool,
 }
 
@@ -27,6 +27,9 @@ impl<'a> RecreateContext<'a> {
     ) -> Score {
         // TODO: reuse context/activities vector?
         let context = compute_insertion_context(self.problem, solution, insertion);
-        compute_insertion_score(self.constraints, &context, self.noise_generator)
+        compute_insertion_score(self.constraints, &context)
+            + self.noise_generator.map_or(Score::ZERO, |noise_generator| {
+                Score::soft(noise_generator.create_noise(context.insertion.service_id()))
+            })
     }
 }

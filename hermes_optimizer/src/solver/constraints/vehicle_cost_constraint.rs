@@ -12,13 +12,13 @@ pub struct VehicleCostConstraint;
 
 impl RouteConstraint for VehicleCostConstraint {
     fn compute_score(&self, problem: &VehicleRoutingProblem, _: &WorkingSolutionRoute) -> Score {
-        Score::soft(problem.route_costs())
+        Score::soft(problem.fixed_vehicle_costs())
     }
 
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
         match context.insertion {
             Insertion::ExistingRoute(_) => Score::soft(0.0),
-            Insertion::NewRoute(_) => Score::soft(context.problem().route_costs()),
+            Insertion::NewRoute(_) => Score::soft(context.problem().fixed_vehicle_costs()),
         }
     }
 }

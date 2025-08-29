@@ -220,7 +220,7 @@ impl BestInsertion {
                     let score = context.compute_insertion_score(solution, &new_route_insertion);
 
                     if score < best_score {
-                        // best_score = score;
+                        best_score = score;
                         best_insertion = Some(new_route_insertion);
                     }
                 }

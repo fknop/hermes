@@ -1,6 +1,8 @@
 use jiff::SignedDuration;
 use rand::{Rng, rngs::SmallRng};
 
+use crate::solver::constraints::transport_cost_constraint::TRANSPORT_COST_WEIGHT;
+
 use super::{
     distance_method::DistanceMethod,
     location::{Location, LocationId},
@@ -69,7 +71,7 @@ impl VehicleRoutingProblem {
     }
 
     pub fn max_cost(&self) -> Cost {
-        self.travel_costs.max_cost()
+        self.travel_costs.max_cost() * TRANSPORT_COST_WEIGHT
     }
 
     pub fn travel_time(&self, from: LocationId, to: LocationId) -> jiff::SignedDuration {
@@ -89,8 +91,8 @@ impl VehicleRoutingProblem {
         waiting_duration.as_secs_f64() * 30.0
     }
 
-    pub fn route_costs(&self) -> f64 {
-        10000.0 // Placeholder for the static cost of a route
+    pub fn fixed_vehicle_costs(&self) -> f64 {
+        2.0 // Placeholder for the static cost of a route
     }
 
     pub fn nearest_services_of_location(

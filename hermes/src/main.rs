@@ -5,9 +5,10 @@ use hermes_optimizer::{
         constraints::transport_cost_constraint::TRANSPORT_COST_WEIGHT,
         score::Score,
         solver::Solver,
-        solver_params::{SolverParams, Termination, Threads},
+        solver_params::{SolverParams, SolverParamsDebugOptions, Termination, Threads},
     },
 };
+use jiff::SignedDuration;
 use mimalloc::MiMalloc;
 use tracing::{info, warn};
 
@@ -67,7 +68,7 @@ fn create_solomon_dataset() -> Vec<SolomonDataset> {
             vehicles: 10,
             optimal_cost: 828.94,
         },
-        // // C2
+        // C2
         SolomonDataset {
             file: "./data/solomon/c2/c201.txt",
             vehicles: 3,
@@ -108,7 +109,7 @@ fn create_solomon_dataset() -> Vec<SolomonDataset> {
             vehicles: 3,
             optimal_cost: 588.32,
         },
-        // // r1
+        // r1
         SolomonDataset {
             file: "./data/solomon/r1/r101.txt",
             vehicles: 19,
@@ -225,15 +226,19 @@ fn main() {
             vrp,
             SolverParams {
                 terminations: vec![
-                    Termination::Iterations(20000),
+                    Termination::Iterations(10000),
                     Termination::VehiclesAndCosts {
                         vehicles: dataset.vehicles,
                         costs: dataset.optimal_cost + 0.5,
                     },
-                    Termination::IterationsWithoutImprovement(10000),
+                    Termination::IterationsWithoutImprovement(5000),
+                    Termination::Duration(SignedDuration::from_secs(10)),
                 ],
-                insertion_threads: Threads::Multi(8),
+                insertion_threads: Threads::Multi(1),
                 search_threads: Threads::Single,
+                debug_options: SolverParamsDebugOptions {
+                    enable_local_search: false,
+                },
                 ..SolverParams::default()
             },
         );
@@ -243,6 +248,7 @@ fn main() {
         let best_solution = solver.current_best_solution().unwrap();
         if best_solution.solution.total_transport_costs() <= dataset.optimal_cost + 0.5
             && best_solution.solution.routes().len() <= dataset.vehicles
+            && best_solution.score.hard_score == 0.0
         {
             info!(
                 "Found optimal solution for {} - Costs = {}, Vehicles = {}",

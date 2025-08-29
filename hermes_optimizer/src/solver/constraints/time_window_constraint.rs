@@ -14,7 +14,10 @@ use super::activity_constraint::ActivityConstraint;
 pub struct TimeWindowConstraint;
 
 impl TimeWindowConstraint {
-    fn compute_time_window_score(time_windows: &[TimeWindow], arrival_time: Timestamp) -> Score {
+    pub fn compute_time_window_score(
+        time_windows: &[TimeWindow],
+        arrival_time: Timestamp,
+    ) -> Score {
         if time_windows.is_empty() {
             return Score::zero();
         }

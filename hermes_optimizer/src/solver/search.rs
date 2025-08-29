@@ -198,19 +198,11 @@ impl Search {
         let num_threads = self.params.search_threads.number_of_threads();
 
         let max_cost = self.problem.max_cost();
-        let noise_generator = Arc::new(NoiseGenerator::new(
-            self.problem.services().len(),
-            max_cost,
-            self.params.noise_probability,
-            self.params.noise_level,
-            &mut rng,
-        ));
 
         let initial_solution = construct_solution(
             &self.problem,
             &mut rng,
             &self.constraints,
-            &noise_generator,
             &self.thread_pool,
         );
 
@@ -234,6 +226,10 @@ impl Search {
             score,
             score_analysis,
         });
+
+        if !self.params.debug_options.enable_local_search {
+            return;
+        }
 
         debug!("Running search on {} threads", num_threads);
         thread::scope(|s| {
@@ -600,7 +596,7 @@ impl Search {
             RecreateContext {
                 rng,
                 constraints: &self.constraints,
-                noise_generator: &state.noise_generator,
+                noise_generator: Some(&state.noise_generator),
                 problem: &self.problem,
                 thread_pool: &self.thread_pool,
             },

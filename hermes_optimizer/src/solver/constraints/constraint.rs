@@ -21,18 +21,14 @@ pub enum Constraint {
 }
 
 impl Constraint {
-    pub fn compute_insertion_score(
-        &self,
-        context: &InsertionContext,
-        noise_generator: &NoiseGenerator,
-    ) -> Score {
+    pub fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
         let insertion_score = match self {
             Constraint::Global(constraint) => constraint.compute_insertion_score(context),
             Constraint::Route(constraint) => constraint.compute_insertion_score(context),
             Constraint::Activity(constraint) => constraint.compute_insertion_score(context),
         };
 
-        insertion_score + Score::soft(noise_generator.create_noise(context.insertion.service_id()))
+        insertion_score
     }
 
     pub fn compute_score(

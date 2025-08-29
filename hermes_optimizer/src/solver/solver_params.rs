@@ -5,6 +5,11 @@ use super::{
 };
 
 #[derive(Clone, Debug)]
+pub struct SolverParamsDebugOptions {
+    pub enable_local_search: bool,
+}
+
+#[derive(Clone, Debug)]
 pub struct SolverParams {
     pub terminations: Vec<Termination>,
     pub solver_acceptor: SolverAcceptorStrategy,
@@ -29,6 +34,8 @@ pub struct SolverParams {
     pub tabu_enabled: bool,
     pub tabu_size: usize,
     pub tabu_iterations: usize,
+
+    pub debug_options: SolverParamsDebugOptions,
 }
 
 #[derive(Clone, Debug)]
@@ -81,7 +88,7 @@ impl Default for SolverParams {
             ],
             max_solutions: 10,
 
-            tabu_enabled: true,
+            tabu_enabled: false,
             tabu_size: 10,
             tabu_iterations: 1000,
             solver_acceptor: SolverAcceptorStrategy::Schrimpf,
@@ -93,11 +100,15 @@ impl Default for SolverParams {
             noise_level: 0.15,
             noise_probability: 0.15,
 
-            alns_segment_iterations: 250,
-            alns_reaction_factor: 0.7,
-            alns_best_factor: 12.0,
+            alns_segment_iterations: 50,
+            alns_reaction_factor: 0.8,
+            alns_best_factor: 9.0,
             alns_improvement_factor: 6.0,
             alns_accepted_worst_factor: 1.0,
+
+            debug_options: SolverParamsDebugOptions {
+                enable_local_search: true,
+            },
         }
     }
 }

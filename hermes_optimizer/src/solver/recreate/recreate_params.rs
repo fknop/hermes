@@ -15,6 +15,7 @@ impl Default for RecreateParams {
                 RecreateStrategy::BestInsertion(BestInsertionSortMethod::Far),
                 RecreateStrategy::BestInsertion(BestInsertionSortMethod::Close),
                 RecreateStrategy::BestInsertion(BestInsertionSortMethod::TimeWindow),
+                RecreateStrategy::CompleteBestInsertion,
             ],
         }
     }
