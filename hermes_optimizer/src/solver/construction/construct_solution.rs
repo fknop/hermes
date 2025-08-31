@@ -11,8 +11,12 @@ use crate::{
     },
     solver::{
         constraints::{
-            constraint::Constraint, global_constraint::GlobalConstraintType,
-            route_constraint::RouteConstraintType, time_window_constraint::TimeWindowConstraint,
+            activity_constraint::ActivityConstraintType,
+            capacity_constraint::CapacityConstraint,
+            constraint::Constraint,
+            global_constraint::GlobalConstraintType,
+            route_constraint::{RouteConstraint, RouteConstraintType},
+            time_window_constraint::TimeWindowConstraint,
             transport_cost_constraint::TransportCostConstraint,
             vehicle_cost_constraint::VehicleCostConstraint,
             waiting_duration_constraint::WaitingDurationConstraint,
@@ -134,13 +138,13 @@ fn create_initial_routes(problem: &VehicleRoutingProblem, solution: &mut Working
         .cloned()
         .max_by(|&first, &second| {
             problem
-                .travel_cost(depot_id, problem.service_location(second).id())
-                .partial_cmp(&problem.travel_cost(depot_id, problem.service_location(first).id()))
+                .travel_cost(depot_id, problem.service_location(first).id())
+                .partial_cmp(&problem.travel_cost(depot_id, problem.service_location(second).id()))
                 .unwrap()
         })
         .unwrap();
     seed_customers.push(first_seed);
-    interior.retain(|&i| i != first_seed);
+    exterior.retain(|&i| i != first_seed);
 
     while seed_customers.len() < k_min && (!exterior.is_empty() || !interior.is_empty()) {
         let candidate_j = exterior.iter().cloned().max_by(|&a, &b| {
@@ -297,68 +301,68 @@ pub fn construct_solution(
         &mut solution,
         RecreateContext {
             rng,
-            constraints,
-            // constraints: &vec![
-            //     Constraint::Global(GlobalConstraintType::TransportCost(TransportCostConstraint)),
-            //     Constraint::Route(RouteConstraintType::VehicleCost(VehicleCostConstraint)),
-            //     Constraint::Route(RouteConstraintType::WaitingDuration(
-            //         WaitingDurationConstraint,
-            //     )),
-            // ],
+            // constraints,
+            constraints: &vec![
+                Constraint::Global(GlobalConstraintType::TransportCost(TransportCostConstraint)),
+                Constraint::Route(RouteConstraintType::VehicleCost(VehicleCostConstraint)),
+                Constraint::Route(RouteConstraintType::WaitingDuration(
+                    WaitingDurationConstraint,
+                )),
+            ],
             noise_generator: None,
             problem,
             thread_pool,
         },
     );
 
-    // let mut satisfied = false;
+    let mut satisfied = false;
 
-    // while !satisfied {
-    //     let mut service_to_remove = None;
-    //     for route in solution.routes() {
-    //         for activity in route.activities() {
-    //             let score = TimeWindowConstraint::compute_time_window_score(
-    //                 activity.service(problem).time_windows(),
-    //                 activity.arrival_time(),
-    //             );
+    while !satisfied {
+        let mut service_to_remove = None;
+        for route in solution.routes() {
+            for activity in route.activities() {
+                let time_window_score = TimeWindowConstraint::compute_time_window_score(
+                    activity.service(problem).time_windows(),
+                    activity.arrival_time(),
+                );
 
-    //             if score.hard_score > 0.0 {
-    //                 service_to_remove = Some(activity.service_id());
-    //                 break;
-    //             }
-    //         }
+                if time_window_score.hard_score > 0.0 {
+                    service_to_remove = Some(activity.service_id());
+                    break;
+                }
 
-    //         if service_to_remove.is_some() {
-    //             break;
-    //         }
-    //     }
+                let vehicle = route.vehicle(problem);
+                if !vehicle
+                    .capacity()
+                    .satisfies_demand(activity.cumulative_load())
+                {
+                    service_to_remove = Some(activity.service_id());
+                    break;
+                }
+            }
 
-    //     if let Some(service_id) = service_to_remove {
-    //         solution.remove_service(service_id);
-    //     } else {
-    //         satisfied = true
-    //     }
-    // }
+            if service_to_remove.is_some() {
+                break;
+            }
+        }
 
-    // let final_unassigned_services = solution
-    //     .unassigned_services()
-    //     .iter()
-    //     .cloned()
-    //     .collect::<Vec<_>>();
+        if let Some(service_id) = service_to_remove {
+            solution.remove_service(service_id);
+        } else {
+            satisfied = true
+        }
+    }
 
-    // println!("final_unassigned {:?}", final_unassigned_services);
-
-    // BestInsertion::insert_services(
-    //     &final_unassigned_services,
-    //     &mut solution,
-    //     RecreateContext {
-    //         rng,
-    //         constraints,
-    //         noise_generator: None,
-    //         problem,
-    //         thread_pool,
-    //     },
-    // );
+    ConstructionBestInsertion::insert_services(
+        &mut solution,
+        RecreateContext {
+            rng,
+            constraints,
+            noise_generator: None,
+            problem,
+            thread_pool,
+        },
+    );
 
     solution
 }
