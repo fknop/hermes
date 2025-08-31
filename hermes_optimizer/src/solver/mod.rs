@@ -7,6 +7,7 @@ pub mod noise;
 pub mod recreate;
 pub mod ruin;
 pub mod score;
+pub mod score_level;
 pub mod search;
 pub mod solver;
 pub mod solver_manager;

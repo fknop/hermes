@@ -5,16 +5,34 @@ use crate::{
     solver::{
         insertion_context::InsertionContext,
         score::Score,
+        score_level::ScoreLevel,
         working_solution::{WorkingSolutionRoute, WorkingSolutionRouteActivity},
     },
 };
 
 use super::activity_constraint::ActivityConstraint;
 
-pub struct TimeWindowConstraint;
+pub struct TimeWindowConstraint {
+    score_level: ScoreLevel,
+}
+
+impl Default for TimeWindowConstraint {
+    fn default() -> Self {
+        TimeWindowConstraint {
+            score_level: ScoreLevel::Hard,
+        }
+    }
+}
+
+impl TimeWindowConstraint {
+    pub fn new(score_level: ScoreLevel) -> Self {
+        TimeWindowConstraint { score_level }
+    }
+}
 
 impl TimeWindowConstraint {
     pub fn compute_time_window_score(
+        level: ScoreLevel,
         time_windows: &[TimeWindow],
         arrival_time: Timestamp,
     ) -> Score {
@@ -33,7 +51,7 @@ impl TimeWindowConstraint {
             .map(|time_window| time_window.overtime(arrival_time))
             .min();
 
-        Score::hard(overtime.unwrap_or(0) as f64)
+        Score::of(level, overtime.unwrap_or(0) as f64)
     }
 }
 
@@ -45,6 +63,7 @@ impl ActivityConstraint for TimeWindowConstraint {
         activity: &WorkingSolutionRouteActivity,
     ) -> Score {
         TimeWindowConstraint::compute_time_window_score(
+            self.score_level,
             activity.service(problem).time_windows(),
             activity.arrival_time(),
         )
@@ -59,6 +78,7 @@ impl ActivityConstraint for TimeWindowConstraint {
             let service = problem.service(activity.service_id);
 
             total_score += TimeWindowConstraint::compute_time_window_score(
+                self.score_level,
                 service.time_windows(),
                 activity.arrival_time,
             )

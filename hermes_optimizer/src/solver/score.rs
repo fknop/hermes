@@ -7,6 +7,8 @@ use std::{
 use fxhash::FxHashMap;
 use serde::Serialize;
 
+use super::score_level::ScoreLevel;
+
 #[derive(Debug, Copy, Clone, PartialEq, Serialize)]
 pub struct Score {
     pub hard_score: f64,
@@ -33,6 +35,13 @@ impl Score {
         Score {
             hard_score,
             soft_score,
+        }
+    }
+
+    pub fn of(level: ScoreLevel, score: f64) -> Self {
+        match level {
+            ScoreLevel::Hard => Score::hard(score),
+            ScoreLevel::Soft => Score::soft(score),
         }
     }
 

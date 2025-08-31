@@ -27,6 +27,7 @@ use crate::{
             best_insertion::BestInsertion, construction_best_insertion::ConstructionBestInsertion,
             recreate_context::RecreateContext, regret_insertion::RegretInsertion,
         },
+        score_level::ScoreLevel,
         working_solution::WorkingSolution,
     },
 };
@@ -305,6 +306,12 @@ pub fn construct_solution(
             constraints: &vec![
                 Constraint::Global(GlobalConstraintType::TransportCost(TransportCostConstraint)),
                 Constraint::Route(RouteConstraintType::VehicleCost(VehicleCostConstraint)),
+                Constraint::Route(RouteConstraintType::Capacity(CapacityConstraint::new(
+                    ScoreLevel::Soft,
+                ))),
+                Constraint::Activity(ActivityConstraintType::TimeWindow(
+                    TimeWindowConstraint::new(ScoreLevel::Soft),
+                )),
                 Constraint::Route(RouteConstraintType::WaitingDuration(
                     WaitingDurationConstraint,
                 )),
@@ -322,6 +329,7 @@ pub fn construct_solution(
         for route in solution.routes() {
             for activity in route.activities() {
                 let time_window_score = TimeWindowConstraint::compute_time_window_score(
+                    ScoreLevel::Hard,
                     activity.service(problem).time_windows(),
                     activity.arrival_time(),
                 );

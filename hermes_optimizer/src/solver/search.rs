@@ -163,8 +163,10 @@ impl Search {
     fn create_constraints() -> Vec<Constraint> {
         vec![
             Constraint::Global(GlobalConstraintType::TransportCost(TransportCostConstraint)),
-            Constraint::Activity(ActivityConstraintType::TimeWindow(TimeWindowConstraint)),
-            Constraint::Route(RouteConstraintType::Capacity(CapacityConstraint)),
+            Constraint::Activity(ActivityConstraintType::TimeWindow(
+                TimeWindowConstraint::default(),
+            )),
+            Constraint::Route(RouteConstraintType::Capacity(CapacityConstraint::default())),
             Constraint::Route(RouteConstraintType::Shift(ShiftConstraint)),
             Constraint::Route(RouteConstraintType::WaitingDuration(
                 WaitingDurationConstraint,

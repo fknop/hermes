@@ -234,10 +234,10 @@ fn main() {
                     Termination::IterationsWithoutImprovement(5000),
                     Termination::Duration(SignedDuration::from_secs(10)),
                 ],
-                insertion_threads: Threads::Multi(1),
+                insertion_threads: Threads::Multi(4),
                 search_threads: Threads::Single,
                 debug_options: SolverParamsDebugOptions {
-                    enable_local_search: false,
+                    enable_local_search: true,
                 },
                 ..SolverParams::default()
             },

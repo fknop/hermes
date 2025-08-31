@@ -6,16 +6,34 @@ use crate::{
         insertion::{ExistingRouteInsertion, Insertion, NewRouteInsertion},
         insertion_context::InsertionContext,
         score::Score,
+        score_level::ScoreLevel,
         working_solution::WorkingSolutionRoute,
     },
 };
 
 use super::route_constraint::RouteConstraint;
 
-pub struct CapacityConstraint;
+pub struct CapacityConstraint {
+    score_level: ScoreLevel,
+}
+
+impl Default for CapacityConstraint {
+    fn default() -> Self {
+        CapacityConstraint {
+            score_level: ScoreLevel::Hard,
+        }
+    }
+}
+
+impl CapacityConstraint {
+    pub fn new(score_level: ScoreLevel) -> Self {
+        CapacityConstraint { score_level }
+    }
+}
 
 impl CapacityConstraint {
     fn compute_capacity_score(
+        &self,
         vehicle_capacity: &Capacity,
         initial_load: &Capacity,
         cumulative_load: &Capacity,
@@ -24,7 +42,10 @@ impl CapacityConstraint {
         if vehicle_capacity.satisfies_demand(&load) {
             Score::zero()
         } else {
-            Score::hard(vehicle_capacity.over_capacity_demand(&load))
+            Score::of(
+                self.score_level,
+                vehicle_capacity.over_capacity_demand(&load),
+            )
         }
     }
 }
@@ -40,11 +61,14 @@ impl RouteConstraint for CapacityConstraint {
 
         let mut score = Score::zero();
         if !vehicle.capacity().satisfies_demand(initial_load) {
-            score += Score::hard(vehicle.capacity().over_capacity_demand(initial_load));
+            score += Score::of(
+                self.score_level,
+                vehicle.capacity().over_capacity_demand(initial_load),
+            );
         }
 
         for activity in route.activities() {
-            score += CapacityConstraint::compute_capacity_score(
+            score += self.compute_capacity_score(
                 vehicle.capacity(),
                 initial_load,
                 activity.cumulative_load(),
@@ -73,7 +97,8 @@ impl RouteConstraint for CapacityConstraint {
 
         let mut score = Score::zero();
         if !vehicle.capacity().satisfies_demand(&context.initial_load) {
-            score += Score::hard(
+            score += Score::of(
+                self.score_level,
                 vehicle
                     .capacity()
                     .over_capacity_demand(&context.initial_load),
@@ -81,7 +106,7 @@ impl RouteConstraint for CapacityConstraint {
         }
 
         for activity in context.activities.iter().skip(context.insertion.position()) {
-            score += CapacityConstraint::compute_capacity_score(
+            score += self.compute_capacity_score(
                 vehicle.capacity(),
                 &context.initial_load,
                 &activity.cumulative_load,
