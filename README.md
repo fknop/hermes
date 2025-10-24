@@ -1,0 +1,6 @@
+The repository contains two projects:
+
+* hermes_core which is a simple routing engine based on OpenStreetMap (think Google Directions)
+* hermes_optimizer which is a vehicle routing optimization solver
+
+The goal of this project was to learn Rust by doing something somewhat complicated and that needed the performance of a native language.
