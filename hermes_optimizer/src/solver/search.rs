@@ -4,7 +4,7 @@ use fxhash::FxHashMap;
 use jiff::Timestamp;
 use parking_lot::{MappedRwLockReadGuard, RwLock, RwLockReadGuard};
 use rand::{Rng, SeedableRng, rngs::SmallRng, seq::IndexedRandom};
-use tracing::debug;
+use tracing::{debug, info};
 
 use crate::{
     acceptor::{
@@ -289,8 +289,8 @@ impl Search {
                         loop {
                             state.iteration += 1;
 
-                            if (state.iteration) % 500 == 0 {
-                                debug!(
+                            if (state.iteration).is_multiple_of(500) {
+                                info!(
                                     thread = thread::current().name().unwrap_or("main"),
                                     weights = ?self.operator_weights.read(),
                                     "Thread {}: Iteration {}/{}",
@@ -396,7 +396,9 @@ impl Search {
     ) {
         if self.params.tabu_enabled
             && iteration_info.iteration > 0
-            && iteration_info.iteration % self.params.tabu_iterations == 0
+            && iteration_info
+                .iteration
+                .is_multiple_of(self.params.tabu_iterations)
         {
             state.tabu.write().clear();
         }
@@ -463,15 +465,14 @@ impl Search {
             if !is_duplicate && !is_tabu {
                 guard.with_upgraded(|guard| {
                     // Evict worst
-                    if guard.len() + 1 > self.params.max_solutions {
-                        if let Some(worst_solution) = guard.pop() {
-                            if self.params.tabu_enabled {
-                                let mut guard = state.tabu.write();
-                                guard.push_front(worst_solution);
-                                if guard.len() > self.params.tabu_size {
-                                    guard.pop_back();
-                                }
-                            }
+                    if guard.len() + 1 > self.params.max_solutions
+                        && let Some(worst_solution) = guard.pop()
+                        && self.params.tabu_enabled
+                    {
+                        let mut guard = state.tabu.write();
+                        guard.push_front(worst_solution);
+                        if guard.len() > self.params.tabu_size {
+                            guard.pop_back();
                         }
                     }
 
@@ -518,7 +519,9 @@ impl Search {
         }
 
         if iteration_info.iteration > 0
-            && iteration_info.iteration % self.params.alns_segment_iterations == 0
+            && iteration_info
+                .iteration
+                .is_multiple_of(self.params.alns_segment_iterations)
         {
             for operator in self.operator_weights.write().ruin.iter_mut() {
                 if let Some(ruin_score) = state

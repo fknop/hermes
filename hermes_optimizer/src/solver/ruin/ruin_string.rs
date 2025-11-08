@@ -120,7 +120,7 @@ impl RuinString {
         let mut string_position = 0;
         let mut preserved = 0;
 
-        for i in start..(start + total_string_length) {
+        for _ in start..(start + total_string_length) {
             if string_position >= start_of_preserved_string
                 && string_position < start_of_preserved_string + preserved_string_length
             {

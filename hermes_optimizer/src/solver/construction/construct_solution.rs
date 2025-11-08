@@ -1,6 +1,5 @@
-use std::{cmp::Ordering, f64, ops::AddAssign, sync::Arc};
+use std::{f64, sync::Arc};
 
-use fxhash::FxHashSet;
 use geo::ConvexHull;
 use jiff::Timestamp;
 use rand::rngs::SmallRng;
@@ -11,21 +10,17 @@ use crate::{
     },
     solver::{
         constraints::{
-            activity_constraint::ActivityConstraintType,
-            capacity_constraint::CapacityConstraint,
-            constraint::Constraint,
-            global_constraint::GlobalConstraintType,
-            route_constraint::{RouteConstraint, RouteConstraintType},
-            time_window_constraint::TimeWindowConstraint,
+            activity_constraint::ActivityConstraintType, capacity_constraint::CapacityConstraint,
+            constraint::Constraint, global_constraint::GlobalConstraintType,
+            route_constraint::RouteConstraintType, time_window_constraint::TimeWindowConstraint,
             transport_cost_constraint::TransportCostConstraint,
             vehicle_cost_constraint::VehicleCostConstraint,
             waiting_duration_constraint::WaitingDurationConstraint,
         },
         insertion::{Insertion, NewRouteInsertion},
-        noise::NoiseGenerator,
         recreate::{
-            best_insertion::BestInsertion, construction_best_insertion::ConstructionBestInsertion,
-            recreate_context::RecreateContext, regret_insertion::RegretInsertion,
+            construction_best_insertion::ConstructionBestInsertion,
+            recreate_context::RecreateContext,
         },
         score_level::ScoreLevel,
         working_solution::WorkingSolution,

@@ -1,4 +1,4 @@
-use crate::solver::{insertion_context::InsertionContext, noise::NoiseGenerator};
+use crate::solver::insertion_context::InsertionContext;
 
 use super::constraint::Constraint;
 

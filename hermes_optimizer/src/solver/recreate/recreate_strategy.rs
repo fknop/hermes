@@ -5,7 +5,7 @@ use serde::Serialize;
 use crate::solver::working_solution::WorkingSolution;
 
 use super::{
-    best_insertion::{BestInsertion, BestInsertionSortMethod},
+    best_insertion::{BestInsertion, BestInsertionParams, BestInsertionSortMethod},
     construction_best_insertion::ConstructionBestInsertion,
     recreate_context::RecreateContext,
     recreate_solution::RecreateSolution,
@@ -37,7 +37,10 @@ impl RecreateSolution for RecreateStrategy {
                 strategy.recreate_solution(solution, context);
             }
             RecreateStrategy::BestInsertion(sort_method) => {
-                let strategy = BestInsertion::new(*sort_method);
+                let strategy = BestInsertion::new(BestInsertionParams {
+                    sort_method: *sort_method,
+                    blink_rate: 0.0,
+                });
                 strategy.recreate_solution(solution, context);
             }
             RecreateStrategy::RegretInsertion => {

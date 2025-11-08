@@ -1,10 +1,7 @@
-use rand::rngs::SmallRng;
-
 use crate::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
-        insertion_context::InsertionContext, noise::NoiseGenerator, score::Score,
-        working_solution::WorkingSolution,
+        insertion_context::InsertionContext, score::Score, working_solution::WorkingSolution,
     },
 };
 
@@ -22,13 +19,11 @@ pub enum Constraint {
 
 impl Constraint {
     pub fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
-        let insertion_score = match self {
+        match self {
             Constraint::Global(constraint) => constraint.compute_insertion_score(context),
             Constraint::Route(constraint) => constraint.compute_insertion_score(context),
             Constraint::Activity(constraint) => constraint.compute_insertion_score(context),
-        };
-
-        insertion_score
+        }
     }
 
     pub fn compute_score(

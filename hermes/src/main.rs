@@ -2,8 +2,6 @@ use hermes_core::geopoint::GeoPoint;
 use hermes_optimizer::{
     solomon::solomon_parser::SolomonParser,
     solver::{
-        constraints::transport_cost_constraint::TRANSPORT_COST_WEIGHT,
-        score::Score,
         solver::Solver,
         solver_params::{SolverParams, SolverParamsDebugOptions, Termination, Threads},
     },
@@ -234,7 +232,7 @@ fn main() {
                     Termination::IterationsWithoutImprovement(5000),
                     Termination::Duration(SignedDuration::from_secs(10)),
                 ],
-                insertion_threads: Threads::Multi(4),
+                insertion_threads: Threads::Multi(8),
                 search_threads: Threads::Single,
                 debug_options: SolverParamsDebugOptions {
                     enable_local_search: true,

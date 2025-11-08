@@ -76,39 +76,55 @@ impl GlobalConstraint for TransportCostConstraint {
         let mut next_location_id = None;
 
         let position = context.insertion.position();
-        if route.is_none() || route.unwrap().is_empty() {
-            if let Some(depot_id) = depot_location_id {
-                previous_location_id = Some(depot_id);
 
-                if vehicle.should_return_to_depot() {
+        match route {
+            None => {
+                if let Some(depot_id) = depot_location_id {
+                    previous_location_id = Some(depot_id);
+
+                    if vehicle.should_return_to_depot() {
+                        next_location_id = Some(depot_id);
+                    }
+                }
+            }
+            Some(route) if route.is_empty() => {
+                if let Some(depot_id) = depot_location_id {
+                    previous_location_id = Some(depot_id);
+
+                    if vehicle.should_return_to_depot() {
+                        next_location_id = Some(depot_id);
+                    }
+                }
+            }
+            Some(route) if position == 0 => {
+                if let Some(depot_id) = depot_location_id {
+                    previous_location_id = Some(depot_id);
+                }
+
+                let activities = route.activities();
+                next_location_id = Some(activities[0].service(problem).location_id());
+            }
+            Some(route) if position >= route.activities().len() => {
+                // Inserting at the end
+                let activities = route.activities();
+                previous_location_id = Some(
+                    activities[activities.len() - 1]
+                        .service(problem)
+                        .location_id(),
+                );
+
+                if let Some(depot_id) = depot_location_id
+                    && vehicle.should_return_to_depot()
+                {
                     next_location_id = Some(depot_id);
                 }
             }
-        } else if position == 0 {
-            if let Some(depot_id) = depot_location_id {
-                previous_location_id = Some(depot_id);
+            Some(route) => {
+                let activities = route.activities();
+                previous_location_id =
+                    Some(activities[position - 1].service(problem).location_id());
+                next_location_id = Some(activities[position].service(problem).location_id());
             }
-
-            let activities = route.unwrap().activities();
-            next_location_id = Some(activities[0].service(problem).location_id());
-        } else if position >= route.unwrap().activities().len() {
-            // Inserting at the end
-            let activities = route.unwrap().activities();
-            previous_location_id = Some(
-                activities[activities.len() - 1]
-                    .service(problem)
-                    .location_id(),
-            );
-
-            if let Some(depot_id) = depot_location_id
-                && vehicle.should_return_to_depot()
-            {
-                next_location_id = Some(depot_id);
-            }
-        } else {
-            let activities = route.unwrap().activities();
-            previous_location_id = Some(activities[position - 1].service(problem).location_id());
-            next_location_id = Some(activities[position].service(problem).location_id());
         }
 
         let old_cost =

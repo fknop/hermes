@@ -41,22 +41,22 @@ impl RouteConstraint for MaximumWorkingDurationConstraint {
                 let route = context.solution.route(route_id);
                 let vehicle = route.vehicle(problem);
 
-                if let Some(maximum_working_duration) = vehicle.maximum_working_duration() {
-                    if working_duration > maximum_working_duration {
-                        return Score::hard(
-                            working_duration.as_secs_f64() - maximum_working_duration.as_secs_f64(),
-                        );
-                    }
+                if let Some(maximum_working_duration) = vehicle.maximum_working_duration()
+                    && working_duration > maximum_working_duration
+                {
+                    return Score::hard(
+                        working_duration.as_secs_f64() - maximum_working_duration.as_secs_f64(),
+                    );
                 }
             }
             Insertion::NewRoute(NewRouteInsertion { vehicle_id, .. }) => {
                 let vehicle = problem.vehicle(vehicle_id);
-                if let Some(maximum_working_duration) = vehicle.maximum_working_duration() {
-                    if working_duration > maximum_working_duration {
-                        return Score::hard(
-                            working_duration.as_secs_f64() - maximum_working_duration.as_secs_f64(),
-                        );
-                    }
+                if let Some(maximum_working_duration) = vehicle.maximum_working_duration()
+                    && working_duration > maximum_working_duration
+                {
+                    return Score::hard(
+                        working_duration.as_secs_f64() - maximum_working_duration.as_secs_f64(),
+                    );
                 }
             }
         }

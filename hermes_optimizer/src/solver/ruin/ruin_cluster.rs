@@ -1,5 +1,5 @@
 use fxhash::FxHashSet;
-use rand::{Rng, seq::IndexedRandom};
+use rand::seq::IndexedRandom;
 
 use crate::{solver::working_solution::WorkingSolution, utils::kruskal::kruskal_cluster};
 

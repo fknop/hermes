@@ -2,12 +2,7 @@ use std::fmt::Display;
 
 use jiff::Timestamp;
 use parking_lot::RwLock;
-use rand::{
-    Rng,
-    rngs::SmallRng,
-    seq::{IndexedRandom, SliceRandom},
-};
-use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
+use rand::{Rng, rngs::SmallRng, seq::SliceRandom};
 use serde::Serialize;
 
 use crate::{
@@ -28,6 +23,7 @@ use super::{recreate_context::RecreateContext, recreate_solution::RecreateSoluti
 pub struct BestInsertion {
     cached_min_max_demand: RwLock<Option<(Capacity, Capacity)>>,
     sort_method: BestInsertionSortMethod,
+    blink_rate: f64,
 }
 
 #[derive(Default, Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize)]
@@ -71,10 +67,21 @@ const METHODS: [BestInsertionSortMethod; 4] = [
     BestInsertionSortMethod::Close,
 ];
 
+pub struct BestInsertionParams {
+    pub sort_method: BestInsertionSortMethod,
+    pub blink_rate: f64,
+}
+
 impl BestInsertion {
-    pub fn new(sort_method: BestInsertionSortMethod) -> Self {
+    pub fn new(
+        BestInsertionParams {
+            sort_method,
+            blink_rate,
+        }: BestInsertionParams,
+    ) -> Self {
         BestInsertion {
             sort_method,
+            blink_rate,
             ..Default::default()
         }
     }
@@ -182,7 +189,12 @@ impl BestInsertion {
         }
     }
 
+    fn should_blink(&self, rng: &mut SmallRng) -> bool {
+        rng.random_bool(self.blink_rate)
+    }
+
     pub fn insert_services(
+        &self,
         unassigned_services: &Vec<ServiceId>,
         solution: &mut WorkingSolution,
         context: RecreateContext,
@@ -195,6 +207,10 @@ impl BestInsertion {
 
             for (route_id, route) in routes.iter().enumerate() {
                 for position in 0..=route.activities().len() {
+                    if self.should_blink(context.rng) {
+                        continue;
+                    }
+
                     let insertion = Insertion::ExistingRoute(ExistingRouteInsertion {
                         route_id,
                         service_id,
@@ -243,6 +259,6 @@ impl RecreateSolution for BestInsertion {
         self.sort_unassigned_services(context.problem, &mut unassigned_services, context.rng);
         // unassigned_services.shuffle(context.rng);
 
-        BestInsertion::insert_services(&unassigned_services, solution, context);
+        self.insert_services(&unassigned_services, solution, context);
     }
 }

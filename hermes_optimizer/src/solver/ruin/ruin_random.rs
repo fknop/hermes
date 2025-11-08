@@ -1,5 +1,3 @@
-use rand::Rng;
-
 use crate::solver::working_solution::WorkingSolution;
 
 use super::{ruin_context::RuinContext, ruin_solution::RuinSolution};

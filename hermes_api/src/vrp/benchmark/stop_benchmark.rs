@@ -1,9 +1,6 @@
 use std::sync::Arc;
 
-use axum::{
-    Json,
-    extract::{Path, State},
-};
+use axum::extract::{Path, State};
 
 use crate::{error::ApiError, state::AppState};
 

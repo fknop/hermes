@@ -1,18 +1,13 @@
 use rand::Rng;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
-use crate::{
-    problem::service::ServiceId,
-    solver::{
-        insertion::{ExistingRouteInsertion, Insertion, NewRouteInsertion},
-        score::Score,
-        working_solution::WorkingSolution,
-    },
+use crate::solver::{
+    insertion::{ExistingRouteInsertion, Insertion, NewRouteInsertion},
+    score::Score,
+    working_solution::WorkingSolution,
 };
 
-use super::{
-    best_insertion, recreate_context::RecreateContext, recreate_solution::RecreateSolution,
-};
+use super::{recreate_context::RecreateContext, recreate_solution::RecreateSolution};
 
 /// Implements a Regret-k Insertion heuristic.
 ///
