@@ -96,7 +96,7 @@ impl VehicleRoutingProblem {
     }
 
     pub fn fixed_vehicle_costs(&self) -> f64 {
-        2.0 // Placeholder for the static cost of a route
+        100000.0 //self.max_cost() // Placeholder for the static cost of a route
     }
 
     pub fn nearest_services_of_location(
@@ -185,11 +185,11 @@ impl VehicleRoutingProblemBuilder {
             self.distance_method.unwrap_or(DistanceMethod::Haversine),
         );
 
-        let neighborhoods = Neighborhoods::new(BuildNeighborhoodParams {
-            services: &services,
-            location_index: &service_location_index,
-            locations: &locations,
-        });
+        // let neighborhoods = Neighborhoods::new(BuildNeighborhoodParams {
+        //     services: &services,
+        //     location_index: &service_location_index,
+        //     locations: &locations,
+        // });
 
         VehicleRoutingProblem {
             locations,
@@ -197,7 +197,7 @@ impl VehicleRoutingProblemBuilder {
             services,
             travel_costs,
             service_location_index,
-            neighborhoods,
+            neighborhoods: Neighborhoods::empty(),
         }
     }
 }

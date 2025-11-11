@@ -15,6 +15,12 @@ pub struct BuildNeighborhoodParams<'a> {
 }
 
 impl Neighborhoods {
+    pub fn empty() -> Self {
+        Neighborhoods {
+            neighborhood: vec![],
+        }
+    }
+
     pub fn new(params: BuildNeighborhoodParams) -> Self {
         Neighborhoods {
             neighborhood: Neighborhoods::build_neighborhood(params),

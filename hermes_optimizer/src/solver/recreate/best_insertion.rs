@@ -205,36 +205,6 @@ impl BestInsertion {
 
             let routes = solution.routes();
 
-            // for neighbor_service_id in context.problem.service_neighborhood_iter(service_id) {
-            //     let route_id = solution.route_of_service(neighbor_service_id);
-
-            //     if let Some(route_id) = route_id {
-            //         let route = solution.route(route_id);
-
-            //         if let Some(service_position) = route.service_position(neighbor_service_id) {
-            //             // Insert before or after the neighbor
-            //             let possible_positions = [service_position, service_position + 1];
-
-            //             for position in possible_positions {
-            //                 let insertion = Insertion::ExistingRoute(ExistingRouteInsertion {
-            //                     route_id,
-            //                     service_id,
-            //                     position,
-            //                 });
-
-            //                 let score = context.compute_insertion_score(solution, &insertion);
-
-            //                 if score < best_score {
-            //                     best_score = score;
-            //                     best_insertion = Some(insertion);
-            //                 }
-            //             }
-            //         }
-            //     } else {
-            //         continue;
-            //     }
-            // }
-
             for (route_id, route) in routes.iter().enumerate() {
                 for position in 0..=route.activities().len() {
                     if self.should_blink(context.rng) {

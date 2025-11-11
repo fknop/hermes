@@ -1,4 +1,5 @@
 use std::ops::Add;
+use std::ops::AddAssign;
 
 use crate::{
     problem::{capacity::Capacity, vehicle_routing_problem::VehicleRoutingProblem},
@@ -34,11 +35,14 @@ impl CapacityConstraint {
 impl CapacityConstraint {
     fn compute_capacity_score(
         &self,
+        load: &mut Capacity,
         vehicle_capacity: &Capacity,
         initial_load: &Capacity,
         cumulative_load: &Capacity,
     ) -> Score {
-        let load = initial_load.add(cumulative_load);
+        load.reset();
+        load.add_assign(initial_load);
+        load.add_assign(cumulative_load);
         if vehicle_capacity.satisfies_demand(&load) {
             Score::zero()
         } else {
@@ -67,8 +71,11 @@ impl RouteConstraint for CapacityConstraint {
             );
         }
 
+        // Reuse vector to avoid allocations
+        let mut load = Capacity::zero();
         for activity in route.activities() {
             score += self.compute_capacity_score(
+                &mut load,
                 vehicle.capacity(),
                 initial_load,
                 activity.cumulative_load(),
@@ -105,8 +112,11 @@ impl RouteConstraint for CapacityConstraint {
             );
         }
 
+        // Reuse vector to avoid allocations
+        let mut load = Capacity::zero();
         for activity in context.activities.iter().skip(context.insertion.position()) {
             score += self.compute_capacity_score(
+                &mut load,
                 vehicle.capacity(),
                 &context.initial_load,
                 &activity.cumulative_load,

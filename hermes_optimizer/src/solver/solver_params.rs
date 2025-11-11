@@ -26,6 +26,7 @@ pub struct SolverParams {
     pub noise_probability: f64,
     pub noise_level: f64,
 
+    pub alns_iterations_without_improvement_reset: usize,
     pub alns_segment_iterations: usize,
     pub alns_reaction_factor: f64,
     pub alns_best_factor: f64,
@@ -86,7 +87,7 @@ impl Default for SolverParams {
                 Termination::Iterations(100000),
                 Termination::Duration(SignedDuration::from_mins(2)),
             ],
-            max_solutions: 10,
+            max_solutions: 20,
 
             tabu_enabled: false,
             tabu_size: 10,
@@ -100,7 +101,8 @@ impl Default for SolverParams {
             noise_level: 0.15,
             noise_probability: 0.15,
 
-            alns_segment_iterations: 50,
+            alns_iterations_without_improvement_reset: 2000,
+            alns_segment_iterations: 100,
             alns_reaction_factor: 0.8,
             alns_best_factor: 9.0,
             alns_improvement_factor: 6.0,

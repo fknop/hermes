@@ -35,7 +35,7 @@ fn create_solomon_dataset() -> Vec<SolomonDataset> {
         SolomonDataset {
             file: "./data/solomon/c1/c103.txt",
             vehicles: 10,
-            optimal_cost: 828.06,
+            optimal_cost: 828.94,
         },
         SolomonDataset {
             file: "./data/solomon/c1/c104.txt",

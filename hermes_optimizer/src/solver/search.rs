@@ -4,7 +4,7 @@ use fxhash::FxHashMap;
 use jiff::Timestamp;
 use parking_lot::{MappedRwLockReadGuard, RwLock, RwLockReadGuard};
 use rand::{Rng, SeedableRng, rngs::SmallRng, seq::IndexedRandom};
-use tracing::debug;
+use tracing::{debug, info};
 
 use crate::{
     acceptor::{
@@ -343,12 +343,15 @@ impl Search {
     fn should_terminate(&self, state: &ThreadedSearchState) -> bool {
         self.params.terminations.iter().any(|termination| {
             if self.check_termination(state, termination) {
-                debug!(
-                    thread = thread::current().name().unwrap_or("main"),
-                    "Thread {}: Termination condition met: {:?}",
-                    thread::current().name().unwrap_or("main"),
-                    termination
-                );
+                if !matches!(termination, Termination::Iterations(_)) {
+                    info!(
+                        thread = thread::current().name().unwrap_or("main"),
+                        "Thread {}: Termination condition met: {:?} at iteration {}",
+                        thread::current().name().unwrap_or("main"),
+                        termination,
+                        state.iteration
+                    );
+                }
                 true
             } else {
                 false
@@ -518,30 +521,56 @@ impl Search {
             );
         }
 
-        if iteration_info.iteration > 0
-            && iteration_info
+        if state.iteration > 0 {
+            if state
+                .iterations_without_improvement
+                .is_multiple_of(self.params.alns_iterations_without_improvement_reset)
+            {
+                for operator in self.operator_weights.write().ruin.iter_mut() {
+                    if let Some(ruin_score) = state
+                        .operator_scores
+                        .ruin_scores
+                        .get_mut(&operator.strategy)
+                    {
+                        operator.reset();
+                        ruin_score.reset();
+                    }
+                }
+
+                for operator in self.operator_weights.write().recreate.iter_mut() {
+                    if let Some(recreate_score) = state
+                        .operator_scores
+                        .recreate_scores
+                        .get_mut(&operator.strategy)
+                    {
+                        operator.reset();
+                        recreate_score.reset();
+                    }
+                }
+            } else if state
                 .iteration
                 .is_multiple_of(self.params.alns_segment_iterations)
-        {
-            for operator in self.operator_weights.write().ruin.iter_mut() {
-                if let Some(ruin_score) = state
-                    .operator_scores
-                    .ruin_scores
-                    .get_mut(&operator.strategy)
-                {
-                    operator.update_weight(ruin_score, self.params.alns_reaction_factor);
-                    ruin_score.reset();
+            {
+                for operator in self.operator_weights.write().ruin.iter_mut() {
+                    if let Some(ruin_score) = state
+                        .operator_scores
+                        .ruin_scores
+                        .get_mut(&operator.strategy)
+                    {
+                        operator.update_weight(ruin_score, self.params.alns_reaction_factor);
+                        ruin_score.reset();
+                    }
                 }
-            }
 
-            for operator in self.operator_weights.write().recreate.iter_mut() {
-                if let Some(recreate_score) = state
-                    .operator_scores
-                    .recreate_scores
-                    .get_mut(&operator.strategy)
-                {
-                    operator.update_weight(recreate_score, self.params.alns_reaction_factor);
-                    recreate_score.reset();
+                for operator in self.operator_weights.write().recreate.iter_mut() {
+                    if let Some(recreate_score) = state
+                        .operator_scores
+                        .recreate_scores
+                        .get_mut(&operator.strategy)
+                    {
+                        operator.update_weight(recreate_score, self.params.alns_reaction_factor);
+                        recreate_score.reset();
+                    }
                 }
             }
         }
