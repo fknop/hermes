@@ -1,7 +1,8 @@
 use crate::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
-        insertion_context::InsertionContext, score::Score, working_solution::WorkingSolution,
+        insertion_context::InsertionContext, score::Score, score_level::ScoreLevel,
+        working_solution::WorkingSolution,
     },
 };
 
@@ -18,6 +19,14 @@ pub enum Constraint {
 }
 
 impl Constraint {
+    pub fn score_level(&self) -> ScoreLevel {
+        match self {
+            Constraint::Global(constraint) => constraint.score_level(),
+            Constraint::Route(constraint) => constraint.score_level(),
+            Constraint::Activity(constraint) => constraint.score_level(),
+        }
+    }
+
     pub fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
         match self {
             Constraint::Global(constraint) => constraint.compute_insertion_score(context),
