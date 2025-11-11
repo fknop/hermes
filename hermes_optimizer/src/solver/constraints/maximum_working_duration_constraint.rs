@@ -4,6 +4,7 @@ use crate::{
         insertion::{ExistingRouteInsertion, Insertion, NewRouteInsertion},
         insertion_context::InsertionContext,
         score::Score,
+        score_level::ScoreLevel,
         working_solution::WorkingSolutionRoute,
     },
 };
@@ -12,7 +13,13 @@ use super::route_constraint::RouteConstraint;
 
 pub struct MaximumWorkingDurationConstraint;
 
+const SCORE_LEVEL: ScoreLevel = ScoreLevel::Hard;
+
 impl RouteConstraint for MaximumWorkingDurationConstraint {
+    fn score_level(&self) -> ScoreLevel {
+        SCORE_LEVEL
+    }
+
     fn compute_score(
         &self,
         problem: &VehicleRoutingProblem,
@@ -22,7 +29,8 @@ impl RouteConstraint for MaximumWorkingDurationConstraint {
         if let Some(maximum_working_duration) = vehicle.maximum_working_duration() {
             let working_duration = route.end(problem).duration_since(route.start(problem));
             if working_duration > maximum_working_duration {
-                return Score::hard(
+                return Score::of(
+                    self.score_level(),
                     working_duration.as_secs_f64() - maximum_working_duration.as_secs_f64(),
                 );
             }
@@ -44,7 +52,8 @@ impl RouteConstraint for MaximumWorkingDurationConstraint {
                 if let Some(maximum_working_duration) = vehicle.maximum_working_duration()
                     && working_duration > maximum_working_duration
                 {
-                    return Score::hard(
+                    return Score::of(
+                        self.score_level(),
                         working_duration.as_secs_f64() - maximum_working_duration.as_secs_f64(),
                     );
                 }
@@ -54,7 +63,8 @@ impl RouteConstraint for MaximumWorkingDurationConstraint {
                 if let Some(maximum_working_duration) = vehicle.maximum_working_duration()
                     && working_duration > maximum_working_duration
                 {
-                    return Score::hard(
+                    return Score::of(
+                        self.score_level(),
                         working_duration.as_secs_f64() - maximum_working_duration.as_secs_f64(),
                     );
                 }

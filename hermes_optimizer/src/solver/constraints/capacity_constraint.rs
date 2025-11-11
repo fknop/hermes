@@ -1,4 +1,3 @@
-use std::ops::Add;
 use std::ops::AddAssign;
 
 use crate::{
@@ -55,6 +54,10 @@ impl CapacityConstraint {
 }
 
 impl RouteConstraint for CapacityConstraint {
+    fn score_level(&self) -> ScoreLevel {
+        self.score_level
+    }
+
     fn compute_score(
         &self,
         problem: &VehicleRoutingProblem,

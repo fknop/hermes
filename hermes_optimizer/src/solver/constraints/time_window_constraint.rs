@@ -56,6 +56,9 @@ impl TimeWindowConstraint {
 }
 
 impl ActivityConstraint for TimeWindowConstraint {
+    fn score_level(&self) -> ScoreLevel {
+        self.score_level
+    }
     fn compute_score(
         &self,
         problem: &VehicleRoutingProblem,
@@ -63,7 +66,7 @@ impl ActivityConstraint for TimeWindowConstraint {
         activity: &WorkingSolutionRouteActivity,
     ) -> Score {
         TimeWindowConstraint::compute_time_window_score(
-            self.score_level,
+            self.score_level(),
             activity.service(problem).time_windows(),
             activity.arrival_time(),
         )
@@ -78,7 +81,7 @@ impl ActivityConstraint for TimeWindowConstraint {
             let service = problem.service(activity.service_id);
 
             total_score += TimeWindowConstraint::compute_time_window_score(
-                self.score_level,
+                self.score_level(),
                 service.time_windows(),
                 activity.arrival_time,
             )

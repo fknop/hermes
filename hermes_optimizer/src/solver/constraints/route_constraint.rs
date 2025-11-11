@@ -1,7 +1,8 @@
 use crate::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
-        insertion_context::InsertionContext, score::Score, working_solution::WorkingSolutionRoute,
+        insertion_context::InsertionContext, score::Score, score_level::ScoreLevel,
+        working_solution::WorkingSolutionRoute,
     },
 };
 
@@ -13,6 +14,8 @@ use super::{
 };
 
 pub trait RouteConstraint {
+    fn score_level(&self) -> ScoreLevel;
+
     fn compute_score(&self, problem: &VehicleRoutingProblem, route: &WorkingSolutionRoute)
     -> Score;
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score;
@@ -39,6 +42,15 @@ impl RouteConstraintType {
 }
 
 impl RouteConstraint for RouteConstraintType {
+    fn score_level(&self) -> ScoreLevel {
+        match self {
+            RouteConstraintType::Capacity(c) => c.score_level(),
+            RouteConstraintType::Shift(s) => s.score_level(),
+            RouteConstraintType::WaitingDuration(w) => w.score_level(),
+            RouteConstraintType::VehicleCost(v) => v.score_level(),
+            RouteConstraintType::MaximumWorkingDuration(m) => m.score_level(),
+        }
+    }
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
         match self {
             RouteConstraintType::Capacity(c) => c.compute_insertion_score(context),

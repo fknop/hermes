@@ -3,7 +3,8 @@ use jiff::SignedDuration;
 use crate::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
-        insertion_context::InsertionContext, score::Score, working_solution::WorkingSolutionRoute,
+        insertion_context::InsertionContext, score::Score, score_level::ScoreLevel,
+        working_solution::WorkingSolutionRoute,
     },
 };
 
@@ -12,8 +13,13 @@ use super::route_constraint::RouteConstraint;
 pub struct WaitingDurationConstraint;
 
 pub const WAITING_DURATION_WEIGHT: i64 = 1;
+const SCORE_LEVEL: ScoreLevel = ScoreLevel::Soft;
 
 impl RouteConstraint for WaitingDurationConstraint {
+    fn score_level(&self) -> ScoreLevel {
+        SCORE_LEVEL
+    }
+
     fn compute_score(
         &self,
         problem: &VehicleRoutingProblem,
@@ -33,7 +39,7 @@ impl RouteConstraint for WaitingDurationConstraint {
             })
             .sum();
 
-        Score::soft(problem.waiting_cost(waiting_duration))
+        Score::of(self.score_level(), problem.waiting_cost(waiting_duration))
     }
 
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
@@ -51,7 +57,8 @@ impl RouteConstraint for WaitingDurationConstraint {
             })
             .sum();
 
-        Score::soft(
+        Score::of(
+            self.score_level(),
             context
                 .solution
                 .problem()

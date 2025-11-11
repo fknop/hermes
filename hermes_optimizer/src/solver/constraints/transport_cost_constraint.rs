@@ -1,6 +1,6 @@
 use crate::solver::{
     insertion::Insertion, insertion_context::InsertionContext, score::Score,
-    working_solution::WorkingSolution,
+    score_level::ScoreLevel, working_solution::WorkingSolution,
 };
 
 use super::global_constraint::GlobalConstraint;
@@ -9,7 +9,13 @@ pub struct TransportCostConstraint;
 
 pub const TRANSPORT_COST_WEIGHT: f64 = 70.0;
 
+const SCORE_LEVEL: ScoreLevel = ScoreLevel::Soft;
+
 impl GlobalConstraint for TransportCostConstraint {
+    fn score_level(&self) -> ScoreLevel {
+        SCORE_LEVEL
+    }
+
     fn compute_score(&self, solution: &WorkingSolution) -> Score {
         let problem = solution.problem();
         let mut cost = 0.0;
@@ -47,7 +53,7 @@ impl GlobalConstraint for TransportCostConstraint {
             }
         }
 
-        Score::soft(cost * TRANSPORT_COST_WEIGHT)
+        Score::of(self.score_level(), cost * TRANSPORT_COST_WEIGHT)
     }
 
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
@@ -146,6 +152,9 @@ impl GlobalConstraint for TransportCostConstraint {
 
         let travel_cost_delta = new_cost - old_cost;
 
-        Score::soft(travel_cost_delta * TRANSPORT_COST_WEIGHT)
+        Score::of(
+            self.score_level(),
+            travel_cost_delta * TRANSPORT_COST_WEIGHT,
+        )
     }
 }

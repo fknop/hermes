@@ -4,15 +4,22 @@ use crate::{
         insertion::{ExistingRouteInsertion, Insertion, NewRouteInsertion},
         insertion_context::InsertionContext,
         score::Score,
+        score_level::ScoreLevel,
         working_solution::WorkingSolutionRoute,
     },
 };
 
 use super::route_constraint::RouteConstraint;
 
+const SCORE_LEVEL: ScoreLevel = ScoreLevel::Hard;
+
 pub struct ShiftConstraint;
 
 impl RouteConstraint for ShiftConstraint {
+    fn score_level(&self) -> crate::solver::score_level::ScoreLevel {
+        SCORE_LEVEL
+    }
+
     fn compute_score(
         &self,
         problem: &VehicleRoutingProblem,
@@ -23,7 +30,10 @@ impl RouteConstraint for ShiftConstraint {
         if let Some(latest_end) = vehicle.latest_end_time()
             && route.end(problem) > latest_end
         {
-            Score::hard((route.end(problem).as_second() - latest_end.as_second()) as f64)
+            Score::of(
+                self.score_level(),
+                (route.end(problem).as_second() - latest_end.as_second()) as f64,
+            )
         } else {
             Score::zero()
         }
@@ -40,7 +50,10 @@ impl RouteConstraint for ShiftConstraint {
                 if let Some(latest_end) = vehicle.latest_end_time()
                     && context.end > latest_end
                 {
-                    Score::hard((context.end.as_second() - latest_end.as_second()) as f64)
+                    Score::of(
+                        self.score_level(),
+                        (context.end.as_second() - latest_end.as_second()) as f64,
+                    )
                 } else {
                     Score::zero()
                 }
@@ -51,7 +64,10 @@ impl RouteConstraint for ShiftConstraint {
                 if let Some(latest_end) = vehicle.latest_end_time()
                     && context.end > latest_end
                 {
-                    Score::hard((context.end.as_second() - latest_end.as_second()) as f64)
+                    Score::of(
+                        self.score_level(),
+                        (context.end.as_second() - latest_end.as_second()) as f64,
+                    )
                 } else {
                     Score::zero()
                 }
