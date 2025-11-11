@@ -83,3 +83,9 @@ impl Location {
         (bearing_deg + 360.0) % 360.0
     }
 }
+
+impl From<&Location> for geo::Point<f64> {
+    fn from(location: &Location) -> Self {
+        geo::Point::new(location.x(), location.y())
+    }
+}

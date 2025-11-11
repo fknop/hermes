@@ -1,7 +1,10 @@
 use jiff::SignedDuration;
 use rand::{Rng, rngs::SmallRng};
 
-use crate::solver::constraints::transport_cost_constraint::TRANSPORT_COST_WEIGHT;
+use crate::{
+    problem::neighborhood::{BuildNeighborhoodParams, Neighborhoods},
+    solver::constraints::transport_cost_constraint::TRANSPORT_COST_WEIGHT,
+};
 
 use super::{
     distance_method::DistanceMethod,
@@ -18,6 +21,7 @@ pub struct VehicleRoutingProblem {
     services: Vec<Service>,
     travel_costs: TravelCostMatrix,
     service_location_index: ServiceLocationIndex,
+    neighborhoods: Neighborhoods,
 }
 
 impl VehicleRoutingProblem {
@@ -100,13 +104,19 @@ impl VehicleRoutingProblem {
         location_id: usize,
     ) -> impl Iterator<Item = ServiceId> {
         let location = &self.locations[location_id];
-        self.service_location_index
-            .nearest_neighbor_iter(geo::Point::new(location.x(), location.y()))
+        self.service_location_index.nearest_neighbor_iter(location)
     }
 
     pub fn nearest_services(&self, service_id: ServiceId) -> impl Iterator<Item = ServiceId> {
         let location_id = self.service(service_id).location_id();
         self.nearest_services_of_location(location_id)
+    }
+
+    pub fn service_neighborhood_iter(
+        &self,
+        service_id: ServiceId,
+    ) -> impl Iterator<Item = ServiceId> {
+        self.neighborhoods.neighbors_iter(service_id)
     }
 }
 
@@ -175,12 +185,19 @@ impl VehicleRoutingProblemBuilder {
             self.distance_method.unwrap_or(DistanceMethod::Haversine),
         );
 
+        let neighborhoods = Neighborhoods::new(BuildNeighborhoodParams {
+            services: &services,
+            location_index: &service_location_index,
+            locations: &locations,
+        });
+
         VehicleRoutingProblem {
             locations,
             vehicles: self.vehicles.expect("Expected list of vehicles"),
             services,
             travel_costs,
             service_location_index,
+            neighborhoods,
         }
     }
 }

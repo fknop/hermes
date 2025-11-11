@@ -41,6 +41,10 @@ impl WorkingSolution {
         }
     }
 
+    pub fn is_unassigned(&self, service_id: ServiceId) -> bool {
+        self.unassigned_services.contains(&service_id)
+    }
+
     pub fn total_transport_costs(&self) -> f64 {
         self.routes
             .iter()
@@ -271,6 +275,12 @@ impl WorkingSolutionRoute {
 
     pub fn contains_service(&self, service_id: ServiceId) -> bool {
         self.services.contains(&service_id)
+    }
+
+    pub fn service_position(&self, service_id: ServiceId) -> Option<usize> {
+        self.activities
+            .iter()
+            .position(|activity| activity.service_id == service_id)
     }
 
     pub fn is_empty(&self) -> bool {

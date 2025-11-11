@@ -4,7 +4,7 @@ use fxhash::FxHashMap;
 use jiff::Timestamp;
 use parking_lot::{MappedRwLockReadGuard, RwLock, RwLockReadGuard};
 use rand::{Rng, SeedableRng, rngs::SmallRng, seq::IndexedRandom};
-use tracing::{debug, info};
+use tracing::debug;
 
 use crate::{
     acceptor::{
@@ -290,7 +290,7 @@ impl Search {
                             state.iteration += 1;
 
                             if (state.iteration).is_multiple_of(500) {
-                                info!(
+                                debug!(
                                     thread = thread::current().name().unwrap_or("main"),
                                     weights = ?self.operator_weights.read(),
                                     "Thread {}: Iteration {}/{}",

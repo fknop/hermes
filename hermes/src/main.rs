@@ -1,4 +1,5 @@
 use hermes_core::geopoint::GeoPoint;
+use hermes_optimizer::solver::constraints::transport_cost_constraint::TRANSPORT_COST_WEIGHT;
 use hermes_optimizer::{
     solomon::solomon_parser::SolomonParser,
     solver::{
@@ -224,15 +225,15 @@ fn main() {
             vrp,
             SolverParams {
                 terminations: vec![
-                    Termination::Iterations(10000),
+                    Termination::Iterations(20000),
                     Termination::VehiclesAndCosts {
                         vehicles: dataset.vehicles,
                         costs: dataset.optimal_cost + 0.5,
                     },
-                    Termination::IterationsWithoutImprovement(5000),
+                    Termination::IterationsWithoutImprovement(10000),
                     Termination::Duration(SignedDuration::from_secs(10)),
                 ],
-                insertion_threads: Threads::Multi(8),
+                insertion_threads: Threads::Multi(4),
                 search_threads: Threads::Single,
                 debug_options: SolverParamsDebugOptions {
                     enable_local_search: true,

@@ -97,10 +97,11 @@ impl ServiceLocationIndex {
         ServiceLocationIndex { tree }
     }
 
-    pub fn nearest_neighbor_iter<'a>(
-        &'a self,
-        point: geo::Point,
-    ) -> impl Iterator<Item = usize> + 'a {
+    pub fn nearest_neighbor_iter<'a, P>(&'a self, point: P) -> impl Iterator<Item = usize> + 'a
+    where
+        P: Into<geo::Point>,
+    {
+        let point: geo::Point = point.into();
         self.tree
             .nearest_neighbor_iter(&[point.x(), point.y()])
             .map(|geom_with_data| geom_with_data.data.service_id)
