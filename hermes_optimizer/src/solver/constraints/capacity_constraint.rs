@@ -1,7 +1,9 @@
 use std::ops::AddAssign;
 
 use crate::{
-    problem::{capacity::Capacity, vehicle_routing_problem::VehicleRoutingProblem},
+    problem::{
+        capacity::Capacity, service::ServiceType, vehicle_routing_problem::VehicleRoutingProblem,
+    },
     solver::{
         insertion::{ExistingRouteInsertion, Insertion, NewRouteInsertion},
         insertion_context::InsertionContext,
@@ -42,12 +44,12 @@ impl CapacityConstraint {
         load.reset();
         load.add_assign(initial_load);
         load.add_assign(cumulative_load);
-        if vehicle_capacity.satisfies_demand(&load) {
+        if vehicle_capacity.satisfies_demand(load) {
             Score::zero()
         } else {
             Score::of(
                 self.score_level,
-                vehicle_capacity.over_capacity_demand(&load),
+                vehicle_capacity.over_capacity_demand(load),
             )
         }
     }
@@ -115,15 +117,29 @@ impl RouteConstraint for CapacityConstraint {
             );
         }
 
-        // Reuse vector to avoid allocations
-        let mut load = Capacity::zero();
-        for activity in context.activities.iter().skip(context.insertion.position()) {
-            score += self.compute_capacity_score(
-                &mut load,
-                vehicle.capacity(),
-                &context.initial_load,
-                &activity.cumulative_load,
-            );
+        match *context.insertion {
+            Insertion::ExistingRoute(ExistingRouteInsertion {
+                route_id,
+                position,
+                service_id,
+            }) => {
+                let service = problem.service(service_id);
+                if let Some(next_activity) =
+                    context.solution.route(route_id).activities().get(position)
+                    && service.service_type() == ServiceType::Pickup
+                {
+                    let new_max_load = next_activity.max_load_until_end() + service.demand();
+                    if !vehicle.capacity().satisfies_demand(&new_max_load) {
+                        score += Score::of(
+                            self.score_level,
+                            vehicle.capacity().over_capacity_demand(&new_max_load),
+                        );
+                    }
+                }
+            }
+            Insertion::NewRoute(NewRouteInsertion { .. }) => {
+                // No activities before insertion in new route
+            }
         }
 
         score

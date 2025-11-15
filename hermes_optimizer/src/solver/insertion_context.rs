@@ -11,7 +11,7 @@ pub struct ActivityInsertionContext {
     pub arrival_time: Timestamp,
     pub departure_time: Timestamp,
     pub waiting_duration: SignedDuration,
-    pub cumulative_load: Capacity,
+    // pub cumulative_load: Capacity,
 }
 
 impl ActivityInsertionContext {

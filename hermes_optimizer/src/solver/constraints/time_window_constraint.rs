@@ -76,6 +76,8 @@ impl ActivityConstraint for TimeWindowConstraint {
         let problem = context.problem();
 
         let mut total_score = Score::zero();
+
+        // TODO: precompute time slacks to avoid recomputing for all activities
         for i in context.insertion.position()..context.activities.len() {
             let activity = &context.activities[i];
             let service = problem.service(activity.service_id);

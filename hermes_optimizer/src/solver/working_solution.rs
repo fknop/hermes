@@ -256,9 +256,6 @@ pub struct WorkingSolutionRoute {
 
     // Current total cost of the route
     total_cost: Cost,
-
-    // Current total waiting time of the route
-    waiting_duration: SignedDuration,
 }
 
 impl WorkingSolutionRoute {
@@ -269,7 +266,6 @@ impl WorkingSolutionRoute {
             activities: Vec::new(),
             total_initial_load: Capacity::ZERO,
             total_cost: 0.0,
-            waiting_duration: SignedDuration::ZERO,
         }
     }
 
@@ -473,7 +469,10 @@ impl WorkingSolutionRoute {
     }
 
     pub fn total_waiting_duration(&self) -> SignedDuration {
-        self.waiting_duration
+        self.activities
+            .iter()
+            .map(|activity| activity.waiting_duration)
+            .sum()
     }
 
     pub fn vehicle_id(&self) -> VehicleId {
@@ -522,7 +521,6 @@ impl WorkingSolutionRoute {
         }
 
         self.services.remove(&activity.service_id);
-        self.waiting_duration -= activity.waiting_duration();
 
         if activity.service(problem).service_type() == ServiceType::Delivery {
             self.total_initial_load -= activity.service(problem).demand();
@@ -585,106 +583,111 @@ impl WorkingSolutionRoute {
             },
         );
 
-        self.waiting_duration += activity.waiting_duration();
         self.activities.insert(position, activity);
-
-        // Update the arrival times and departure times of subsequent activities
-        self.update_next_activities(problem, position + 1);
 
         if problem.service(service_id).service_type() == ServiceType::Delivery {
             self.total_initial_load += problem.service(service_id).demand();
         }
+
+        // Update the arrival times and departure times of subsequent activities
+        self.forward_update_pass(problem, position);
+        self.backward_update_pass(problem);
     }
 
     fn resync(&mut self, problem: &VehicleRoutingProblem) {
-        self.waiting_duration = SignedDuration::ZERO;
-        self.total_initial_load = Capacity::ZERO;
+        let mut total_initial_load = Capacity::ZERO;
 
-        for activity_index in 0..self.activities.len() {
-            let (before, after) = self.activities.split_at_mut(activity_index);
-            let previous_activity = before.last();
-            let activity = &mut after[0];
+        for activity in self
+            .activities()
+            .iter()
+            .filter(|activity| activity.service(problem).service_type() == ServiceType::Delivery)
+        {
+            total_initial_load += activity.service(problem).demand();
+        }
 
-            let service = activity.service(problem);
-            self.waiting_duration += activity.waiting_duration();
-            if service.service_type() == ServiceType::Delivery {
-                self.total_initial_load += service.demand();
-            }
+        self.total_initial_load = total_initial_load;
+        self.forward_update_pass(problem, 0);
+        self.backward_update_pass(problem);
+    }
 
-            if let Some(previous_activity) = previous_activity {
-                activity.update_arrival_time(
-                    problem,
-                    compute_activity_arrival_time(
+    fn forward_update_pass(&mut self, problem: &VehicleRoutingProblem, start: usize) {
+        for i in start..self.activities().len() {
+            let (first, second) = self.activities.split_at_mut(i);
+            let previous_activity = first.last();
+            let current_activity = &mut second[0];
+
+            match previous_activity {
+                Some(previous_activity) => {
+                    current_activity.update_arrival_time(
                         problem,
-                        previous_activity.service_id,
-                        previous_activity.departure_time,
-                        activity.service_id,
-                    ),
-                );
+                        compute_activity_arrival_time(
+                            problem,
+                            previous_activity.service_id,
+                            previous_activity.departure_time,
+                            current_activity.service_id,
+                        ),
+                    );
 
-                activity.cumulative_load = compute_activity_cumulative_load(
-                    problem.service(activity.service_id),
-                    &previous_activity.cumulative_load,
-                );
-            } else {
-                activity.update_arrival_time(
-                    problem,
-                    compute_first_activity_arrival_time(
+                    current_activity.cumulative_load = compute_activity_cumulative_load(
+                        problem.service(current_activity.service_id),
+                        &previous_activity.cumulative_load,
+                    );
+                }
+                None => {
+                    current_activity.update_arrival_time(
                         problem,
-                        self.vehicle_id,
-                        activity.service_id,
-                    ),
-                );
+                        compute_first_activity_arrival_time(
+                            problem,
+                            self.vehicle_id,
+                            current_activity.service_id,
+                        ),
+                    );
 
-                activity.cumulative_load = compute_activity_cumulative_load(
-                    problem.service(activity.service_id),
-                    &Capacity::ZERO,
-                );
+                    current_activity.cumulative_load = compute_activity_cumulative_load(
+                        problem.service(current_activity.service_id),
+                        &Capacity::ZERO,
+                    );
+                }
             }
         }
     }
 
-    fn update_next_activities(&mut self, problem: &VehicleRoutingProblem, start: usize) {
-        for i in start..self.activities().len() {
-            let (previous, next) = self.activities.split_at_mut(i);
-            let previous_activity = previous.last();
+    fn backward_update_pass(&mut self, problem: &VehicleRoutingProblem) {
+        for i in (0..self.activities.len()).rev() {
+            let (first, second) = self.activities.split_at_mut(i + 1);
+            let current_activity = &mut first[i];
+            let next_activity = second.first();
 
-            let activity = &mut next[0];
+            WorkingSolutionRoute::update_max_load_until_end(
+                &self.total_initial_load,
+                current_activity,
+                next_activity,
+            );
+        }
+    }
 
-            self.waiting_duration -= activity.waiting_duration();
-
-            if let Some(previous_activity) = previous_activity {
-                activity.update_arrival_time(
-                    problem,
-                    compute_activity_arrival_time(
-                        problem,
-                        previous_activity.service_id,
-                        previous_activity.departure_time,
-                        activity.service_id,
-                    ),
-                );
-
-                activity.cumulative_load = compute_activity_cumulative_load(
-                    problem.service(activity.service_id),
-                    &previous_activity.cumulative_load,
-                );
-            } else {
-                activity.update_arrival_time(
-                    problem,
-                    compute_first_activity_arrival_time(
-                        problem,
-                        self.vehicle_id,
-                        activity.service_id,
-                    ),
-                );
-
-                activity.cumulative_load = compute_activity_cumulative_load(
-                    problem.service(activity.service_id),
-                    &Capacity::ZERO,
-                );
+    fn update_max_load_until_end(
+        total_initial_load: &Capacity,
+        current_activity: &mut WorkingSolutionRouteActivity,
+        next_activity: Option<&WorkingSolutionRouteActivity>,
+    ) {
+        match next_activity {
+            Some(next_activity) => {
+                let load = total_initial_load + &current_activity.cumulative_load;
+                match load.partial_cmp(&next_activity.max_load_until_end) {
+                    Some(std::cmp::Ordering::Greater) => {
+                        current_activity.max_load_until_end = load.clone();
+                    }
+                    _ => {
+                        current_activity.max_load_until_end =
+                            next_activity.max_load_until_end.clone();
+                    }
+                }
             }
-
-            self.waiting_duration += activity.waiting_duration()
+            None => {
+                current_activity.max_load_until_end =
+                    total_initial_load + &current_activity.cumulative_load;
+            }
         }
     }
 
@@ -701,6 +704,7 @@ pub struct WorkingSolutionRouteActivity {
     departure_time: Timestamp,
     waiting_duration: SignedDuration,
     cumulative_load: Capacity,
+    max_load_until_end: Capacity,
 }
 
 impl WorkingSolutionRouteActivity {
@@ -712,7 +716,6 @@ impl WorkingSolutionRouteActivity {
     ) -> Self {
         let waiting_duration = compute_waiting_duration(problem.service(service_id), arrival_time);
         WorkingSolutionRouteActivity {
-            // problem,
             service_id,
             arrival_time,
             waiting_duration,
@@ -723,6 +726,7 @@ impl WorkingSolutionRouteActivity {
                 service_id,
             ),
             cumulative_load,
+            max_load_until_end: Capacity::ZERO,
         }
     }
 
@@ -748,6 +752,10 @@ impl WorkingSolutionRouteActivity {
 
     pub fn cumulative_load(&self) -> &Capacity {
         &self.cumulative_load
+    }
+
+    pub fn max_load_until_end(&self) -> &Capacity {
+        &self.max_load_until_end
     }
 
     fn update_arrival_time(&mut self, problem: &VehicleRoutingProblem, arrival_time: Timestamp) {
@@ -903,7 +911,7 @@ pub fn compute_insertion_context<'a>(
                         arrival_time: activity.arrival_time,
                         departure_time: activity.departure_time,
                         waiting_duration: activity.waiting_duration,
-                        cumulative_load: activity.cumulative_load.clone(),
+                        // cumulative_load: activity.cumulative_load.clone(),
                     }),
             );
 
@@ -922,25 +930,25 @@ pub fn compute_insertion_context<'a>(
                 compute_waiting_duration(problem.service(context.service_id), arrival_time);
             let mut departure_time =
                 compute_departure_time(problem, arrival_time, waiting_duration, context.service_id);
-            let cumulative_load = if route.activities.is_empty() || context.position == 0 {
-                compute_activity_cumulative_load(
-                    problem.service(context.service_id),
-                    &Capacity::ZERO,
-                )
-            } else {
-                let previous_activity = &route.activities[context.position - 1];
-                compute_activity_cumulative_load(
-                    problem.service(context.service_id),
-                    &previous_activity.cumulative_load,
-                )
-            };
+            // let cumulative_load = if route.activities.is_empty() || context.position == 0 {
+            //     compute_activity_cumulative_load(
+            //         problem.service(context.service_id),
+            //         &Capacity::ZERO,
+            //     )
+            // } else {
+            //     let previous_activity = &route.activities[context.position - 1];
+            //     compute_activity_cumulative_load(
+            //         problem.service(context.service_id),
+            //         &previous_activity.cumulative_load,
+            //     )
+            // };
 
             activities.push(ActivityInsertionContext {
                 service_id: context.service_id,
                 arrival_time,
                 departure_time,
                 waiting_duration,
-                cumulative_load,
+                // cumulative_load,
             });
 
             let mut last_service_id = context.service_id;
@@ -960,17 +968,17 @@ pub fn compute_insertion_context<'a>(
                 departure_time =
                     compute_departure_time(problem, arrival_time, waiting_duration, service_id);
 
-                let cumulative_load = compute_activity_cumulative_load(
-                    problem.service(service_id),
-                    &activities[activities.len() - 1].cumulative_load,
-                );
+                // let cumulative_load = compute_activity_cumulative_load(
+                //     problem.service(service_id),
+                //     &activities[activities.len() - 1].cumulative_load,
+                // );
 
                 activities.push(ActivityInsertionContext {
                     service_id,
                     arrival_time,
                     departure_time,
                     waiting_duration,
-                    cumulative_load,
+                    // cumulative_load,
                 });
 
                 last_service_id = service_id;
@@ -1026,10 +1034,10 @@ pub fn compute_insertion_context<'a>(
                 arrival_time,
                 departure_time,
                 waiting_duration,
-                cumulative_load: compute_activity_cumulative_load(
-                    problem.service(context.service_id),
-                    &Capacity::ZERO,
-                ),
+                // cumulative_load: compute_activity_cumulative_load(
+                // problem.service(context.service_id),
+                // &Capacity::ZERO,
+                // ),
             }];
 
             let service = problem.service(context.service_id);

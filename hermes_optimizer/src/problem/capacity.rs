@@ -180,13 +180,48 @@ impl Index<usize> for Capacity {
     }
 }
 
+impl PartialOrd for Capacity {
+    // A capacity is considered greater if at least one element is greater and none are less
+    // Similarly, it is considered less if at least one element is less and none are greater
+    // If all elements are equal, they are considered equal
+    // If there is a mix of greater and less, they are considered incomparable (None)
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        let mut self_greater = false;
+        let mut other_greater = false;
+
+        let max_len = self.len().max(other.len());
+
+        for i in 0..max_len {
+            let self_value = self.0.get(i).cloned().unwrap_or(0.0);
+            let other_value = other.0.get(i).cloned().unwrap_or(0.0);
+
+            if self_value > other_value {
+                self_greater = true;
+            } else if self_value < other_value {
+                other_greater = true;
+            }
+
+            if self_greater && other_greater {
+                return None; // Incomparable
+            }
+        }
+
+        if self_greater {
+            Some(std::cmp::Ordering::Greater)
+        } else if other_greater {
+            Some(std::cmp::Ordering::Less)
+        } else {
+            Some(std::cmp::Ordering::Equal)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
 
     use std::cmp::Ordering;
 
     use super::*;
-    use smallvec::smallvec;
 
     #[test]
     fn test_add_mut() {
@@ -284,6 +319,21 @@ mod tests {
         assert_eq!(more, Some(Ordering::Greater));
 
         let more = vec![0.6, 0.6, 0.6].partial_cmp(&vec![0.6, 0.6, 0.6]);
+        assert_eq!(more, Some(Ordering::Equal));
+    }
+
+    #[test]
+    fn test_cmp_capacity() {
+        let less = Capacity::from_vec(vec![0.5, 0.5, 0.5])
+            .partial_cmp(&Capacity::from_vec(vec![0.6, 0.6, 0.6]));
+        assert_eq!(less, Some(Ordering::Less));
+
+        let more = Capacity::from_vec(vec![0.7, 0.6, 0.7])
+            .partial_cmp(&Capacity::from_vec(vec![0.6, 0.6, 0.6]));
+        assert_eq!(more, Some(Ordering::Greater));
+
+        let more = Capacity::from_vec(vec![0.6, 0.6, 0.6])
+            .partial_cmp(&Capacity::from_vec(vec![0.6, 0.6, 0.6]));
         assert_eq!(more, Some(Ordering::Equal));
     }
 }
