@@ -36,7 +36,10 @@ impl Display for RuinStrategy {
 }
 
 impl RuinSolution for RuinStrategy {
-    fn ruin_solution(&self, solution: &mut WorkingSolution, context: RuinContext) {
+    fn ruin_solution<R>(&self, solution: &mut WorkingSolution, context: RuinContext<R>)
+    where
+        R: rand::Rng,
+    {
         match self {
             RuinStrategy::Random => {
                 let strategy = RuinRandom;

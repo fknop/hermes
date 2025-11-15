@@ -73,7 +73,10 @@ fn get_worst(problem: &VehicleRoutingProblem, solution: &WorkingSolution) -> Opt
 }
 
 impl RuinSolution for RuinWorst {
-    fn ruin_solution(&self, solution: &mut WorkingSolution, context: RuinContext) {
+    fn ruin_solution<R>(&self, solution: &mut WorkingSolution, context: RuinContext<R>)
+    where
+        R: rand::Rng,
+    {
         for _ in 0..context.num_activities_to_remove {
             if solution.routes().is_empty() {
                 return;

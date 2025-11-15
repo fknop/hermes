@@ -131,7 +131,10 @@ impl WorkingSolution {
         &self.routes[route_id]
     }
 
-    pub fn random_route(&self, rng: &mut SmallRng) -> usize {
+    pub fn random_route<R>(&self, rng: &mut R) -> usize
+    where
+        R: rand::Rng,
+    {
         rng.random_range(0..self.routes.len())
     }
 
@@ -691,7 +694,10 @@ impl WorkingSolutionRoute {
         }
     }
 
-    pub fn random_activity(&self, rng: &mut SmallRng) -> usize {
+    pub fn random_activity<R>(&self, rng: &mut R) -> usize
+    where
+        R: rand::Rng,
+    {
         rng.random_range(0..self.activities.len())
     }
 }

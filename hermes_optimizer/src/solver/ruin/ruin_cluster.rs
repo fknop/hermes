@@ -8,7 +8,7 @@ use super::{ruin_context::RuinContext, ruin_solution::RuinSolution};
 pub struct RuinCluster;
 
 impl RuinSolution for RuinCluster {
-    fn ruin_solution(
+    fn ruin_solution<R>(
         &self,
         solution: &mut WorkingSolution,
         RuinContext {
@@ -16,8 +16,10 @@ impl RuinSolution for RuinCluster {
             num_activities_to_remove,
             problem,
             ..
-        }: RuinContext,
-    ) {
+        }: RuinContext<R>,
+    ) where
+        R: rand::Rng,
+    {
         if solution.routes().is_empty() {
             return;
         }

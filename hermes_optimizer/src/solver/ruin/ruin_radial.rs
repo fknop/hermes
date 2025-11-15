@@ -5,7 +5,7 @@ use super::{ruin_context::RuinContext, ruin_solution::RuinSolution};
 pub struct RuinRadial;
 
 impl RuinSolution for RuinRadial {
-    fn ruin_solution(
+    fn ruin_solution<R>(
         &self,
         solution: &mut WorkingSolution,
         RuinContext {
@@ -13,8 +13,10 @@ impl RuinSolution for RuinRadial {
             num_activities_to_remove,
             problem,
             ..
-        }: RuinContext,
-    ) {
+        }: RuinContext<R>,
+    ) where
+        R: rand::Rng,
+    {
         let random_location_id = problem.random_location(rng);
 
         for service_id in problem

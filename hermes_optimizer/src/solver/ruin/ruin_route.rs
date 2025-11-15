@@ -7,7 +7,10 @@ use super::{ruin_context::RuinContext, ruin_solution::RuinSolution};
 pub struct RuinRoute;
 
 impl RuinSolution for RuinRoute {
-    fn ruin_solution(&self, solution: &mut WorkingSolution, context: RuinContext) {
+    fn ruin_solution<R>(&self, solution: &mut WorkingSolution, context: RuinContext<R>)
+    where
+        R: rand::Rng,
+    {
         let mut remaining: i64 = context.num_activities_to_remove as i64;
 
         while remaining > 0 {

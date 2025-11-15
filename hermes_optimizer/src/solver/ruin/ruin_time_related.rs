@@ -30,7 +30,10 @@ impl RuinTimeRelated {
 }
 
 impl RuinSolution for RuinTimeRelated {
-    fn ruin_solution(&self, solution: &mut WorkingSolution, context: RuinContext) {
+    fn ruin_solution<R>(&self, solution: &mut WorkingSolution, context: RuinContext<R>)
+    where
+        R: rand::Rng,
+    {
         let routes = solution.routes();
         let target_route_id = context.rng.random_range(0..routes.len());
         let target_activity_id = context

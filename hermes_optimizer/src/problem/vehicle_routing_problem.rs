@@ -33,11 +33,17 @@ impl VehicleRoutingProblem {
         &self.services[index]
     }
 
-    pub fn random_location(&self, rng: &mut SmallRng) -> usize {
+    pub fn random_location<R>(&self, rng: &mut R) -> usize
+    where
+        R: rand::Rng,
+    {
         rng.random_range(0..self.locations.len())
     }
 
-    pub fn random_service(&self, rng: &mut SmallRng) -> usize {
+    pub fn random_service<R>(&self, rng: &mut R) -> usize
+    where
+        R: rand::Rng,
+    {
         rng.random_range(0..self.services.len())
     }
 

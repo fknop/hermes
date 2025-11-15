@@ -51,11 +51,10 @@ impl RuinString {
         starts
     }
 
-    fn compute_preserved_length(
-        string_length: usize,
-        route_length: usize,
-        rng: &mut SmallRng,
-    ) -> usize {
+    fn compute_preserved_length<R>(string_length: usize, route_length: usize, rng: &mut R) -> usize
+    where
+        R: rand::Rng,
+    {
         // Cannot preserve anything in this case
         if string_length == route_length {
             return 0;
@@ -73,7 +72,10 @@ impl RuinString {
         preserved_length
     }
 
-    fn ruin_string(&self, solution: &mut WorkingSolution, rng: &mut SmallRng, route_id: usize) {
+    fn ruin_string<R>(&self, solution: &mut WorkingSolution, rng: &mut R, route_id: usize)
+    where
+        R: rand::Rng,
+    {
         let route = solution.route(route_id);
         let route_length = route.activities().len();
         let string_length = rng.random_range(self.l_min..=self.l_max).min(route_length);
@@ -93,12 +95,10 @@ impl RuinString {
         }
     }
 
-    fn ruin_split_string(
-        &self,
-        solution: &mut WorkingSolution,
-        rng: &mut SmallRng,
-        route_id: usize,
-    ) {
+    fn ruin_split_string<R>(&self, solution: &mut WorkingSolution, rng: &mut R, route_id: usize)
+    where
+        R: rand::Rng,
+    {
         let route = solution.route(route_id);
         let route_length = route.activities().len();
         let string_length = rng.random_range(self.l_min..=self.l_max).min(route_length);
@@ -138,7 +138,10 @@ impl RuinString {
 }
 
 impl RuinSolution for RuinString {
-    fn ruin_solution(&self, solution: &mut WorkingSolution, context: RuinContext) {
+    fn ruin_solution<R>(&self, solution: &mut WorkingSolution, context: RuinContext<R>)
+    where
+        R: rand::Rng,
+    {
         let k = context
             .rng
             .random_range(self.k_min..=self.k_max)
