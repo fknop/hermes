@@ -88,11 +88,11 @@ impl VehicleRoutingProblem {
     }
 
     pub fn acceptable_service_waiting_duration_secs(&self) -> i64 {
-        60
+        0
     }
 
     pub fn waiting_cost(&self, waiting_duration: SignedDuration) -> Cost {
-        waiting_duration.as_secs_f64() * 30.0
+        waiting_duration.as_secs_f64() * 10.0
     }
 
     pub fn fixed_vehicle_costs(&self) -> f64 {

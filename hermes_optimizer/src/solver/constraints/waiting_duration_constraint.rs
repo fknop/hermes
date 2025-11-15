@@ -43,26 +43,12 @@ impl RouteConstraint for WaitingDurationConstraint {
     }
 
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
-        let total_waiting_duration: SignedDuration = context
-            .activities
-            .iter()
-            .map(|activity| {
-                if activity.waiting_duration.as_secs()
-                    > context.problem().acceptable_service_waiting_duration_secs()
-                {
-                    activity.waiting_duration
-                } else {
-                    SignedDuration::ZERO
-                }
-            })
-            .sum();
-
         Score::of(
             self.score_level(),
             context
                 .solution
                 .problem()
-                .waiting_cost(total_waiting_duration),
+                .waiting_cost(context.waiting_duration_delta),
         )
     }
 }

@@ -10,7 +10,7 @@ pub struct ActivityInsertionContext {
     pub service_id: ServiceId,
     pub arrival_time: Timestamp,
     pub departure_time: Timestamp,
-    pub waiting_duration: SignedDuration,
+    // pub waiting_duration: SignedDuration,
     // pub cumulative_load: Capacity,
 }
 

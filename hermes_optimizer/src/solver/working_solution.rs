@@ -910,8 +910,6 @@ pub fn compute_insertion_context<'a>(
                         service_id: activity.service_id,
                         arrival_time: activity.arrival_time,
                         departure_time: activity.departure_time,
-                        waiting_duration: activity.waiting_duration,
-                        // cumulative_load: activity.cumulative_load.clone(),
                     }),
             );
 
@@ -930,18 +928,6 @@ pub fn compute_insertion_context<'a>(
                 compute_waiting_duration(problem.service(context.service_id), arrival_time);
             let mut departure_time =
                 compute_departure_time(problem, arrival_time, waiting_duration, context.service_id);
-            // let cumulative_load = if route.activities.is_empty() || context.position == 0 {
-            //     compute_activity_cumulative_load(
-            //         problem.service(context.service_id),
-            //         &Capacity::ZERO,
-            //     )
-            // } else {
-            //     let previous_activity = &route.activities[context.position - 1];
-            //     compute_activity_cumulative_load(
-            //         problem.service(context.service_id),
-            //         &previous_activity.cumulative_load,
-            //     )
-            // };
 
             let mut waiting_duration_delta =
                 compute_waiting_duration(problem.service(context.service_id), arrival_time);
@@ -949,8 +935,6 @@ pub fn compute_insertion_context<'a>(
                 service_id: context.service_id,
                 arrival_time,
                 departure_time,
-                waiting_duration,
-                // cumulative_load,
             });
 
             let mut last_service_id = context.service_id;
@@ -965,26 +949,19 @@ pub fn compute_insertion_context<'a>(
                     service_id,
                 );
 
-                waiting_duration_delta - route.activities[i].waiting_duration;
+                waiting_duration_delta -= route.activities[i].waiting_duration;
 
                 waiting_duration =
                     compute_waiting_duration(problem.service(context.service_id), arrival_time);
-                waiting_duration_delta + waiting_duration;
+                waiting_duration_delta += waiting_duration;
 
                 departure_time =
                     compute_departure_time(problem, arrival_time, waiting_duration, service_id);
-
-                // let cumulative_load = compute_activity_cumulative_load(
-                //     problem.service(service_id),
-                //     &activities[activities.len() - 1].cumulative_load,
-                // );
 
                 activities.push(ActivityInsertionContext {
                     service_id,
                     arrival_time,
                     departure_time,
-                    waiting_duration,
-                    // cumulative_load,
                 });
 
                 last_service_id = service_id;
@@ -1040,11 +1017,6 @@ pub fn compute_insertion_context<'a>(
                 service_id: context.service_id,
                 arrival_time,
                 departure_time,
-                waiting_duration: waiting_duration.clone(),
-                // cumulative_load: compute_activity_cumulative_load(
-                // problem.service(context.service_id),
-                // &Capacity::ZERO,
-                // ),
             }];
 
             let service = problem.service(context.service_id);
