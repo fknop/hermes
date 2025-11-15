@@ -28,3 +28,37 @@ impl RngCore for MockRng {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use rand::Rng;
+
+    use super::*;
+
+    #[test]
+    fn test_mock_rng() {
+        let data = vec![1, 2, 3, 4];
+        let mut rng = MockRng::new(data.clone());
+
+        for &expected in data.iter().cycle().take(8) {
+            let value = rng.next_u64();
+            assert_eq!(value, expected);
+        }
+    }
+
+    #[test]
+    fn test_random_bool() {
+        let data = vec![
+            (u64::MAX / 4),
+            (u64::MAX / 4),
+            (u64::MAX / 4),
+            (u64::MAX / 4),
+        ];
+        let mut rng = MockRng::new(data);
+
+        assert!(!rng.random_bool(0.20));
+        assert!(rng.random_bool(0.26));
+        assert!(rng.random_bool(0.6));
+        assert!(!rng.random_bool(0.10));
+    }
+}
