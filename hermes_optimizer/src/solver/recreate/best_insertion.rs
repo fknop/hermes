@@ -1,13 +1,12 @@
 use std::fmt::Display;
 
 use jiff::Timestamp;
-use parking_lot::RwLock;
 use rand::{Rng, rngs::SmallRng, seq::SliceRandom};
 use serde::Serialize;
 
 use crate::{
     problem::{
-        capacity::Capacity, service::ServiceId, travel_cost_matrix::Distance,
+        service::ServiceId, travel_cost_matrix::Distance,
         vehicle_routing_problem::VehicleRoutingProblem,
     },
     solver::{
@@ -21,7 +20,6 @@ use super::{recreate_context::RecreateContext, recreate_solution::RecreateSoluti
 
 #[derive(Default)]
 pub struct BestInsertion {
-    cached_min_max_demand: RwLock<Option<(Capacity, Capacity)>>,
     sort_method: BestInsertionSortMethod,
     blink_rate: f64,
 }
@@ -82,32 +80,7 @@ impl BestInsertion {
         BestInsertion {
             sort_method,
             blink_rate,
-            ..Default::default()
         }
-    }
-
-    fn min_max_demand(&self, problem: &VehicleRoutingProblem) -> (Capacity, Capacity) {
-        let is_none;
-        {
-            let cached_minimum_demand = self.cached_min_max_demand.read();
-            is_none = cached_minimum_demand.is_none();
-        }
-
-        if is_none {
-            let demands: Vec<&Capacity> = problem
-                .services()
-                .iter()
-                .map(|service| service.demand())
-                .collect();
-
-            self.cached_min_max_demand
-                .write()
-                .replace(Capacity::compute_min_max_capacities(&demands));
-        }
-
-        let cached_min_max_demand = self.cached_min_max_demand.read();
-        let (min, max) = cached_min_max_demand.as_ref().unwrap();
-        (min.clone(), max.clone())
     }
 
     pub fn sort_unassigned_services(
@@ -120,23 +93,13 @@ impl BestInsertion {
             BestInsertionSortMethod::Random => {
                 unassigned_services.shuffle(rng);
             }
-            BestInsertionSortMethod::Demand => {
-                let (min_demand, max_demand) = self.min_max_demand(problem);
-                unassigned_services.sort_by(|a, b| {
-                    let demand_a = problem
-                        .service(*a)
-                        .demand()
-                        .normalize(&min_demand, &max_demand);
-                    let demand_b = problem
-                        .service(*b)
-                        .demand()
-                        .normalize(&min_demand, &max_demand);
+            BestInsertionSortMethod::Demand => unassigned_services.sort_by(|a, b| {
+                // Not perfect but good enough for sorting purposes.
+                let first_demand_a = problem.service(*a).demand().get(0).unwrap_or(0.0);
+                let first_demand_b = problem.service(*b).demand().get(0).unwrap_or(0.0);
 
-                    demand_b
-                        .partial_cmp(&demand_a)
-                        .unwrap_or(std::cmp::Ordering::Equal)
-                })
-            }
+                first_demand_a.total_cmp(&first_demand_b)
+            }),
             BestInsertionSortMethod::Far => {
                 unassigned_services.sort_by_key(|&service| {
                     let distance_from_depot = problem

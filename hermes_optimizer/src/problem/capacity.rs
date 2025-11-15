@@ -3,8 +3,6 @@ use std::ops::{Add, AddAssign, Index, Sub, SubAssign};
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 
-use crate::utils::normalize::normalize;
-
 type CapacityVector = SmallVec<[f64; 4]>;
 
 #[derive(Default, Debug, PartialEq, Clone, Serialize, Deserialize)]
@@ -58,19 +56,6 @@ impl Capacity {
         }
 
         (Capacity(min), Capacity(max))
-    }
-
-    pub fn normalize(&self, min: &Capacity, max: &Capacity) -> Vec<f64> {
-        if self.0.is_empty() {
-            return vec![];
-        }
-        let mut normalized = vec![0.0; self.0.len()];
-
-        (0..self.0.len()).for_each(|i| {
-            normalized[i] = normalize(self.0[i], min.0[i], max.0[i]);
-        });
-
-        normalized
     }
 
     pub fn len(&self) -> usize {
@@ -293,21 +278,6 @@ mod tests {
 
         assert_eq!(min, Capacity::from_vec(vec![1.0, 2.0, 3.0]));
         assert_eq!(max, Capacity::from_vec(vec![4.0, 5.0, 6.0]));
-    }
-
-    #[test]
-    fn test_normalize() {
-        let capacity = Capacity::from_vec(vec![5.0, 10.0, 15.0]);
-        let min = Capacity::from_vec(vec![0.0, 5.0, 10.0]);
-        let max = Capacity::from_vec(vec![10.0, 15.0, 20.0]);
-
-        let normalized = capacity.normalize(&min, &max);
-
-        // 5 - 0 / 10 - 0 = 0.5
-        // 10 - 5 / 15 - 5 = 5 / 10 = 0.5
-        // 15 - 10 / 20 - 10 = 5 / 10 = 0.5
-
-        assert_eq!(normalized, vec![0.5, 0.5, 0.5]);
     }
 
     #[test]

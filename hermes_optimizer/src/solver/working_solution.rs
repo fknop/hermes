@@ -943,6 +943,8 @@ pub fn compute_insertion_context<'a>(
             //     )
             // };
 
+            let mut waiting_duration_delta =
+                compute_waiting_duration(problem.service(context.service_id), arrival_time);
             activities.push(ActivityInsertionContext {
                 service_id: context.service_id,
                 arrival_time,
@@ -963,8 +965,12 @@ pub fn compute_insertion_context<'a>(
                     service_id,
                 );
 
+                waiting_duration_delta - route.activities[i].waiting_duration;
+
                 waiting_duration =
                     compute_waiting_duration(problem.service(context.service_id), arrival_time);
+                waiting_duration_delta + waiting_duration;
+
                 departure_time =
                     compute_departure_time(problem, arrival_time, waiting_duration, service_id);
 
@@ -1008,6 +1014,7 @@ pub fn compute_insertion_context<'a>(
                 ),
                 solution,
                 initial_load: new_initial_load,
+                waiting_duration_delta,
                 activities,
                 insertion,
             }
@@ -1033,7 +1040,7 @@ pub fn compute_insertion_context<'a>(
                 service_id: context.service_id,
                 arrival_time,
                 departure_time,
-                waiting_duration,
+                waiting_duration: waiting_duration.clone(),
                 // cumulative_load: compute_activity_cumulative_load(
                 // problem.service(context.service_id),
                 // &Capacity::ZERO,
@@ -1044,6 +1051,7 @@ pub fn compute_insertion_context<'a>(
 
             InsertionContext {
                 problem,
+                waiting_duration_delta: waiting_duration,
                 start: compute_vehicle_start(
                     problem,
                     context.vehicle_id,

@@ -28,6 +28,7 @@ pub struct InsertionContext<'a> {
     pub activities: Vec<ActivityInsertionContext>,
     pub start: Timestamp,
     pub end: Timestamp,
+    pub waiting_duration_delta: SignedDuration,
 }
 
 impl InsertionContext<'_> {
