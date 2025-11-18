@@ -3,6 +3,7 @@ pub mod constraints;
 pub mod construction;
 pub mod insertion;
 pub mod insertion_context;
+pub mod intensify;
 pub mod noise;
 pub mod recreate;
 pub mod ruin;

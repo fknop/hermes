@@ -507,6 +507,48 @@ impl WorkingSolutionRoute {
         max_load
     }
 
+    pub fn location_id(&self, problem: &VehicleRoutingProblem, position: usize) -> Option<usize> {
+        self.activities
+            .get(position)
+            .map(|activity| activity.service(problem).location_id())
+    }
+
+    pub fn previous_location_id(
+        &self,
+        problem: &VehicleRoutingProblem,
+        position: usize,
+    ) -> Option<usize> {
+        if position == 0 {
+            let vehicle = self.vehicle(problem);
+            vehicle.depot_location_id()
+        } else if position <= self.activities.len() {
+            let previous_activity = &self.activities[position - 1];
+            Some(previous_activity.service(problem).location_id())
+        } else {
+            None
+        }
+    }
+
+    pub fn next_location_id(
+        &self,
+        problem: &VehicleRoutingProblem,
+        position: usize,
+    ) -> Option<usize> {
+        let next_activity = self.activities.get(position + 1);
+
+        match next_activity {
+            Some(activity) => Some(activity.service(problem).location_id()),
+            None => {
+                let vehicle = self.vehicle(problem);
+                if vehicle.should_return_to_depot() {
+                    vehicle.depot_location_id()
+                } else {
+                    None
+                }
+            }
+        }
+    }
+
     fn remove_activity(
         &mut self,
         problem: &VehicleRoutingProblem,

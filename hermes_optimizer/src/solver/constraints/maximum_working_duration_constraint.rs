@@ -42,30 +42,57 @@ impl RouteConstraint for MaximumWorkingDurationConstraint {
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
         let problem = context.problem();
 
-        let working_duration = context.end.duration_since(context.start);
+        let new_working_duration = context.end.duration_since(context.start);
 
         match *context.insertion {
             Insertion::ExistingRoute(ExistingRouteInsertion { route_id, .. }) => {
                 let route = context.solution.route(route_id);
                 let vehicle = route.vehicle(problem);
 
-                if let Some(maximum_working_duration) = vehicle.maximum_working_duration()
-                    && working_duration > maximum_working_duration
-                {
-                    return Score::of(
-                        self.score_level(),
-                        working_duration.as_secs_f64() - maximum_working_duration.as_secs_f64(),
-                    );
+                // && working_duration > maximum_working_duration
+                if let Some(maximum_working_duration) = vehicle.maximum_working_duration() {
+                    let current_working_duration =
+                        route.end(problem).duration_since(route.start(problem));
+
+                    // New violation, old route was not violating the constraint
+                    if new_working_duration > maximum_working_duration
+                        && current_working_duration <= maximum_working_duration
+                    {
+                        return Score::of(
+                            self.score_level(),
+                            new_working_duration.as_secs_f64()
+                                - maximum_working_duration.as_secs_f64(),
+                        );
+
+                        // Both are violating the constraint, we compute the delta between the two
+                    } else if current_working_duration > maximum_working_duration
+                        && new_working_duration > maximum_working_duration
+                    {
+                        return Score::of(
+                            self.score_level(),
+                            (new_working_duration - current_working_duration).as_secs_f64(),
+                        );
+                        // Current duration is violating, new one is not
+                    } else if current_working_duration > maximum_working_duration
+                        && new_working_duration <= maximum_working_duration
+                    {
+                        return Score::of(
+                            self.score_level(),
+                            (maximum_working_duration - current_working_duration).as_secs_f64(),
+                        );
+                    } else {
+                        return Score::zero();
+                    }
                 }
             }
             Insertion::NewRoute(NewRouteInsertion { vehicle_id, .. }) => {
                 let vehicle = problem.vehicle(vehicle_id);
                 if let Some(maximum_working_duration) = vehicle.maximum_working_duration()
-                    && working_duration > maximum_working_duration
+                    && new_working_duration > maximum_working_duration
                 {
                     return Score::of(
                         self.score_level(),
-                        working_duration.as_secs_f64() - maximum_working_duration.as_secs_f64(),
+                        new_working_duration.as_secs_f64() - maximum_working_duration.as_secs_f64(),
                     );
                 }
             }
