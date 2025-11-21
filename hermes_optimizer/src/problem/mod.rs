@@ -1,3 +1,4 @@
+pub mod amount;
 pub mod capacity;
 pub mod distance_method;
 pub mod job;
