@@ -1,1 +1,9 @@
+mod cross_exchange;
 mod intensify_operator;
+mod inter_relocate;
+mod inter_swap;
+mod inter_two_opt_star;
+mod or_opt;
+mod relocate;
+mod swap;
+mod two_opt;

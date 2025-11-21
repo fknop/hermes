@@ -13,7 +13,7 @@ pub enum ServiceType {
     Delivery,
 }
 
-type TimeWindows = SmallVec<[TimeWindow; 2]>;
+type TimeWindows = SmallVec<[TimeWindow; 1]>;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Service {

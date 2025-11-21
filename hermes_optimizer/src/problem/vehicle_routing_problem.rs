@@ -93,6 +93,14 @@ impl VehicleRoutingProblem {
         self.travel_costs.travel_cost(from, to)
     }
 
+    pub fn travel_cost_or_zero(&self, from: Option<LocationId>, to: Option<LocationId>) -> Cost {
+        if let (Some(from), Some(to)) = (from, to) {
+            self.travel_cost(from, to)
+        } else {
+            0.0
+        }
+    }
+
     pub fn acceptable_service_waiting_duration_secs(&self) -> i64 {
         0
     }
@@ -123,6 +131,10 @@ impl VehicleRoutingProblem {
         service_id: ServiceId,
     ) -> impl Iterator<Item = ServiceId> {
         self.neighborhoods.neighbors_iter(service_id)
+    }
+
+    pub fn is_symmetric(&self) -> bool {
+        self.travel_costs.is_symmetric()
     }
 }
 

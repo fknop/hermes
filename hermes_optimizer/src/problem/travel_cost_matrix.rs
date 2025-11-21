@@ -15,6 +15,7 @@ pub struct TravelCostMatrix {
     times: Vec<Time>,
     costs: Vec<Cost>,
     num_locations: usize,
+    is_symmetric: bool,
 }
 
 impl TravelCostMatrix {
@@ -24,11 +25,19 @@ impl TravelCostMatrix {
         costs: Vec<Vec<Cost>>,
     ) -> Self {
         let num_locations = distances.len();
+
+        let is_symmetric = distances.iter().enumerate().all(|(i, row)| {
+            row.iter()
+                .enumerate()
+                .all(|(j, &value)| distances[j][i] == value)
+        });
+
         TravelCostMatrix {
             distances: distances.into_iter().flatten().collect(),
             times: times.into_iter().flatten().collect(),
             costs: costs.into_iter().flatten().collect(),
             num_locations,
+            is_symmetric,
         }
     }
 
@@ -59,6 +68,7 @@ impl TravelCostMatrix {
             times,
             costs,
             num_locations,
+            is_symmetric: true,
         }
     }
 
@@ -81,6 +91,7 @@ impl TravelCostMatrix {
             times,
             costs,
             num_locations,
+            is_symmetric: true,
         }
     }
 
@@ -101,5 +112,9 @@ impl TravelCostMatrix {
 
     pub fn max_cost(&self) -> Cost {
         self.costs.iter().cloned().fold(0.0, f64::max)
+    }
+
+    pub fn is_symmetric(&self) -> bool {
+        self.is_symmetric
     }
 }
