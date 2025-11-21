@@ -89,3 +89,9 @@ impl From<&Location> for geo::Point<f64> {
         geo::Point::new(location.x(), location.y())
     }
 }
+
+impl Into<geo::Point<f64>> for Location {
+    fn into(self) -> geo::Point<f64> {
+        geo::Point::new(self.x(), self.y())
+    }
+}
