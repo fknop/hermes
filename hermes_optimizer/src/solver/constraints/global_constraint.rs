@@ -1,6 +1,6 @@
 use crate::solver::{
     insertion_context::InsertionContext, score::Score, score_level::ScoreLevel,
-    working_solution::WorkingSolution,
+    solution::working_solution::WorkingSolution,
 };
 
 use super::transport_cost_constraint::TransportCostConstraint;

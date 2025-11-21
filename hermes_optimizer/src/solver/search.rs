@@ -45,11 +45,11 @@ use super::{
     },
     ruin::{ruin_context::RuinContext, ruin_solution::RuinSolution, ruin_strategy::RuinStrategy},
     score::{Score, ScoreAnalysis},
+    solution::working_solution::WorkingSolution,
     solver_params::{
         SolverAcceptorStrategy, SolverParams, SolverSelectorStrategy, Termination, Threads,
     },
     statistics::{GlobalStatistics, ScoreEvolutionRow},
-    working_solution::WorkingSolution,
 };
 
 use super::statistics::{SearchStatistics, ThreadSearchStatistics};

@@ -1,5 +1,5 @@
 use crate::solver::{
-    accepted_solution::AcceptedSolution, score::Score, working_solution::WorkingSolution,
+    accepted_solution::AcceptedSolution, score::Score, solution::working_solution::WorkingSolution,
 };
 
 use super::{

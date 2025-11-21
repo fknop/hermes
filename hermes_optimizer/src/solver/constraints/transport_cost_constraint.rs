@@ -1,6 +1,6 @@
 use crate::solver::{
     insertion::Insertion, insertion_context::InsertionContext, score::Score,
-    score_level::ScoreLevel, working_solution::WorkingSolution,
+    score_level::ScoreLevel, solution::working_solution::WorkingSolution,
 };
 
 use super::global_constraint::GlobalConstraint;

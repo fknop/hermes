@@ -1,6 +1,8 @@
 use jiff::SignedDuration;
 
-use crate::{problem::travel_cost_matrix::Distance, solver::working_solution::WorkingSolution};
+use crate::{
+    problem::travel_cost_matrix::Distance, solver::solution::working_solution::WorkingSolution,
+};
 
 use super::{ruin_context::RuinContext, ruin_solution::RuinSolution};
 

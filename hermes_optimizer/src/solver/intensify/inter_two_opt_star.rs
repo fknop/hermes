@@ -1,6 +1,8 @@
 use crate::{
     problem,
-    solver::{intensify::intensify_operator::ComputeDelta, working_solution::WorkingSolution},
+    solver::{
+        intensify::intensify_operator::ComputeDelta, solution::working_solution::WorkingSolution,
+    },
 };
 
 /// **Inter-Route 2-Opt* (Two-Opt Star)**

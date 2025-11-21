@@ -1,6 +1,6 @@
 use rand::RngCore;
 
-use crate::solver::working_solution::WorkingSolution;
+use crate::solver::solution::working_solution::WorkingSolution;
 
 use super::ruin_context::RuinContext;
 

@@ -5,11 +5,15 @@ use crate::solver::{
         or_opt::OrOptOperator, relocate::RelocateOperator, swap::SwapOperator,
         two_opt::TwoOptOperator,
     },
-    working_solution::WorkingSolution,
+    solution::working_solution::WorkingSolution,
 };
 
 pub trait ComputeDelta {
     fn compute_delta(&self, solution: &WorkingSolution) -> f64;
+}
+
+pub trait GenerateIntensifyOperators<T = Self> {
+    fn generate_operators(&self, solution: &WorkingSolution) -> Vec<T>;
 }
 
 pub enum IntensifyOperator {

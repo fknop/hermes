@@ -2,7 +2,7 @@ use std::f64;
 
 use crate::{
     problem::{service::ServiceId, vehicle_routing_problem::VehicleRoutingProblem},
-    solver::working_solution::WorkingSolution,
+    solver::solution::working_solution::WorkingSolution,
 };
 
 use super::{ruin_context::RuinContext, ruin_solution::RuinSolution};

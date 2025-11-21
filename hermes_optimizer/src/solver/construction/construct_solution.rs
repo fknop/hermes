@@ -23,7 +23,7 @@ use crate::{
             recreate_context::RecreateContext,
         },
         score_level::ScoreLevel,
-        working_solution::WorkingSolution,
+        solution::working_solution::WorkingSolution,
     },
 };
 

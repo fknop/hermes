@@ -1,5 +1,8 @@
 use std::f64;
 
+use serde::Serialize;
+
+#[derive(Debug, Clone, Serialize)]
 pub struct BBox {
     min: geo::Coord<f64>,
     max: geo::Coord<f64>,

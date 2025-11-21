@@ -1,5 +1,5 @@
 use crate::solver::{
-    intensify::intensify_operator::ComputeDelta, working_solution::WorkingSolution,
+    intensify::intensify_operator::ComputeDelta, solution::working_solution::WorkingSolution,
 };
 
 /// **Intra-Route Swap**

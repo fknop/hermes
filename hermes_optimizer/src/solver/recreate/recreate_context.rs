@@ -5,9 +5,10 @@ use crate::{
     solver::{
         constraints::{compute_insertion_score::compute_insertion_score, constraint::Constraint},
         insertion::Insertion,
+        insertion_context::compute_insertion_context,
         noise::NoiseGenerator,
         score::Score,
-        working_solution::{WorkingSolution, compute_insertion_context},
+        solution::working_solution::WorkingSolution,
     },
 };
 

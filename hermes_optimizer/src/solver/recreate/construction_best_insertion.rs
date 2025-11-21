@@ -3,7 +3,7 @@ use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use crate::solver::{
     insertion::{ExistingRouteInsertion, Insertion, NewRouteInsertion},
     score::Score,
-    working_solution::WorkingSolution,
+    solution::working_solution::WorkingSolution,
 };
 
 use super::{recreate_context::RecreateContext, recreate_solution::RecreateSolution};

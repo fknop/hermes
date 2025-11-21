@@ -12,7 +12,7 @@ use crate::{
     solver::{
         insertion::{ExistingRouteInsertion, Insertion, NewRouteInsertion},
         score::Score,
-        working_solution::WorkingSolution,
+        solution::working_solution::WorkingSolution,
     },
 };
 

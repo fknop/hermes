@@ -11,7 +11,7 @@ use hermes_optimizer::{
     },
     solver::{
         insertion::{ExistingRouteInsertion, Insertion, NewRouteInsertion},
-        working_solution::WorkingSolution,
+        solution::working_solution::WorkingSolution,
     },
 };
 

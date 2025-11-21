@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use serde::Serialize;
 
-use crate::solver::working_solution::WorkingSolution;
+use crate::solver::solution::working_solution::WorkingSolution;
 
 use super::{
     best_insertion::{BestInsertion, BestInsertionParams, BestInsertionSortMethod},
@@ -48,5 +48,7 @@ impl RecreateSolution for RecreateStrategy {
                 strategy.recreate_solution(solution, context);
             }
         }
+
+        solution.resync();
     }
 }

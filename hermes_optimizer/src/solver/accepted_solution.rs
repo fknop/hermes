@@ -2,7 +2,7 @@ use serde::Serialize;
 
 use super::{
     score::{Score, ScoreAnalysis},
-    working_solution::WorkingSolution,
+    solution::working_solution::WorkingSolution,
 };
 
 #[derive(Clone, Serialize)]

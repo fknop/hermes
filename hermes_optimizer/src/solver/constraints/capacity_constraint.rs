@@ -9,7 +9,7 @@ use crate::{
         insertion_context::InsertionContext,
         score::Score,
         score_level::ScoreLevel,
-        working_solution::WorkingSolutionRoute,
+        solution::route::WorkingSolutionRoute,
     },
 };
 

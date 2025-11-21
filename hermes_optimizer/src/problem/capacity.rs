@@ -3,7 +3,7 @@ use std::ops::{Add, AddAssign, Index, Sub, SubAssign};
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 
-type CapacityVector = SmallVec<[f64; 4]>;
+type CapacityVector = SmallVec<[f64; 2]>;
 
 #[derive(Default, Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct Capacity(CapacityVector);

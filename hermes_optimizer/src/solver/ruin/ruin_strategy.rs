@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use serde::Serialize;
 
-use crate::solver::working_solution::WorkingSolution;
+use crate::solver::solution::working_solution::WorkingSolution;
 
 use super::{
     ruin_cluster::RuinCluster, ruin_context::RuinContext, ruin_radial::RuinRadial,

@@ -1,4 +1,4 @@
-use crate::solver::working_solution::WorkingSolution;
+use crate::solver::solution::working_solution::WorkingSolution;
 
 use super::recreate_context::RecreateContext;
 
