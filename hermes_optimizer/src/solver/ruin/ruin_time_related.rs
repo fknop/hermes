@@ -38,7 +38,9 @@ impl RuinSolution for RuinTimeRelated {
         R: rand::Rng,
     {
         let routes = solution.routes();
-        let target_route_id = context.rng.random_range(0..routes.len());
+
+        let target_route_id = solution.random_non_empty_route(context.rng).unwrap();
+
         let target_activity_id = context
             .rng
             .random_range(0..routes[target_route_id].activities().len());

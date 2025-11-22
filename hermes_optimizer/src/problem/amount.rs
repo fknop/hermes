@@ -1,27 +1,41 @@
 use std::ops::{Add, AddAssign, Index, Sub, SubAssign};
 
+use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 
-trait GetAmount {
+pub trait AmountExpression {
     fn get(&self, index: usize) -> f64;
     fn len(&self) -> usize;
-    fn empty(&self) -> bool {
+    fn is_empty(&self) -> bool {
         self.len() == 0
     }
+    fn iter(&self) -> impl Iterator<Item = f64>;
 }
 
 type Vector = SmallVec<[f64; 2]>;
 
-#[derive(Debug, Clone)]
-struct Amount(Vector);
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Amount(Vector);
 
 impl Amount {
-    fn from_vec(vec: Vec<f64>) -> Self {
+    pub const EMPTY: Amount = Amount(Vector::new_const());
+
+    pub fn empty() -> Self {
+        Self::EMPTY
+    }
+
+    pub fn from_vec(vec: Vec<f64>) -> Self {
         Amount(SmallVec::from_vec(vec))
     }
 }
 
-impl GetAmount for Amount {
+impl Default for Amount {
+    fn default() -> Self {
+        Self::EMPTY
+    }
+}
+
+impl AmountExpression for Amount {
     fn len(&self) -> usize {
         self.0.len()
     }
@@ -29,6 +43,10 @@ impl GetAmount for Amount {
     #[inline]
     fn get(&self, index: usize) -> f64 {
         self.0.get(index).cloned().unwrap_or(0.0)
+    }
+
+    fn iter(&self) -> impl Iterator<Item = f64> {
+        self.0.iter().cloned()
     }
 }
 
@@ -66,7 +84,7 @@ impl SubAssign<&Amount> for Amount {
 }
 
 impl<'a> Add<&'a Amount> for &'a Amount {
-    type Output = AmountSum<'a>;
+    type Output = AmountSum<'a, Amount, Amount>;
 
     fn add(self, rhs: &'a Amount) -> Self::Output {
         AmountSum { lhs: self, rhs }
@@ -83,7 +101,7 @@ impl<'a> Sub<&'a Amount> for &'a Amount {
 
 impl<A> PartialEq<A> for Amount
 where
-    A: GetAmount,
+    A: AmountExpression,
 {
     fn eq(&self, other: &A) -> bool {
         if self.len() != other.len() {
@@ -103,7 +121,7 @@ where
 
 impl<A> PartialOrd<A> for Amount
 where
-    A: GetAmount,
+    A: AmountExpression,
 {
     fn partial_cmp(&self, other: &A) -> Option<std::cmp::Ordering> {
         for i in 0..self.len().max(other.len()) {
@@ -120,12 +138,20 @@ where
 }
 
 #[derive(Debug, Clone)]
-struct AmountSum<'a> {
-    lhs: &'a Amount,
-    rhs: &'a Amount,
+pub struct AmountSum<'a, LHS, RHS>
+where
+    LHS: AmountExpression,
+    RHS: AmountExpression,
+{
+    lhs: &'a LHS,
+    rhs: &'a RHS,
 }
 
-impl GetAmount for AmountSum<'_> {
+impl<'a, LHS, RHS> AmountExpression for AmountSum<'a, LHS, RHS>
+where
+    LHS: AmountExpression,
+    RHS: AmountExpression,
+{
     fn len(&self) -> usize {
         self.lhs.len().max(self.rhs.len())
     }
@@ -133,33 +159,63 @@ impl GetAmount for AmountSum<'_> {
     fn get(&self, index: usize) -> f64 {
         self.lhs.get(index) + self.rhs.get(index)
     }
+
+    fn iter(&self) -> impl Iterator<Item = f64> {
+        self.lhs.iter().zip(self.rhs.iter()).map(|(a, b)| a + b)
+    }
 }
 
-impl PartialEq<Amount> for AmountSum<'_> {
+impl<'a, LHS, RHS> PartialEq<Amount> for AmountSum<'a, LHS, RHS>
+where
+    LHS: AmountExpression,
+    RHS: AmountExpression,
+{
     fn eq(&self, other: &Amount) -> bool {
         other.eq(self)
     }
 }
 
-impl PartialOrd<Amount> for AmountSum<'_> {
+impl<'a, LHS, RHS> PartialOrd<Amount> for AmountSum<'a, LHS, RHS>
+where
+    LHS: AmountExpression,
+    RHS: AmountExpression,
+{
     fn partial_cmp(&self, other: &Amount) -> Option<std::cmp::Ordering> {
         other.partial_cmp(self).map(|o| o.reverse())
     }
 }
 
+impl<'a, LHS, RHS> From<AmountSum<'a, LHS, RHS>> for Amount
+where
+    LHS: AmountExpression,
+    RHS: AmountExpression,
+{
+    fn from(val: AmountSum<'a, LHS, RHS>) -> Self {
+        let mut vec = SmallVec::with_capacity(val.len());
+        for i in 0..val.len() {
+            vec.push(val.get(i));
+        }
+        Amount(vec)
+    }
+}
+
 #[derive(Debug, Clone)]
-struct AmountSub<'a> {
+pub struct AmountSub<'a> {
     lhs: &'a Amount,
     rhs: &'a Amount,
 }
 
-impl GetAmount for AmountSub<'_> {
+impl AmountExpression for AmountSub<'_> {
     fn len(&self) -> usize {
         self.lhs.len().max(self.rhs.len())
     }
 
     fn get(&self, index: usize) -> f64 {
         self.lhs.get(index) - self.rhs.get(index)
+    }
+
+    fn iter(&self) -> impl Iterator<Item = f64> {
+        self.lhs.iter().zip(self.rhs.iter()).map(|(a, b)| a - b)
     }
 }
 
@@ -172,6 +228,16 @@ impl PartialEq<Amount> for AmountSub<'_> {
 impl PartialOrd<Amount> for AmountSub<'_> {
     fn partial_cmp(&self, other: &Amount) -> Option<std::cmp::Ordering> {
         other.partial_cmp(self).map(|o| o.reverse())
+    }
+}
+
+impl From<AmountSub<'_>> for Amount {
+    fn from(val: AmountSub<'_>) -> Self {
+        let mut vec = SmallVec::with_capacity(val.len());
+        for i in 0..val.len() {
+            vec.push(val.get(i));
+        }
+        Amount(vec)
     }
 }
 

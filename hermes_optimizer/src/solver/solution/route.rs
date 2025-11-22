@@ -4,6 +4,7 @@ use serde::Serialize;
 
 use crate::{
     problem::{
+        amount::AmountExpression,
         capacity::Capacity,
         service::{ServiceId, ServiceType},
         vehicle::{Vehicle, VehicleId},
@@ -39,7 +40,7 @@ impl WorkingSolutionRoute {
             vehicle_id,
             services: FxHashSet::default(),
             activities: Vec::new(),
-            total_initial_load: Capacity::ZERO,
+            total_initial_load: Capacity::EMPTY,
             bbox: BBox::default(),
             updated_in_iteration: false,
         }
@@ -264,7 +265,7 @@ impl WorkingSolutionRoute {
         let vehicle_capacity = vehicle.capacity();
 
         for (index, demand) in self.total_initial_load.iter().enumerate() {
-            let capacity = vehicle_capacity.get(index).unwrap_or(0.0);
+            let capacity = vehicle_capacity.get(index);
             if capacity == 0.0 && demand > 0.0 {
                 max_load = 1.0;
             } else {
@@ -393,7 +394,7 @@ impl WorkingSolutionRoute {
                 )
             },
             if self.activities().is_empty() || position == 0 {
-                compute_activity_cumulative_load(problem.service(service_id), &Capacity::ZERO)
+                compute_activity_cumulative_load(problem.service(service_id), &Capacity::EMPTY)
             } else {
                 let previous_activity = &self.activities[position - 1];
                 compute_activity_cumulative_load(
@@ -420,7 +421,7 @@ impl WorkingSolutionRoute {
             return;
         }
 
-        let mut total_initial_load = Capacity::ZERO;
+        let mut total_initial_load = Capacity::EMPTY;
 
         for activity in self
             .activities()
@@ -482,7 +483,7 @@ impl WorkingSolutionRoute {
 
                     current_activity.cumulative_load = compute_activity_cumulative_load(
                         problem.service(current_activity.service_id),
-                        &Capacity::ZERO,
+                        &Capacity::EMPTY,
                     );
                 }
             }
@@ -513,7 +514,7 @@ impl WorkingSolutionRoute {
                 let load = total_initial_load + &current_activity.cumulative_load;
                 match load.partial_cmp(&next_activity.max_load_until_end) {
                     Some(std::cmp::Ordering::Greater) => {
-                        current_activity.max_load_until_end = load.clone();
+                        current_activity.max_load_until_end = load.into()
                     }
                     _ => {
                         current_activity.max_load_until_end =
@@ -523,7 +524,7 @@ impl WorkingSolutionRoute {
             }
             None => {
                 current_activity.max_load_until_end =
-                    total_initial_load + &current_activity.cumulative_load;
+                    (total_initial_load + &current_activity.cumulative_load).into();
             }
         }
     }

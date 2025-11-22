@@ -128,7 +128,7 @@ pub fn compute_insertion_context<'a>(
             let service = problem.service(context.service_id);
             let current_initial_load = route.total_initial_load();
             let new_initial_load = if service.service_type() == ServiceType::Delivery {
-                current_initial_load + service.demand()
+                (current_initial_load + service.demand()).into()
             } else {
                 current_initial_load.clone()
             };
@@ -198,7 +198,7 @@ pub fn compute_insertion_context<'a>(
                 initial_load: if service.service_type() == ServiceType::Delivery {
                     service.demand().clone()
                 } else {
-                    Capacity::zero()
+                    Capacity::EMPTY
                 },
                 activities,
                 insertion,

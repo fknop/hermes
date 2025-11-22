@@ -1,8 +1,9 @@
-use std::ops::AddAssign;
-
 use crate::{
     problem::{
-        capacity::Capacity, service::ServiceType, vehicle_routing_problem::VehicleRoutingProblem,
+        amount::AmountExpression,
+        capacity::{Capacity, is_capacity_satisfied, over_capacity_demand},
+        service::ServiceType,
+        vehicle_routing_problem::VehicleRoutingProblem,
     },
     solver::{
         insertion::{ExistingRouteInsertion, Insertion, NewRouteInsertion},
@@ -36,20 +37,17 @@ impl CapacityConstraint {
 impl CapacityConstraint {
     fn compute_capacity_score(
         &self,
-        load: &mut Capacity,
         vehicle_capacity: &Capacity,
         initial_load: &Capacity,
         cumulative_load: &Capacity,
     ) -> Score {
-        load.reset();
-        load.add_assign(initial_load);
-        load.add_assign(cumulative_load);
-        if vehicle_capacity.satisfies_demand(load) {
+        let load = initial_load + cumulative_load;
+        if is_capacity_satisfied(vehicle_capacity, &load) {
             Score::zero()
         } else {
             Score::of(
                 self.score_level,
-                vehicle_capacity.over_capacity_demand(load),
+                over_capacity_demand(vehicle_capacity, &load),
             )
         }
     }
@@ -69,18 +67,16 @@ impl RouteConstraint for CapacityConstraint {
         let initial_load = route.total_initial_load();
 
         let mut score = Score::zero();
-        if !vehicle.capacity().satisfies_demand(initial_load) {
+
+        if !is_capacity_satisfied(vehicle.capacity(), initial_load) {
             score += Score::of(
                 self.score_level,
-                vehicle.capacity().over_capacity_demand(initial_load),
+                over_capacity_demand(vehicle.capacity(), initial_load),
             );
         }
 
-        // Reuse vector to avoid allocations
-        let mut load = Capacity::zero();
         for activity in route.activities() {
             score += self.compute_capacity_score(
-                &mut load,
                 vehicle.capacity(),
                 initial_load,
                 activity.cumulative_load(),
@@ -108,12 +104,11 @@ impl RouteConstraint for CapacityConstraint {
         };
 
         let mut score = Score::zero();
-        if !vehicle.capacity().satisfies_demand(&context.initial_load) {
+
+        if !is_capacity_satisfied(vehicle.capacity(), &context.initial_load) {
             score += Score::of(
                 self.score_level,
-                vehicle
-                    .capacity()
-                    .over_capacity_demand(&context.initial_load),
+                over_capacity_demand(vehicle.capacity(), &context.initial_load),
             );
         }
 
@@ -129,10 +124,10 @@ impl RouteConstraint for CapacityConstraint {
                     && service.service_type() == ServiceType::Pickup
                 {
                     let new_max_load = next_activity.max_load_until_end() + service.demand();
-                    if !vehicle.capacity().satisfies_demand(&new_max_load) {
+                    if !is_capacity_satisfied(vehicle.capacity(), &new_max_load) {
                         score += Score::of(
                             self.score_level,
-                            vehicle.capacity().over_capacity_demand(&new_max_load),
+                            over_capacity_demand(vehicle.capacity(), &new_max_load),
                         );
                     }
                 }

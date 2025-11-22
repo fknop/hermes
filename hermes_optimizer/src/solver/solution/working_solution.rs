@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use fxhash::FxHashSet;
+use rand::seq::IteratorRandom;
 use serde::Serialize;
 
 use crate::{
@@ -18,7 +19,12 @@ pub struct WorkingSolution {
 
 impl WorkingSolution {
     pub fn new(problem: Arc<VehicleRoutingProblem>) -> Self {
-        let routes = Vec::new();
+        let routes = problem
+            .vehicles()
+            .iter()
+            .enumerate()
+            .map(|(vehicle_id, _)| WorkingSolutionRoute::empty(vehicle_id))
+            .collect();
         let unassigned_services = (0..problem.services().len()).collect();
 
         WorkingSolution {
@@ -28,13 +34,16 @@ impl WorkingSolution {
         }
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.unassigned_services.len() == self.problem.services().len()
+    }
+
     pub fn is_unassigned(&self, service_id: ServiceId) -> bool {
         self.unassigned_services.contains(&service_id)
     }
 
     pub fn total_transport_costs(&self) -> f64 {
-        self.routes
-            .iter()
+        self.non_empty_routes_iter()
             .map(|route| route.transport_costs(&self.problem))
             .sum()
     }
@@ -75,13 +84,13 @@ impl WorkingSolution {
         true
     }
 
-    pub fn num_available_vehicles(&self) -> usize {
-        self.problem.vehicles().len() - self.routes.len()
-    }
+    // pub fn num_available_vehicles(&self) -> usize {
+    //     self.problem.vehicles().len() - self.routes.len()
+    // }
 
-    pub fn has_available_vehicle(&self) -> bool {
-        self.problem.vehicles().len() > self.routes.len()
-    }
+    // pub fn has_available_vehicle(&self) -> bool {
+    //     self.problem.vehicles().len() > self.routes.len()
+    // }
 
     pub fn available_vehicles_iter(&self) -> impl std::iter::Iterator<Item = usize> {
         // Find the first vehicle that has no routes assigned
@@ -91,10 +100,9 @@ impl WorkingSolution {
             .enumerate()
             .map(|(vehicle_id, _)| vehicle_id)
             .filter(|&vehicle_id| {
-                !self
-                    .routes
+                self.routes
                     .iter()
-                    .any(|route| route.vehicle_id == vehicle_id)
+                    .any(|route| route.is_empty() && route.vehicle_id == vehicle_id)
             })
     }
 
@@ -110,6 +118,14 @@ impl WorkingSolution {
         self.problem.as_ref()
     }
 
+    pub fn non_empty_routes_iter(&self) -> impl Iterator<Item = &WorkingSolutionRoute> {
+        self.routes.iter().filter(|route| !route.is_empty())
+    }
+
+    pub fn non_empty_routes_count(&self) -> usize {
+        self.routes.iter().filter(|route| !route.is_empty()).count()
+    }
+
     pub fn routes(&self) -> &[WorkingSolutionRoute] {
         &self.routes
     }
@@ -118,11 +134,16 @@ impl WorkingSolution {
         &self.routes[route_id]
     }
 
-    pub fn random_route<R>(&self, rng: &mut R) -> usize
+    pub fn random_non_empty_route<R>(&self, rng: &mut R) -> Option<usize>
     where
         R: rand::Rng,
     {
-        rng.random_range(0..self.routes.len())
+        self.routes
+            .iter()
+            .enumerate()
+            .filter(|(_, route)| !route.is_empty())
+            .choose(rng)
+            .map(|(index, _)| index)
     }
 
     pub fn route_of_service(&self, service_id: ServiceId) -> Option<usize> {
@@ -141,9 +162,11 @@ impl WorkingSolution {
                 self.unassigned_services.remove(&context.service_id);
             }
             Insertion::NewRoute(context) => {
-                let mut new_route = WorkingSolutionRoute::empty(context.vehicle_id);
-                new_route.insert_service(&self.problem, 0, context.service_id);
-                self.routes.push(new_route);
+                // panic!("Shouldn't use Insertion::NewRoute anymore");
+                // let mut new_route = WorkingSolutionRoute::empty(context.vehicle_id);
+                let route = &mut self.routes[context.vehicle_id];
+                route.insert_service(&self.problem, 0, context.service_id);
+                // self.routes.push(new_route);
                 self.unassigned_services.remove(&context.service_id);
             }
         }
@@ -159,13 +182,13 @@ impl WorkingSolution {
             self.unassigned_services.insert(service_id);
         }
 
-        if route.is_empty() {
-            self.routes.remove(route_id);
-        }
+        // if route.is_empty() {
+        //     self.routes.remove(route_id);
+        // }
     }
 
     pub fn remove_service(&mut self, service_id: ServiceId) -> bool {
-        let mut route_to_remove = None;
+        // let mut route_to_remove = None;
         let mut removed = false;
         for (route_id, route) in self.routes.iter_mut().enumerate() {
             removed = route.remove_service(&self.problem, service_id);
@@ -173,22 +196,22 @@ impl WorkingSolution {
             if removed {
                 self.unassigned_services.insert(service_id);
 
-                if route.is_empty() {
-                    route_to_remove = Some(route_id);
-                }
+                // if route.is_empty() {
+                //     route_to_remove = Some(route_id);
+                // }
                 break;
             }
         }
 
-        if let Some(route_id) = route_to_remove {
-            self.routes.remove(route_id);
-        }
+        // if let Some(route_id) = route_to_remove {
+        //     self.routes.remove(route_id);
+        // }
 
         removed
     }
 
     pub fn remove_service_from_route(&mut self, route_id: usize, service_id: ServiceId) -> bool {
-        let mut route_to_remove = None;
+        // let mut route_to_remove = None;
         let mut removed = false;
         let route = &mut self.routes[route_id];
         if route.contains_service(service_id) {
@@ -197,15 +220,15 @@ impl WorkingSolution {
             if removed {
                 self.unassigned_services.insert(service_id);
 
-                if route.is_empty() {
-                    route_to_remove = Some(route_id);
-                }
+                // if route.is_empty() {
+                //     route_to_remove = Some(route_id);
+                // }
             }
         }
 
-        if let Some(route_id) = route_to_remove {
-            self.routes.remove(route_id);
-        }
+        // if let Some(route_id) = route_to_remove {
+        //     self.routes.remove(route_id);
+        // }
 
         removed
     }
@@ -222,7 +245,7 @@ impl WorkingSolution {
             self.unassigned_services.insert(activity.service_id);
         }
 
-        self.routes.remove(route_id);
+        self.routes[route_id] = WorkingSolutionRoute::empty(route_id);
 
         removed
     }

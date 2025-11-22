@@ -6,7 +6,10 @@ use rand::rngs::SmallRng;
 
 use crate::{
     problem::{
-        capacity::Capacity, service::ServiceType, vehicle_routing_problem::VehicleRoutingProblem,
+        amount::{Amount, AmountExpression},
+        capacity::{Capacity, is_capacity_satisfied},
+        service::ServiceType,
+        vehicle_routing_problem::VehicleRoutingProblem,
     },
     solver::{
         constraints::{
@@ -31,11 +34,13 @@ use crate::{
 /// Kmin = max(Q_i / D_i) for each capacity dimension i
 fn find_minimum_vehicles(problem: &VehicleRoutingProblem) -> usize {
     let mut minimum_vehicles = problem.vehicles().len();
-    let total_demand = problem
+    let total_demand: Capacity = problem
         .services()
         .iter()
         .filter(|service| service.service_type() == ServiceType::Delivery)
-        .fold(Capacity::ZERO, |total, service| &total + service.demand());
+        .fold(Capacity::EMPTY, |total, service| {
+            (&total + service.demand()).into()
+        });
 
     for vehicle in problem.vehicles() {
         let mut minimum_for_vehicle_capacity = 0;
@@ -43,7 +48,7 @@ fn find_minimum_vehicles(problem: &VehicleRoutingProblem) -> usize {
         let capacity = vehicle.capacity();
 
         for (index, capacity_dimension) in capacity.iter().enumerate() {
-            let demand = total_demand.get(index).unwrap_or(0.0);
+            let demand = total_demand.get(index);
             if capacity_dimension > 0.0 {
                 let required_vehicles = (demand / capacity_dimension).ceil() as usize;
                 minimum_for_vehicle_capacity = minimum_for_vehicle_capacity.max(required_vehicles);
@@ -335,10 +340,8 @@ pub fn construct_solution(
                 }
 
                 let vehicle = route.vehicle(problem);
-                if !vehicle
-                    .capacity()
-                    .satisfies_demand(activity.cumulative_load())
-                {
+
+                if !is_capacity_satisfied(vehicle.capacity(), activity.cumulative_load()) {
                     service_to_remove = Some(activity.service_id());
                     break;
                 }

@@ -53,20 +53,25 @@ impl RegretInsertion {
                     // One insertion after each activity
                     (context.problem.services().len() - solution.unassigned_services().len())
                     // One insertion at the start of every route
-                    + solution.routes().len()
-                    // One insertion per available vehicle
-                    + solution.num_available_vehicles(),
+                    + solution.routes().len(),
                 );
 
                 // Find all possible insertions in existing routes
                 for (route_id, route) in solution.routes().iter().enumerate() {
                     // We can insert at any position, including the end
                     for position in 0..=route.activities().len() {
-                        let insertion = Insertion::ExistingRoute(ExistingRouteInsertion {
-                            route_id,
-                            service_id,
-                            position,
-                        });
+                        let insertion = if route.is_empty() {
+                            Insertion::NewRoute(NewRouteInsertion {
+                                service_id,
+                                vehicle_id: route.vehicle_id(),
+                            })
+                        } else {
+                            Insertion::ExistingRoute(ExistingRouteInsertion {
+                                route_id,
+                                service_id,
+                                position,
+                            })
+                        };
                         let score = context.compute_insertion_score(solution, &insertion);
 
                         // Only consider valid insertions
@@ -75,16 +80,16 @@ impl RegretInsertion {
                 }
 
                 // Consider creating a new route if a vehicle is available
-                if solution.has_available_vehicle() {
-                    for vehicle_id in solution.available_vehicles_iter() {
-                        let insertion = Insertion::NewRoute(NewRouteInsertion {
-                            service_id,
-                            vehicle_id,
-                        });
-                        let score = context.compute_insertion_score(solution, &insertion);
-                        potential_insertions.push((score, insertion));
-                    }
-                }
+                // if solution.has_available_vehicle() {
+                //     for vehicle_id in solution.available_vehicles_iter() {
+                //         let insertion = Insertion::NewRoute(NewRouteInsertion {
+                //             service_id,
+                //             vehicle_id,
+                //         });
+                //         let score = context.compute_insertion_score(solution, &insertion);
+                //         potential_insertions.push((score, insertion));
+                //     }
+                // }
 
                 // If no valid insertion was found for this service, skip it
                 if potential_insertions.is_empty() {

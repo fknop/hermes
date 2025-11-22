@@ -14,7 +14,13 @@ impl RuinSolution for RuinRoute {
         let mut remaining: i64 = context.num_activities_to_remove as i64;
 
         while remaining > 0 {
-            let route_ids: Vec<usize> = (0..solution.routes().len()).collect();
+            let route_ids = solution
+                .routes()
+                .iter()
+                .enumerate()
+                .filter(|(_, route)| !route.is_empty())
+                .map(|(id, _)| id)
+                .collect::<Vec<usize>>();
 
             let route_id = route_ids
                 .choose_weighted(context.rng, |&route_id| {

@@ -44,8 +44,7 @@ fn transform_solution(accepted_solution: &AcceptedSolution) -> BenchmarkSolution
     let problem = accepted_solution.solution.problem();
     let routes: Vec<BenchmarkSolutionRoute> = accepted_solution
         .solution
-        .routes()
-        .iter()
+        .non_empty_routes_iter()
         .map(|route| {
             let mut activities: Vec<BenchmarkSolutionActivity> = vec![];
 

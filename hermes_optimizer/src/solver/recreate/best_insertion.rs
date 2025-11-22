@@ -6,7 +6,7 @@ use serde::Serialize;
 
 use crate::{
     problem::{
-        service::ServiceId, travel_cost_matrix::Distance,
+        amount::AmountExpression, service::ServiceId, travel_cost_matrix::Distance,
         vehicle_routing_problem::VehicleRoutingProblem,
     },
     solver::{
@@ -95,8 +95,8 @@ impl BestInsertion {
             }
             BestInsertionSortMethod::Demand => unassigned_services.sort_by(|a, b| {
                 // Not perfect but good enough for sorting purposes.
-                let first_demand_a = problem.service(*a).demand().get(0).unwrap_or(0.0);
-                let first_demand_b = problem.service(*b).demand().get(0).unwrap_or(0.0);
+                let first_demand_a = problem.service(*a).demand().get(0);
+                let first_demand_b = problem.service(*b).demand().get(0);
 
                 first_demand_a.total_cmp(&first_demand_b)
             }),
@@ -174,11 +174,18 @@ impl BestInsertion {
                         continue;
                     }
 
-                    let insertion = Insertion::ExistingRoute(ExistingRouteInsertion {
-                        route_id,
-                        service_id,
-                        position,
-                    });
+                    let insertion = if route.is_empty() {
+                        Insertion::NewRoute(NewRouteInsertion {
+                            service_id,
+                            vehicle_id: route.vehicle_id(),
+                        })
+                    } else {
+                        Insertion::ExistingRoute(ExistingRouteInsertion {
+                            route_id,
+                            service_id,
+                            position,
+                        })
+                    };
 
                     let score = context.compute_insertion_score(solution, &insertion);
 
@@ -189,21 +196,21 @@ impl BestInsertion {
                 }
             }
 
-            if solution.has_available_vehicle() {
-                for vehicle_id in solution.available_vehicles_iter() {
-                    let new_route_insertion = Insertion::NewRoute(NewRouteInsertion {
-                        service_id,
-                        vehicle_id,
-                    });
+            // if solution.has_available_vehicle() {
+            //     for vehicle_id in solution.available_vehicles_iter() {
+            //         let new_route_insertion = Insertion::NewRoute(NewRouteInsertion {
+            //             service_id,
+            //             vehicle_id,
+            //         });
 
-                    let score = context.compute_insertion_score(solution, &new_route_insertion);
+            //         let score = context.compute_insertion_score(solution, &new_route_insertion);
 
-                    if score < best_score {
-                        best_score = score;
-                        best_insertion = Some(new_route_insertion);
-                    }
-                }
-            }
+            //         if score < best_score {
+            //             best_score = score;
+            //             best_insertion = Some(new_route_insertion);
+            //         }
+            //     }
+            // }
 
             if let Some(insertion) = best_insertion {
                 solution.insert_service(&insertion);

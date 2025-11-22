@@ -332,7 +332,7 @@ impl Search {
             Termination::VehiclesAndCosts { vehicles, costs } => {
                 if let Some(best_solution) = state.best_solutions.read().first() {
                     best_solution.solution.total_transport_costs() <= costs
-                        && best_solution.solution.routes().len() <= vehicles
+                        && best_solution.solution.non_empty_routes_iter().count() <= vehicles
                 } else {
                     false
                 }

@@ -102,8 +102,8 @@ pub(crate) fn compute_activity_cumulative_load(
     current_cumulative_load: &Capacity,
 ) -> Capacity {
     match service.service_type() {
-        ServiceType::Pickup => current_cumulative_load.add(service.demand()),
-        ServiceType::Delivery => current_cumulative_load.sub(service.demand()),
+        ServiceType::Pickup => current_cumulative_load.add(service.demand()).into(),
+        ServiceType::Delivery => current_cumulative_load.sub(service.demand()).into(),
     }
 }
 

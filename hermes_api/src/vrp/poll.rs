@@ -105,8 +105,7 @@ fn transform_solution(accepted_solution: &AcceptedSolution, hermes: &Hermes) -> 
     let problem = accepted_solution.solution.problem();
     let routes: Vec<ApiSolutionRoute> = accepted_solution
         .solution
-        .routes()
-        .iter()
+        .non_empty_routes_iter()
         .map(|route| {
             let vehicle = problem.vehicle(route.vehicle_id());
             let mut activities: Vec<ApiSolutionActivity> = vec![];

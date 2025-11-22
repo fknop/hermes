@@ -3,307 +3,337 @@ use std::ops::{Add, AddAssign, Index, Sub, SubAssign};
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 
-type CapacityVector = SmallVec<[f64; 2]>;
+use crate::problem::amount::{Amount, AmountExpression};
 
-#[derive(Default, Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct Capacity(CapacityVector);
+pub type Capacity = Amount;
 
-impl Capacity {
-    pub fn from_vec(vec: Vec<f64>) -> Self {
-        Capacity(CapacityVector::from_vec(vec))
+pub fn is_capacity_satisfied<C, D>(capacity: &C, demand: &D) -> bool
+where
+    C: AmountExpression,
+    D: AmountExpression,
+{
+    if capacity.len() < demand.len() {
+        return false;
     }
 
-    pub fn new(capacity: CapacityVector) -> Self {
-        Capacity(capacity)
-    }
-
-    pub const ZERO: Capacity = Capacity(CapacityVector::new_const());
-
-    pub fn zero() -> Self {
-        Capacity(CapacityVector::new())
-    }
-
-    pub fn iter(&self) -> impl Iterator<Item = f64> {
-        self.0.iter().cloned()
-    }
-
-    pub fn get(&self, index: usize) -> Option<f64> {
-        self.0.get(index).cloned()
-    }
-
-    pub fn compute_min_max_capacities(capacities: &[&Capacity]) -> (Capacity, Capacity) {
-        if capacities.is_empty() {
-            return (Capacity::ZERO, Capacity::ZERO);
-        }
-
-        let max_size = capacities.iter().map(|c| c.0.len()).max().unwrap_or(0);
-        let mut min = CapacityVector::with_capacity(max_size);
-        min.resize(max_size, 0.0);
-
-        let mut max = CapacityVector::with_capacity(max_size);
-        max.resize(max_size, 0.0);
-
-        for i in 0..max_size {
-            min[i] = capacities
-                .iter()
-                .map(|c| c.0.get(i).cloned().unwrap_or(0.0))
-                .fold(f64::INFINITY, |a, b| a.min(b));
-
-            max[i] = capacities
-                .iter()
-                .map(|c| c.0.get(i).cloned().unwrap_or(0.0))
-                .fold(0.0_f64, |a, b| a.max(b));
-        }
-
-        (Capacity(min), Capacity(max))
-    }
-
-    pub fn len(&self) -> usize {
-        self.0.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty() || self.0.iter().all(|&c| c == 0.0)
-    }
-
-    pub fn reset(&mut self) {
-        self.0.fill(0.0);
-    }
-
-    pub fn satisfies_demand(&self, demand: &Capacity) -> bool {
-        if self.len() < demand.len() {
-            return false;
-        }
-
-        demand.0.iter().zip(self.0.iter()).all(|(d, c)| d <= c)
-    }
-
-    pub fn over_capacity_demand(&self, demand: &Capacity) -> f64 {
-        let mut over_capacity = 0.0;
-
-        for i in 0..demand.0.len() {
-            if self.0[i] < demand.0[i] {
-                over_capacity += demand.0[i] - self.0[i];
-            }
-        }
-
-        over_capacity
-    }
+    demand.iter().zip(capacity.iter()).all(|(d, c)| d <= c)
 }
 
-impl AddAssign<&Capacity> for Capacity {
-    fn add_assign(&mut self, rhs: &Capacity) {
-        if self.0.len() < rhs.0.len() {
-            self.0.resize(rhs.0.len(), 0.0);
-        }
+pub fn over_capacity_demand<C, D>(capacity: &C, demand: &D) -> f64
+where
+    C: AmountExpression,
+    D: AmountExpression,
+{
+    let mut over_capacity = 0.0;
 
-        for (a, b) in self.0.iter_mut().zip(rhs.0.iter()) {
-            *a += *b;
+    for i in 0..demand.len() {
+        if capacity.get(i) < demand.get(i) {
+            over_capacity += demand.get(i) - capacity.get(i);
         }
     }
+
+    over_capacity
 }
 
-impl SubAssign<&Capacity> for Capacity {
-    fn sub_assign(&mut self, rhs: &Capacity) {
-        if self.0.len() < rhs.0.len() {
-            self.0.resize(rhs.0.len(), 0.0);
-        }
+// #[derive(Default, Debug, PartialEq, Clone, Serialize, Deserialize)]
+// pub struct Capacity(CapacityVector);
 
-        for (a, b) in self.0.iter_mut().zip(rhs.0.iter()) {
-            *a -= *b;
-        }
-    }
-}
+// impl Capacity {
+//     pub fn from_vec(vec: Vec<f64>) -> Self {
+//         Capacity(CapacityVector::from_vec(vec))
+//     }
 
-impl Add<&Capacity> for &Capacity {
-    type Output = Capacity;
+//     pub fn new(capacity: CapacityVector) -> Self {
+//         Capacity(capacity)
+//     }
 
-    fn add(self, rhs: &Capacity) -> Self::Output {
-        if self.len() == rhs.len() {
-            let mut output = CapacityVector::new();
+//     pub const ZERO: Capacity = Capacity(CapacityVector::new_const());
 
-            for (a, b) in self.0.iter().zip(rhs.iter()) {
-                output.push(a + b);
-            }
-            Capacity(output)
-        } else {
-            let mut output = self.clone();
+//     pub fn zero() -> Self {
+//         Capacity(CapacityVector::new())
+//     }
 
-            output += rhs;
+//     pub fn iter(&self) -> impl Iterator<Item = f64> {
+//         self.0.iter().cloned()
+//     }
 
-            output
-        }
-    }
-}
+//     pub fn get(&self, index: usize) -> Option<f64> {
+//         self.0.get(index).cloned()
+//     }
 
-impl Sub<&Capacity> for &Capacity {
-    type Output = Capacity;
+//     pub fn compute_min_max_capacities(capacities: &[&Capacity]) -> (Capacity, Capacity) {
+//         if capacities.is_empty() {
+//             return (Capacity::ZERO, Capacity::ZERO);
+//         }
 
-    fn sub(self, rhs: &Capacity) -> Self::Output {
-        if self.len() == rhs.len() {
-            let mut output = CapacityVector::new();
+//         let max_size = capacities.iter().map(|c| c.0.len()).max().unwrap_or(0);
+//         let mut min = CapacityVector::with_capacity(max_size);
+//         min.resize(max_size, 0.0);
 
-            for (a, b) in self.0.iter().zip(rhs.iter()) {
-                output.push(a - b);
-            }
-            Capacity(output)
-        } else {
-            let mut output = self.clone();
+//         let mut max = CapacityVector::with_capacity(max_size);
+//         max.resize(max_size, 0.0);
 
-            output -= rhs;
+//         for i in 0..max_size {
+//             min[i] = capacities
+//                 .iter()
+//                 .map(|c| c.0.get(i).cloned().unwrap_or(0.0))
+//                 .fold(f64::INFINITY, |a, b| a.min(b));
 
-            output
-        }
-    }
-}
+//             max[i] = capacities
+//                 .iter()
+//                 .map(|c| c.0.get(i).cloned().unwrap_or(0.0))
+//                 .fold(0.0_f64, |a, b| a.max(b));
+//         }
 
-impl Index<usize> for Capacity {
-    type Output = f64;
+//         (Capacity(min), Capacity(max))
+//     }
 
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.0[index]
-    }
-}
+//     pub fn len(&self) -> usize {
+//         self.0.len()
+//     }
 
-impl PartialOrd for Capacity {
-    // A capacity is considered greater if at least one element is greater and none are less
-    // Similarly, it is considered less if at least one element is less and none are greater
-    // If all elements are equal, they are considered equal
-    // If there is a mix of greater and less, they are considered incomparable (None)
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        let mut self_greater = false;
-        let mut other_greater = false;
+//     pub fn is_empty(&self) -> bool {
+//         self.0.is_empty() || self.0.iter().all(|&c| c == 0.0)
+//     }
 
-        let max_len = self.len().max(other.len());
+//     pub fn reset(&mut self) {
+//         self.0.fill(0.0);
+//     }
 
-        for i in 0..max_len {
-            let self_value = self.0.get(i).cloned().unwrap_or(0.0);
-            let other_value = other.0.get(i).cloned().unwrap_or(0.0);
+//     pub fn satisfies_demand(&self, demand: &Capacity) -> bool {
+//         if self.len() < demand.len() {
+//             return false;
+//         }
 
-            if self_value > other_value {
-                self_greater = true;
-            } else if self_value < other_value {
-                other_greater = true;
-            }
+//         demand.0.iter().zip(self.0.iter()).all(|(d, c)| d <= c)
+//     }
 
-            if self_greater && other_greater {
-                return None; // Incomparable
-            }
-        }
+//     pub fn over_capacity_demand(&self, demand: &Capacity) -> f64 {
+//         let mut over_capacity = 0.0;
 
-        if self_greater {
-            Some(std::cmp::Ordering::Greater)
-        } else if other_greater {
-            Some(std::cmp::Ordering::Less)
-        } else {
-            Some(std::cmp::Ordering::Equal)
-        }
-    }
-}
+//         for i in 0..demand.0.len() {
+//             if self.0[i] < demand.0[i] {
+//                 over_capacity += demand.0[i] - self.0[i];
+//             }
+//         }
 
-#[cfg(test)]
-mod tests {
+//         over_capacity
+//     }
+// }
 
-    use std::cmp::Ordering;
+// impl AddAssign<&Capacity> for Capacity {
+//     fn add_assign(&mut self, rhs: &Capacity) {
+//         if self.0.len() < rhs.0.len() {
+//             self.0.resize(rhs.0.len(), 0.0);
+//         }
 
-    use super::*;
+//         for (a, b) in self.0.iter_mut().zip(rhs.0.iter()) {
+//             *a += *b;
+//         }
+//     }
+// }
 
-    #[test]
-    fn test_add_mut() {
-        let mut total_capacity = Capacity::default();
+// impl SubAssign<&Capacity> for Capacity {
+//     fn sub_assign(&mut self, rhs: &Capacity) {
+//         if self.0.len() < rhs.0.len() {
+//             self.0.resize(rhs.0.len(), 0.0);
+//         }
 
-        total_capacity.add_assign(&Capacity::from_vec(vec![1.0, 2.0, 3.0]));
+//         for (a, b) in self.0.iter_mut().zip(rhs.0.iter()) {
+//             *a -= *b;
+//         }
+//     }
+// }
 
-        assert_eq!(total_capacity, Capacity::from_vec(vec![1.0, 2.0, 3.0]));
+// impl Add<&Capacity> for &Capacity {
+//     type Output = Capacity;
 
-        total_capacity.add_assign(&Capacity::from_vec(vec![1.0, 2.0, 3.0]));
+//     fn add(self, rhs: &Capacity) -> Self::Output {
+//         if self.len() == rhs.len() {
+//             let mut output = CapacityVector::new();
 
-        assert_eq!(total_capacity, Capacity::from_vec(vec![2.0, 4.0, 6.0]));
-    }
+//             for (a, b) in self.0.iter().zip(rhs.iter()) {
+//                 output.push(a + b);
+//             }
+//             Capacity(output)
+//         } else {
+//             let mut output = self.clone();
 
-    #[test]
-    fn test_sub_mut() {
-        let mut total_capacity = Capacity::from_vec(vec![10.0, 4.0, 5.0]);
+//             output += rhs;
 
-        total_capacity.sub_assign(&Capacity::from_vec(vec![1.0, 2.0, 3.0]));
+//             output
+//         }
+//     }
+// }
 
-        assert_eq!(total_capacity, Capacity::from_vec(vec![9.0, 2.0, 2.0]));
+// impl Sub<&Capacity> for &Capacity {
+//     type Output = Capacity;
 
-        total_capacity.sub_assign(&Capacity::from_vec(vec![1.0, 0.0, 0.0]));
+//     fn sub(self, rhs: &Capacity) -> Self::Output {
+//         if self.len() == rhs.len() {
+//             let mut output = CapacityVector::new();
 
-        assert_eq!(total_capacity, Capacity::from_vec(vec![8.0, 2.0, 2.0]));
-    }
+//             for (a, b) in self.0.iter().zip(rhs.iter()) {
+//                 output.push(a - b);
+//             }
+//             Capacity(output)
+//         } else {
+//             let mut output = self.clone();
 
-    #[test]
-    fn satisfies_demand() {
-        let total_capacity = Capacity::from_vec(vec![10.0, 5.0, 8.0]);
-        let demand = Capacity::from_vec(vec![5.0, 3.0, 2.0]);
+//             output -= rhs;
 
-        assert!(total_capacity.satisfies_demand(&demand));
+//             output
+//         }
+//     }
+// }
 
-        let insufficient_demand = Capacity::from_vec(vec![11.0, 6.0, 2.0]);
+// impl Index<usize> for Capacity {
+//     type Output = f64;
 
-        assert!(!total_capacity.satisfies_demand(&insufficient_demand));
-    }
+//     fn index(&self, index: usize) -> &Self::Output {
+//         &self.0[index]
+//     }
+// }
 
-    #[test]
-    pub fn over_capacity_demand() {
-        let total_capacity = Capacity::from_vec(vec![10.0, 5.0, 8.0, 5.0]);
-        let demand = Capacity::from_vec(vec![5.0, 3.0, 2.0, 8.0]);
+// impl PartialOrd for Capacity {
+//     // A capacity is considered greater if at least one element is greater and none are less
+//     // Similarly, it is considered less if at least one element is less and none are greater
+//     // If all elements are equal, they are considered equal
+//     // If there is a mix of greater and less, they are considered incomparable (None)
+//     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+//         let mut self_greater = false;
+//         let mut other_greater = false;
 
-        assert_eq!(total_capacity.over_capacity_demand(&demand), 3.0);
-        assert_eq!(demand.over_capacity_demand(&total_capacity), 13.0);
-    }
+//         let max_len = self.len().max(other.len());
 
-    #[test]
-    fn test_add_op() {
-        let capacity1 = Capacity::from_vec(vec![1.0, 2.0, 3.0]);
-        let capacity2 = Capacity::from_vec(vec![4.0, 5.0, 6.0]);
+//         for i in 0..max_len {
+//             let self_value = self.0.get(i).cloned().unwrap_or(0.0);
+//             let other_value = other.0.get(i).cloned().unwrap_or(0.0);
 
-        let result = &capacity1 + &capacity2;
+//             if self_value > other_value {
+//                 self_greater = true;
+//             } else if self_value < other_value {
+//                 other_greater = true;
+//             }
 
-        assert_eq!(result, Capacity::from_vec(vec![5.0, 7.0, 9.0]));
-    }
+//             if self_greater && other_greater {
+//                 return None; // Incomparable
+//             }
+//         }
 
-    #[test]
-    fn test_min_max_capacities() {
-        let capacities = [
-            Capacity::from_vec(vec![1.0, 2.0, 3.0]),
-            Capacity::from_vec(vec![4.0, 5.0, 6.0]),
-            Capacity::from_vec(vec![2.0, 3.0, 4.0]),
-        ];
+//         if self_greater {
+//             Some(std::cmp::Ordering::Greater)
+//         } else if other_greater {
+//             Some(std::cmp::Ordering::Less)
+//         } else {
+//             Some(std::cmp::Ordering::Equal)
+//         }
+//     }
+// }
 
-        let (min, max) =
-            Capacity::compute_min_max_capacities(&(capacities.iter().collect::<Vec<&Capacity>>()));
+// #[cfg(test)]
+// mod tests {
 
-        assert_eq!(min, Capacity::from_vec(vec![1.0, 2.0, 3.0]));
-        assert_eq!(max, Capacity::from_vec(vec![4.0, 5.0, 6.0]));
-    }
+//     use std::cmp::Ordering;
 
-    #[test]
-    fn test_cmp_vectors() {
-        let less = vec![0.5, 0.5, 0.5].partial_cmp(&vec![0.6, 0.6, 0.6]);
-        assert_eq!(less, Some(Ordering::Less));
+//     use super::*;
 
-        let more = vec![0.7, 0.6, 0.7].partial_cmp(&vec![0.6, 0.6, 0.6]);
-        assert_eq!(more, Some(Ordering::Greater));
+//     #[test]
+//     fn test_add_mut() {
+//         let mut total_capacity = Capacity::default();
 
-        let more = vec![0.6, 0.6, 0.6].partial_cmp(&vec![0.6, 0.6, 0.6]);
-        assert_eq!(more, Some(Ordering::Equal));
-    }
+//         total_capacity.add_assign(&Capacity::from_vec(vec![1.0, 2.0, 3.0]));
 
-    #[test]
-    fn test_cmp_capacity() {
-        let less = Capacity::from_vec(vec![0.5, 0.5, 0.5])
-            .partial_cmp(&Capacity::from_vec(vec![0.6, 0.6, 0.6]));
-        assert_eq!(less, Some(Ordering::Less));
+//         assert_eq!(total_capacity, Capacity::from_vec(vec![1.0, 2.0, 3.0]));
 
-        let more = Capacity::from_vec(vec![0.7, 0.6, 0.7])
-            .partial_cmp(&Capacity::from_vec(vec![0.6, 0.6, 0.6]));
-        assert_eq!(more, Some(Ordering::Greater));
+//         total_capacity.add_assign(&Capacity::from_vec(vec![1.0, 2.0, 3.0]));
 
-        let more = Capacity::from_vec(vec![0.6, 0.6, 0.6])
-            .partial_cmp(&Capacity::from_vec(vec![0.6, 0.6, 0.6]));
-        assert_eq!(more, Some(Ordering::Equal));
-    }
-}
+//         assert_eq!(total_capacity, Capacity::from_vec(vec![2.0, 4.0, 6.0]));
+//     }
+
+//     #[test]
+//     fn test_sub_mut() {
+//         let mut total_capacity = Capacity::from_vec(vec![10.0, 4.0, 5.0]);
+
+//         total_capacity.sub_assign(&Capacity::from_vec(vec![1.0, 2.0, 3.0]));
+
+//         assert_eq!(total_capacity, Capacity::from_vec(vec![9.0, 2.0, 2.0]));
+
+//         total_capacity.sub_assign(&Capacity::from_vec(vec![1.0, 0.0, 0.0]));
+
+//         assert_eq!(total_capacity, Capacity::from_vec(vec![8.0, 2.0, 2.0]));
+//     }
+
+//     #[test]
+//     fn satisfies_demand() {
+//         let total_capacity = Capacity::from_vec(vec![10.0, 5.0, 8.0]);
+//         let demand = Capacity::from_vec(vec![5.0, 3.0, 2.0]);
+
+//         assert!(total_capacity.satisfies_demand(&demand));
+
+//         let insufficient_demand = Capacity::from_vec(vec![11.0, 6.0, 2.0]);
+
+//         assert!(!total_capacity.satisfies_demand(&insufficient_demand));
+//     }
+
+//     #[test]
+//     pub fn over_capacity_demand() {
+//         let total_capacity = Capacity::from_vec(vec![10.0, 5.0, 8.0, 5.0]);
+//         let demand = Capacity::from_vec(vec![5.0, 3.0, 2.0, 8.0]);
+
+//         assert_eq!(total_capacity.over_capacity_demand(&demand), 3.0);
+//         assert_eq!(demand.over_capacity_demand(&total_capacity), 13.0);
+//     }
+
+//     #[test]
+//     fn test_add_op() {
+//         let capacity1 = Capacity::from_vec(vec![1.0, 2.0, 3.0]);
+//         let capacity2 = Capacity::from_vec(vec![4.0, 5.0, 6.0]);
+
+//         let result = &capacity1 + &capacity2;
+
+//         assert_eq!(result, Capacity::from_vec(vec![5.0, 7.0, 9.0]));
+//     }
+
+//     #[test]
+//     fn test_min_max_capacities() {
+//         let capacities = [
+//             Capacity::from_vec(vec![1.0, 2.0, 3.0]),
+//             Capacity::from_vec(vec![4.0, 5.0, 6.0]),
+//             Capacity::from_vec(vec![2.0, 3.0, 4.0]),
+//         ];
+
+//         let (min, max) =
+//             Capacity::compute_min_max_capacities(&(capacities.iter().collect::<Vec<&Capacity>>()));
+
+//         assert_eq!(min, Capacity::from_vec(vec![1.0, 2.0, 3.0]));
+//         assert_eq!(max, Capacity::from_vec(vec![4.0, 5.0, 6.0]));
+//     }
+
+//     #[test]
+//     fn test_cmp_vectors() {
+//         let less = vec![0.5, 0.5, 0.5].partial_cmp(&vec![0.6, 0.6, 0.6]);
+//         assert_eq!(less, Some(Ordering::Less));
+
+//         let more = vec![0.7, 0.6, 0.7].partial_cmp(&vec![0.6, 0.6, 0.6]);
+//         assert_eq!(more, Some(Ordering::Greater));
+
+//         let more = vec![0.6, 0.6, 0.6].partial_cmp(&vec![0.6, 0.6, 0.6]);
+//         assert_eq!(more, Some(Ordering::Equal));
+//     }
+
+//     #[test]
+//     fn test_cmp_capacity() {
+//         let less = Capacity::from_vec(vec![0.5, 0.5, 0.5])
+//             .partial_cmp(&Capacity::from_vec(vec![0.6, 0.6, 0.6]));
+//         assert_eq!(less, Some(Ordering::Less));
+
+//         let more = Capacity::from_vec(vec![0.7, 0.6, 0.7])
+//             .partial_cmp(&Capacity::from_vec(vec![0.6, 0.6, 0.6]));
+//         assert_eq!(more, Some(Ordering::Greater));
+
+//         let more = Capacity::from_vec(vec![0.6, 0.6, 0.6])
+//             .partial_cmp(&Capacity::from_vec(vec![0.6, 0.6, 0.6]));
+//         assert_eq!(more, Some(Ordering::Equal));
+//     }
+// }

@@ -145,7 +145,7 @@ impl RuinSolution for RuinString {
         let k = context
             .rng
             .random_range(self.k_min..=self.k_max)
-            .min(solution.routes().len());
+            .min(solution.non_empty_routes_count());
 
         let mut ruined_routes = FxHashSet::<usize>::default();
 

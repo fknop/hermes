@@ -78,7 +78,7 @@ impl RuinSolution for RuinWorst {
         R: rand::Rng,
     {
         for _ in 0..context.num_activities_to_remove {
-            if solution.routes().is_empty() {
+            if solution.is_empty() {
                 return;
             }
 

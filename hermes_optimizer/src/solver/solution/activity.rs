@@ -39,7 +39,7 @@ impl WorkingSolutionRouteActivity {
                 service_id,
             ),
             cumulative_load,
-            max_load_until_end: Capacity::ZERO,
+            max_load_until_end: Capacity::EMPTY,
         }
     }
 

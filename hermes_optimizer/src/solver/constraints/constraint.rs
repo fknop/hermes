@@ -42,20 +42,22 @@ impl Constraint {
     ) -> Score {
         match self {
             Constraint::Global(constraint) => constraint.compute_score(solution),
-            Constraint::Route(constraint) => {
-                solution.routes().iter().fold(Score::zero(), |acc, route| {
+            Constraint::Route(constraint) => solution
+                .non_empty_routes_iter()
+                .fold(Score::zero(), |acc, route| {
                     acc + constraint.compute_score(problem, route)
-                })
-            }
+                }),
             Constraint::Activity(constraint) => {
-                solution.routes().iter().fold(Score::zero(), |acc, route| {
-                    acc + route
-                        .activities()
-                        .iter()
-                        .fold(Score::zero(), |acc, activity| {
-                            acc + constraint.compute_score(problem, route, activity)
-                        })
-                })
+                solution
+                    .non_empty_routes_iter()
+                    .fold(Score::zero(), |acc, route| {
+                        acc + route
+                            .activities()
+                            .iter()
+                            .fold(Score::zero(), |acc, activity| {
+                                acc + constraint.compute_score(problem, route, activity)
+                            })
+                    })
             }
         }
     }

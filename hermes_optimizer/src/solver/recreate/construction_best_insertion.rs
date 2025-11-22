@@ -28,11 +28,18 @@ impl ConstructionBestInsertion {
 
                         for (route_id, route) in routes.iter().enumerate() {
                             for position in 0..=route.activities().len() {
-                                let insertion = Insertion::ExistingRoute(ExistingRouteInsertion {
-                                    route_id,
-                                    service_id,
-                                    position,
-                                });
+                                let insertion = if route.is_empty() {
+                                    Insertion::NewRoute(NewRouteInsertion {
+                                        service_id,
+                                        vehicle_id: route.vehicle_id(),
+                                    })
+                                } else {
+                                    Insertion::ExistingRoute(ExistingRouteInsertion {
+                                        route_id,
+                                        service_id,
+                                        position,
+                                    })
+                                };
 
                                 let score = context.compute_insertion_score(solution, &insertion);
 
@@ -43,22 +50,22 @@ impl ConstructionBestInsertion {
                             }
                         }
 
-                        if solution.has_available_vehicle() {
-                            for vehicle_id in solution.available_vehicles_iter() {
-                                let new_route_insertion = Insertion::NewRoute(NewRouteInsertion {
-                                    service_id,
-                                    vehicle_id,
-                                });
+                        // if solution.has_available_vehicle() {
+                        //     for vehicle_id in solution.available_vehicles_iter() {
+                        //         let new_route_insertion = Insertion::NewRoute(NewRouteInsertion {
+                        //             service_id,
+                        //             vehicle_id,
+                        //         });
 
-                                let score =
-                                    context.compute_insertion_score(solution, &new_route_insertion);
+                        //         let score =
+                        //             context.compute_insertion_score(solution, &new_route_insertion);
 
-                                if score < best_score_for_service {
-                                    best_score_for_service = score;
-                                    best_insertion_for_service = Some(new_route_insertion);
-                                }
-                            }
-                        }
+                        //         if score < best_score_for_service {
+                        //             best_score_for_service = score;
+                        //             best_insertion_for_service = Some(new_route_insertion);
+                        //         }
+                        //     }
+                        // }
 
                         (best_insertion_for_service, best_score_for_service)
                     })

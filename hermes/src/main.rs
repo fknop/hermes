@@ -246,21 +246,21 @@ fn main() {
 
         let best_solution = solver.current_best_solution().unwrap();
         if best_solution.solution.total_transport_costs() <= dataset.optimal_cost + 0.5
-            && best_solution.solution.routes().len() <= dataset.vehicles
+            && best_solution.solution.non_empty_routes_count() <= dataset.vehicles
             && best_solution.score.hard_score == 0.0
         {
             info!(
                 "Found optimal solution for {} - Costs = {}, Vehicles = {}",
                 dataset.file,
                 best_solution.solution.total_transport_costs(),
-                best_solution.solution.routes().len()
+                best_solution.solution.non_empty_routes_count()
             );
         } else {
             warn!(
                 "Could not find optimal solution for {} - Costs = {:?}, Vehicles = {}",
                 dataset.file,
                 best_solution.solution.total_transport_costs(),
-                best_solution.solution.routes().len()
+                best_solution.solution.non_empty_routes_count()
             );
         }
     }

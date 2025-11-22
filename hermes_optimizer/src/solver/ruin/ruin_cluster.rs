@@ -20,9 +20,6 @@ impl RuinSolution for RuinCluster {
     ) where
         R: rand::Rng,
     {
-        if solution.routes().is_empty() {
-            return;
-        }
         let mut ruined_routes: FxHashSet<usize> = FxHashSet::default();
 
         let mut target_service_id = problem.random_service(rng);

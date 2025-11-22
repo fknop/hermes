@@ -19,7 +19,7 @@ impl GlobalConstraint for TransportCostConstraint {
     fn compute_score(&self, solution: &WorkingSolution) -> Score {
         let problem = solution.problem();
         let mut cost = 0.0;
-        for route in solution.routes() {
+        for route in solution.non_empty_routes_iter() {
             let vehicle = route.vehicle(problem);
 
             let activities = route.activities();
@@ -71,7 +71,7 @@ impl GlobalConstraint for TransportCostConstraint {
 
         let route = match context.insertion {
             Insertion::ExistingRoute(existing_route) => {
-                context.solution.routes().get(existing_route.route_id)
+                Some(context.solution.route(existing_route.route_id))
             }
             Insertion::NewRoute(_) => None,
         };
