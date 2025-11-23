@@ -1,5 +1,6 @@
 mod cross_exchange;
 mod intensify_operator;
+mod intensify_search;
 mod inter_relocate;
 mod inter_swap;
 mod inter_two_opt_star;

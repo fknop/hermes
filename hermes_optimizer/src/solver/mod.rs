@@ -1,4 +1,5 @@
 pub mod accepted_solution;
+pub mod alns_weights;
 pub mod constraints;
 pub mod construction;
 pub mod insertion;

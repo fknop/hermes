@@ -1,5 +1,9 @@
 use jiff::SignedDuration;
 
+use crate::solver::{
+    recreate::recreate_strategy::RecreateStrategy, ruin::ruin_strategy::RuinStrategy,
+};
+
 use super::{
     recreate::recreate_params::RecreateParams, ruin::ruin_params::RuinParams, score::Score,
 };
@@ -112,5 +116,21 @@ impl Default for SolverParams {
                 enable_local_search: true,
             },
         }
+    }
+}
+
+impl SolverParams {
+    pub fn strategies(&self) -> Vec<(RuinStrategy, RecreateStrategy)> {
+        self.ruin
+            .ruin_strategies
+            .iter()
+            .map(|ruin_strategy| {
+                self.recreate
+                    .recreate_strategies
+                    .iter()
+                    .map(|recreate_strategy| (ruin_strategy.clone(), recreate_strategy.clone()))
+            })
+            .flatten()
+            .collect::<Vec<_>>()
     }
 }
