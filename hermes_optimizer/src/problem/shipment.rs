@@ -38,6 +38,10 @@ pub struct Shipment {
 }
 
 impl Shipment {
+    pub fn external_id(&self) -> &str {
+        &self.external_id
+    }
+
     pub fn demand(&self) -> &Capacity {
         &self.demand
     }
@@ -48,5 +52,10 @@ impl Shipment {
 
     pub fn delivery(&self) -> &ShipmentLocation {
         &self.delivery
+    }
+
+    pub fn has_time_windows(&self) -> bool {
+        self.pickup.time_windows.iter().any(|tw| !tw.is_empty())
+            || self.delivery.time_windows.iter().any(|tw| !tw.is_empty())
     }
 }

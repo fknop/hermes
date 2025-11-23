@@ -143,6 +143,8 @@ impl SolomonParser {
 mod tests {
     use std::env;
 
+    use crate::problem::job::Job;
+
     use super::*;
 
     #[test]
@@ -161,13 +163,19 @@ mod tests {
             assert_eq!(*vehicle.capacity(), Capacity::from_vec(vec![200.0]));
         }
 
-        for (index, service) in vrp.services().iter().enumerate() {
-            assert_eq!(service.external_id(), (index + 1).to_string().as_str());
-            assert_eq!(service.service_duration(), SignedDuration::from_secs(90));
+        for (index, job) in vrp.jobs().iter().enumerate() {
+            match job {
+                Job::Service(service) => {
+                    assert_eq!(service.external_id(), (index + 1).to_string().as_str());
+                    assert_eq!(service.service_duration(), SignedDuration::from_secs(90));
+                }
+                _ => panic!("Expected all jobs to be services"),
+            }
         }
 
         // Check one location
-        let time_window = vrp.services()[9]
+        let time_window = vrp
+            .service(9)
             .time_windows()
             .iter()
             .min_by_key(|tw| tw.start())

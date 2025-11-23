@@ -1,19 +1,15 @@
 use std::hint::black_box;
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use hermes_optimizer::problem::capacity::Capacity;
+use hermes_optimizer::problem::{
+    amount::{AmountExpression, AmountSub, AmountSum},
+    capacity::Capacity,
+};
 use std::ops::AddAssign;
 
 #[inline]
-fn capacity_add(a: &Capacity, b: &Capacity) -> Capacity {
+fn capacity_add<'a>(a: &'a Capacity, b: &'a Capacity) -> AmountSum<'a, Capacity, Capacity> {
     a + b
-}
-
-#[inline]
-fn capacity_add_with_reset(a: &Capacity, b: &Capacity, result: &mut Capacity) {
-    result.reset();
-    result.add_assign(a);
-    result.add_assign(b);
 }
 
 fn capacity_benchmark(c: &mut Criterion) -> () {
@@ -21,11 +17,6 @@ fn capacity_benchmark(c: &mut Criterion) -> () {
     let second = Capacity::from_vec(vec![45.3, 15.2, 190.1]);
     c.bench_function("capacity add (smallvec)", |b| {
         b.iter(|| capacity_add(black_box(&first), black_box(&second)))
-    });
-
-    c.bench_function("capacity add (with reset)", |b| {
-        let mut result = Capacity::zero();
-        b.iter(|| capacity_add_with_reset(black_box(&first), black_box(&second), &mut result));
     });
 }
 

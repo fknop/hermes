@@ -51,7 +51,7 @@ impl RegretInsertion {
             .filter_map(|&service_id| {
                 let mut potential_insertions: Vec<(Score, Insertion)> = Vec::with_capacity(
                     // One insertion after each activity
-                    (context.problem.services().len() - solution.unassigned_services().len())
+                    (context.problem.jobs().len() - solution.unassigned_services().len())
                     // One insertion at the start of every route
                     + solution.routes().len(),
                 );

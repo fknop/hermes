@@ -6,7 +6,7 @@ use serde::Serialize;
 
 use crate::{
     problem::{
-        amount::AmountExpression, service::ServiceId, travel_cost_matrix::Distance,
+        amount::AmountExpression, job::JobId, service::ServiceId, travel_cost_matrix::Distance,
         vehicle_routing_problem::VehicleRoutingProblem,
     },
     solver::{
@@ -95,8 +95,8 @@ impl BestInsertion {
             }
             BestInsertionSortMethod::Demand => unassigned_services.sort_by(|a, b| {
                 // Not perfect but good enough for sorting purposes.
-                let first_demand_a = problem.service(*a).demand().get(0);
-                let first_demand_b = problem.service(*b).demand().get(0);
+                let first_demand_a = problem.job(*a).demand().get(0);
+                let first_demand_b = problem.job(*b).demand().get(0);
 
                 first_demand_a.total_cmp(&first_demand_b)
             }),

@@ -3,40 +3,42 @@ use serde::Serialize;
 use crate::solver::solution::route::WorkingSolutionRoute;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
-pub enum ActivityId {
+pub enum ActivityType {
     Service(usize),
-    // Shipment(usize)
+    ShipmentPickup(usize),
+    ShipmentDelivery(usize),
 }
 
-impl From<ActivityId> for usize {
-    fn from(job_id: ActivityId) -> Self {
-        match job_id {
-            ActivityId::Service(id) => id,
-            // JobId::Shipment(id) => id,
+impl From<ActivityType> for usize {
+    fn from(activity_type: ActivityType) -> Self {
+        match activity_type {
+            ActivityType::Service(id) => id,
+            ActivityType::ShipmentPickup(id) => id,
+            ActivityType::ShipmentDelivery(id) => id,
         }
     }
 }
 
-pub struct JobIdIterator<'a> {
+pub struct ActivityTypeIterator<'a> {
     route: &'a WorkingSolutionRoute,
     start: usize,
     end: usize,
 }
 
-impl<'a> JobIdIterator<'a> {
+impl<'a> ActivityTypeIterator<'a> {
     pub fn new(route: &'a WorkingSolutionRoute, start: usize, end: usize) -> Self {
-        JobIdIterator { route, start, end }
+        ActivityTypeIterator { route, start, end }
     }
 }
 
-impl Iterator for JobIdIterator<'_> {
+impl Iterator for ActivityTypeIterator<'_> {
     type Item = usize;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.start < self.end {
             let activity = &self.route.activities[self.start];
             self.start += 1;
-            Some(activity.job_id.into())
+            Some(activity.activity_type.into())
         } else {
             None
         }

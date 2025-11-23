@@ -245,7 +245,7 @@ impl Search {
                 let global_statistics = Arc::clone(self.statistics.global_statistics());
                 let thread_statistics = Arc::clone(self.statistics.thread_statistics(thread_index));
                 let thread_noise_generator = NoiseGenerator::new(
-                    self.problem.services().len(),
+                    self.problem.jobs().len(),
                     max_cost,
                     self.params.noise_probability,
                     self.params.noise_level,
@@ -551,13 +551,13 @@ impl Search {
         let ruin_minimum_ratio = self.params.ruin.ruin_minimum_ratio;
         let ruin_maximum_ratio = self.params.ruin.ruin_maximum_ratio;
 
-        let minimum_ruin_size = ((ruin_minimum_ratio * self.problem.services().len() as f64).ceil()
+        let minimum_ruin_size = ((ruin_minimum_ratio * self.problem.jobs().len() as f64).ceil()
             as usize)
             .max(self.params.ruin.ruin_minimum_size);
 
-        let maximum_ruin_size =
-            ((ruin_maximum_ratio * self.problem.services().len() as f64).floor() as usize)
-                .min(self.params.ruin.ruin_maximum_size);
+        let maximum_ruin_size = ((ruin_maximum_ratio * self.problem.jobs().len() as f64).floor()
+            as usize)
+            .min(self.params.ruin.ruin_maximum_size);
 
         rng.random_range(minimum_ruin_size..=maximum_ruin_size)
     }

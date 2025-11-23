@@ -52,6 +52,10 @@ impl Service {
         &self.time_windows
     }
 
+    pub fn has_time_windows(&self) -> bool {
+        self.time_windows.iter().any(|tw| !tw.is_empty())
+    }
+
     pub fn time_windows_satisfied(&self, arrival_time: jiff::Timestamp) -> bool {
         self.time_windows
             .iter()

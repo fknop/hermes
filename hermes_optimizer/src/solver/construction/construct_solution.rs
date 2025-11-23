@@ -35,8 +35,7 @@ use crate::{
 fn find_minimum_vehicles(problem: &VehicleRoutingProblem) -> usize {
     let mut minimum_vehicles = problem.vehicles().len();
     let total_demand: Capacity = problem
-        .services()
-        .iter()
+        .services_iter()
         .filter(|service| service.service_type() == ServiceType::Delivery)
         .fold(Capacity::EMPTY, |total, service| {
             (&total + service.demand()).into()
@@ -69,8 +68,7 @@ fn find_minimum_vehicles(problem: &VehicleRoutingProblem) -> usize {
 fn compute_convex_hull(problem: &VehicleRoutingProblem) -> (Vec<usize>, Vec<usize>) {
     let points = geo::MultiPoint::from(
         problem
-            .services()
-            .iter()
+            .services_iter()
             .map(|s| {
                 let loc = problem.location(s.location_id());
                 (loc.x(), loc.y())
@@ -91,7 +89,7 @@ fn compute_convex_hull(problem: &VehicleRoutingProblem) -> (Vec<usize>, Vec<usiz
         })
         .collect();
 
-    let interior: Vec<usize> = (0..problem.services().len())
+    let interior: Vec<usize> = (0..problem.jobs().len())
         .filter(|i| !exterior.contains(&problem.service_location(*i).id()))
         .collect();
 

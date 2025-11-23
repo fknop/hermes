@@ -3,7 +3,6 @@ pub mod capacity;
 pub mod distance_method;
 pub mod job;
 pub mod location;
-mod neighborhood;
 pub mod service;
 mod service_location_index;
 pub mod shipment;

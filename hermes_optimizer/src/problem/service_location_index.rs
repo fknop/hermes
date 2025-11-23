@@ -2,12 +2,13 @@ use geo::{Distance, Haversine};
 use rstar::primitives::GeomWithData;
 use rstar::{AABB, Envelope, PointDistance, RTree, RTreeObject};
 
+use crate::problem::job::Job;
+
 use super::distance_method::DistanceMethod;
 use super::location::Location;
-use super::service::Service;
 
 pub struct IndexedData {
-    service_id: usize,
+    job_id: usize,
 }
 
 pub enum IndexedPoint {
@@ -67,15 +68,28 @@ pub struct ServiceLocationIndex {
 impl ServiceLocationIndex {
     pub fn new(
         locations: &[Location],
-        services: &[Service],
+        jobs: &[Job],
         distance_method: DistanceMethod,
     ) -> ServiceLocationIndex {
+        let mut location_ids = vec![];
+
+        for (job_id, job) in jobs.iter().enumerate() {
+            match job {
+                Job::Service(service) => {
+                    location_ids.push((job_id, service.location_id()));
+                }
+                Job::Shipment(shipment) => {
+                    location_ids.push((job_id, shipment.pickup().location_id()));
+                    location_ids.push((job_id, shipment.delivery().location_id()));
+                }
+            }
+        }
+
         let tree: RTree<ServiceLocationIndexObject> = RTree::bulk_load(
-            services
+            location_ids
                 .iter()
-                .enumerate()
-                .map(|(service_id, service)| {
-                    let location = &locations[service.location_id()];
+                .map(|&(job_id, location_id)| {
+                    let location = &locations[location_id];
 
                     ServiceLocationIndexObject::new(
                         match distance_method {
@@ -88,7 +102,7 @@ impl ServiceLocationIndex {
                                 y: location.y(),
                             },
                         },
-                        IndexedData { service_id },
+                        IndexedData { job_id },
                     )
                 })
                 .collect(),
@@ -104,7 +118,7 @@ impl ServiceLocationIndex {
         let point: geo::Point = point.into();
         self.tree
             .nearest_neighbor_iter(&[point.x(), point.y()])
-            .map(|geom_with_data| geom_with_data.data.service_id)
+            .map(|geom_with_data| geom_with_data.data.job_id)
     }
 }
 
@@ -116,7 +130,10 @@ mod tests {
     use serde::Deserialize;
     use serde_json;
 
-    use crate::problem::service::ServiceId;
+    use crate::problem::{
+        job::JobId,
+        service::{Service, ServiceId},
+    };
 
     use super::*;
 
@@ -138,7 +155,15 @@ mod tests {
     #[test]
     fn test_service_location_index() {
         let (locations, services) = build_locations_and_services();
-        let index = ServiceLocationIndex::new(&locations, &services, DistanceMethod::Haversine);
+        let index = ServiceLocationIndex::new(
+            &locations,
+            &services
+                .iter()
+                .cloned()
+                .map(|service| Job::Service(service))
+                .collect::<Vec<_>>(),
+            DistanceMethod::Haversine,
+        );
 
         let nearest: Vec<ServiceId> = index
             .nearest_neighbor_iter(geo::Point::new(locations[0].x(), locations[0].y()))

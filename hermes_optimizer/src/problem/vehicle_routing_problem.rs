@@ -1,15 +1,17 @@
 use jiff::SignedDuration;
-use rand::{Rng, rngs::SmallRng};
 
 use crate::{
-    problem::neighborhood::{BuildNeighborhoodParams, Neighborhoods},
+    problem::{
+        job::{Job, JobId},
+        service::{Service, ServiceId},
+        shipment::Shipment,
+    },
     solver::constraints::transport_cost_constraint::TRANSPORT_COST_WEIGHT,
 };
 
 use super::{
     distance_method::DistanceMethod,
     location::{Location, LocationId},
-    service::{Service, ServiceId},
     service_location_index::ServiceLocationIndex,
     travel_cost_matrix::{Cost, Distance, TravelCostMatrix},
     vehicle::{Vehicle, VehicleId},
@@ -18,19 +20,45 @@ use super::{
 pub struct VehicleRoutingProblem {
     locations: Vec<Location>,
     vehicles: Vec<Vehicle>,
-    services: Vec<Service>,
+    jobs: Vec<Job>,
     travel_costs: TravelCostMatrix,
     service_location_index: ServiceLocationIndex,
-    neighborhoods: Neighborhoods,
+
+    has_time_windows: bool,
 }
 
 impl VehicleRoutingProblem {
-    pub fn services(&self) -> &[Service] {
-        &self.services
+    pub fn jobs(&self) -> &[Job] {
+        &self.jobs
+    }
+
+    pub fn services_iter(&self) -> impl Iterator<Item = &Service> {
+        self.jobs.iter().filter_map(|job| match job {
+            Job::Service(service) => Some(service),
+            _ => None,
+        })
+    }
+
+    pub fn job(&self, index: usize) -> &Job {
+        &self.jobs[index]
     }
 
     pub fn service(&self, index: usize) -> &Service {
-        &self.services[index]
+        let job = &self.jobs[index];
+
+        match job {
+            Job::Service(service) => service,
+            _ => panic!("Job {index} is not a service"),
+        }
+    }
+
+    pub fn shipment(&self, index: usize) -> &Shipment {
+        let job = &self.jobs[index];
+
+        match job {
+            Job::Shipment(shipment) => shipment,
+            _ => panic!("Job {index} is not a shipment"),
+        }
     }
 
     pub fn random_location<R>(&self, rng: &mut R) -> usize
@@ -44,7 +72,7 @@ impl VehicleRoutingProblem {
     where
         R: rand::Rng,
     {
-        rng.random_range(0..self.services.len())
+        rng.random_range(0..self.jobs.len())
     }
 
     pub fn vehicle(&self, index: usize) -> &Vehicle {
@@ -64,9 +92,12 @@ impl VehicleRoutingProblem {
     }
 
     pub fn service_location(&self, service_id: ServiceId) -> &Location {
-        let service = &self.services[service_id];
-        let location_id = service.location_id();
-        &self.locations[location_id]
+        if let Job::Service(service) = &self.jobs[service_id] {
+            let location_id = service.location_id();
+            return &self.locations[location_id];
+        } else {
+            panic!("Job {service_id} is not a service");
+        }
     }
 
     pub fn vehicle_depot_location(&self, vehicle_id: VehicleId) -> Option<&Location> {
@@ -121,20 +152,23 @@ impl VehicleRoutingProblem {
         self.service_location_index.nearest_neighbor_iter(location)
     }
 
-    pub fn nearest_services(&self, service_id: ServiceId) -> impl Iterator<Item = ServiceId> {
-        let location_id = self.service(service_id).location_id();
-        self.nearest_services_of_location(location_id)
-    }
-
-    pub fn service_neighborhood_iter(
-        &self,
-        service_id: ServiceId,
-    ) -> impl Iterator<Item = ServiceId> {
-        self.neighborhoods.neighbors_iter(service_id)
+    pub fn nearest_services(&self, job_id: ServiceId) -> impl Iterator<Item = ServiceId> {
+        let job = &self.jobs[job_id];
+        match job {
+            Job::Service(service) => {
+                let location_id = service.location_id();
+                self.nearest_services_of_location(location_id)
+            }
+            Job::Shipment(_) => unimplemented!("Shipment not implemented"),
+        }
     }
 
     pub fn is_symmetric(&self) -> bool {
         self.travel_costs.is_symmetric()
+    }
+
+    pub fn has_time_windows(&self) -> bool {
+        self.has_time_windows
     }
 }
 
@@ -196,26 +230,24 @@ impl VehicleRoutingProblemBuilder {
         }
 
         let travel_costs = self.travel_costs.expect("Expected travel costs matrix");
+
+        let jobs = services.into_iter().map(Job::Service).collect::<Vec<Job>>();
+
         let service_location_index = ServiceLocationIndex::new(
             &locations,
-            &services,
+            &jobs,
             // TODO: benchmark which is best ?
             self.distance_method.unwrap_or(DistanceMethod::Haversine),
         );
 
-        // let neighborhoods = Neighborhoods::new(BuildNeighborhoodParams {
-        //     services: &services,
-        //     location_index: &service_location_index,
-        //     locations: &locations,
-        // });
-
         VehicleRoutingProblem {
             locations,
             vehicles: self.vehicles.expect("Expected list of vehicles"),
-            services,
+            has_time_windows: jobs.iter().any(|job| job.has_time_windows()),
+
             travel_costs,
             service_location_index,
-            neighborhoods: Neighborhoods::empty(),
+            jobs,
         }
     }
 }

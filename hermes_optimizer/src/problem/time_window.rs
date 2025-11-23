@@ -21,6 +21,10 @@ impl TimeWindow {
     pub fn end(&self) -> Option<Timestamp> {
         self.end
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.start.is_none() && self.end.is_none()
+    }
 }
 
 impl TimeWindow {

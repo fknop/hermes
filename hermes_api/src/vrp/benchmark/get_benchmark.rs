@@ -55,7 +55,7 @@ pub async fn get_benchmark_handler(
                     y: loc.y(),
                 })
                 .collect(),
-            services: vrp.services().to_vec(),
+            services: vrp.services_iter().cloned().collect::<Vec<_>>(),
             vehicles: vrp.vehicles().to_vec(),
         })
     } else {

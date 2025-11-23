@@ -4,6 +4,7 @@ use jiff::{SignedDuration, Timestamp};
 
 use crate::problem::{
     capacity::Capacity,
+    job::JobId,
     service::{Service, ServiceId, ServiceType},
     vehicle::VehicleId,
     vehicle_routing_problem::VehicleRoutingProblem,

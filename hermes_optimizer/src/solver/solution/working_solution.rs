@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use fxhash::FxHashSet;
 use rand::seq::IteratorRandom;
-use serde::Serialize;
 
 use crate::{
     problem::{service::ServiceId, vehicle_routing_problem::VehicleRoutingProblem},
@@ -24,7 +23,7 @@ impl WorkingSolution {
             .enumerate()
             .map(|(vehicle_id, _)| WorkingSolutionRoute::empty(vehicle_id))
             .collect();
-        let unassigned_services = (0..problem.services().len()).collect();
+        let unassigned_services = (0..problem.jobs().len()).collect();
 
         WorkingSolution {
             problem,
@@ -34,7 +33,7 @@ impl WorkingSolution {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.unassigned_services.len() == self.problem.services().len()
+        self.unassigned_services.len() == self.problem.jobs().len()
     }
 
     pub fn is_unassigned(&self, service_id: ServiceId) -> bool {
@@ -70,11 +69,11 @@ impl WorkingSolution {
             if !route
                 .activities
                 .iter()
-                .map(|activity| activity.job_id)
+                .map(|activity| activity.activity_type)
                 .eq(other_route
                     .activities
                     .iter()
-                    .map(|activity| activity.job_id))
+                    .map(|activity| activity.activity_type))
             {
                 return false;
             }
@@ -241,7 +240,8 @@ impl WorkingSolution {
     pub fn remove_route(&mut self, route_id: usize) -> usize {
         let removed = self.routes[route_id].activities.len();
         for activity in self.routes[route_id].activities.iter() {
-            self.unassigned_services.insert(activity.job_id.into());
+            self.unassigned_services
+                .insert(activity.activity_type.into());
         }
 
         self.routes[route_id] = WorkingSolutionRoute::empty(route_id);

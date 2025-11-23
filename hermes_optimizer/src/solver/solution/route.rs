@@ -6,13 +6,14 @@ use crate::{
     problem::{
         amount::AmountExpression,
         capacity::Capacity,
+        job::Job,
         service::{ServiceId, ServiceType},
         vehicle::{Vehicle, VehicleId},
         vehicle_routing_problem::VehicleRoutingProblem,
     },
     solver::solution::{
         activity::WorkingSolutionRouteActivity,
-        activity_id::{ActivityId, JobIdIterator},
+        activity_type::{ActivityType, ActivityTypeIterator},
         utils::{
             compute_activity_arrival_time, compute_activity_cumulative_load,
             compute_departure_time, compute_first_activity_arrival_time, compute_vehicle_end,
@@ -55,7 +56,7 @@ impl WorkingSolutionRoute {
     pub fn service_position(&self, service_id: ServiceId) -> Option<usize> {
         self.activities
             .iter()
-            .position(|activity| activity.job_id == ActivityId::Service(service_id))
+            .position(|activity| activity.activity_type == ActivityType::Service(service_id))
     }
 
     pub fn is_empty(&self) -> bool {
@@ -337,7 +338,7 @@ impl WorkingSolutionRoute {
             return None;
         }
 
-        self.services.remove(&activity.job_id.into());
+        self.services.remove(&activity.activity_type.into());
 
         if activity.service(problem).service_type() == ServiceType::Delivery {
             self.total_initial_load -= activity.service(problem).demand();
@@ -364,7 +365,7 @@ impl WorkingSolutionRoute {
         let activity_id = self
             .activities
             .iter()
-            .position(|activity| activity.job_id == ActivityId::Service(service_id))
+            .position(|activity| activity.activity_type == ActivityType::Service(service_id))
             .unwrap();
 
         self.remove_activity(problem, activity_id).is_some()
@@ -409,8 +410,12 @@ impl WorkingSolutionRoute {
         self.activities.insert(position, activity);
         self.updated_in_iteration = true;
 
-        if problem.service(service_id).service_type() == ServiceType::Delivery {
-            self.total_initial_load += problem.service(service_id).demand();
+        let job = problem.job(service_id);
+
+        if let Job::Service(service) = job
+            && service.service_type() == ServiceType::Delivery
+        {
+            self.total_initial_load += problem.job(service_id).demand();
         }
 
         // Update the arrival times and departure times of subsequent activities
@@ -462,14 +467,14 @@ impl WorkingSolutionRoute {
                         problem,
                         compute_activity_arrival_time(
                             problem,
-                            previous_activity.job_id.into(),
+                            previous_activity.activity_type.into(),
                             previous_activity.departure_time,
-                            current_activity.job_id.into(),
+                            current_activity.activity_type.into(),
                         ),
                     );
 
                     current_activity.cumulative_load = compute_activity_cumulative_load(
-                        problem.service(current_activity.job_id.into()),
+                        problem.service(current_activity.activity_type.into()),
                         &previous_activity.cumulative_load,
                     );
                 }
@@ -479,12 +484,12 @@ impl WorkingSolutionRoute {
                         compute_first_activity_arrival_time(
                             problem,
                             self.vehicle_id,
-                            current_activity.job_id.into(),
+                            current_activity.activity_type.into(),
                         ),
                     );
 
                     current_activity.cumulative_load = compute_activity_cumulative_load(
-                        problem.service(current_activity.job_id.into()),
+                        problem.service(current_activity.activity_type.into()),
                         &Capacity::EMPTY,
                     );
                 }
@@ -538,8 +543,8 @@ impl WorkingSolutionRoute {
         rng.random_range(0..self.activities.len())
     }
 
-    pub fn job_ids_iter(&self, start: usize, end: usize) -> JobIdIterator<'_> {
-        JobIdIterator::new(self, start, end)
+    pub fn job_ids_iter(&self, start: usize, end: usize) -> ActivityTypeIterator<'_> {
+        ActivityTypeIterator::new(self, start, end)
     }
 
     /// Checks whether inserting the given job IDs between the given [start, end) indices is valid
@@ -550,6 +555,10 @@ impl WorkingSolutionRoute {
         start: usize,
         end: usize,
     ) -> bool {
+        if !problem.has_time_windows() {
+            return true;
+        }
+
         let previous_activity = if start == 0 {
             None
         } else {

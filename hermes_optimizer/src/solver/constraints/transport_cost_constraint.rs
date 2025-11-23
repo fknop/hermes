@@ -18,6 +18,11 @@ impl GlobalConstraint for TransportCostConstraint {
 
     fn compute_score(&self, solution: &WorkingSolution) -> Score {
         let problem = solution.problem();
+
+        if !problem.has_time_windows() {
+            return Score::zero();
+        }
+
         let mut cost = 0.0;
         for route in solution.non_empty_routes_iter() {
             let vehicle = route.vehicle(problem);
@@ -58,6 +63,11 @@ impl GlobalConstraint for TransportCostConstraint {
 
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
         let problem = context.problem();
+
+        if !problem.has_time_windows() {
+            return Score::zero();
+        }
+
         let service_id = context.insertion.service_id();
         let service = problem.service(service_id);
 
