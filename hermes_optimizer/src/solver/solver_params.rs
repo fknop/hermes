@@ -108,7 +108,7 @@ impl Default for SolverParams {
             alns_iterations_without_improvement_reset: 2000,
             alns_segment_iterations: 100,
             alns_reaction_factor: 0.8,
-            alns_best_factor: 9.0,
+            alns_best_factor: 12.0,
             alns_improvement_factor: 6.0,
             alns_accepted_worst_factor: 1.0,
 
@@ -124,13 +124,12 @@ impl SolverParams {
         self.ruin
             .ruin_strategies
             .iter()
-            .map(|ruin_strategy| {
+            .flat_map(|ruin_strategy| {
                 self.recreate
                     .recreate_strategies
                     .iter()
-                    .map(|recreate_strategy| (ruin_strategy.clone(), recreate_strategy.clone()))
+                    .map(|recreate_strategy| (*ruin_strategy, *recreate_strategy))
             })
-            .flatten()
             .collect::<Vec<_>>()
     }
 }

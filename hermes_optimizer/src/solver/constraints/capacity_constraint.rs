@@ -63,6 +63,10 @@ impl RouteConstraint for CapacityConstraint {
         problem: &VehicleRoutingProblem,
         route: &WorkingSolutionRoute,
     ) -> Score {
+        if !problem.has_capacity() {
+            return Score::zero();
+        }
+
         let vehicle = route.vehicle(problem);
         let initial_load = route.total_initial_load();
 

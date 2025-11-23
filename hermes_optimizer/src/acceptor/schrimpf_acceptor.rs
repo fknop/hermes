@@ -13,7 +13,7 @@ impl SchrimpfAcceptor {
     pub fn new(initial_threshold: f64) -> Self {
         SchrimpfAcceptor {
             initial_threshold,
-            alpha: 0.5,
+            alpha: 0.6,
         }
     }
 

@@ -2,6 +2,7 @@ use jiff::SignedDuration;
 
 use crate::{
     problem::{
+        amount::AmountExpression,
         job::{Job, JobId},
         service::{Service, ServiceId},
         shipment::Shipment,
@@ -25,6 +26,7 @@ pub struct VehicleRoutingProblem {
     service_location_index: ServiceLocationIndex,
 
     has_time_windows: bool,
+    has_capacity: bool,
 }
 
 impl VehicleRoutingProblem {
@@ -136,8 +138,16 @@ impl VehicleRoutingProblem {
         0
     }
 
-    pub fn waiting_cost(&self, waiting_duration: SignedDuration) -> Cost {
-        waiting_duration.as_secs_f64() * 10.0
+    pub fn waiting_duration_weight(&self) -> f64 {
+        10.0
+    }
+
+    pub fn has_waiting_duration_cost(&self) -> bool {
+        self.waiting_duration_weight() > 0.0
+    }
+
+    pub fn waiting_duration_cost(&self, waiting_duration: SignedDuration) -> Cost {
+        waiting_duration.as_secs_f64() * self.waiting_duration_weight()
     }
 
     pub fn fixed_vehicle_costs(&self) -> f64 {
@@ -169,6 +179,10 @@ impl VehicleRoutingProblem {
 
     pub fn has_time_windows(&self) -> bool {
         self.has_time_windows
+    }
+
+    pub fn has_capacity(&self) -> bool {
+        self.has_capacity
     }
 }
 
@@ -244,6 +258,7 @@ impl VehicleRoutingProblemBuilder {
             locations,
             vehicles: self.vehicles.expect("Expected list of vehicles"),
             has_time_windows: jobs.iter().any(|job| job.has_time_windows()),
+            has_capacity: jobs.iter().any(|job| !job.demand().is_empty()),
 
             travel_costs,
             service_location_index,
