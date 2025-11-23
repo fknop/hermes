@@ -16,7 +16,7 @@ use hermes_core::{
 use hermes_optimizer::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
-        accepted_solution::AcceptedSolution, solution::working_solution::WorkingSolutionRoute,
+        accepted_solution::AcceptedSolution, solution::route::WorkingSolutionRoute,
         solver::SolverStatus,
     },
 };

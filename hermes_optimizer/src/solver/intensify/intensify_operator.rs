@@ -8,8 +8,9 @@ use crate::solver::{
     solution::working_solution::WorkingSolution,
 };
 
-pub trait ComputeDelta {
+pub trait IntensifyOp {
     fn compute_delta(&self, solution: &WorkingSolution) -> f64;
+    fn is_valid(&self, solution: &WorkingSolution) -> bool;
 }
 
 pub trait GenerateIntensifyOperators<T = Self> {

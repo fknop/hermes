@@ -1,7 +1,7 @@
 use crate::{
     problem,
     solver::{
-        intensify::intensify_operator::ComputeDelta, solution::working_solution::WorkingSolution,
+        intensify::intensify_operator::IntensifyOp, solution::working_solution::WorkingSolution,
     },
 };
 
@@ -45,7 +45,7 @@ pub struct InterTwoOptStarOperator {
     second_from: usize,
 }
 
-impl ComputeDelta for InterTwoOptStarOperator {
+impl IntensifyOp for InterTwoOptStarOperator {
     fn compute_delta(&self, solution: &WorkingSolution) -> f64 {
         let problem = solution.problem();
         let r1 = solution.route(self.first_route_id);
@@ -67,5 +67,9 @@ impl ComputeDelta for InterTwoOptStarOperator {
         delta += problem.travel_cost_or_zero(second_from, first_from_next);
 
         delta
+    }
+
+    fn is_valid(&self, solution: &WorkingSolution) -> bool {
+        todo!()
     }
 }

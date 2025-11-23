@@ -1,4 +1,7 @@
-use crate::problem::{service::ServiceId, vehicle::VehicleId};
+use crate::{
+    problem::{service::ServiceId, vehicle::VehicleId},
+    solver::solution::{route::WorkingSolutionRoute, working_solution::WorkingSolution},
+};
 
 #[derive(Clone)]
 pub struct ExistingRouteInsertion {
@@ -31,6 +34,13 @@ impl Insertion {
         match self {
             Insertion::NewRoute(_) => 0,
             Insertion::ExistingRoute(ctx) => ctx.position,
+        }
+    }
+
+    pub fn route<'a>(&self, solution: &'a WorkingSolution) -> &'a WorkingSolutionRoute {
+        match self {
+            Insertion::NewRoute(ctx) => solution.route(ctx.vehicle_id),
+            Insertion::ExistingRoute(ctx) => solution.route(ctx.route_id),
         }
     }
 }

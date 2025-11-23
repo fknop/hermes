@@ -12,15 +12,17 @@ use crate::{
     },
     solver::solution::{
         activity::WorkingSolutionRouteActivity,
+        activity_id::{ActivityId, JobIdIterator},
         utils::{
             compute_activity_arrival_time, compute_activity_cumulative_load,
-            compute_first_activity_arrival_time, compute_vehicle_end, compute_vehicle_start,
+            compute_departure_time, compute_first_activity_arrival_time, compute_vehicle_end,
+            compute_vehicle_start, compute_waiting_duration,
         },
     },
     utils::bbox::BBox,
 };
 
-#[derive(Clone, Serialize)]
+#[derive(Clone)]
 pub struct WorkingSolutionRoute {
     pub(super) vehicle_id: VehicleId,
     pub(super) services: FxHashSet<ServiceId>,
@@ -53,7 +55,7 @@ impl WorkingSolutionRoute {
     pub fn service_position(&self, service_id: ServiceId) -> Option<usize> {
         self.activities
             .iter()
-            .position(|activity| activity.service_id == service_id)
+            .position(|activity| activity.job_id == ActivityId::Service(service_id))
     }
 
     pub fn is_empty(&self) -> bool {
@@ -335,7 +337,7 @@ impl WorkingSolutionRoute {
             return None;
         }
 
-        self.services.remove(&activity.service_id);
+        self.services.remove(&activity.job_id.into());
 
         if activity.service(problem).service_type() == ServiceType::Delivery {
             self.total_initial_load -= activity.service(problem).demand();
@@ -362,7 +364,7 @@ impl WorkingSolutionRoute {
         let activity_id = self
             .activities
             .iter()
-            .position(|activity| activity.service_id == service_id)
+            .position(|activity| activity.job_id == ActivityId::Service(service_id))
             .unwrap();
 
         self.remove_activity(problem, activity_id).is_some()
@@ -460,14 +462,14 @@ impl WorkingSolutionRoute {
                         problem,
                         compute_activity_arrival_time(
                             problem,
-                            previous_activity.service_id,
+                            previous_activity.job_id.into(),
                             previous_activity.departure_time,
-                            current_activity.service_id,
+                            current_activity.job_id.into(),
                         ),
                     );
 
                     current_activity.cumulative_load = compute_activity_cumulative_load(
-                        problem.service(current_activity.service_id),
+                        problem.service(current_activity.job_id.into()),
                         &previous_activity.cumulative_load,
                     );
                 }
@@ -477,12 +479,12 @@ impl WorkingSolutionRoute {
                         compute_first_activity_arrival_time(
                             problem,
                             self.vehicle_id,
-                            current_activity.service_id,
+                            current_activity.job_id.into(),
                         ),
                     );
 
                     current_activity.cumulative_load = compute_activity_cumulative_load(
-                        problem.service(current_activity.service_id),
+                        problem.service(current_activity.job_id.into()),
                         &Capacity::EMPTY,
                     );
                 }
@@ -534,5 +536,96 @@ impl WorkingSolutionRoute {
         R: rand::Rng,
     {
         rng.random_range(0..self.activities.len())
+    }
+
+    pub fn job_ids_iter(&self, start: usize, end: usize) -> JobIdIterator<'_> {
+        JobIdIterator::new(self, start, end)
+    }
+
+    /// Checks whether inserting the given job IDs between the given [start, end) indices is valid
+    pub fn is_valid_tw_change(
+        &self,
+        problem: &VehicleRoutingProblem,
+        job_ids: impl Iterator<Item = usize>,
+        start: usize,
+        end: usize,
+    ) -> bool {
+        let previous_activity = if start == 0 {
+            None
+        } else {
+            Some(&self.activities[start - 1])
+        };
+
+        let mut previous_service_id = previous_activity.map(|activity| activity.service_id());
+        let mut previous_departure_time =
+            previous_activity.map(|activity| activity.departure_time());
+
+        for service_id in job_ids {
+            let arrival_time = if let Some(previous_service_id) = previous_service_id
+                && let Some(previous_departure_time) = previous_departure_time
+            {
+                compute_activity_arrival_time(
+                    problem,
+                    previous_service_id,
+                    previous_departure_time,
+                    service_id,
+                )
+            } else {
+                compute_first_activity_arrival_time(problem, self.vehicle_id, service_id)
+            };
+
+            let waiting_duration =
+                compute_waiting_duration(problem.service(service_id), arrival_time);
+
+            previous_service_id = Some(service_id);
+            previous_departure_time = Some(compute_departure_time(
+                problem,
+                arrival_time,
+                waiting_duration,
+                service_id,
+            ));
+
+            let service = problem.service(service_id);
+
+            if !service.time_windows_satisfied(arrival_time) {
+                return false;
+            }
+        }
+
+        for i in end..self.activities.len() {
+            let next_service_id = self.activities[i].service_id();
+
+            let arrival_time = if let Some(previous_service_id) = previous_service_id
+                && let Some(previous_departure_time) = previous_departure_time
+            {
+                compute_activity_arrival_time(
+                    problem,
+                    previous_service_id,
+                    previous_departure_time,
+                    next_service_id,
+                )
+            } else {
+                compute_first_activity_arrival_time(problem, self.vehicle_id, next_service_id)
+            };
+
+            let waiting_duration =
+                compute_waiting_duration(problem.service(next_service_id), arrival_time);
+
+            previous_service_id = Some(next_service_id);
+            previous_departure_time = Some(compute_departure_time(
+                problem,
+                arrival_time,
+                waiting_duration,
+                next_service_id,
+            ));
+
+            let service = problem.service(next_service_id);
+
+            if !service.time_windows_satisfied(arrival_time) {
+                return false;
+            }
+        }
+
+        true
     }
 }

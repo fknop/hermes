@@ -7,12 +7,15 @@ use crate::{
         service::{Service, ServiceId},
         vehicle_routing_problem::VehicleRoutingProblem,
     },
-    solver::solution::utils::{compute_departure_time, compute_waiting_duration},
+    solver::solution::{
+        activity_id::ActivityId,
+        utils::{compute_departure_time, compute_waiting_duration},
+    },
 };
 
-#[derive(Clone, Serialize)]
+#[derive(Clone)]
 pub struct WorkingSolutionRouteActivity {
-    pub(super) service_id: ServiceId,
+    pub(super) job_id: ActivityId,
     pub(super) arrival_time: Timestamp,
     pub(super) departure_time: Timestamp,
     pub(super) waiting_duration: SignedDuration,
@@ -29,7 +32,7 @@ impl WorkingSolutionRouteActivity {
     ) -> Self {
         let waiting_duration = compute_waiting_duration(problem.service(service_id), arrival_time);
         WorkingSolutionRouteActivity {
-            service_id,
+            job_id: ActivityId::Service(service_id),
             arrival_time,
             waiting_duration,
             departure_time: compute_departure_time(
@@ -44,11 +47,11 @@ impl WorkingSolutionRouteActivity {
     }
 
     pub fn service<'a>(&self, problem: &'a VehicleRoutingProblem) -> &'a Service {
-        problem.service(self.service_id)
+        problem.service(self.job_id.into())
     }
 
     pub fn service_id(&self) -> ServiceId {
-        self.service_id
+        self.job_id.into()
     }
 
     pub fn arrival_time(&self) -> Timestamp {
@@ -78,12 +81,12 @@ impl WorkingSolutionRouteActivity {
     ) {
         self.arrival_time = arrival_time;
         self.waiting_duration =
-            compute_waiting_duration(problem.service(self.service_id), arrival_time);
+            compute_waiting_duration(problem.service(self.job_id.into()), arrival_time);
         self.departure_time = compute_departure_time(
             problem,
             self.arrival_time,
             self.waiting_duration,
-            self.service_id,
+            self.job_id.into(),
         );
     }
 }

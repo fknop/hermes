@@ -21,6 +21,12 @@ impl ShipmentLocation {
     pub fn location_id(&self) -> LocationId {
         self.location_id
     }
+
+    pub fn time_windows_satisfied(&self, arrival_time: jiff::Timestamp) -> bool {
+        self.time_windows
+            .iter()
+            .any(|tw| tw.is_satisfied(arrival_time))
+    }
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]

@@ -1,5 +1,5 @@
 use crate::solver::{
-    intensify::intensify_operator::ComputeDelta, solution::working_solution::WorkingSolution,
+    intensify::intensify_operator::IntensifyOp, solution::working_solution::WorkingSolution,
 };
 
 /// **Intra-Route 2-Opt**
@@ -72,12 +72,23 @@ impl TwoOptOperator {
     }
 }
 
-impl ComputeDelta for TwoOptOperator {
+impl IntensifyOp for TwoOptOperator {
     fn compute_delta(&self, solution: &WorkingSolution) -> f64 {
         if solution.problem().is_symmetric() {
             self.symmetric_delta(solution)
         } else {
             self.asymmetric_delta(solution)
         }
+    }
+
+    fn is_valid(&self, solution: &WorkingSolution) -> bool {
+        let route = solution.route(self.route_id);
+
+        route.is_valid_tw_change(
+            solution.problem(),
+            route.job_ids_iter(self.from, self.to),
+            self.from,
+            self.to + 1,
+        )
     }
 }

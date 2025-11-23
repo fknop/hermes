@@ -75,6 +75,16 @@ impl ActivityConstraint for TimeWindowConstraint {
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
         let problem = context.problem();
 
+        let route = context.insertion.route(context.solution);
+        if route.is_valid_tw_change(
+            problem,
+            [context.insertion.service_id()].into_iter(),
+            context.insertion.position(),
+            context.insertion.position(),
+        ) {
+            return Score::zero();
+        }
+
         let mut total_score = Score::zero();
 
         // TODO: precompute time slacks to avoid recomputing for all activities

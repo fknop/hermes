@@ -51,6 +51,12 @@ impl Service {
     pub fn time_windows(&self) -> &[TimeWindow] {
         &self.time_windows
     }
+
+    pub fn time_windows_satisfied(&self, arrival_time: jiff::Timestamp) -> bool {
+        self.time_windows
+            .iter()
+            .any(|tw| tw.is_satisfied(arrival_time))
+    }
 }
 
 #[derive(Default)]

@@ -1,5 +1,5 @@
 use crate::solver::{
-    intensify::intensify_operator::ComputeDelta, solution::working_solution::WorkingSolution,
+    intensify::intensify_operator::IntensifyOp, solution::working_solution::WorkingSolution,
 };
 
 /// **Intra-Route Or-Opt**
@@ -25,7 +25,7 @@ pub struct OrOptOperator {
     count: usize,
 }
 
-impl ComputeDelta for OrOptOperator {
+impl IntensifyOp for OrOptOperator {
     fn compute_delta(&self, solution: &WorkingSolution) -> f64 {
         let problem = solution.problem();
         let route = solution.route(self.route_id);
@@ -49,5 +49,9 @@ impl ComputeDelta for OrOptOperator {
         delta += problem.travel_cost_or_zero(end, Y);
 
         delta
+    }
+
+    fn is_valid(&self, solution: &WorkingSolution) -> bool {
+        todo!()
     }
 }

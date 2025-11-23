@@ -9,9 +9,8 @@ use crate::{
     solver::{insertion::Insertion, solution::route::WorkingSolutionRoute},
 };
 
-#[derive(Clone, Serialize)]
+#[derive(Clone)]
 pub struct WorkingSolution {
-    #[serde(skip_serializing)]
     problem: Arc<VehicleRoutingProblem>,
     routes: Vec<WorkingSolutionRoute>,
     unassigned_services: FxHashSet<ServiceId>,
@@ -71,11 +70,11 @@ impl WorkingSolution {
             if !route
                 .activities
                 .iter()
-                .map(|activity| activity.service_id)
+                .map(|activity| activity.job_id)
                 .eq(other_route
                     .activities
                     .iter()
-                    .map(|activity| activity.service_id))
+                    .map(|activity| activity.job_id))
             {
                 return false;
             }
@@ -242,7 +241,7 @@ impl WorkingSolution {
     pub fn remove_route(&mut self, route_id: usize) -> usize {
         let removed = self.routes[route_id].activities.len();
         for activity in self.routes[route_id].activities.iter() {
-            self.unassigned_services.insert(activity.service_id);
+            self.unassigned_services.insert(activity.job_id.into());
         }
 
         self.routes[route_id] = WorkingSolutionRoute::empty(route_id);

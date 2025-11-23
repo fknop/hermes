@@ -1,5 +1,5 @@
 use crate::solver::{
-    intensify::intensify_operator::ComputeDelta, solution::working_solution::WorkingSolution,
+    intensify::intensify_operator::IntensifyOp, solution::working_solution::WorkingSolution,
 };
 
 /// **Intra-Route Relocate**
@@ -25,7 +25,7 @@ pub struct RelocateOperator {
     to: usize,
 }
 
-impl ComputeDelta for RelocateOperator {
+impl IntensifyOp for RelocateOperator {
     fn compute_delta(&self, solution: &WorkingSolution) -> f64 {
         let problem = solution.problem();
         let route = solution.route(self.route_id);
@@ -49,5 +49,9 @@ impl ComputeDelta for RelocateOperator {
             + problem.travel_cost_or_zero(from, next_to);
 
         new_cost - current_cost
+    }
+
+    fn is_valid(&self, solution: &WorkingSolution) -> bool {
+        todo!()
     }
 }

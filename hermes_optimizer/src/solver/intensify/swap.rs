@@ -1,5 +1,5 @@
 use crate::solver::{
-    intensify::intensify_operator::ComputeDelta, solution::working_solution::WorkingSolution,
+    intensify::intensify_operator::IntensifyOp, solution::working_solution::WorkingSolution,
 };
 
 /// **Intra-Route Swap**
@@ -21,7 +21,7 @@ pub struct SwapOperator {
     second: usize,
 }
 
-impl ComputeDelta for SwapOperator {
+impl IntensifyOp for SwapOperator {
     fn compute_delta(&self, solution: &WorkingSolution) -> f64 {
         let problem = solution.problem();
         let route = solution.route(self.route_id);
@@ -51,5 +51,9 @@ impl ComputeDelta for SwapOperator {
             + problem.travel_cost_or_zero(first_loc, next_second_loc);
 
         new_cost - current_cost
+    }
+
+    fn is_valid(&self, solution: &WorkingSolution) -> bool {
+        todo!()
     }
 }

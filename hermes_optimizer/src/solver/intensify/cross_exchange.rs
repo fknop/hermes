@@ -1,5 +1,5 @@
 use crate::solver::{
-    intensify::intensify_operator::ComputeDelta, solution::working_solution::WorkingSolution,
+    intensify::intensify_operator::IntensifyOp, solution::working_solution::WorkingSolution,
 };
 
 /// **Cross-Exchange**
@@ -24,7 +24,7 @@ pub struct CrossExchangeOperator {
     second_end: usize,
 }
 
-impl ComputeDelta for CrossExchangeOperator {
+impl IntensifyOp for CrossExchangeOperator {
     fn compute_delta(&self, solution: &WorkingSolution) -> f64 {
         let problem = solution.problem();
 
@@ -56,5 +56,9 @@ impl ComputeDelta for CrossExchangeOperator {
         delta += problem.travel_cost_or_zero(first_end, next_second_end);
 
         delta
+    }
+
+    fn is_valid(&self, solution: &WorkingSolution) -> bool {
+        todo!()
     }
 }

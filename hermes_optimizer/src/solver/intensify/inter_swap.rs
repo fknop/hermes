@@ -1,5 +1,5 @@
 use crate::solver::{
-    intensify::intensify_operator::ComputeDelta, solution::working_solution::WorkingSolution,
+    intensify::intensify_operator::IntensifyOp, solution::working_solution::WorkingSolution,
 };
 
 /// **Inter-Route Swap**
@@ -22,7 +22,7 @@ pub struct InterSwapOperator {
     second: usize,
 }
 
-impl ComputeDelta for InterSwapOperator {
+impl IntensifyOp for InterSwapOperator {
     fn compute_delta(&self, solution: &WorkingSolution) -> f64 {
         let problem = solution.problem();
         let r1 = solution.route(self.first_route_id);
@@ -52,5 +52,9 @@ impl ComputeDelta for InterSwapOperator {
         delta += problem.travel_cost_or_zero(first, y);
 
         delta
+    }
+
+    fn is_valid(&self, solution: &WorkingSolution) -> bool {
+        todo!()
     }
 }
