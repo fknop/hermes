@@ -1,16 +1,20 @@
-use crate::solver::{
-    intensify::{
-        cross_exchange::CrossExchangeOperator, inter_relocate::InterRelocateOperator,
-        inter_swap::InterSwapOperator, inter_two_opt_star::InterTwoOptStarOperator,
-        or_opt::OrOptOperator, relocate::RelocateOperator, swap::SwapOperator,
-        two_opt::TwoOptOperator,
+use crate::{
+    problem::vehicle_routing_problem::VehicleRoutingProblem,
+    solver::{
+        intensify::{
+            cross_exchange::CrossExchangeOperator, inter_relocate::InterRelocateOperator,
+            inter_swap::InterSwapOperator, inter_two_opt_star::InterTwoOptStarOperator,
+            or_opt::OrOptOperator, relocate::RelocateOperator, swap::SwapOperator,
+            two_opt::TwoOptOperator,
+        },
+        solution::working_solution::WorkingSolution,
     },
-    solution::working_solution::WorkingSolution,
 };
 
 pub trait IntensifyOp {
     fn compute_delta(&self, solution: &WorkingSolution) -> f64;
     fn is_valid(&self, solution: &WorkingSolution) -> bool;
+    fn apply(&self, problem: &VehicleRoutingProblem, solution: &mut WorkingSolution);
 }
 
 pub trait GenerateIntensifyOperators<T = Self> {

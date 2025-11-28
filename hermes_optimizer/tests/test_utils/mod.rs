@@ -3,8 +3,9 @@ use std::sync::Arc;
 use hermes_optimizer::{
     problem::{
         distance_method::DistanceMethod,
+        job::Job,
         location::{Location, LocationId},
-        service::{Job, JobId, ServiceBuilder},
+        service::{Service, ServiceBuilder, ServiceId},
         travel_cost_matrix::TravelCostMatrix,
         vehicle::{Vehicle, VehicleBuilder},
         vehicle_routing_problem::{VehicleRoutingProblem, VehicleRoutingProblemBuilder},
@@ -50,7 +51,7 @@ pub fn create_locations(locations: Vec<(f64, f64)>) -> Vec<Location> {
         .collect()
 }
 
-pub fn create_basic_services(location_ids: Vec<LocationId>) -> Vec<Job> {
+pub fn create_basic_services(location_ids: Vec<LocationId>) -> Vec<Service> {
     location_ids
         .iter()
         .enumerate()
@@ -79,7 +80,7 @@ pub fn create_basic_vehicles(location_ids: Vec<LocationId>) -> Vec<Vehicle> {
 
 pub fn create_test_problem(
     locations: Vec<Location>,
-    services: Vec<Job>,
+    services: Vec<Service>,
     vehicles: Vec<Vehicle>,
 ) -> VehicleRoutingProblem {
     let mut builder = VehicleRoutingProblemBuilder::default();
@@ -95,7 +96,7 @@ pub fn create_test_problem(
 
 pub struct TestRoute {
     pub vehicle_id: usize,
-    pub service_ids: Vec<JobId>,
+    pub service_ids: Vec<ServiceId>,
 }
 
 pub fn create_test_working_solution(

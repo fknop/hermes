@@ -7,15 +7,12 @@ use crate::{
         service::{Service, ServiceId},
         vehicle_routing_problem::VehicleRoutingProblem,
     },
-    solver::solution::{
-        activity_type::ActivityType,
-        utils::{compute_departure_time, compute_waiting_duration},
-    },
+    solver::solution::utils::{compute_departure_time, compute_waiting_duration},
 };
 
 #[derive(Clone)]
 pub struct WorkingSolutionRouteActivity {
-    pub(super) activity_type: ActivityType,
+    pub(super) job_id: JobId,
     pub(super) arrival_time: Timestamp,
     pub(super) departure_time: Timestamp,
     pub(super) waiting_duration: SignedDuration,
@@ -24,6 +21,17 @@ pub struct WorkingSolutionRouteActivity {
 }
 
 impl WorkingSolutionRouteActivity {
+    pub fn invalid(job_id: ServiceId) -> Self {
+        WorkingSolutionRouteActivity {
+            job_id: JobId::Service(job_id),
+            arrival_time: jiff::Timestamp::MIN,
+            waiting_duration: SignedDuration::ZERO,
+            departure_time: jiff::Timestamp::MIN,
+            cumulative_load: Capacity::EMPTY,
+            max_load_until_end: Capacity::EMPTY,
+        }
+    }
+
     pub fn new(
         problem: &VehicleRoutingProblem,
         job_id: ServiceId,
@@ -32,7 +40,7 @@ impl WorkingSolutionRouteActivity {
     ) -> Self {
         let waiting_duration = compute_waiting_duration(problem.service(job_id), arrival_time);
         WorkingSolutionRouteActivity {
-            activity_type: ActivityType::Service(job_id),
+            job_id: JobId::Service(job_id),
             arrival_time,
             waiting_duration,
             departure_time: compute_departure_time(problem, arrival_time, waiting_duration, job_id),
@@ -42,11 +50,11 @@ impl WorkingSolutionRouteActivity {
     }
 
     pub fn service<'a>(&self, problem: &'a VehicleRoutingProblem) -> &'a Service {
-        problem.service(self.activity_type.into())
+        problem.service(self.job_id.into())
     }
 
     pub fn service_id(&self) -> ServiceId {
-        self.activity_type.into()
+        self.job_id.into()
     }
 
     pub fn arrival_time(&self) -> Timestamp {
@@ -76,12 +84,12 @@ impl WorkingSolutionRouteActivity {
     ) {
         self.arrival_time = arrival_time;
         self.waiting_duration =
-            compute_waiting_duration(problem.service(self.activity_type.into()), arrival_time);
+            compute_waiting_duration(problem.service(self.job_id.into()), arrival_time);
         self.departure_time = compute_departure_time(
             problem,
             self.arrival_time,
             self.waiting_duration,
-            self.activity_type.into(),
+            self.job_id.into(),
         );
     }
 }

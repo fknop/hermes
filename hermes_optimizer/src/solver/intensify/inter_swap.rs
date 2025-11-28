@@ -1,5 +1,8 @@
-use crate::solver::{
-    intensify::intensify_operator::IntensifyOp, solution::working_solution::WorkingSolution,
+use crate::{
+    problem::vehicle_routing_problem::VehicleRoutingProblem,
+    solver::{
+        intensify::intensify_operator::IntensifyOp, solution::working_solution::WorkingSolution,
+    },
 };
 
 /// **Inter-Route Swap**
@@ -56,5 +59,26 @@ impl IntensifyOp for InterSwapOperator {
 
     fn is_valid(&self, solution: &WorkingSolution) -> bool {
         todo!()
+    }
+
+    fn apply(&self, problem: &VehicleRoutingProblem, solution: &mut WorkingSolution) {
+        if let Some(first_service_id) = solution
+            .route_mut(self.first_route_id)
+            .remove_activity(problem, self.first)
+            && let Some(second_service_id) = solution
+                .route_mut(self.second_route_id)
+                .remove_activity(problem, self.second)
+        {
+            solution.route_mut(self.first_route_id).insert_service(
+                problem,
+                self.first,
+                second_service_id,
+            );
+            solution.route_mut(self.second_route_id).insert_service(
+                problem,
+                self.second,
+                first_service_id,
+            );
+        }
     }
 }

@@ -1,5 +1,6 @@
 use crate::problem::{capacity::Capacity, service::Service, shipment::Shipment};
 
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum JobId {
     Service(usize),
     ShipmentPickup(usize),
@@ -24,8 +25,8 @@ pub enum Job {
 impl Job {
     pub fn external_id(&self) -> &str {
         match self {
-            Job::Service(service) => &service.external_id(),
-            Job::Shipment(shipment) => &shipment.external_id(),
+            Job::Service(service) => service.external_id(),
+            Job::Shipment(shipment) => shipment.external_id(),
         }
     }
 

@@ -69,11 +69,11 @@ impl WorkingSolution {
             if !route
                 .activities
                 .iter()
-                .map(|activity| activity.activity_type)
+                .map(|activity| activity.job_id)
                 .eq(other_route
                     .activities
                     .iter()
-                    .map(|activity| activity.activity_type))
+                    .map(|activity| activity.job_id))
             {
                 return false;
             }
@@ -130,6 +130,10 @@ impl WorkingSolution {
 
     pub fn route(&self, route_id: usize) -> &WorkingSolutionRoute {
         &self.routes[route_id]
+    }
+
+    pub fn route_mut(&mut self, route_id: usize) -> &mut WorkingSolutionRoute {
+        &mut self.routes[route_id]
     }
 
     pub fn random_non_empty_route<R>(&self, rng: &mut R) -> Option<usize>
@@ -240,8 +244,7 @@ impl WorkingSolution {
     pub fn remove_route(&mut self, route_id: usize) -> usize {
         let removed = self.routes[route_id].activities.len();
         for activity in self.routes[route_id].activities.iter() {
-            self.unassigned_services
-                .insert(activity.activity_type.into());
+            self.unassigned_services.insert(activity.job_id.into());
         }
 
         self.routes[route_id] = WorkingSolutionRoute::empty(route_id);

@@ -1,5 +1,8 @@
-use crate::solver::{
-    intensify::intensify_operator::IntensifyOp, solution::working_solution::WorkingSolution,
+use crate::{
+    problem::vehicle_routing_problem::VehicleRoutingProblem,
+    solver::{
+        intensify::intensify_operator::IntensifyOp, solution::working_solution::WorkingSolution,
+    },
 };
 
 /// **Intra-Route 2-Opt**
@@ -86,9 +89,17 @@ impl IntensifyOp for TwoOptOperator {
 
         route.is_valid_tw_change(
             solution.problem(),
-            route.job_ids_iter(self.from, self.to),
+            route
+                .job_ids_iter(self.from, self.to)
+                .map(|job_id| job_id.into()),
             self.from,
             self.to + 1,
         )
+    }
+
+    fn apply(&self, problem: &VehicleRoutingProblem, solution: &mut WorkingSolution) {
+        let route = solution.route_mut(self.route_id);
+        let job_ids = route.job_ids_iter(self.from, self.to).collect::<Vec<_>>();
+        route.replace_activities(problem, &job_ids, self.from);
     }
 }

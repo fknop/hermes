@@ -6,14 +6,14 @@ use crate::{
     problem::{
         amount::AmountExpression,
         capacity::Capacity,
-        job::Job,
+        job::{Job, JobId},
         service::{ServiceId, ServiceType},
         vehicle::{Vehicle, VehicleId},
         vehicle_routing_problem::VehicleRoutingProblem,
     },
     solver::solution::{
         activity::WorkingSolutionRouteActivity,
-        activity_type::{ActivityType, ActivityTypeIterator},
+        route_job_id_iterator::RouteJobIdIterator,
         utils::{
             compute_activity_arrival_time, compute_activity_cumulative_load,
             compute_departure_time, compute_first_activity_arrival_time, compute_vehicle_end,
@@ -56,7 +56,7 @@ impl WorkingSolutionRoute {
     pub fn service_position(&self, service_id: ServiceId) -> Option<usize> {
         self.activities
             .iter()
-            .position(|activity| activity.activity_type == ActivityType::Service(service_id))
+            .position(|activity| activity.job_id == JobId::Service(service_id))
     }
 
     pub fn is_empty(&self) -> bool {
@@ -338,7 +338,7 @@ impl WorkingSolutionRoute {
             return None;
         }
 
-        self.services.remove(&activity.activity_type.into());
+        self.services.remove(&activity.job_id.into());
 
         if activity.service(problem).service_type() == ServiceType::Delivery {
             self.total_initial_load -= activity.service(problem).demand();
@@ -365,7 +365,7 @@ impl WorkingSolutionRoute {
         let activity_id = self
             .activities
             .iter()
-            .position(|activity| activity.activity_type == ActivityType::Service(service_id))
+            .position(|activity| activity.job_id == JobId::Service(service_id))
             .unwrap();
 
         self.remove_activity(problem, activity_id).is_some()
@@ -382,32 +382,33 @@ impl WorkingSolutionRoute {
         }
 
         self.services.insert(service_id);
-        let activity = WorkingSolutionRouteActivity::new(
-            problem,
-            service_id,
-            if self.activities.is_empty() || position == 0 {
-                compute_first_activity_arrival_time(problem, self.vehicle_id, service_id)
-            } else {
-                let previous_activity = &self.activities[position - 1];
-                compute_activity_arrival_time(
-                    problem,
-                    previous_activity.service_id(),
-                    previous_activity.departure_time(),
-                    service_id,
-                )
-            },
-            if self.activities().is_empty() || position == 0 {
-                compute_activity_cumulative_load(problem.service(service_id), &Capacity::EMPTY)
-            } else {
-                let previous_activity = &self.activities[position - 1];
-                compute_activity_cumulative_load(
-                    problem.service(service_id),
-                    &previous_activity.cumulative_load,
-                )
-            },
-        );
+        // let activity = WorkingSolutionRouteActivity::new(
+        //     problem,
+        //     service_id,
+        //     if self.activities.is_empty() || position == 0 {
+        //         compute_first_activity_arrival_time(problem, self.vehicle_id, service_id)
+        //     } else {
+        //         let previous_activity = &self.activities[position - 1];
+        //         compute_activity_arrival_time(
+        //             problem,
+        //             previous_activity.service_id(),
+        //             previous_activity.departure_time(),
+        //             service_id,
+        //         )
+        //     },
+        //     if self.activities().is_empty() || position == 0 {
+        //         compute_activity_cumulative_load(problem.service(service_id), &Capacity::EMPTY)
+        //     } else {
+        //         let previous_activity = &self.activities[position - 1];
+        //         compute_activity_cumulative_load(
+        //             problem.service(service_id),
+        //             &previous_activity.cumulative_load,
+        //         )
+        //     },
+        // );
 
-        self.activities.insert(position, activity);
+        self.activities
+            .insert(position, WorkingSolutionRouteActivity::invalid(service_id));
         self.updated_in_iteration = true;
 
         let job = problem.job(service_id);
@@ -419,8 +420,47 @@ impl WorkingSolutionRoute {
         }
 
         // Update the arrival times and departure times of subsequent activities
-        self.forward_update_pass(problem, position);
+        self.update_activity_data(problem, position);
+    }
+
+    pub fn replace_activities(
+        &mut self,
+        problem: &VehicleRoutingProblem,
+        job_ids: &[JobId],
+        start: usize,
+    ) {
+        for (i, &job_id) in job_ids.iter().enumerate() {
+            self.activities[start + i].job_id = job_id;
+        }
+
+        // Update the arrival times and departure times of subsequent activities
+        self.update_activity_data(problem, start);
+    }
+
+    pub fn move_activity(&mut self, problem: &VehicleRoutingProblem, from: usize, to: usize) {
+        if from >= self.activities.len() || to >= self.activities.len() || from == to {
+            return;
+        }
+
+        let activity = self.activities.remove(from);
+        self.activities
+            .insert(if to > from { to - 1 } else { to }, activity);
+
+        let start = from.min(to);
+        self.update_activity_data(problem, start);
+    }
+
+    pub fn swap_activities(&mut self, problem: &VehicleRoutingProblem, i: usize, j: usize) {
+        self.activities.swap(i, j);
+        let start = i.min(j);
+
+        self.update_activity_data(problem, start);
+    }
+
+    fn update_activity_data(&mut self, problem: &VehicleRoutingProblem, start: usize) {
+        self.forward_update_pass(problem, start);
         self.backward_update_pass(problem);
+        self.update_bbox(problem);
     }
 
     pub(super) fn resync(&mut self, problem: &VehicleRoutingProblem) {
@@ -467,14 +507,14 @@ impl WorkingSolutionRoute {
                         problem,
                         compute_activity_arrival_time(
                             problem,
-                            previous_activity.activity_type.into(),
+                            previous_activity.job_id.into(),
                             previous_activity.departure_time,
-                            current_activity.activity_type.into(),
+                            current_activity.job_id.into(),
                         ),
                     );
 
                     current_activity.cumulative_load = compute_activity_cumulative_load(
-                        problem.service(current_activity.activity_type.into()),
+                        problem.service(current_activity.job_id.into()),
                         &previous_activity.cumulative_load,
                     );
                 }
@@ -484,12 +524,12 @@ impl WorkingSolutionRoute {
                         compute_first_activity_arrival_time(
                             problem,
                             self.vehicle_id,
-                            current_activity.activity_type.into(),
+                            current_activity.job_id.into(),
                         ),
                     );
 
                     current_activity.cumulative_load = compute_activity_cumulative_load(
-                        problem.service(current_activity.activity_type.into()),
+                        problem.service(current_activity.job_id.into()),
                         &Capacity::EMPTY,
                     );
                 }
@@ -543,8 +583,12 @@ impl WorkingSolutionRoute {
         rng.random_range(0..self.activities.len())
     }
 
-    pub fn job_ids_iter(&self, start: usize, end: usize) -> ActivityTypeIterator<'_> {
-        ActivityTypeIterator::new(self, start, end)
+    pub fn job_ids_iter(&self, start: usize, end: usize) -> impl Iterator<Item = JobId> + '_ {
+        self.activities[start..end]
+            .iter()
+            .map(|activity| activity.job_id)
+
+        // RouteJobIdIterator::new(self, start, end)
     }
 
     /// Checks whether inserting the given job IDs between the given [start, end) indices is valid

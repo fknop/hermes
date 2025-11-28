@@ -1,5 +1,5 @@
 use crate::{
-    problem,
+    problem::{self, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{
         intensify::intensify_operator::IntensifyOp, solution::working_solution::WorkingSolution,
     },
@@ -70,6 +70,10 @@ impl IntensifyOp for InterTwoOptStarOperator {
     }
 
     fn is_valid(&self, solution: &WorkingSolution) -> bool {
+        todo!()
+    }
+
+    fn apply(&self, problem: &VehicleRoutingProblem, solution: &mut WorkingSolution) {
         todo!()
     }
 }
