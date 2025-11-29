@@ -1,18 +1,40 @@
-use std::ops::{Add, AddAssign, Index, Sub, SubAssign};
+use std::{
+    cmp::Ordering,
+    ops::{Add, AddAssign, Index, Sub, SubAssign},
+};
 
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 
-pub trait AmountExpression {
+pub trait AmountExpression: Sized {
     fn get(&self, index: usize) -> f64;
     fn len(&self) -> usize;
     fn is_empty(&self) -> bool {
-        self.len() == 0
+        self.len() == 0 || self.iter().all(|v| v == 0.0)
     }
-    fn iter(&self) -> impl Iterator<Item = f64>;
+    fn iter(&self) -> impl Iterator<Item = f64>
+    where
+        Self: Sized;
 }
 
 type Vector = SmallVec<[f64; 2]>;
+
+// 1. Blanket implementation for References
+// This allows &Amount to be used anywhere AmountExpression is required.
+impl<T: AmountExpression + Sized> AmountExpression for &T {
+    fn get(&self, index: usize) -> f64 {
+        (**self).get(index)
+    }
+    fn len(&self) -> usize {
+        (**self).len()
+    }
+    fn iter(&self) -> impl Iterator<Item = f64>
+    where
+        Self: Sized,
+    {
+        (**self).iter()
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Amount(Vector);
@@ -26,6 +48,27 @@ impl Amount {
 
     pub fn from_vec(vec: Vec<f64>) -> Self {
         Amount(SmallVec::from_vec(vec))
+    }
+
+    pub fn reset(&mut self) {
+        self.0.clear();
+    }
+
+    pub fn update(&mut self, other: &Amount) {
+        self.0.clone_from(&other.0);
+    }
+
+    pub fn update_expr(&mut self, other: impl AmountExpression) {
+        self.0.clear();
+        self.0.extend(other.iter());
+    }
+
+    pub fn update_max(&mut self, other: &Amount) {
+        let max_len = self.len().max(other.len());
+        self.0.resize(max_len, 0.0);
+        for i in 0..max_len {
+            self.0[i] = self.get(i).max(other.get(i));
+        }
     }
 }
 
@@ -59,42 +102,38 @@ impl Index<usize> for Amount {
     }
 }
 
-impl AddAssign<&Amount> for Amount {
-    fn add_assign(&mut self, rhs: &Amount) {
-        if self.0.len() < rhs.0.len() {
-            self.0.resize(rhs.0.len(), 0.0);
+impl<E: AmountExpression> AddAssign<E> for Amount {
+    fn add_assign(&mut self, rhs: E) {
+        if self.0.len() < rhs.len() {
+            self.0.resize(rhs.len(), 0.0);
         }
 
-        for (a, b) in self.0.iter_mut().zip(rhs.0.iter()) {
-            *a += *b;
-        }
-    }
-}
-
-impl SubAssign<&Amount> for Amount {
-    fn sub_assign(&mut self, rhs: &Amount) {
-        if self.0.len() < rhs.0.len() {
-            self.0.resize(rhs.0.len(), 0.0);
-        }
-
-        for (a, b) in self.0.iter_mut().zip(rhs.0.iter()) {
-            *a -= *b;
+        for (a, b) in self.0.iter_mut().zip(rhs.iter()) {
+            *a += b;
         }
     }
 }
 
-impl<'a> Add<&'a Amount> for &'a Amount {
-    type Output = AmountSum<'a, Amount, Amount>;
+impl<E: AmountExpression> SubAssign<E> for Amount {
+    fn sub_assign(&mut self, rhs: E) {
+        if self.0.len() < rhs.len() {
+            self.0.resize(rhs.len(), 0.0);
+        }
+        for (a, b) in self.0.iter_mut().zip(rhs.iter()) {
+            *a -= b;
+        }
+    }
+}
 
-    fn add(self, rhs: &'a Amount) -> Self::Output {
+impl<'a, 'b> Add<&'b Amount> for &'a Amount {
+    type Output = AmountSum<&'a Amount, &'b Amount>;
+    fn add(self, rhs: &'b Amount) -> Self::Output {
         AmountSum { lhs: self, rhs }
     }
 }
-
-impl<'a> Sub<&'a Amount> for &'a Amount {
-    type Output = AmountSub<'a>;
-
-    fn sub(self, rhs: &'a Amount) -> Self::Output {
+impl<'a, 'b> Sub<&'b Amount> for &'a Amount {
+    type Output = AmountSub<&'a Amount, &'b Amount>;
+    fn sub(self, rhs: &'b Amount) -> Self::Output {
         AmountSub { lhs: self, rhs }
     }
 }
@@ -119,35 +158,13 @@ where
     }
 }
 
-impl<A> PartialOrd<A> for Amount
-where
-    A: AmountExpression,
-{
-    fn partial_cmp(&self, other: &A) -> Option<std::cmp::Ordering> {
-        for i in 0..self.len().max(other.len()) {
-            let self_value = self.get(i);
-            let other_value = other.get(i);
-            if self_value < other_value {
-                return Some(std::cmp::Ordering::Less);
-            } else if self_value > other_value {
-                return Some(std::cmp::Ordering::Greater);
-            }
-        }
-        Some(std::cmp::Ordering::Equal)
-    }
-}
-
 #[derive(Debug, Clone)]
-pub struct AmountSum<'a, LHS, RHS>
-where
-    LHS: AmountExpression,
-    RHS: AmountExpression,
-{
-    lhs: &'a LHS,
-    rhs: &'a RHS,
+pub struct AmountSum<LHS, RHS> {
+    pub lhs: LHS,
+    pub rhs: RHS,
 }
 
-impl<'a, LHS, RHS> AmountExpression for AmountSum<'a, LHS, RHS>
+impl<LHS, RHS> AmountExpression for AmountSum<LHS, RHS>
 where
     LHS: AmountExpression,
     RHS: AmountExpression,
@@ -165,7 +182,7 @@ where
     }
 }
 
-impl<'a, LHS, RHS> PartialEq<Amount> for AmountSum<'a, LHS, RHS>
+impl<LHS, RHS> PartialEq<Amount> for AmountSum<LHS, RHS>
 where
     LHS: AmountExpression,
     RHS: AmountExpression,
@@ -175,7 +192,7 @@ where
     }
 }
 
-impl<'a, LHS, RHS> PartialOrd<Amount> for AmountSum<'a, LHS, RHS>
+impl<LHS, RHS> PartialOrd<Amount> for AmountSum<LHS, RHS>
 where
     LHS: AmountExpression,
     RHS: AmountExpression,
@@ -185,27 +202,17 @@ where
     }
 }
 
-impl<'a, LHS, RHS> From<AmountSum<'a, LHS, RHS>> for Amount
-where
-    LHS: AmountExpression,
-    RHS: AmountExpression,
-{
-    fn from(val: AmountSum<'a, LHS, RHS>) -> Self {
-        let mut vec = SmallVec::with_capacity(val.len());
-        for i in 0..val.len() {
-            vec.push(val.get(i));
-        }
-        Amount(vec)
-    }
-}
-
 #[derive(Debug, Clone)]
-pub struct AmountSub<'a> {
-    lhs: &'a Amount,
-    rhs: &'a Amount,
+pub struct AmountSub<L, R> {
+    lhs: L,
+    rhs: R,
 }
 
-impl AmountExpression for AmountSub<'_> {
+impl<L, R> AmountExpression for AmountSub<L, R>
+where
+    L: AmountExpression,
+    R: AmountExpression,
+{
     fn len(&self) -> usize {
         self.lhs.len().max(self.rhs.len())
     }
@@ -219,27 +226,115 @@ impl AmountExpression for AmountSub<'_> {
     }
 }
 
-impl PartialEq<Amount> for AmountSub<'_> {
+// Allow AmountSub == Amount
+impl<L, R> PartialEq<Amount> for AmountSub<L, R>
+where
+    L: AmountExpression,
+    R: AmountExpression,
+{
     fn eq(&self, other: &Amount) -> bool {
         other.eq(self)
     }
 }
 
-impl PartialOrd<Amount> for AmountSub<'_> {
-    fn partial_cmp(&self, other: &Amount) -> Option<std::cmp::Ordering> {
-        other.partial_cmp(self).map(|o| o.reverse())
+impl<A> PartialOrd<A> for Amount
+where
+    A: AmountExpression,
+{
+    fn partial_cmp(&self, other: &A) -> Option<Ordering> {
+        // Lexicographical-style comparison over the values?
+        // Your original logic compared index by index.
+        let common_len = self.len().max(other.len());
+        for i in 0..common_len {
+            let s = self.get(i);
+            let o = other.get(i);
+            if s < o {
+                return Some(Ordering::Less);
+            }
+            if s > o {
+                return Some(Ordering::Greater);
+            }
+        }
+        Some(Ordering::Equal)
     }
 }
 
-impl From<AmountSub<'_>> for Amount {
-    fn from(val: AmountSub<'_>) -> Self {
+impl<L, R> From<AmountSum<L, R>> for Amount
+where
+    L: AmountExpression,
+    R: AmountExpression,
+{
+    fn from(val: AmountSum<L, R>) -> Self {
+        // We know the exact length, so we can pre-allocate
         let mut vec = SmallVec::with_capacity(val.len());
-        for i in 0..val.len() {
-            vec.push(val.get(i));
-        }
+        vec.extend(val.iter());
         Amount(vec)
     }
 }
+
+// 3. Implement for AmountSub
+impl<L, R> From<AmountSub<L, R>> for Amount
+where
+    L: AmountExpression,
+    R: AmountExpression,
+{
+    fn from(val: AmountSub<L, R>) -> Self {
+        let mut vec = SmallVec::with_capacity(val.len());
+        vec.extend(val.iter());
+        Amount(vec)
+    }
+}
+
+// Macro to implement Add<RHS> for LHS where output is AmountSum<LHS, RHS>
+macro_rules! impl_add_mix {
+    ($lhs:ty, $rhs:ty) => {
+        impl<'a, L, R> Add<$rhs> for $lhs
+        where
+            L: AmountExpression,
+            R: AmountExpression,
+        {
+            type Output = AmountSum<$lhs, $rhs>;
+            fn add(self, rhs: $rhs) -> Self::Output {
+                AmountSum { lhs: self, rhs }
+            }
+        }
+    };
+}
+
+// Macro to implement Sub<RHS> for LHS where output is AmountSub<LHS, RHS>
+macro_rules! impl_sub_mix {
+    ($lhs:ty, $rhs:ty) => {
+        impl<'a, L, R> Sub<$rhs> for $lhs
+        where
+            L: AmountExpression,
+            R: AmountExpression,
+        {
+            type Output = AmountSub<$lhs, $rhs>;
+            fn sub(self, rhs: $rhs) -> Self::Output {
+                AmountSub { lhs: self, rhs }
+            }
+        }
+    };
+}
+
+// Register combinations
+impl_add_mix!(AmountSum<L, R>, &'a Amount);
+impl_add_mix!(AmountSub<L, R>, &'a Amount);
+impl_add_mix!(AmountSum<L, R>, AmountSum<L, R>); // Self mix
+impl_add_mix!(AmountSum<L, R>, AmountSub<L, R>); // Cross mix
+impl_add_mix!(AmountSub<L, R>, AmountSum<L, R>); // Cross mix
+impl_add_mix!(AmountSub<L, R>, AmountSub<L, R>); // Self mix
+impl_add_mix!(&'a Amount, AmountSum<L, R>);
+impl_add_mix!(&'a Amount, AmountSub<L, R>);
+
+impl_sub_mix!(AmountSum<L, R>, &'a Amount);
+impl_sub_mix!(AmountSub<L, R>, &'a Amount);
+impl_sub_mix!(AmountSum<L, R>, AmountSum<L, R>);
+impl_sub_mix!(AmountSum<L, R>, AmountSub<L, R>);
+impl_sub_mix!(AmountSub<L, R>, AmountSum<L, R>);
+impl_sub_mix!(AmountSub<L, R>, AmountSub<L, R>);
+impl_sub_mix!(&'a Amount, AmountSum<L, R>);
+impl_sub_mix!(&'a Amount, AmountSub<L, R>);
 
 #[cfg(test)]
 mod tests {
@@ -307,5 +402,36 @@ mod tests {
         let sum = &a + &b;
         let expected = Amount::from_vec(vec![25.0, 35.0, 25.0]);
         assert!(expected > sum);
+    }
+
+    #[test]
+    fn test_nesting_mix() {
+        let a = Amount::from_vec(vec![100.0]);
+        let b = Amount::from_vec(vec![50.0]);
+        let c = Amount::from_vec(vec![25.0]);
+
+        // ((a - b) + c)
+        let calc = (&a - &b) + &c;
+        assert_eq!(calc.get(0), 75.0);
+
+        // ((a + b) - c)
+        let calc2 = (&a + &b) - &c;
+        assert_eq!(calc2.get(0), 125.0);
+    }
+
+    #[test]
+    fn test_nesting_add() {
+        let a = Amount::from_vec(vec![10.0]);
+        let b = Amount::from_vec(vec![10.0]);
+        let c = Amount::from_vec(vec![10.0]);
+
+        // (a + b) is AmountSum<&Amount, &Amount>
+        // (a + b) + c is AmountSum<AmountSum<&Amount, &Amount>, &Amount>
+        let sum = &a + &b + &c;
+
+        assert_eq!(sum.get(0), 30.0);
+
+        let result: Amount = Amount::from(sum);
+        assert_eq!(result.get(0), 30.0);
     }
 }

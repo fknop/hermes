@@ -325,7 +325,7 @@ pub fn construct_solution(
     while !satisfied {
         let mut service_to_remove = None;
         for route in solution.routes() {
-            for activity in route.activities() {
+            for (i, activity) in route.activities().iter().enumerate() {
                 let time_window_score = TimeWindowConstraint::compute_time_window_score(
                     ScoreLevel::Hard,
                     activity.service(problem).time_windows(),
@@ -339,7 +339,9 @@ pub fn construct_solution(
 
                 let vehicle = route.vehicle(problem);
 
-                if !is_capacity_satisfied(vehicle.capacity(), activity.cumulative_load()) {
+                let load = route.load_at(i);
+
+                if !is_capacity_satisfied(vehicle.capacity(), load) {
                     service_to_remove = Some(activity.service_id());
                     break;
                 }

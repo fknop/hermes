@@ -25,7 +25,7 @@ pub struct SwapOperator {
 }
 
 impl IntensifyOp for SwapOperator {
-    fn compute_delta(&self, solution: &WorkingSolution) -> f64 {
+    fn delta(&self, solution: &WorkingSolution) -> f64 {
         let problem = solution.problem();
         let route = solution.route(self.route_id);
 
@@ -64,5 +64,9 @@ impl IntensifyOp for SwapOperator {
         solution
             .route_mut(self.route_id)
             .swap_activities(problem, self.first, self.second);
+    }
+
+    fn updated_routes(&self) -> Vec<usize> {
+        vec![self.route_id]
     }
 }

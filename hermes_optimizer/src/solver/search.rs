@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, sync::Arc, thread};
+use std::{collections::VecDeque, sync::Arc, thread, usize};
 
 use jiff::Timestamp;
 use parking_lot::{MappedRwLockReadGuard, RwLock, RwLockReadGuard};
@@ -30,6 +30,7 @@ use crate::{
             vehicle_cost_constraint::VehicleCostConstraint,
             waiting_duration_constraint::WaitingDurationConstraint,
         },
+        intensify::intensify_search::IntensifySearch,
         statistics::SearchStatisticsIteration,
     },
 };
@@ -288,21 +289,66 @@ impl Search {
                             noise_generator: thread_noise_generator
                         };
 
+                        // let mut should_intensify = false;
+
                         loop {
-                            state.iteration += 1;
 
-                            if (state.iteration).is_multiple_of(500) {
-                                debug!(
-                                    thread = thread::current().name().unwrap_or("main"),
-                                    weights = ?self.alns_weights.read(),
-                                    "Thread {}: Iteration {}/{}",
-                                    thread_index,
-                                    state.iteration,
-                                    max_iterations.map(|max| max.to_string()).unwrap_or(String::from("N/A"))
-                                );
-                            }
 
-                            self.perform_iteration(&mut state, &mut thread_rng);
+                            // should_intensify = false; // should_intensify || state.iterations_without_improvement > 500;
+
+                            // if should_intensify {
+                            //     let mut intensify_search = IntensifySearch::new(&self.problem);
+
+                            //     let best_selector = SelectBestSelector;
+                            //     let (mut working_solution, current_score) = {
+                            //         let solutions_guard = state.best_solutions.read();
+                            //         if !solutions_guard.is_empty()
+                            //             && let Some(AcceptedSolution {
+                            //                 solution, score, ..
+                            //             }) =best_selector
+                            //                 .select_solution(&solutions_guard, &mut thread_rng)
+                            //         {
+                            //             (solution.clone(), *score)
+                            //         } else {
+                            //             panic!("No solutions selected");
+                            //         }
+                            //     }; // Lock is released here
+
+
+                            //     let intensify_iterations = 500.min(max_iterations.unwrap_or(usize::MAX) - state.iteration);
+
+                            //     intensify_search.intensify(&self.problem, &mut working_solution, intensify_iterations);
+
+                            //     state.iteration += intensify_iterations;
+                            //     let iteration_info = IterationInfo {
+                            //         iteration: state.iteration,
+                            //         ruin_strategy: None,
+                            //         recreate_strategy: None,
+                            //         current_score,
+                            //     };
+                            //     self.update_solutions(working_solution, &mut state, iteration_info);
+                            //     should_intensify = false;
+
+
+                            // }
+                            // else {
+                                state.iteration += 1;
+
+                                if (state.iteration).is_multiple_of(500) {
+                                    debug!(
+                                        thread = thread::current().name().unwrap_or("main"),
+                                        weights = ?self.alns_weights.read(),
+                                        "Thread {}: Iteration {}/{}",
+                                        thread_index,
+                                        state.iteration,
+                                        max_iterations.map(|max| max.to_string()).unwrap_or(String::from("N/A"))
+                                    );
+                                }
+
+                                self.perform_iteration(&mut state, &mut thread_rng);
+                            // }
+
+
 
                             let should_terminate = *is_stopped.read() || self.should_terminate(&state);
                             if should_terminate {
@@ -388,8 +434,8 @@ impl Search {
             state,
             IterationInfo {
                 iteration: state.iteration,
-                ruin_strategy,
-                recreate_strategy,
+                ruin_strategy: Some(ruin_strategy),
+                recreate_strategy: Some(recreate_strategy),
                 current_score,
             },
         );
@@ -402,10 +448,8 @@ impl Search {
         iteration_info: IterationInfo,
     ) {
         if self.params.tabu_enabled
-            && iteration_info.iteration > 0
-            && iteration_info
-                .iteration
-                .is_multiple_of(self.params.tabu_iterations)
+            && state.iteration > 0
+            && state.iteration.is_multiple_of(self.params.tabu_iterations)
         {
             state.tabu.write().clear();
         }
@@ -419,7 +463,7 @@ impl Search {
             &solution,
             &score,
             AcceptSolutionContext {
-                iteration: iteration_info.iteration,
+                iteration: state.iteration,
                 max_iterations: state.max_iterations,
                 max_solutions: self.params.max_solutions,
             },
@@ -504,25 +548,29 @@ impl Search {
                 });
             }
 
-            state.alns_scores.update_scores(
-                iteration_info.strategy(),
-                &self.params,
-                UpdateScoreParams {
-                    is_best,
-                    improved: score < iteration_info.current_score,
-                    accepted: true,
-                },
-            );
+            if let Some(strategy) = iteration_info.strategy() {
+                state.alns_scores.update_scores(
+                    strategy,
+                    &self.params,
+                    UpdateScoreParams {
+                        is_best,
+                        improved: score < iteration_info.current_score,
+                        accepted: true,
+                    },
+                );
+            }
         } else {
-            state.alns_scores.update_scores(
-                iteration_info.strategy(),
-                &self.params,
-                UpdateScoreParams {
-                    is_best: false,
-                    improved: false,
-                    accepted: false,
-                },
-            );
+            if let Some(strategy) = iteration_info.strategy() {
+                state.alns_scores.update_scores(
+                    strategy,
+                    &self.params,
+                    UpdateScoreParams {
+                        is_best: false,
+                        improved: false,
+                        accepted: false,
+                    },
+                );
+            }
         }
 
         if state.iteration > 0 {
@@ -625,14 +673,17 @@ impl Search {
 
 struct IterationInfo {
     pub iteration: usize,
-    pub ruin_strategy: RuinStrategy,
-    pub recreate_strategy: RecreateStrategy,
+    pub ruin_strategy: Option<RuinStrategy>,
+    pub recreate_strategy: Option<RecreateStrategy>,
     pub current_score: Score,
 }
 
 impl IterationInfo {
-    fn strategy(&self) -> (RuinStrategy, RecreateStrategy) {
-        (self.ruin_strategy, self.recreate_strategy)
+    fn strategy(&self) -> Option<(RuinStrategy, RecreateStrategy)> {
+        match (self.ruin_strategy, self.recreate_strategy) {
+            (Some(ruin), Some(recreate)) => Some((ruin, recreate)),
+            _ => None,
+        }
     }
 }
 

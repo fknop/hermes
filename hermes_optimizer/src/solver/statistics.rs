@@ -62,8 +62,8 @@ impl GlobalStatistics {
 #[derive(Serialize)]
 pub struct SearchStatisticsIteration {
     pub timestamp: Timestamp,
-    pub ruin_strategy: RuinStrategy,
-    pub recreate_strategy: RecreateStrategy,
+    pub ruin_strategy: Option<RuinStrategy>,
+    pub recreate_strategy: Option<RecreateStrategy>,
     pub improved: bool,
     pub is_best: bool,
 }
@@ -82,15 +82,19 @@ pub struct ThreadSearchStatistics {
 
 impl ThreadSearchStatistics {
     pub fn add_iteration_info(&mut self, iteration: SearchStatisticsIteration) {
-        self.ruin_strategies
-            .entry(iteration.ruin_strategy)
-            .and_modify(|entry| *entry += 1)
-            .or_insert(1);
+        if let Some(ruin_strategy) = iteration.ruin_strategy {
+            self.ruin_strategies
+                .entry(ruin_strategy)
+                .and_modify(|entry| *entry += 1)
+                .or_insert(1);
+        }
 
-        self.recreate_strategies
-            .entry(iteration.recreate_strategy)
-            .and_modify(|entry| *entry += 1)
-            .or_insert(1);
+        if let Some(recreate_strategy) = iteration.recreate_strategy {
+            self.recreate_strategies
+                .entry(recreate_strategy)
+                .and_modify(|entry| *entry += 1)
+                .or_insert(1);
+        }
 
         self.iterations.push(iteration);
     }

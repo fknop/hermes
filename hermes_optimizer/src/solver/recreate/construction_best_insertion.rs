@@ -41,7 +41,11 @@ impl ConstructionBestInsertion {
                                     })
                                 };
 
-                                let score = context.compute_insertion_score(solution, &insertion);
+                                let score = context.compute_insertion_score(
+                                    solution,
+                                    &insertion,
+                                    Some(&best_score_for_service),
+                                );
 
                                 if score < best_score_for_service {
                                     best_score_for_service = score;

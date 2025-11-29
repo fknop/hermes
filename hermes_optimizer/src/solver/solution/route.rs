@@ -1,6 +1,5 @@
 use fxhash::FxHashSet;
 use jiff::{SignedDuration, Timestamp};
-use serde::Serialize;
 
 use crate::{
     problem::{
@@ -13,7 +12,6 @@ use crate::{
     },
     solver::solution::{
         activity::WorkingSolutionRouteActivity,
-        route_job_id_iterator::RouteJobIdIterator,
         utils::{
             compute_activity_arrival_time, compute_activity_cumulative_load,
             compute_departure_time, compute_first_activity_arrival_time, compute_vehicle_end,
@@ -29,8 +27,23 @@ pub struct WorkingSolutionRoute {
     pub(super) services: FxHashSet<ServiceId>,
     pub(super) activities: Vec<WorkingSolutionRouteActivity>,
 
-    // Current total demand of the route
-    pub(super) total_initial_load: Capacity,
+    pub(super) fwd_load_pickups: Vec<Capacity>,
+    pub(super) fwd_load_deliveries: Vec<Capacity>,
+    pub(super) fwd_load_shipments: Vec<Capacity>,
+    pub(super) bwd_load_pickups: Vec<Capacity>,
+    pub(super) bwd_load_deliveries: Vec<Capacity>,
+
+    // fwd_load_peaks[i] stores the peak load up to step i
+    // step 0 is the start depot
+    pub(super) fwd_load_peaks: Vec<Capacity>,
+
+    // bwd_load_peaks[i] stores the peak load from step i to the end
+    // step 0 is the start depot
+    pub(super) bwd_load_peaks: Vec<Capacity>,
+
+    // current_load[i] stores the current load at step i
+    // step 0 is the start depot
+    pub(super) current_load: Vec<Capacity>,
 
     bbox: BBox,
 
@@ -38,15 +51,42 @@ pub struct WorkingSolutionRoute {
 }
 
 impl WorkingSolutionRoute {
-    pub fn empty(vehicle_id: VehicleId) -> Self {
-        WorkingSolutionRoute {
+    pub fn empty(problem: &VehicleRoutingProblem, vehicle_id: VehicleId) -> Self {
+        let mut route = WorkingSolutionRoute {
             vehicle_id,
             services: FxHashSet::default(),
             activities: Vec::new(),
-            total_initial_load: Capacity::EMPTY,
             bbox: BBox::default(),
             updated_in_iteration: false,
-        }
+            fwd_load_peaks: Vec::new(),
+            bwd_load_peaks: Vec::new(),
+            current_load: Vec::new(),
+            bwd_load_deliveries: Vec::new(),
+            bwd_load_pickups: Vec::new(),
+            fwd_load_deliveries: Vec::new(),
+            fwd_load_pickups: Vec::new(),
+            fwd_load_shipments: Vec::new(),
+        };
+
+        route.resize_amounts();
+
+        route
+    }
+
+    pub fn len(&self) -> usize {
+        self.activities.len()
+    }
+
+    pub fn load_at(&self, position: usize) -> &Capacity {
+        &self.current_load[position + 1]
+    }
+
+    pub fn bwd_load_peak(&self, i: usize) -> &Capacity {
+        &self.bwd_load_peaks[i]
+    }
+
+    pub fn fwd_load_peak(&self, i: usize) -> &Capacity {
+        &self.fwd_load_peaks[i]
     }
 
     pub fn contains_service(&self, service_id: ServiceId) -> bool {
@@ -113,6 +153,10 @@ impl WorkingSolutionRoute {
             last.service_id(),
             last.departure_time(),
         )
+    }
+
+    pub fn job_id_at(&self, position: usize) -> JobId {
+        self.activities[position].job_id
     }
 
     pub fn duration(&self, problem: &VehicleRoutingProblem) -> SignedDuration {
@@ -241,7 +285,11 @@ impl WorkingSolutionRoute {
     }
 
     pub fn total_initial_load(&self) -> &Capacity {
-        &self.total_initial_load
+        &self.current_load[0]
+    }
+
+    pub fn current_loads(&self) -> &[Capacity] {
+        &self.current_load
     }
 
     pub fn total_waiting_duration(&self) -> SignedDuration {
@@ -260,14 +308,12 @@ impl WorkingSolutionRoute {
     }
 
     pub fn max_load(&self, problem: &VehicleRoutingProblem) -> f64 {
-        // TODO: incldue cumulative load here
-
         let vehicle = problem.vehicle(self.vehicle_id);
         let mut max_load = 0.0_f64;
 
         let vehicle_capacity = vehicle.capacity();
 
-        for (index, demand) in self.total_initial_load.iter().enumerate() {
+        for (index, demand) in self.fwd_load_peaks[self.len()].iter().enumerate() {
             let capacity = vehicle_capacity.get(index);
             if capacity == 0.0 && demand > 0.0 {
                 max_load = 1.0;
@@ -340,10 +386,6 @@ impl WorkingSolutionRoute {
 
         self.services.remove(&activity.job_id.into());
 
-        if activity.service(problem).service_type() == ServiceType::Delivery {
-            self.total_initial_load -= activity.service(problem).demand();
-        }
-
         self.activities.remove(activity_id);
 
         // self.update_next_activities(problem, activity_id);
@@ -413,12 +455,6 @@ impl WorkingSolutionRoute {
 
         let job = problem.job(service_id);
 
-        if let Job::Service(service) = job
-            && service.service_type() == ServiceType::Delivery
-        {
-            self.total_initial_load += problem.job(service_id).demand();
-        }
-
         // Update the arrival times and departure times of subsequent activities
         self.update_activity_data(problem, position);
     }
@@ -458,8 +494,7 @@ impl WorkingSolutionRoute {
     }
 
     fn update_activity_data(&mut self, problem: &VehicleRoutingProblem, start: usize) {
-        self.forward_update_pass(problem, start);
-        self.backward_update_pass(problem);
+        self.update_data(problem);
         self.update_bbox(problem);
     }
 
@@ -468,19 +503,7 @@ impl WorkingSolutionRoute {
             return;
         }
 
-        let mut total_initial_load = Capacity::EMPTY;
-
-        for activity in self
-            .activities()
-            .iter()
-            .filter(|activity| activity.service(problem).service_type() == ServiceType::Delivery)
-        {
-            total_initial_load += activity.service(problem).demand();
-        }
-
-        self.total_initial_load = total_initial_load;
-        self.forward_update_pass(problem, 0);
-        self.backward_update_pass(problem);
+        self.update_data(problem);
         self.update_bbox(problem);
     }
 
@@ -495,11 +518,74 @@ impl WorkingSolutionRoute {
         self.bbox = bbox;
     }
 
-    fn forward_update_pass(&mut self, problem: &VehicleRoutingProblem, start: usize) {
-        for i in start..self.activities().len() {
+    fn resize_amounts(&mut self) {
+        self.fwd_load_pickups
+            .resize_with(self.len(), Capacity::empty);
+        self.fwd_load_deliveries
+            .resize_with(self.len(), Capacity::empty);
+        self.bwd_load_deliveries
+            .resize_with(self.len(), Capacity::empty);
+        self.bwd_load_pickups
+            .resize_with(self.len(), Capacity::empty);
+        self.fwd_load_shipments
+            .resize_with(self.len(), Capacity::empty);
+
+        let size = self.len() + 2;
+        self.fwd_load_peaks.resize_with(size, Capacity::empty);
+        self.bwd_load_peaks.resize_with(size, Capacity::empty);
+        self.current_load.resize_with(size, Capacity::empty);
+
+        if self.is_empty() {
+            self.fwd_load_peaks.fill_with(Capacity::empty);
+            self.bwd_load_peaks.fill_with(Capacity::empty);
+            self.current_load.fill_with(Capacity::empty);
+        }
+    }
+
+    fn update_data(&mut self, problem: &VehicleRoutingProblem) {
+        self.resize_amounts();
+
+        if self.is_empty() {
+            return;
+        }
+
+        let len = self.len();
+
+        let mut current_load_pickups = Capacity::empty();
+        let mut current_load_deliveries = Capacity::empty();
+        let mut current_load_shipments = Capacity::empty();
+
+        for i in 0..len {
             let (first, second) = self.activities.split_at_mut(i);
             let previous_activity = first.last();
             let current_activity = &mut second[0];
+            let job_id = current_activity.job_id();
+            let job = problem.job(job_id.into());
+
+            match job_id {
+                JobId::Service(_) => {
+                    if let Job::Service(service) = job {
+                        match service.service_type() {
+                            ServiceType::Pickup => {
+                                current_load_pickups += job.demand();
+                            }
+                            ServiceType::Delivery => {
+                                current_load_deliveries += job.demand();
+                            }
+                        }
+                    }
+                }
+                JobId::ShipmentPickup(_) => {
+                    current_load_shipments += job.demand();
+                }
+                JobId::ShipmentDelivery(_) => {
+                    current_load_shipments -= job.demand();
+                }
+            }
+
+            self.fwd_load_pickups[i].update(&current_load_pickups);
+            self.fwd_load_deliveries[i].update(&current_load_deliveries);
+            self.fwd_load_shipments[i].update(&current_load_shipments);
 
             match previous_activity {
                 Some(previous_activity) => {
@@ -512,11 +598,6 @@ impl WorkingSolutionRoute {
                             current_activity.job_id.into(),
                         ),
                     );
-
-                    current_activity.cumulative_load = compute_activity_cumulative_load(
-                        problem.service(current_activity.job_id.into()),
-                        &previous_activity.cumulative_load,
-                    );
                 }
                 None => {
                     current_activity.update_arrival_time(
@@ -527,52 +608,59 @@ impl WorkingSolutionRoute {
                             current_activity.job_id.into(),
                         ),
                     );
-
-                    current_activity.cumulative_load = compute_activity_cumulative_load(
-                        problem.service(current_activity.job_id.into()),
-                        &Capacity::EMPTY,
-                    );
                 }
             }
         }
-    }
 
-    fn backward_update_pass(&mut self, problem: &VehicleRoutingProblem) {
-        for i in (0..self.activities.len()).rev() {
-            let (first, second) = self.activities.split_at_mut(i + 1);
-            let current_activity = &mut first[i];
-            let next_activity = second.first();
+        assert!(self.fwd_load_shipments[self.len() - 1].is_empty());
+        self.current_load[len + 1].update(&self.fwd_load_pickups[len - 1]);
 
-            WorkingSolutionRoute::update_max_load_until_end(
-                &self.total_initial_load,
-                current_activity,
-                next_activity,
+        // Reset for the reverse pass
+        current_load_deliveries.reset();
+        current_load_pickups.reset();
+
+        for i in (0..len).rev() {
+            let job_id = self.activities[i].job_id;
+            let job = problem.job(job_id.into());
+
+            self.bwd_load_deliveries[i].update(&current_load_deliveries);
+            self.bwd_load_pickups[i].update(&current_load_pickups);
+
+            self.current_load[i + 1].update_expr(
+                // Load from pickups + remaining load from shipments + remaining deliveries
+                &self.fwd_load_pickups[i] + &self.fwd_load_shipments[i] + &current_load_deliveries,
             );
-        }
-    }
 
-    fn update_max_load_until_end(
-        total_initial_load: &Capacity,
-        current_activity: &mut WorkingSolutionRouteActivity,
-        next_activity: Option<&WorkingSolutionRouteActivity>,
-    ) {
-        match next_activity {
-            Some(next_activity) => {
-                let load = total_initial_load + &current_activity.cumulative_load;
-                match load.partial_cmp(&next_activity.max_load_until_end) {
-                    Some(std::cmp::Ordering::Greater) => {
-                        current_activity.max_load_until_end = load.into()
+            if let Job::Service(service) = job {
+                match service.service_type() {
+                    ServiceType::Pickup => {
+                        current_load_pickups += job.demand();
                     }
-                    _ => {
-                        current_activity.max_load_until_end =
-                            next_activity.max_load_until_end.clone();
+                    ServiceType::Delivery => {
+                        current_load_deliveries += job.demand();
                     }
                 }
             }
-            None => {
-                current_activity.max_load_until_end =
-                    (total_initial_load + &current_activity.cumulative_load).into();
-            }
+        }
+
+        // The load at start is the load of all deliveries
+        self.current_load[0].update(&current_load_deliveries);
+
+        self.fwd_load_peaks[0].update(&self.current_load[0]);
+
+        let mut peak = self.current_load[0].clone();
+        self.fwd_load_peaks[0].update(&peak);
+        for i in 1..self.fwd_load_peaks.len() {
+            peak.update_max(&self.current_load[i]);
+
+            self.fwd_load_peaks[i].update(&peak);
+        }
+
+        peak.update(&self.current_load[len + 1]);
+        self.bwd_load_peaks[len + 1].update(&peak);
+        for i in (0..self.bwd_load_peaks.len()).rev() {
+            peak.update_max(&self.current_load[i]);
+            self.bwd_load_peaks[i].update(&peak);
         }
     }
 
@@ -583,19 +671,22 @@ impl WorkingSolutionRoute {
         rng.random_range(0..self.activities.len())
     }
 
-    pub fn job_ids_iter(&self, start: usize, end: usize) -> impl Iterator<Item = JobId> + '_ {
+    /// Returns an iterator over the job IDs in the route between the given [start, end) indices
+    pub fn job_ids_iter(
+        &self,
+        start: usize,
+        end: usize,
+    ) -> impl DoubleEndedIterator<Item = JobId> + '_ {
         self.activities[start..end]
             .iter()
             .map(|activity| activity.job_id)
-
-        // RouteJobIdIterator::new(self, start, end)
     }
 
     /// Checks whether inserting the given job IDs between the given [start, end) indices is valid
     pub fn is_valid_tw_change(
         &self,
         problem: &VehicleRoutingProblem,
-        job_ids: impl Iterator<Item = usize>,
+        job_ids: impl Iterator<Item = JobId>,
         start: usize,
         end: usize,
     ) -> bool {
@@ -613,7 +704,18 @@ impl WorkingSolutionRoute {
         let mut previous_departure_time =
             previous_activity.map(|activity| activity.departure_time());
 
-        for service_id in job_ids {
+        let succeeding_activities = if end < self.activities.len() {
+            &self.activities[end..]
+        } else {
+            &[]
+        };
+
+        for job_id in job_ids.chain(
+            succeeding_activities
+                .iter()
+                .map(|activity| activity.job_id()),
+        ) {
+            let service_id = job_id.into(); // TODO: handle shipments
             let arrival_time = if let Some(previous_service_id) = previous_service_id
                 && let Some(previous_departure_time) = previous_departure_time
             {
@@ -645,9 +747,42 @@ impl WorkingSolutionRoute {
             }
         }
 
-        for i in end..self.activities.len() {
-            let next_service_id = self.activities[i].service_id();
+        true
+    }
 
+    pub fn is_valid_capacity_change(
+        &self,
+        problem: &VehicleRoutingProblem,
+        job_ids: impl Iterator<Item = JobId>,
+        start: usize,
+        end: usize,
+    ) -> bool {
+        if !problem.has_capacity() {
+            return true;
+        }
+
+        let previous_activity = if start == 0 {
+            None
+        } else {
+            Some(&self.activities[start - 1])
+        };
+
+        let mut previous_service_id = previous_activity.map(|activity| activity.service_id());
+        let mut previous_departure_time =
+            previous_activity.map(|activity| activity.departure_time());
+
+        let succeeding_activities = if end < self.activities.len() {
+            &self.activities[end..]
+        } else {
+            &[]
+        };
+
+        for job_id in job_ids.chain(
+            succeeding_activities
+                .iter()
+                .map(|activity| activity.job_id()),
+        ) {
+            let service_id = job_id.into(); // TODO: handle shipments
             let arrival_time = if let Some(previous_service_id) = previous_service_id
                 && let Some(previous_departure_time) = previous_departure_time
             {
@@ -655,24 +790,24 @@ impl WorkingSolutionRoute {
                     problem,
                     previous_service_id,
                     previous_departure_time,
-                    next_service_id,
+                    service_id,
                 )
             } else {
-                compute_first_activity_arrival_time(problem, self.vehicle_id, next_service_id)
+                compute_first_activity_arrival_time(problem, self.vehicle_id, service_id)
             };
 
             let waiting_duration =
-                compute_waiting_duration(problem.service(next_service_id), arrival_time);
+                compute_waiting_duration(problem.service(service_id), arrival_time);
 
-            previous_service_id = Some(next_service_id);
+            previous_service_id = Some(service_id);
             previous_departure_time = Some(compute_departure_time(
                 problem,
                 arrival_time,
                 waiting_duration,
-                next_service_id,
+                service_id,
             ));
 
-            let service = problem.service(next_service_id);
+            let service = problem.service(service_id);
 
             if !service.time_windows_satisfied(arrival_time) {
                 return false;

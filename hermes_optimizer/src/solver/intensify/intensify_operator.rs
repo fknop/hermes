@@ -12,13 +12,10 @@ use crate::{
 };
 
 pub trait IntensifyOp {
-    fn compute_delta(&self, solution: &WorkingSolution) -> f64;
+    fn delta(&self, solution: &WorkingSolution) -> f64;
     fn is_valid(&self, solution: &WorkingSolution) -> bool;
     fn apply(&self, problem: &VehicleRoutingProblem, solution: &mut WorkingSolution);
-}
-
-pub trait GenerateIntensifyOperators<T = Self> {
-    fn generate_operators(&self, solution: &WorkingSolution) -> Vec<T>;
+    fn updated_routes(&self) -> Vec<usize>;
 }
 
 pub enum IntensifyOperator {
@@ -59,16 +56,44 @@ impl IntensifyOperator {
         }
     }
 
-    pub fn compute_delta(&self, solution: &WorkingSolution) -> f64 {
+    pub fn delta(&self, solution: &WorkingSolution) -> f64 {
         match self {
-            IntensifyOperator::TwoOpt(op) => op.compute_delta(solution),
-            IntensifyOperator::Relocate(op) => op.compute_delta(solution),
-            IntensifyOperator::Swap(op) => op.compute_delta(solution),
-            IntensifyOperator::OrOpt(op) => op.compute_delta(solution),
-            IntensifyOperator::InterRelocate(op) => op.compute_delta(solution),
-            IntensifyOperator::InterSwap(op) => op.compute_delta(solution),
-            IntensifyOperator::TwoOptStar(op) => op.compute_delta(solution),
-            IntensifyOperator::CrossExchange(op) => op.compute_delta(solution),
+            IntensifyOperator::TwoOpt(op) => op.delta(solution),
+            IntensifyOperator::Relocate(op) => op.delta(solution),
+            IntensifyOperator::Swap(op) => op.delta(solution),
+            IntensifyOperator::OrOpt(op) => op.delta(solution),
+            IntensifyOperator::InterRelocate(op) => op.delta(solution),
+            IntensifyOperator::InterSwap(op) => op.delta(solution),
+            IntensifyOperator::TwoOptStar(op) => op.delta(solution),
+            IntensifyOperator::CrossExchange(op) => op.delta(solution),
+            _ => unimplemented!(),
+        }
+    }
+
+    pub fn apply(&self, problem: &VehicleRoutingProblem, solution: &mut WorkingSolution) {
+        match self {
+            IntensifyOperator::TwoOpt(op) => op.apply(problem, solution),
+            IntensifyOperator::Relocate(op) => op.apply(problem, solution),
+            IntensifyOperator::Swap(op) => op.apply(problem, solution),
+            IntensifyOperator::OrOpt(op) => op.apply(problem, solution),
+            IntensifyOperator::InterRelocate(op) => op.apply(problem, solution),
+            IntensifyOperator::InterSwap(op) => op.apply(problem, solution),
+            IntensifyOperator::TwoOptStar(op) => op.apply(problem, solution),
+            IntensifyOperator::CrossExchange(op) => op.apply(problem, solution),
+            _ => unimplemented!(),
+        }
+    }
+
+    pub fn updated_routes(&self) -> Vec<usize> {
+        match self {
+            IntensifyOperator::TwoOpt(op) => op.updated_routes(),
+            IntensifyOperator::Relocate(op) => op.updated_routes(),
+            IntensifyOperator::Swap(op) => op.updated_routes(),
+            IntensifyOperator::OrOpt(op) => op.updated_routes(),
+            IntensifyOperator::InterRelocate(op) => op.updated_routes(),
+            IntensifyOperator::InterSwap(op) => op.updated_routes(),
+            IntensifyOperator::TwoOptStar(op) => op.updated_routes(),
+            IntensifyOperator::CrossExchange(op) => op.updated_routes(),
             _ => unimplemented!(),
         }
     }

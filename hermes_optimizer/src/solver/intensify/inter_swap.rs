@@ -26,7 +26,7 @@ pub struct InterSwapOperator {
 }
 
 impl IntensifyOp for InterSwapOperator {
-    fn compute_delta(&self, solution: &WorkingSolution) -> f64 {
+    fn delta(&self, solution: &WorkingSolution) -> f64 {
         let problem = solution.problem();
         let r1 = solution.route(self.first_route_id);
         let r2 = solution.route(self.second_route_id);
@@ -80,5 +80,9 @@ impl IntensifyOp for InterSwapOperator {
                 first_service_id,
             );
         }
+    }
+
+    fn updated_routes(&self) -> Vec<usize> {
+        vec![self.first_route_id, self.second_route_id]
     }
 }

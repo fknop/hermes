@@ -72,7 +72,7 @@ impl RegretInsertion {
                                 position,
                             })
                         };
-                        let score = context.compute_insertion_score(solution, &insertion);
+                        let score = context.compute_insertion_score(solution, &insertion, None);
 
                         // Only consider valid insertions
                         potential_insertions.push((score, insertion));

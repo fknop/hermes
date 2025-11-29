@@ -7,6 +7,12 @@ pub enum JobId {
     ShipmentDelivery(usize),
 }
 
+impl JobId {
+    pub fn is_shipment(&self) -> bool {
+        matches!(self, JobId::ShipmentPickup(_) | JobId::ShipmentDelivery(_))
+    }
+}
+
 impl From<JobId> for usize {
     fn from(job_id: JobId) -> Self {
         match job_id {

@@ -86,7 +86,7 @@ pub fn create_test_problem(
     let mut builder = VehicleRoutingProblemBuilder::default();
 
     builder.set_distance_method(DistanceMethod::Euclidean);
-    builder.set_travel_costs(TravelCostMatrix::from_haversine(&locations));
+    builder.set_travel_costs(TravelCostMatrix::from_euclidian(&locations));
     builder.set_services(services);
     builder.set_locations(locations);
     builder.set_vehicles(vehicles);

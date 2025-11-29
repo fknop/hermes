@@ -25,21 +25,31 @@ use crate::{
 /// Edges Added:   (prev->to),   (from->next)
 /// ```
 pub struct TwoOptOperator {
-    route_id: usize,
-    from: usize,
-    to: usize,
+    params: TwoOptParams,
+}
+
+pub struct TwoOptParams {
+    pub route_id: usize,
+    pub from: usize,
+    pub to: usize,
+}
+
+impl TwoOptOperator {
+    pub fn new(params: TwoOptParams) -> Self {
+        TwoOptOperator { params }
+    }
 }
 
 impl TwoOptOperator {
     fn symmetric_delta(&self, solution: &WorkingSolution) -> f64 {
         let problem = solution.problem();
-        let route = solution.route(self.route_id);
+        let route = solution.route(self.params.route_id);
 
-        let prev_from = route.previous_location_id(problem, self.from);
-        let from = route.location_id(problem, self.from);
+        let prev_from = route.previous_location_id(problem, self.params.from);
+        let from = route.location_id(problem, self.params.from);
 
-        let to = route.location_id(problem, self.to);
-        let next_to = route.next_location_id(problem, self.to);
+        let to = route.location_id(problem, self.params.to);
+        let next_to = route.next_location_id(problem, self.params.to);
 
         let current_cost =
             problem.travel_cost_or_zero(prev_from, from) + problem.travel_cost_or_zero(to, next_to);
@@ -52,16 +62,16 @@ impl TwoOptOperator {
 
     fn asymmetric_delta(&self, solution: &WorkingSolution) -> f64 {
         let problem = solution.problem();
-        let route = solution.route(self.route_id);
+        let route = solution.route(self.params.route_id);
 
-        if self.from >= self.to {
+        if self.params.from >= self.params.to {
             panic!("TwoOpt: cannot have from >= to")
         }
 
         let mut delta = self.symmetric_delta(solution);
 
         // Chain reversal
-        for i in self.from..self.to {
+        for i in self.params.from..self.params.to {
             let u = route.location_id(problem, i);
             let v = route.location_id(problem, i + 1);
 
@@ -76,7 +86,7 @@ impl TwoOptOperator {
 }
 
 impl IntensifyOp for TwoOptOperator {
-    fn compute_delta(&self, solution: &WorkingSolution) -> f64 {
+    fn delta(&self, solution: &WorkingSolution) -> f64 {
         if solution.problem().is_symmetric() {
             self.symmetric_delta(solution)
         } else {
@@ -85,21 +95,28 @@ impl IntensifyOp for TwoOptOperator {
     }
 
     fn is_valid(&self, solution: &WorkingSolution) -> bool {
-        let route = solution.route(self.route_id);
+        let route = solution.route(self.params.route_id);
 
         route.is_valid_tw_change(
             solution.problem(),
             route
-                .job_ids_iter(self.from, self.to)
-                .map(|job_id| job_id.into()),
-            self.from,
-            self.to + 1,
+                .job_ids_iter(self.params.from, self.params.to + 1)
+                .rev(),
+            self.params.from,
+            self.params.to + 1,
         )
     }
 
     fn apply(&self, problem: &VehicleRoutingProblem, solution: &mut WorkingSolution) {
-        let route = solution.route_mut(self.route_id);
-        let job_ids = route.job_ids_iter(self.from, self.to).collect::<Vec<_>>();
-        route.replace_activities(problem, &job_ids, self.from);
+        let route = solution.route_mut(self.params.route_id);
+        let job_ids = route
+            .job_ids_iter(self.params.from, self.params.to + 1)
+            .rev()
+            .collect::<Vec<_>>();
+        route.replace_activities(problem, &job_ids, self.params.from);
+    }
+
+    fn updated_routes(&self) -> Vec<usize> {
+        vec![self.params.route_id]
     }
 }

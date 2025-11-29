@@ -68,23 +68,15 @@ impl RouteConstraint for CapacityConstraint {
         }
 
         let vehicle = route.vehicle(problem);
-        let initial_load = route.total_initial_load();
-
         let mut score = Score::zero();
 
-        if !is_capacity_satisfied(vehicle.capacity(), initial_load) {
-            score += Score::of(
-                self.score_level,
-                over_capacity_demand(vehicle.capacity(), initial_load),
-            );
-        }
-
-        for activity in route.activities() {
-            score += self.compute_capacity_score(
-                vehicle.capacity(),
-                initial_load,
-                activity.cumulative_load(),
-            );
+        for load in route.current_loads() {
+            if !is_capacity_satisfied(vehicle.capacity(), &load) {
+                score += Score::of(
+                    self.score_level,
+                    over_capacity_demand(vehicle.capacity(), &load),
+                );
+            }
         }
 
         score
@@ -109,35 +101,36 @@ impl RouteConstraint for CapacityConstraint {
 
         let mut score = Score::zero();
 
-        if !is_capacity_satisfied(vehicle.capacity(), &context.initial_load) {
-            score += Score::of(
-                self.score_level,
-                over_capacity_demand(vehicle.capacity(), &context.initial_load),
-            );
-        }
+        let route = context.insertion.route(context.solution);
 
-        match *context.insertion {
-            Insertion::ExistingRoute(ExistingRouteInsertion {
-                route_id,
-                position,
-                service_id,
-            }) => {
-                let service = problem.service(service_id);
-                if let Some(next_activity) =
-                    context.solution.route(route_id).activities().get(position)
-                    && service.service_type() == ServiceType::Pickup
-                {
-                    let new_max_load = next_activity.max_load_until_end() + service.demand();
-                    if !is_capacity_satisfied(vehicle.capacity(), &new_max_load) {
-                        score += Score::of(
-                            self.score_level,
-                            over_capacity_demand(vehicle.capacity(), &new_max_load),
-                        );
-                    }
+        match service.service_type() {
+            ServiceType::Pickup => {
+                if !is_capacity_satisfied(
+                    vehicle.capacity(),
+                    &(service.demand() + route.bwd_load_peak(context.insertion.position())),
+                ) {
+                    score += Score::of(
+                        self.score_level,
+                        over_capacity_demand(
+                            vehicle.capacity(),
+                            &(service.demand() + route.bwd_load_peak(context.insertion.position())),
+                        ),
+                    );
                 }
             }
-            Insertion::NewRoute(NewRouteInsertion { .. }) => {
-                // No activities before insertion in new route
+            ServiceType::Delivery => {
+                if !is_capacity_satisfied(
+                    vehicle.capacity(),
+                    &(service.demand() + route.fwd_load_peak(context.insertion.position())),
+                ) {
+                    score += Score::of(
+                        self.score_level,
+                        over_capacity_demand(
+                            vehicle.capacity(),
+                            &(service.demand() + route.fwd_load_peak(context.insertion.position())),
+                        ),
+                    );
+                }
             }
         }
 

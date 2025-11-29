@@ -25,6 +25,7 @@ impl<'a> RecreateContext<'a> {
         &self,
         solution: &WorkingSolution,
         insertion: &Insertion,
+        best_score: Option<&Score>,
     ) -> Score {
         // Temporary check until enum is reworked
         match insertion {
@@ -41,7 +42,7 @@ impl<'a> RecreateContext<'a> {
         };
 
         let context = compute_insertion_context(self.problem, solution, insertion);
-        compute_insertion_score(self.constraints, &context)
+        compute_insertion_score(self.constraints, &context, best_score)
             + self.noise_generator.map_or(Score::ZERO, |noise_generator| {
                 Score::soft(noise_generator.create_noise(context.insertion.service_id()))
             })

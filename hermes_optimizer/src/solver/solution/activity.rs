@@ -2,7 +2,6 @@ use jiff::{SignedDuration, Timestamp};
 
 use crate::{
     problem::{
-        capacity::Capacity,
         job::JobId,
         service::{Service, ServiceId},
         vehicle_routing_problem::VehicleRoutingProblem,
@@ -16,8 +15,6 @@ pub struct WorkingSolutionRouteActivity {
     pub(super) arrival_time: Timestamp,
     pub(super) departure_time: Timestamp,
     pub(super) waiting_duration: SignedDuration,
-    pub(super) cumulative_load: Capacity,
-    pub(super) max_load_until_end: Capacity,
 }
 
 impl WorkingSolutionRouteActivity {
@@ -27,8 +24,6 @@ impl WorkingSolutionRouteActivity {
             arrival_time: jiff::Timestamp::MIN,
             waiting_duration: SignedDuration::ZERO,
             departure_time: jiff::Timestamp::MIN,
-            cumulative_load: Capacity::EMPTY,
-            max_load_until_end: Capacity::EMPTY,
         }
     }
 
@@ -36,7 +31,6 @@ impl WorkingSolutionRouteActivity {
         problem: &VehicleRoutingProblem,
         job_id: ServiceId,
         arrival_time: Timestamp,
-        cumulative_load: Capacity,
     ) -> Self {
         let waiting_duration = compute_waiting_duration(problem.service(job_id), arrival_time);
         WorkingSolutionRouteActivity {
@@ -44,8 +38,6 @@ impl WorkingSolutionRouteActivity {
             arrival_time,
             waiting_duration,
             departure_time: compute_departure_time(problem, arrival_time, waiting_duration, job_id),
-            cumulative_load,
-            max_load_until_end: Capacity::EMPTY,
         }
     }
 
@@ -55,6 +47,10 @@ impl WorkingSolutionRouteActivity {
 
     pub fn service_id(&self) -> ServiceId {
         self.job_id.into()
+    }
+
+    pub fn job_id(&self) -> JobId {
+        self.job_id
     }
 
     pub fn arrival_time(&self) -> Timestamp {
@@ -67,14 +63,6 @@ impl WorkingSolutionRouteActivity {
 
     pub fn waiting_duration(&self) -> SignedDuration {
         self.waiting_duration
-    }
-
-    pub fn cumulative_load(&self) -> &Capacity {
-        &self.cumulative_load
-    }
-
-    pub fn max_load_until_end(&self) -> &Capacity {
-        &self.max_load_until_end
     }
 
     pub(super) fn update_arrival_time(

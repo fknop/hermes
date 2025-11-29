@@ -28,7 +28,7 @@ pub struct CrossExchangeOperator {
 }
 
 impl IntensifyOp for CrossExchangeOperator {
-    fn compute_delta(&self, solution: &WorkingSolution) -> f64 {
+    fn delta(&self, solution: &WorkingSolution) -> f64 {
         let problem = solution.problem();
 
         let r1 = solution.route(self.first_route_id);
@@ -67,5 +67,9 @@ impl IntensifyOp for CrossExchangeOperator {
 
     fn apply(&self, problem: &VehicleRoutingProblem, solution: &mut WorkingSolution) {
         todo!()
+    }
+
+    fn updated_routes(&self) -> Vec<usize> {
+        vec![self.first_route_id, self.second_route_id]
     }
 }

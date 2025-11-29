@@ -3,8 +3,7 @@ use std::ops::{Add, Sub};
 use jiff::{SignedDuration, Timestamp};
 
 use crate::problem::{
-    capacity::Capacity,
-    job::JobId,
+    amount::Amount,
     service::{Service, ServiceId, ServiceType},
     vehicle::VehicleId,
     vehicle_routing_problem::VehicleRoutingProblem,
@@ -100,8 +99,8 @@ pub(crate) fn compute_activity_arrival_time(
 
 pub(crate) fn compute_activity_cumulative_load(
     service: &Service,
-    current_cumulative_load: &Capacity,
-) -> Capacity {
+    current_cumulative_load: &Amount,
+) -> Amount {
     match service.service_type() {
         ServiceType::Pickup => current_cumulative_load.add(service.demand()).into(),
         ServiceType::Delivery => current_cumulative_load.sub(service.demand()).into(),

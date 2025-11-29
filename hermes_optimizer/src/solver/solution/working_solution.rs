@@ -21,7 +21,7 @@ impl WorkingSolution {
             .vehicles()
             .iter()
             .enumerate()
-            .map(|(vehicle_id, _)| WorkingSolutionRoute::empty(vehicle_id))
+            .map(|(vehicle_id, _)| WorkingSolutionRoute::empty(&problem, vehicle_id))
             .collect();
         let unassigned_services = (0..problem.jobs().len()).collect();
 
@@ -247,7 +247,8 @@ impl WorkingSolution {
             self.unassigned_services.insert(activity.job_id.into());
         }
 
-        self.routes[route_id] = WorkingSolutionRoute::empty(route_id);
+        // TODO: reset to avoid reallocations
+        self.routes[route_id] = WorkingSolutionRoute::empty(&self.problem, route_id);
 
         removed
     }

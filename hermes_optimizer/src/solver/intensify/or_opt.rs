@@ -29,7 +29,7 @@ pub struct OrOptOperator {
 }
 
 impl IntensifyOp for OrOptOperator {
-    fn compute_delta(&self, solution: &WorkingSolution) -> f64 {
+    fn delta(&self, solution: &WorkingSolution) -> f64 {
         let problem = solution.problem();
         let route = solution.route(self.route_id);
 
@@ -60,5 +60,9 @@ impl IntensifyOp for OrOptOperator {
 
     fn apply(&self, problem: &VehicleRoutingProblem, solution: &mut WorkingSolution) {
         todo!()
+    }
+
+    fn updated_routes(&self) -> Vec<usize> {
+        vec![self.route_id]
     }
 }

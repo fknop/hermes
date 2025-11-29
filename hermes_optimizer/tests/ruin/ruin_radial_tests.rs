@@ -1,11 +1,10 @@
 use std::sync::Arc;
 
 use hermes_optimizer::{
-    problem::service::JobId,
+    problem::service::ServiceId,
     solver::ruin::{
         ruin_context::RuinContext, ruin_radial::RuinRadial, ruin_solution::RuinSolution,
     },
-    *,
 };
 
 use crate::{
@@ -64,7 +63,7 @@ fn test_radial_ruin_basic() {
             .activities()
             .iter()
             .map(|activity| activity.service_id())
-            .collect::<Vec<JobId>>(),
+            .collect::<Vec<ServiceId>>(),
         vec![1, 3]
     );
 }

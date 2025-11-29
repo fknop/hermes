@@ -1,11 +1,7 @@
 use jiff::{SignedDuration, Timestamp};
 
 use crate::{
-    problem::{
-        capacity::Capacity,
-        service::{ServiceId, ServiceType},
-        vehicle_routing_problem::VehicleRoutingProblem,
-    },
+    problem::{service::ServiceId, vehicle_routing_problem::VehicleRoutingProblem},
     solver::solution::utils::{
         compute_activity_arrival_time, compute_departure_time, compute_first_activity_arrival_time,
         compute_vehicle_end, compute_vehicle_start, compute_waiting_duration,
@@ -18,8 +14,6 @@ pub struct ActivityInsertionContext {
     pub service_id: ServiceId,
     pub arrival_time: Timestamp,
     pub departure_time: Timestamp,
-    // pub waiting_duration: SignedDuration,
-    // pub cumulative_load: Capacity,
 }
 
 impl ActivityInsertionContext {
@@ -32,7 +26,6 @@ pub struct InsertionContext<'a> {
     pub problem: &'a VehicleRoutingProblem,
     pub solution: &'a WorkingSolution,
     pub insertion: &'a Insertion,
-    pub initial_load: Capacity,
     pub activities: Vec<ActivityInsertionContext>,
     pub start: Timestamp,
     pub end: Timestamp,
@@ -125,14 +118,6 @@ pub fn compute_insertion_context<'a>(
                 last_service_id = service_id;
             }
 
-            let service = problem.service(context.service_id);
-            let current_initial_load = route.total_initial_load();
-            let new_initial_load = if service.service_type() == ServiceType::Delivery {
-                (current_initial_load + service.demand()).into()
-            } else {
-                current_initial_load.clone()
-            };
-
             InsertionContext {
                 problem,
                 start: compute_vehicle_start(
@@ -148,7 +133,6 @@ pub fn compute_insertion_context<'a>(
                     activities[activities.len() - 1].departure_time,
                 ),
                 solution,
-                initial_load: new_initial_load,
                 waiting_duration_delta,
                 activities,
                 insertion,
@@ -177,8 +161,6 @@ pub fn compute_insertion_context<'a>(
                 departure_time,
             }];
 
-            let service = problem.service(context.service_id);
-
             InsertionContext {
                 problem,
                 waiting_duration_delta: waiting_duration,
@@ -195,11 +177,6 @@ pub fn compute_insertion_context<'a>(
                     activities[activities.len() - 1].departure_time,
                 ),
                 solution,
-                initial_load: if service.service_type() == ServiceType::Delivery {
-                    service.demand().clone()
-                } else {
-                    Capacity::EMPTY
-                },
                 activities,
                 insertion,
             }
