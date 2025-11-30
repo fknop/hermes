@@ -113,7 +113,7 @@ impl IntensifyOp for TwoOptOperator {
             .job_ids_iter(self.params.from, self.params.to + 1)
             .rev()
             .collect::<Vec<_>>();
-        route.replace_activities(problem, &job_ids, self.params.from);
+        route.replace_activities(problem, &job_ids, self.params.from, self.params.to + 1);
     }
 
     fn updated_routes(&self) -> Vec<usize> {

@@ -97,16 +97,6 @@ pub(crate) fn compute_activity_arrival_time(
     previous_activity_departure_time + travel_time
 }
 
-pub(crate) fn compute_activity_cumulative_load(
-    service: &Service,
-    current_cumulative_load: &Amount,
-) -> Amount {
-    match service.service_type() {
-        ServiceType::Pickup => current_cumulative_load.add(service.demand()).into(),
-        ServiceType::Delivery => current_cumulative_load.sub(service.demand()).into(),
-    }
-}
-
 pub(crate) fn compute_waiting_duration(
     service: &Service,
     arrival_time: Timestamp,

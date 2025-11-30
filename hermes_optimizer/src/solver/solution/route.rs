@@ -3,7 +3,7 @@ use jiff::{SignedDuration, Timestamp};
 
 use crate::{
     problem::{
-        amount::{Amount, AmountExpression},
+        amount::AmountExpression,
         capacity::Capacity,
         job::{Job, JobId},
         service::{ServiceId, ServiceType},
@@ -12,10 +12,11 @@ use crate::{
     },
     solver::solution::{
         activity::WorkingSolutionRouteActivity,
+        route_update_iterator::RouteUpdateIterator,
         utils::{
-            compute_activity_arrival_time, compute_activity_cumulative_load,
-            compute_departure_time, compute_first_activity_arrival_time, compute_vehicle_end,
-            compute_vehicle_start, compute_waiting_duration,
+            compute_activity_arrival_time, compute_departure_time,
+            compute_first_activity_arrival_time, compute_vehicle_end, compute_vehicle_start,
+            compute_waiting_duration,
         },
     },
     utils::bbox::BBox,
@@ -424,33 +425,11 @@ impl WorkingSolutionRoute {
         }
 
         self.services.insert(service_id);
-        // let activity = WorkingSolutionRouteActivity::new(
-        //     problem,
-        //     service_id,
-        //     if self.activities.is_empty() || position == 0 {
-        //         compute_first_activity_arrival_time(problem, self.vehicle_id, service_id)
-        //     } else {
-        //         let previous_activity = &self.activities[position - 1];
-        //         compute_activity_arrival_time(
-        //             problem,
-        //             previous_activity.service_id(),
-        //             previous_activity.departure_time(),
-        //             service_id,
-        //         )
-        //     },
-        //     if self.activities().is_empty() || position == 0 {
-        //         compute_activity_cumulative_load(problem.service(service_id), &Capacity::EMPTY)
-        //     } else {
-        //         let previous_activity = &self.activities[position - 1];
-        //         compute_activity_cumulative_load(
-        //             problem.service(service_id),
-        //             &previous_activity.cumulative_load,
-        //         )
-        //     },
-        // );
 
-        self.activities
-            .insert(position, WorkingSolutionRouteActivity::invalid(service_id));
+        self.activities.insert(
+            position,
+            WorkingSolutionRouteActivity::invalid(JobId::Service(service_id)),
+        );
         self.updated_in_iteration = true;
 
         // Update the arrival times and departure times of subsequent activities
@@ -462,10 +441,14 @@ impl WorkingSolutionRoute {
         problem: &VehicleRoutingProblem,
         job_ids: &[JobId],
         start: usize,
+        end: usize,
     ) {
-        for (i, &job_id) in job_ids.iter().enumerate() {
-            self.activities[start + i].job_id = job_id;
-        }
+        self.activities.splice(
+            start..end,
+            job_ids
+                .iter()
+                .map(|&job_id| WorkingSolutionRouteActivity::invalid(job_id)),
+        );
 
         // Update the arrival times and departure times of subsequent activities
         self.update_activity_data(problem, start);
@@ -680,6 +663,19 @@ impl WorkingSolutionRoute {
             .map(|activity| activity.job_id)
     }
 
+    pub fn replace_data_iter<'a, I>(
+        &'a self,
+        problem: &'a VehicleRoutingProblem,
+        jobs_iter: I,
+        start: usize,
+        end: usize,
+    ) -> RouteUpdateIterator<'a, I>
+    where
+        I: Iterator<Item = JobId>,
+    {
+        RouteUpdateIterator::new(problem, self, jobs_iter, start, end)
+    }
+
     /// Checks whether inserting the given job IDs between the given [start, end) indices is valid
     pub fn is_valid_tw_change(
         &self,
@@ -824,18 +820,20 @@ mod tests {
     use crate::{
         problem::{
             capacity::Capacity,
+            job::JobId,
             service::{ServiceBuilder, ServiceType},
             time_window::TimeWindow,
             travel_cost_matrix::TravelCostMatrix,
             vehicle::VehicleBuilder,
-            vehicle_routing_problem::VehicleRoutingProblemBuilder,
+            vehicle_routing_problem::{VehicleRoutingProblem, VehicleRoutingProblemBuilder},
         },
-        solver::solution::route::WorkingSolutionRoute,
+        solver::solution::{
+            route::WorkingSolutionRoute, route_update_iterator::RouteUpdateActivityData,
+        },
         test_utils,
     };
 
-    #[test]
-    fn test_route_data_correctness() {
+    fn create_problem() -> VehicleRoutingProblem {
         // 10 locations from (0, 0) to (9, 0)
         let locations = test_utils::create_location_grid(1, 10);
 
@@ -894,6 +892,13 @@ mod tests {
         builder.set_services(services);
 
         let problem = builder.build();
+
+        problem
+    }
+
+    #[test]
+    fn test_route_data_correctness() {
+        let problem = create_problem();
 
         let mut route = WorkingSolutionRoute::empty(&problem, 0);
 
@@ -988,6 +993,135 @@ mod tests {
         assert_eq!(
             route.activities[2].departure_time,
             "2025-11-30T11:30:00+02:00".parse().unwrap()
-        )
+        );
+    }
+
+    #[test]
+    fn test_jobs_iter() {
+        let problem = create_problem();
+
+        let mut route = WorkingSolutionRoute::empty(&problem, 0);
+
+        route.insert_service(&problem, 0, 0);
+        route.insert_service(&problem, 1, 2);
+        route.insert_service(&problem, 2, 1);
+
+        let job_ids: Vec<JobId> = route.job_ids_iter(0, 3).collect();
+
+        assert_eq!(
+            job_ids,
+            vec![JobId::Service(0), JobId::Service(2), JobId::Service(1)]
+        );
+
+        // Same value returns empty iterator
+        let job_ids: Vec<JobId> = route.job_ids_iter(0, 0).collect();
+        assert_eq!(job_ids, vec![]);
+    }
+
+    #[test]
+    fn test_route_update_iter() {
+        let problem = create_problem();
+
+        let mut route = WorkingSolutionRoute::empty(&problem, 0);
+
+        route.insert_service(&problem, 0, 0);
+        route.insert_service(&problem, 1, 2);
+        route.insert_service(&problem, 2, 1);
+
+        let mut iterator = route.replace_data_iter(&problem, route.job_ids_iter(1, 3).rev(), 1, 3);
+
+        assert_eq!(
+            iterator.next(),
+            Some(RouteUpdateActivityData {
+                arrival_time: "2025-11-30T10:40:00+02:00".parse().unwrap(),
+                waiting_duration: SignedDuration::ZERO,
+                departure_time: "2025-11-30T10:50:00+02:00".parse().unwrap(),
+            })
+        );
+
+        assert_eq!(
+            iterator.next(),
+            Some(RouteUpdateActivityData {
+                arrival_time: "2025-11-30T11:20:00+02:00".parse().unwrap(),
+                waiting_duration: SignedDuration::ZERO,
+                departure_time: "2025-11-30T11:30:00+02:00".parse().unwrap(),
+            })
+        );
+
+        assert_eq!(iterator.next(), None);
+    }
+
+    #[test]
+    fn test_replace_activities() {
+        let problem = create_problem();
+
+        let mut route = WorkingSolutionRoute::empty(&problem, 0);
+
+        route.insert_service(&problem, 0, 0);
+        route.insert_service(&problem, 1, 2);
+        route.insert_service(&problem, 2, 1);
+
+        route.replace_activities(
+            &problem,
+            &[JobId::Service(1), JobId::Service(2), JobId::Service(0)],
+            0,
+            3,
+        );
+
+        assert_eq!(route.len(), 3);
+        assert_eq!(
+            route
+                .activities
+                .iter()
+                .map(|a| a.job_id)
+                .collect::<Vec<_>>(),
+            vec![JobId::Service(1), JobId::Service(2), JobId::Service(0)]
+        );
+
+        route.replace_activities(&problem, &[JobId::Service(0), JobId::Service(2)], 1, 3);
+
+        assert_eq!(
+            route
+                .activities
+                .iter()
+                .map(|a| a.job_id)
+                .collect::<Vec<_>>(),
+            vec![JobId::Service(1), JobId::Service(0), JobId::Service(2)]
+        );
+    }
+
+    #[test]
+    fn test_replace_activities_remove() {
+        let problem = create_problem();
+
+        let mut route = WorkingSolutionRoute::empty(&problem, 0);
+
+        route.insert_service(&problem, 0, 0);
+        route.insert_service(&problem, 1, 2);
+        route.insert_service(&problem, 2, 1);
+
+        route.replace_activities(&problem, &[], 1, 2);
+
+        assert_eq!(route.len(), 2);
+        assert_eq!(
+            route
+                .activities
+                .iter()
+                .map(|a| a.job_id)
+                .collect::<Vec<_>>(),
+            vec![JobId::Service(0), JobId::Service(1)]
+        );
+
+        route.replace_activities(&problem, &[JobId::Service(2), JobId::Service(1)], 1, 2);
+
+        assert_eq!(route.len(), 3);
+        assert_eq!(
+            route
+                .activities
+                .iter()
+                .map(|a| a.job_id)
+                .collect::<Vec<_>>(),
+            vec![JobId::Service(0), JobId::Service(2), JobId::Service(1)]
+        );
     }
 }

@@ -90,18 +90,10 @@ impl RouteConstraint for CapacityConstraint {
             return Score::zero();
         }
 
-        let vehicle = match *context.insertion {
-            Insertion::ExistingRoute(ExistingRouteInsertion { route_id, .. }) => {
-                context.solution.route(route_id).vehicle(problem)
-            }
-            Insertion::NewRoute(NewRouteInsertion { vehicle_id, .. }) => {
-                problem.vehicle(vehicle_id)
-            }
-        };
-
         let mut score = Score::zero();
 
         let route = context.insertion.route(context.solution);
+        let vehicle = route.vehicle(problem);
 
         match service.service_type() {
             ServiceType::Pickup => {

@@ -18,9 +18,9 @@ pub struct WorkingSolutionRouteActivity {
 }
 
 impl WorkingSolutionRouteActivity {
-    pub fn invalid(job_id: ServiceId) -> Self {
+    pub fn invalid(job_id: JobId) -> Self {
         WorkingSolutionRouteActivity {
-            job_id: JobId::Service(job_id),
+            job_id,
             arrival_time: jiff::Timestamp::MIN,
             waiting_duration: SignedDuration::ZERO,
             departure_time: jiff::Timestamp::MIN,
