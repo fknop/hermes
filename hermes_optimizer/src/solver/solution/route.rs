@@ -629,18 +629,6 @@ impl WorkingSolutionRoute {
                 &self.fwd_load_pickups[i] + &self.fwd_load_shipments[i] + &current_load_deliveries,
             );
 
-            let test_amount: Amount = (&self.fwd_load_pickups[i]
-                + &self.fwd_load_shipments[i]
-                + &current_load_deliveries)
-                .into();
-            println!(
-                "{:?} + {:?} + {:?} = {:?}",
-                self.fwd_load_pickups[i],
-                self.fwd_load_shipments[i],
-                current_load_deliveries,
-                test_amount
-            );
-
             if let Job::Service(service) = job {
                 match service.service_type() {
                     ServiceType::Pickup => {
@@ -655,8 +643,6 @@ impl WorkingSolutionRoute {
 
         // The load at start is the load of all deliveries
         self.current_load[0].update(&current_load_deliveries);
-
-        println!("{:?}", self.current_load);
 
         self.fwd_load_peaks[0].update(&self.current_load[0]);
 
