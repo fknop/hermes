@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, sync::Arc, thread, usize};
+use std::{collections::VecDeque, sync::Arc, thread};
 
 use jiff::Timestamp;
 use parking_lot::{MappedRwLockReadGuard, RwLock, RwLockReadGuard};
@@ -30,7 +30,6 @@ use crate::{
             vehicle_cost_constraint::VehicleCostConstraint,
             waiting_duration_constraint::WaitingDurationConstraint,
         },
-        intensify::intensify_search::IntensifySearch,
         statistics::SearchStatisticsIteration,
     },
 };

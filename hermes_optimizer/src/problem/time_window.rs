@@ -14,6 +14,15 @@ impl TimeWindow {
         TimeWindow { start, end }
     }
 
+    pub fn from_iso(start: Option<&str>, end: Option<&str>) -> Self {
+        let start_ts = start.map(|s| s.parse().expect("Error parsing ISO"));
+        let end_ts = end.map(|e| e.parse().expect("Error parsing ISO"));
+        TimeWindow {
+            start: start_ts,
+            end: end_ts,
+        }
+    }
+
     pub fn start(&self) -> Option<Timestamp> {
         self.start
     }

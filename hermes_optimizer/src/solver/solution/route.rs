@@ -3,7 +3,7 @@ use jiff::{SignedDuration, Timestamp};
 
 use crate::{
     problem::{
-        amount::AmountExpression,
+        amount::{Amount, AmountExpression},
         capacity::Capacity,
         job::{Job, JobId},
         service::{ServiceId, ServiceType},
@@ -68,7 +68,7 @@ impl WorkingSolutionRoute {
             fwd_load_shipments: Vec::new(),
         };
 
-        route.resize_amounts();
+        route.resize_data();
 
         route
     }
@@ -453,8 +453,6 @@ impl WorkingSolutionRoute {
             .insert(position, WorkingSolutionRouteActivity::invalid(service_id));
         self.updated_in_iteration = true;
 
-        let job = problem.job(service_id);
-
         // Update the arrival times and departure times of subsequent activities
         self.update_activity_data(problem, position);
     }
@@ -518,7 +516,7 @@ impl WorkingSolutionRoute {
         self.bbox = bbox;
     }
 
-    fn resize_amounts(&mut self) {
+    fn resize_data(&mut self) {
         self.fwd_load_pickups
             .resize_with(self.len(), Capacity::empty);
         self.fwd_load_deliveries
@@ -530,10 +528,10 @@ impl WorkingSolutionRoute {
         self.fwd_load_shipments
             .resize_with(self.len(), Capacity::empty);
 
-        let size = self.len() + 2;
-        self.fwd_load_peaks.resize_with(size, Capacity::empty);
-        self.bwd_load_peaks.resize_with(size, Capacity::empty);
-        self.current_load.resize_with(size, Capacity::empty);
+        let steps = self.len() + 2;
+        self.fwd_load_peaks.resize_with(steps, Capacity::empty);
+        self.bwd_load_peaks.resize_with(steps, Capacity::empty);
+        self.current_load.resize_with(steps, Capacity::empty);
 
         if self.is_empty() {
             self.fwd_load_peaks.fill_with(Capacity::empty);
@@ -543,7 +541,7 @@ impl WorkingSolutionRoute {
     }
 
     fn update_data(&mut self, problem: &VehicleRoutingProblem) {
-        self.resize_amounts();
+        self.resize_data();
 
         if self.is_empty() {
             return;
@@ -560,7 +558,7 @@ impl WorkingSolutionRoute {
             let previous_activity = first.last();
             let current_activity = &mut second[0];
             let job_id = current_activity.job_id();
-            let job = problem.job(job_id.into());
+            let job = problem.job(job_id);
 
             match job_id {
                 JobId::Service(_) => {
@@ -621,7 +619,7 @@ impl WorkingSolutionRoute {
 
         for i in (0..len).rev() {
             let job_id = self.activities[i].job_id;
-            let job = problem.job(job_id.into());
+            let job = problem.job(job_id);
 
             self.bwd_load_deliveries[i].update(&current_load_deliveries);
             self.bwd_load_pickups[i].update(&current_load_pickups);
@@ -629,6 +627,18 @@ impl WorkingSolutionRoute {
             self.current_load[i + 1].update_expr(
                 // Load from pickups + remaining load from shipments + remaining deliveries
                 &self.fwd_load_pickups[i] + &self.fwd_load_shipments[i] + &current_load_deliveries,
+            );
+
+            let test_amount: Amount = (&self.fwd_load_pickups[i]
+                + &self.fwd_load_shipments[i]
+                + &current_load_deliveries)
+                .into();
+            println!(
+                "{:?} + {:?} + {:?} = {:?}",
+                self.fwd_load_pickups[i],
+                self.fwd_load_shipments[i],
+                current_load_deliveries,
+                test_amount
             );
 
             if let Job::Service(service) = job {
@@ -645,6 +655,8 @@ impl WorkingSolutionRoute {
 
         // The load at start is the load of all deliveries
         self.current_load[0].update(&current_load_deliveries);
+
+        println!("{:?}", self.current_load);
 
         self.fwd_load_peaks[0].update(&self.current_load[0]);
 
@@ -815,5 +827,148 @@ impl WorkingSolutionRoute {
         }
 
         true
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use jiff::SignedDuration;
+
+    use crate::{
+        problem::{
+            capacity::Capacity,
+            service::{ServiceBuilder, ServiceType},
+            time_window::TimeWindow,
+            travel_cost_matrix::TravelCostMatrix,
+            vehicle::VehicleBuilder,
+            vehicle_routing_problem::VehicleRoutingProblemBuilder,
+        },
+        solver::solution::route::WorkingSolutionRoute,
+        test_utils,
+    };
+
+    #[test]
+    fn test_route_data_correctness() {
+        // 10 locations from (0, 0) to (9, 0)
+        let locations = test_utils::create_location_grid(1, 10);
+
+        let mut vehicle_builder = VehicleBuilder::default();
+        vehicle_builder.set_depot_location_id(0);
+        vehicle_builder.set_capacity(Capacity::from_vec(vec![40.0]));
+        vehicle_builder.set_vehicle_id(String::from("vehicle"));
+        let vehicle = vehicle_builder.build();
+        let vehicles = vec![vehicle];
+
+        let mut service_builder = ServiceBuilder::default();
+        service_builder.set_demand(Capacity::from_vec(vec![10.0]));
+        service_builder.set_external_id(String::from("service_1"));
+        service_builder.set_service_duration(SignedDuration::from_mins(10));
+        service_builder.set_time_window(TimeWindow::from_iso(
+            Some("2025-11-30T10:00:00+02:00"),
+            Some("2025-11-30T12:00:00+02:00"),
+        ));
+        service_builder.set_location_id(1);
+        let service_1 = service_builder.build();
+
+        let mut service_builder = ServiceBuilder::default();
+        service_builder.set_demand(Capacity::from_vec(vec![20.0]));
+        service_builder.set_external_id(String::from("service_2"));
+        service_builder.set_service_duration(SignedDuration::from_mins(10));
+        service_builder.set_time_window(TimeWindow::from_iso(
+            Some("2025-11-30T10:00:00+02:00"),
+            Some("2025-11-30T12:00:00+02:00"),
+        ));
+        service_builder.set_location_id(2);
+        let service_2 = service_builder.build();
+
+        let mut service_builder = ServiceBuilder::default();
+        service_builder.set_demand(Capacity::from_vec(vec![10.0]));
+        service_builder.set_external_id(String::from("service_3"));
+        service_builder.set_service_duration(SignedDuration::from_mins(10));
+        service_builder.set_time_window(TimeWindow::from_iso(
+            Some("2025-11-30T10:00:00+02:00"),
+            Some("2025-11-30T12:00:00+02:00"),
+        ));
+        service_builder.set_location_id(3);
+        service_builder.set_service_type(ServiceType::Pickup);
+        let service_3 = service_builder.build();
+
+        let services = vec![service_1, service_2, service_3];
+
+        let mut builder = VehicleRoutingProblemBuilder::default();
+        builder.set_travel_costs(TravelCostMatrix::from_constant(
+            &locations,
+            SignedDuration::from_mins(30).as_secs(),
+            100.0,
+            SignedDuration::from_mins(30).as_secs_f64(),
+        ));
+        builder.set_locations(locations);
+        builder.set_vehicles(vehicles);
+        builder.set_services(services);
+
+        let problem = builder.build();
+
+        let mut route = WorkingSolutionRoute::empty(&problem, 0);
+
+        route.insert_service(&problem, 0, 0);
+        route.insert_service(&problem, 1, 2);
+        route.insert_service(&problem, 2, 1);
+
+        assert_eq!(route.len(), 3);
+        assert_eq!(route.current_load.len(), 5);
+        assert_eq!(route.fwd_load_peaks.len(), 5);
+        assert_eq!(route.bwd_load_peaks.len(), 5);
+        assert_eq!(route.fwd_load_pickups.len(), 3);
+        assert_eq!(route.fwd_load_deliveries.len(), 3);
+        assert_eq!(route.fwd_load_shipments.len(), 3);
+        assert_eq!(route.bwd_load_pickups.len(), 3);
+        assert_eq!(route.bwd_load_deliveries.len(), 3);
+
+        // Check fwd_load_deliveries
+        assert_eq!(route.fwd_load_deliveries[0], Capacity::from_vec(vec![10.0]));
+        assert_eq!(route.fwd_load_deliveries[1], Capacity::from_vec(vec![10.0]));
+        assert_eq!(route.fwd_load_deliveries[2], Capacity::from_vec(vec![30.0]));
+
+        // Check fwd_load_pickups
+        assert_eq!(route.fwd_load_pickups[0], Capacity::empty());
+        assert_eq!(route.fwd_load_pickups[1], Capacity::from_vec(vec![10.0]));
+        assert_eq!(route.fwd_load_pickups[2], Capacity::from_vec(vec![10.0]));
+
+        // Check bwd_load_deliveries
+        assert_eq!(route.bwd_load_deliveries[0], Capacity::from_vec(vec![20.0]));
+        assert_eq!(route.bwd_load_deliveries[1], Capacity::from_vec(vec![20.0]));
+        assert_eq!(route.bwd_load_deliveries[2], Capacity::empty());
+
+        // Check bwd_load_pickups
+        assert_eq!(route.bwd_load_pickups[0], Capacity::from_vec(vec![10.0]));
+        assert_eq!(route.bwd_load_pickups[1], Capacity::empty());
+        assert_eq!(route.bwd_load_pickups[2], Capacity::empty());
+
+        // Check fwd_load_shipments
+        assert_eq!(route.fwd_load_shipments[0], Capacity::empty());
+        assert_eq!(route.fwd_load_shipments[1], Capacity::empty());
+        assert_eq!(route.fwd_load_shipments[2], Capacity::empty());
+
+        // Check fwd_load_peaks
+        assert_eq!(route.fwd_load_peaks[0], Capacity::from_vec(vec![30.0]));
+        assert_eq!(route.fwd_load_peaks[1], Capacity::from_vec(vec![30.0]));
+        assert_eq!(route.fwd_load_peaks[2], Capacity::from_vec(vec![30.0]));
+        assert_eq!(route.fwd_load_peaks[3], Capacity::from_vec(vec![30.0]));
+        assert_eq!(route.fwd_load_peaks[4], Capacity::from_vec(vec![30.0]));
+
+        // Check bwd_load_peaks
+        assert_eq!(route.bwd_load_peaks[0], Capacity::from_vec(vec![30.0]));
+        assert_eq!(route.bwd_load_peaks[1], Capacity::from_vec(vec![30.0])); // Drop 10
+        assert_eq!(route.bwd_load_peaks[2], Capacity::from_vec(vec![30.0])); // Pickup 10
+        assert_eq!(route.bwd_load_peaks[3], Capacity::from_vec(vec![10.0])); // Drop 20
+        assert_eq!(route.bwd_load_peaks[4], Capacity::from_vec(vec![10.0]));
+
+        // Check current loads
+        assert_eq!(route.current_load[0], Capacity::from_vec(vec![30.0])); // Start depot
+        assert_eq!(route.current_load[1], Capacity::from_vec(vec![20.0])); // After service 1, drop 10
+        assert_eq!(route.current_load[2], Capacity::from_vec(vec![30.0])); // After service 3, pickup 10
+        assert_eq!(route.current_load[3], Capacity::from_vec(vec![10.0])); // After service 2, drop 20
+        assert_eq!(route.current_load[4], Capacity::from_vec(vec![10.0])); // End depot
     }
 }

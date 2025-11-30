@@ -41,8 +41,11 @@ impl VehicleRoutingProblem {
         })
     }
 
-    pub fn job(&self, index: usize) -> &Job {
-        &self.jobs[index]
+    pub fn job<Index>(&self, index: Index) -> &Job
+    where
+        Index: Into<usize>,
+    {
+        &self.jobs[index.into()]
     }
 
     pub fn service(&self, index: usize) -> &Service {

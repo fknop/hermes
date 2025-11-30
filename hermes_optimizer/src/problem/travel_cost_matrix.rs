@@ -95,6 +95,18 @@ impl TravelCostMatrix {
         }
     }
 
+    #[cfg(test)]
+    pub fn from_constant(locations: &[Location], time: i64, distance: f64, cost: f64) -> Self {
+        let num_locations = locations.len();
+        TravelCostMatrix {
+            distances: vec![distance; num_locations * num_locations],
+            times: vec![time; num_locations * num_locations],
+            costs: vec![cost; num_locations * num_locations],
+            num_locations,
+            is_symmetric: true,
+        }
+    }
+
     #[inline(always)]
     pub fn travel_distance(&self, from: usize, to: usize) -> Distance {
         self.distances[self.get_index(from, to)]

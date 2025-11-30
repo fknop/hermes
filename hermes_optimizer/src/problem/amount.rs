@@ -6,6 +6,8 @@ use std::{
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 
+use crate::utils;
+
 pub trait AmountExpression: Sized {
     fn get(&self, index: usize) -> f64;
     fn len(&self) -> usize;
@@ -144,6 +146,11 @@ where
 {
     fn eq(&self, other: &A) -> bool {
         if self.len() != other.len() {
+            // Edge case where it can be 0.0 or empty vec
+            if self.is_empty() && other.is_empty() {
+                return true;
+            }
+
             return false;
         }
 
@@ -178,7 +185,8 @@ where
     }
 
     fn iter(&self) -> impl Iterator<Item = f64> {
-        self.lhs.iter().zip(self.rhs.iter()).map(|(a, b)| a + b)
+        utils::zip_longest::zip_longest(self.lhs.iter(), self.rhs.iter())
+            .map(|(a, b)| a.unwrap_or(0.0) + b.unwrap_or(0.0))
     }
 }
 
@@ -222,7 +230,8 @@ where
     }
 
     fn iter(&self) -> impl Iterator<Item = f64> {
-        self.lhs.iter().zip(self.rhs.iter()).map(|(a, b)| a - b)
+        utils::zip_longest::zip_longest(self.lhs.iter(), self.rhs.iter())
+            .map(|(a, b)| a.unwrap_or(0.0) - b.unwrap_or(0.0))
     }
 }
 
@@ -433,5 +442,44 @@ mod tests {
 
         let result: Amount = Amount::from(sum);
         assert_eq!(result.get(0), 30.0);
+    }
+
+    #[test]
+    fn test_amount_update() {
+        let mut a = Amount::from_vec(vec![1.0, 2.0, 3.0]);
+        let b = Amount::from_vec(vec![4.0, 5.0]);
+
+        a.update(&b);
+
+        assert_eq!(a.len(), 2);
+        assert_eq!(a.get(0), 4.0);
+        assert_eq!(a.get(1), 5.0);
+    }
+
+    #[test]
+    fn test_amount_update_expr() {
+        let mut a = Amount::empty();
+        let b = Amount::from_vec(vec![1.0, 2.0, 3.0]);
+        let c = Amount::from_vec(vec![4.0, 5.0, 4.0]);
+        let d = Amount::from_vec(vec![4.0, 5.0, 4.0]);
+
+        a.update_expr(&b + &c + &d);
+
+        assert_eq!(a.len(), 3);
+        assert_eq!(a, Amount::from_vec(vec![9.0, 12.0, 11.0]));
+    }
+
+    #[test]
+    fn test_amount_update_expr_with_empty() {
+        let mut a = Amount::empty();
+        let empty = Amount::empty();
+        let b = Amount::from_vec(vec![1.0, 2.0, 3.0]);
+        let c = Amount::from_vec(vec![4.0, 5.0, 4.0]);
+        let d = Amount::from_vec(vec![4.0, 5.0, 4.0]);
+
+        a.update_expr(&empty + &b + &c + &d);
+
+        assert_eq!(a.len(), 3);
+        assert_eq!(a, Amount::from_vec(vec![9.0, 12.0, 11.0]));
     }
 }
