@@ -3,7 +3,7 @@ use jiff::SignedDuration;
 use crate::{
     problem::{
         amount::AmountExpression,
-        job::{Job, JobId},
+        job::Job,
         service::{Service, ServiceId},
         shipment::Shipment,
     },

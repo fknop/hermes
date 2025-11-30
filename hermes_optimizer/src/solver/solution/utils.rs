@@ -1,10 +1,8 @@
-use std::ops::{Add, Sub};
 
 use jiff::{SignedDuration, Timestamp};
 
 use crate::problem::{
-    amount::Amount,
-    service::{Service, ServiceId, ServiceType},
+    service::{Service, ServiceId},
     vehicle::VehicleId,
     vehicle_routing_problem::VehicleRoutingProblem,
 };

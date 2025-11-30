@@ -108,7 +108,7 @@ where
     G: Graph + UndirectedEdgeAccess + GeometryAccess,
     H: AStarHeuristic,
 {
-    pub fn with_heuristic(graph: &G, heuristic: H) -> AStar<G, H> {
+    pub fn with_heuristic(graph: &G, heuristic: H) -> AStar<'_, G, H> {
         // TODO: better estimate the capacity to allocate
         let data = FxHashMap::default();
         let heap: BinaryHeap<HeapItem> = BinaryHeap::with_capacity(1024);

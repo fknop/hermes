@@ -1,4 +1,4 @@
-use std::iter::{Chain, Map};
+use std::iter::Map;
 
 use jiff::{SignedDuration, Timestamp};
 

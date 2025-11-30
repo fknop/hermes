@@ -1,5 +1,5 @@
 use crate::{
-    problem::{job::JobId, vehicle_routing_problem::VehicleRoutingProblem},
+    problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
         intensify::intensify_operator::IntensifyOp, solution::working_solution::WorkingSolution,
     },
@@ -107,5 +107,65 @@ impl IntensifyOp for RelocateOperator {
 
     fn updated_routes(&self) -> Vec<usize> {
         vec![self.params.route_id]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use crate::{
+        solver::intensify::{
+            intensify_operator::IntensifyOp,
+            relocate::{RelocateOperator, RelocateOperatorParams},
+        },
+        test_utils::{self, TestRoute},
+    };
+
+    #[test]
+    fn test_relocate() {
+        let locations = test_utils::create_location_grid(10, 10);
+
+        let services = test_utils::create_basic_services(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        let vehicles = test_utils::create_basic_vehicles(vec![0, 0]);
+        let problem = Arc::new(test_utils::create_test_problem(
+            locations, services, vehicles,
+        ));
+
+        let mut solution = test_utils::create_test_working_solution(
+            Arc::clone(&problem),
+            vec![
+                TestRoute {
+                    vehicle_id: 0,
+                    service_ids: vec![0, 1, 2, 3, 4, 5],
+                },
+                TestRoute {
+                    vehicle_id: 1,
+                    service_ids: vec![6, 7, 8, 9, 10],
+                },
+            ],
+        );
+
+        let operator = RelocateOperator::new(RelocateOperatorParams {
+            route_id: 0,
+            from: 1,
+            to: 4,
+        });
+
+        let delta = operator.delta(&solution);
+
+        assert_eq!(delta, 6.0);
+
+        operator.apply(&problem, &mut solution);
+
+        assert_eq!(
+            solution
+                .route(0)
+                .activities()
+                .iter()
+                .map(|activity| activity.service_id())
+                .collect::<Vec<_>>(),
+            vec![0, 2, 3, 1, 4, 5]
+        );
     }
 }

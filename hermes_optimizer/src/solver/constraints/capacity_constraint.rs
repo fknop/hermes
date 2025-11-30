@@ -6,7 +6,6 @@ use crate::{
         vehicle_routing_problem::VehicleRoutingProblem,
     },
     solver::{
-        insertion::{ExistingRouteInsertion, Insertion, NewRouteInsertion},
         insertion_context::InsertionContext,
         score::Score,
         score_level::ScoreLevel,

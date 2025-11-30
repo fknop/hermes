@@ -1,7 +1,6 @@
-use std::sync::Arc;
 
 use axum::{
-    extract::{Path, Query, State},
+    extract::Path,
     response::IntoResponse,
 };
 use hermes_optimizer::{
@@ -10,7 +9,7 @@ use hermes_optimizer::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{error::ApiError, state::AppState};
+use crate::error::ApiError;
 
 #[derive(Deserialize)]
 pub struct GetBenchmarkQuery {

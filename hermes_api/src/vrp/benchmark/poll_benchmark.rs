@@ -7,10 +7,8 @@ use axum::{
 use hermes_optimizer::solver::{
     accepted_solution::AcceptedSolution,
     solver::SolverStatus,
-    statistics::{GlobalStatistics, SearchStatistics, ThreadSearchStatistics},
+    statistics::SearchStatistics,
 };
-use jiff::SignedDuration;
-use parking_lot::{MappedRwLockReadGuard, RwLockReadGuard};
 use serde::Serialize;
 use uuid::Uuid;
 

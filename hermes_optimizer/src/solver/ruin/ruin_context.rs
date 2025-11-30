@@ -1,4 +1,4 @@
-use rand::{RngCore, rngs::SmallRng};
+use rand::RngCore;
 
 use crate::problem::vehicle_routing_problem::VehicleRoutingProblem;
 

@@ -1,5 +1,5 @@
 use crate::{
-    problem::{self, vehicle_routing_problem::VehicleRoutingProblem},
+    problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
         intensify::intensify_operator::IntensifyOp, solution::working_solution::WorkingSolution,
     },

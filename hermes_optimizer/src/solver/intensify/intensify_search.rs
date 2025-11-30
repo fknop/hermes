@@ -6,7 +6,10 @@ use crate::{
         intensify::{
             intensify_operator::{IntensifyOp, IntensifyOperator},
             inter_relocate::{InterRelocateOperator, InterRelocateParams},
+            inter_swap::{InterSwapOperator, InterSwapOperatorParams},
+            or_opt::{OrOptOperator, OrOptOperatorParams},
             relocate::{RelocateOperator, RelocateOperatorParams},
+            swap::{SwapOperator, SwapOperatorParams},
             two_opt::{TwoOptOperator, TwoOptParams},
         },
         solution::working_solution::WorkingSolution,
@@ -95,7 +98,7 @@ impl IntensifySearch {
             let route = solution.route(v1);
 
             for from_pos in 0..route.activities().len() {
-                for to_pos in 0..route.activities().len() {
+                for to_pos in 0..=route.activities().len() {
                     if from_pos == to_pos {
                         continue;
                     }
@@ -119,6 +122,58 @@ impl IntensifySearch {
             }
         }
 
+        // SwapOperator
+        for &(v1, v2) in &self.pairs {
+            if v1 != v2 {
+                continue;
+            }
+
+            let route = solution.route(v1);
+
+            for from_pos in 0..route.activities().len() {
+                for to_pos in from_pos + 1..route.activities().len() {
+                    let op = SwapOperator::new(SwapOperatorParams {
+                        route_id: v1,
+                        first: from_pos,
+                        second: to_pos,
+                    });
+
+                    let delta = op.delta(solution);
+                    if delta <= self.deltas[v1][v2] && op.is_valid(solution) {
+                        self.deltas[v1][v2] = delta;
+                        self.best_ops[v1][v2] = Some(IntensifyOperator::Swap(op));
+                    }
+                }
+            }
+        }
+
+        // InterSwapOperator
+        for &(v1, v2) in &self.pairs {
+            if v1 == v2 {
+                continue;
+            }
+
+            let from_route = solution.route(v1);
+            let to_route = solution.route(v2);
+
+            for from_pos in 0..from_route.activities().len() {
+                for to_pos in 0..to_route.activities().len() {
+                    let op = InterSwapOperator::new(InterSwapOperatorParams {
+                        first_route_id: v1,
+                        second_route_id: v2,
+                        first: from_pos,
+                        second: to_pos,
+                    });
+
+                    let delta = op.delta(solution);
+                    if delta <= self.deltas[v1][v2] && op.is_valid(solution) {
+                        self.deltas[v1][v2] = delta;
+                        self.best_ops[v1][v2] = Some(IntensifyOperator::InterSwap(op));
+                    }
+                }
+            }
+        }
+
         // InterRelocateOperator
         for &(v1, v2) in &self.pairs {
             if v1 == v2 {
@@ -135,7 +190,7 @@ impl IntensifySearch {
                     continue; // skip shipments for inter-relocate
                 }
 
-                for to_pos in 0..to_route.activities().len() {
+                for to_pos in 0..=to_route.activities().len() {
                     let op = InterRelocateOperator::new(InterRelocateParams {
                         from_route_id: v1,
                         to_route_id: v2,
@@ -147,6 +202,38 @@ impl IntensifySearch {
                     if delta <= self.deltas[v1][v2] && op.is_valid(solution) {
                         self.deltas[v1][v2] = delta;
                         self.best_ops[v1][v2] = Some(IntensifyOperator::InterRelocate(op));
+                    }
+                }
+            }
+        }
+
+        // OrOptOperator
+        for &(v1, v2) in &self.pairs {
+            if v1 != v2 {
+                continue;
+            }
+
+            let route = solution.route(v1);
+            let route_length = route.activities().len();
+
+            for from_pos in 0..route_length {
+                for to_pos in 0..=route_length {
+                    let max_length = to_pos.abs_diff(from_pos);
+
+                    // A chain is at least length 2
+                    for chain_length in 2..=max_length {
+                        let op = OrOptOperator::new(OrOptOperatorParams {
+                            route_id: v1,
+                            from: from_pos,
+                            to: to_pos,
+                            count: chain_length,
+                        });
+
+                        let delta = op.delta(solution);
+                        if delta <= self.deltas[v1][v2] && op.is_valid(solution) {
+                            self.deltas[v1][v2] = delta;
+                            self.best_ops[v1][v2] = Some(IntensifyOperator::OrOpt(op));
+                        }
                     }
                 }
             }

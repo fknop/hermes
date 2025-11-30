@@ -1,7 +1,7 @@
 use std::f64;
 
 use crate::{
-    problem::{job::JobId, service::ServiceId, vehicle_routing_problem::VehicleRoutingProblem},
+    problem::{service::ServiceId, vehicle_routing_problem::VehicleRoutingProblem},
     solver::solution::working_solution::WorkingSolution,
 };
 

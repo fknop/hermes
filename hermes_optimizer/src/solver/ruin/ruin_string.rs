@@ -2,7 +2,7 @@
 //! Jan Christiaens, Greet Vanden Berghe
 
 use fxhash::FxHashSet;
-use rand::{Rng, rngs::SmallRng, seq::IndexedRandom};
+use rand::seq::IndexedRandom;
 
 use crate::solver::solution::working_solution::WorkingSolution;
 

@@ -1,10 +1,12 @@
 use std::hint::black_box;
 
 use criterion::{Criterion, criterion_group, criterion_main};
+use fxhash::FxHashSet;
 use hermes_optimizer::problem::{
-    amount::{self, Amount, AmountExpression, AmountSub, AmountSum},
+    amount::{Amount, AmountExpression, AmountSum},
     capacity::Capacity,
 };
+use rand::{Rng, random_range, rng};
 
 #[inline]
 fn capacity_add<'a>(a: &'a Capacity, b: &'a Capacity) -> AmountSum<&'a Amount, &'a Amount> {
@@ -110,10 +112,24 @@ fn over_capacity_demand_benchmark(c: &mut Criterion) -> () {
     });
 }
 
+fn find_in_set_benchmark(c: &mut Criterion) -> () {
+    let set: FxHashSet<usize> = (0..100).map(|_| rng().random_range(0..500)).collect();
+    let vector: Vec<usize> = (0..100).map(|_| rng().random_range(0..500)).collect();
+
+    c.bench_function("find in set", |b| {
+        b.iter(|| set.contains(&rng().random_range(0..500)))
+    });
+
+    c.bench_function("find in vector", |b| {
+        b.iter(|| vector.contains(&rng().random_range(0..500)))
+    });
+}
+
 criterion_group!(
     benches,
     capacity_benchmark,
     satisfies_demand_benchmark,
-    over_capacity_demand_benchmark
+    over_capacity_demand_benchmark,
+    find_in_set_benchmark,
 );
 criterion_main!(benches);

@@ -1,5 +1,4 @@
 use hermes_core::geopoint::GeoPoint;
-use hermes_optimizer::solver::constraints::transport_cost_constraint::TRANSPORT_COST_WEIGHT;
 use hermes_optimizer::{
     solomon::solomon_parser::SolomonParser,
     solver::{

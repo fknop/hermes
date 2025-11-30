@@ -6,7 +6,7 @@ use serde::Serialize;
 
 use crate::{
     problem::{
-        amount::AmountExpression, job::JobId, service::ServiceId, travel_cost_matrix::Distance,
+        amount::AmountExpression, service::ServiceId, travel_cost_matrix::Distance,
         vehicle_routing_problem::VehicleRoutingProblem,
     },
     solver::{

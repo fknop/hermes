@@ -6,7 +6,7 @@ use rand::rngs::SmallRng;
 
 use crate::{
     problem::{
-        amount::{Amount, AmountExpression},
+        amount::AmountExpression,
         capacity::{Capacity, is_capacity_satisfied},
         service::ServiceType,
         vehicle_routing_problem::VehicleRoutingProblem,
@@ -224,7 +224,7 @@ pub fn construct_solution(
 
     create_initial_routes(problem, &mut solution);
 
-    let mut unassigned_services = solution
+    let unassigned_services = solution
         .unassigned_services()
         .iter()
         .cloned()

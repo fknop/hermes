@@ -78,6 +78,17 @@ impl WorkingSolutionRoute {
         self.activities.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.activities.is_empty()
+    }
+
+    pub fn reset(&mut self) {
+        self.services.clear();
+        self.activities.clear();
+
+        self.bbox = BBox::default();
+    }
+
     pub fn load_at(&self, position: usize) -> &Capacity {
         &self.current_load[position + 1]
     }
@@ -92,16 +103,6 @@ impl WorkingSolutionRoute {
 
     pub fn contains_service(&self, service_id: ServiceId) -> bool {
         self.services.contains(&service_id)
-    }
-
-    pub fn service_position(&self, service_id: ServiceId) -> Option<usize> {
-        self.activities
-            .iter()
-            .position(|activity| activity.job_id == JobId::Service(service_id))
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.activities.is_empty()
     }
 
     pub fn has_start(&self, problem: &VehicleRoutingProblem) -> bool {
@@ -433,7 +434,7 @@ impl WorkingSolutionRoute {
         self.updated_in_iteration = true;
 
         // Update the arrival times and departure times of subsequent activities
-        self.update_activity_data(problem, position);
+        self.update_activity_data(problem);
     }
 
     pub fn replace_activities(
@@ -451,7 +452,7 @@ impl WorkingSolutionRoute {
         );
 
         // Update the arrival times and departure times of subsequent activities
-        self.update_activity_data(problem, start);
+        self.update_activity_data(problem);
     }
 
     pub fn move_activity(&mut self, problem: &VehicleRoutingProblem, from: usize, to: usize) {
@@ -463,18 +464,19 @@ impl WorkingSolutionRoute {
         self.activities
             .insert(if to > from { to - 1 } else { to }, activity);
 
-        let start = from.min(to);
-        self.update_activity_data(problem, start);
+        self.update_activity_data(problem);
     }
 
     pub fn swap_activities(&mut self, problem: &VehicleRoutingProblem, i: usize, j: usize) {
         self.activities.swap(i, j);
-        let start = i.min(j);
 
-        self.update_activity_data(problem, start);
+        self.update_activity_data(problem);
     }
 
-    fn update_activity_data(&mut self, problem: &VehicleRoutingProblem, start: usize) {
+    fn update_activity_data(&mut self, problem: &VehicleRoutingProblem) {
+        self.services.clear();
+        self.services
+            .extend(self.activities.iter().map(|activity| activity.service_id()));
         self.update_data(problem);
         self.update_bbox(problem);
     }
@@ -891,9 +893,7 @@ mod tests {
         builder.set_vehicles(vehicles);
         builder.set_services(services);
 
-        let problem = builder.build();
-
-        problem
+        builder.build()
     }
 
     #[test]

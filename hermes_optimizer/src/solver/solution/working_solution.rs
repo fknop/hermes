@@ -183,37 +183,24 @@ impl WorkingSolution {
         if let Some(service_id) = route.remove_activity(&self.problem, activity_id) {
             self.unassigned_services.insert(service_id);
         }
-
-        // if route.is_empty() {
-        //     self.routes.remove(route_id);
-        // }
     }
 
     pub fn remove_service(&mut self, service_id: ServiceId) -> bool {
         // let mut route_to_remove = None;
         let mut removed = false;
-        for (route_id, route) in self.routes.iter_mut().enumerate() {
+        for route in self.routes.iter_mut() {
             removed = route.remove_service(&self.problem, service_id);
 
             if removed {
                 self.unassigned_services.insert(service_id);
-
-                // if route.is_empty() {
-                //     route_to_remove = Some(route_id);
-                // }
                 break;
             }
         }
-
-        // if let Some(route_id) = route_to_remove {
-        //     self.routes.remove(route_id);
-        // }
 
         removed
     }
 
     pub fn remove_service_from_route(&mut self, route_id: usize, service_id: ServiceId) -> bool {
-        // let mut route_to_remove = None;
         let mut removed = false;
         let route = &mut self.routes[route_id];
         if route.contains_service(service_id) {
@@ -221,16 +208,8 @@ impl WorkingSolution {
 
             if removed {
                 self.unassigned_services.insert(service_id);
-
-                // if route.is_empty() {
-                //     route_to_remove = Some(route_id);
-                // }
             }
         }
-
-        // if let Some(route_id) = route_to_remove {
-        //     self.routes.remove(route_id);
-        // }
 
         removed
     }
