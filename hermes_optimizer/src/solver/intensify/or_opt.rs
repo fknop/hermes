@@ -87,32 +87,32 @@ impl IntensifyOp for OrOptOperator {
     fn apply(&self, problem: &VehicleRoutingProblem, solution: &mut WorkingSolution) {
         let route = solution.route_mut(self.params.route_id);
 
-        let job_ids = route
-            .job_ids_iter(self.params.from, self.params.from + self.params.count)
-            .collect::<Vec<_>>();
-
         if self.params.from < self.params.to {
-            // Insert activities at new position
-            route.replace_activities(problem, &job_ids, self.params.to, self.params.to);
+            let moved_jobs =
+                route.job_ids_iter(self.params.from, self.params.from + self.params.count);
 
-            // Remove activities at old position
-            route.replace_activities(
-                problem,
-                &[],
-                self.params.from,
-                self.params.from + self.params.count,
-            );
+            let in_between_jobs =
+                route.job_ids_iter(self.params.from + self.params.count, self.params.to);
+
+            let job_ids = in_between_jobs.chain(moved_jobs).collect::<Vec<_>>();
+
+            // Insert activities at new position
+            route.replace_activities(problem, &job_ids, self.params.from, self.params.to);
         } else {
-            // Remove activities at old position
-            route.replace_activities(
-                problem,
-                &[],
-                self.params.from,
-                self.params.from + self.params.count,
-            );
+            let moved_jobs =
+                route.job_ids_iter(self.params.from, self.params.from + self.params.count);
+
+            let in_between_jobs = route.job_ids_iter(self.params.to, self.params.from);
+
+            let job_ids = moved_jobs.chain(in_between_jobs).collect::<Vec<_>>();
 
             // Insert activities at new position
-            route.replace_activities(problem, &job_ids, self.params.to, self.params.to);
+            route.replace_activities(
+                problem,
+                &job_ids,
+                self.params.to,
+                self.params.from + self.params.count,
+            );
         }
     }
 
