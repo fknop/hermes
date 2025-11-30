@@ -956,5 +956,38 @@ mod tests {
         assert_eq!(route.current_load[2], Capacity::from_vec(vec![30.0])); // After service 3, pickup 10
         assert_eq!(route.current_load[3], Capacity::from_vec(vec![10.0])); // After service 2, drop 20
         assert_eq!(route.current_load[4], Capacity::from_vec(vec![10.0])); // End depot
+
+        // Check arrival times
+        assert_eq!(
+            route.activities[0].arrival_time,
+            "2025-11-30T10:00:00+02:00".parse().unwrap()
+        );
+        assert_eq!(
+            route.activities[1].arrival_time,
+            "2025-11-30T10:40:00+02:00".parse().unwrap()
+        );
+        assert_eq!(
+            route.activities[2].arrival_time,
+            "2025-11-30T11:20:00+02:00".parse().unwrap()
+        );
+
+        // Check waiting durations
+        assert_eq!(route.activities[0].waiting_duration, SignedDuration::ZERO);
+        assert_eq!(route.activities[1].waiting_duration, SignedDuration::ZERO);
+        assert_eq!(route.activities[2].waiting_duration, SignedDuration::ZERO);
+
+        // Check departure times
+        assert_eq!(
+            route.activities[0].departure_time,
+            "2025-11-30T10:10:00+02:00".parse().unwrap()
+        );
+        assert_eq!(
+            route.activities[1].departure_time,
+            "2025-11-30T10:50:00+02:00".parse().unwrap()
+        );
+        assert_eq!(
+            route.activities[2].departure_time,
+            "2025-11-30T11:30:00+02:00".parse().unwrap()
+        )
     }
 }
