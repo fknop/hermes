@@ -1,7 +1,8 @@
 use crate::{
-    problem::vehicle_routing_problem::VehicleRoutingProblem,
+    problem::{job::JobId, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{
-        intensify::intensify_operator::IntensifyOp, solution::working_solution::WorkingSolution,
+        intensify::intensify_operator::IntensifyOp,
+        solution::{route::WorkingSolutionRoute, working_solution::WorkingSolution},
     },
 };
 
@@ -35,6 +36,22 @@ impl SwapOperator {
         }
 
         SwapOperator { params }
+    }
+
+    /// Returns job IDs [to, ...(from, to), from]
+    fn moved_jobs<'a>(
+        &'a self,
+        route: &'a WorkingSolutionRoute,
+    ) -> impl DoubleEndedIterator<Item = JobId> + 'a {
+        if self.params.first < self.params.second {
+            std::iter::once(route.job_id_at(self.params.second))
+                .chain(route.job_ids_iter(self.params.first + 1, self.params.second))
+                .chain(std::iter::once(route.job_id_at(self.params.first)))
+        } else {
+            std::iter::once(route.job_id_at(self.params.first))
+                .chain(route.job_ids_iter(self.params.second + 1, self.params.first))
+                .chain(std::iter::once(route.job_id_at(self.params.second)))
+        }
     }
 }
 
@@ -71,14 +88,28 @@ impl IntensifyOp for SwapOperator {
     }
 
     fn is_valid(&self, solution: &WorkingSolution) -> bool {
-        todo!();
+        let route = solution.route(self.params.route_id);
+        let moved_jobs = self.moved_jobs(route);
+
+        route.is_valid_tw_change(
+            solution.problem(),
+            moved_jobs,
+            self.params.first.min(self.params.second),
+            self.params.first.max(self.params.second) + 1,
+        )
     }
 
     fn apply(&self, problem: &VehicleRoutingProblem, solution: &mut WorkingSolution) {
-        solution.route_mut(self.params.route_id).swap_activities(
+        let route = solution.route_mut(self.params.route_id);
+        let moved_jobs: Vec<JobId> = self.moved_jobs(route).collect();
+
+        println!("{:?}", moved_jobs);
+
+        solution.route_mut(self.params.route_id).replace_activities(
             problem,
-            self.params.first,
-            self.params.second,
+            &moved_jobs,
+            self.params.first.min(self.params.second),
+            self.params.first.max(self.params.second) + 1,
         );
     }
 

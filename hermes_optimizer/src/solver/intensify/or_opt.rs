@@ -1,7 +1,8 @@
 use crate::{
-    problem::vehicle_routing_problem::VehicleRoutingProblem,
+    problem::{job::JobId, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{
-        intensify::intensify_operator::IntensifyOp, solution::working_solution::WorkingSolution,
+        intensify::intensify_operator::IntensifyOp,
+        solution::{route::WorkingSolutionRoute, working_solution::WorkingSolution},
     },
 };
 
@@ -52,6 +53,28 @@ impl OrOptOperator {
 
         OrOptOperator { params }
     }
+
+    fn moved_jobs<'a>(
+        &'a self,
+        route: &'a WorkingSolutionRoute,
+    ) -> impl Iterator<Item = JobId> + 'a {
+        if self.params.from < self.params.to {
+            let moved_jobs =
+                route.job_ids_iter(self.params.from, self.params.from + self.params.count);
+
+            let in_between_jobs =
+                route.job_ids_iter(self.params.from + self.params.count, self.params.to);
+
+            in_between_jobs.chain(moved_jobs)
+        } else {
+            let moved_jobs =
+                route.job_ids_iter(self.params.from, self.params.from + self.params.count);
+
+            let in_between_jobs = route.job_ids_iter(self.params.to, self.params.from);
+
+            moved_jobs.chain(in_between_jobs)
+        }
+    }
 }
 
 impl IntensifyOp for OrOptOperator {
@@ -88,23 +111,12 @@ impl IntensifyOp for OrOptOperator {
         let route = solution.route_mut(self.params.route_id);
 
         if self.params.from < self.params.to {
-            let moved_jobs =
-                route.job_ids_iter(self.params.from, self.params.from + self.params.count);
-
-            let in_between_jobs =
-                route.job_ids_iter(self.params.from + self.params.count, self.params.to);
-
-            let job_ids = in_between_jobs.chain(moved_jobs).collect::<Vec<_>>();
+            let job_ids = self.moved_jobs(route).collect::<Vec<_>>();
 
             // Insert activities at new position
             route.replace_activities(problem, &job_ids, self.params.from, self.params.to);
         } else {
-            let moved_jobs =
-                route.job_ids_iter(self.params.from, self.params.from + self.params.count);
-
-            let in_between_jobs = route.job_ids_iter(self.params.to, self.params.from);
-
-            let job_ids = moved_jobs.chain(in_between_jobs).collect::<Vec<_>>();
+            let job_ids = self.moved_jobs(route).collect::<Vec<_>>();
 
             // Insert activities at new position
             route.replace_activities(

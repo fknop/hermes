@@ -1,7 +1,8 @@
 use crate::{
-    problem::vehicle_routing_problem::VehicleRoutingProblem,
+    problem::{job::JobId, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{
-        intensify::intensify_operator::IntensifyOp, solution::working_solution::WorkingSolution,
+        intensify::intensify_operator::IntensifyOp,
+        solution::{route::WorkingSolutionRoute, working_solution::WorkingSolution},
     },
 };
 
@@ -19,30 +20,70 @@ use crate::{
 ///    R2: ... (X) -> [f_start ... f_end] -> (Y) ...
 /// ```
 pub struct CrossExchangeOperator {
-    first_route_id: usize,
-    second_route_id: usize,
-    first_start: usize,
-    first_end: usize,
-    second_start: usize,
-    second_end: usize,
+    params: CrossExchangeOperatorParams,
+}
+
+pub struct CrossExchangeOperatorParams {
+    pub first_route_id: usize,
+    pub second_route_id: usize,
+    pub first_start: usize,
+    pub first_end: usize,
+    pub second_start: usize,
+    pub second_end: usize,
+}
+
+impl CrossExchangeOperator {
+    pub fn new(params: CrossExchangeOperatorParams) -> Self {
+        if params.first_route_id == params.second_route_id {
+            panic!("CrossExchangeOperator cannot be used for intra-route exchange");
+        }
+
+        if params.first_start >= params.first_end {
+            panic!("first_start must be less than first_end");
+        }
+
+        if params.second_start >= params.second_end {
+            panic!("second_start must be less than second_end");
+        }
+
+        Self { params }
+    }
+
+    fn first_route_moved_jobs<'a>(
+        &self,
+        solution: &'a WorkingSolution,
+    ) -> impl DoubleEndedIterator<Item = JobId> + 'a {
+        solution
+            .route(self.params.first_route_id)
+            .job_ids_iter(self.params.first_start, self.params.first_end + 1)
+    }
+
+    fn second_route_moved_jobs<'a>(
+        &self,
+        solution: &'a WorkingSolution,
+    ) -> impl DoubleEndedIterator<Item = JobId> + 'a {
+        solution
+            .route(self.params.second_route_id)
+            .job_ids_iter(self.params.second_start, self.params.second_end + 1)
+    }
 }
 
 impl IntensifyOp for CrossExchangeOperator {
     fn delta(&self, solution: &WorkingSolution) -> f64 {
         let problem = solution.problem();
 
-        let r1 = solution.route(self.first_route_id);
-        let r2 = solution.route(self.second_route_id);
+        let r1 = solution.route(self.params.first_route_id);
+        let r2 = solution.route(self.params.second_route_id);
 
-        let previous_first_start = r1.previous_location_id(problem, self.first_start);
-        let first_start = r1.location_id(problem, self.first_start);
-        let first_end = r1.location_id(problem, self.first_end);
-        let next_first_end = r1.next_location_id(problem, self.first_end);
+        let previous_first_start = r1.previous_location_id(problem, self.params.first_start);
+        let first_start = r1.location_id(problem, self.params.first_start);
+        let first_end = r1.location_id(problem, self.params.first_end);
+        let next_first_end = r1.next_location_id(problem, self.params.first_end);
 
-        let previous_second_start = r2.previous_location_id(problem, self.second_start);
-        let second_start = r2.location_id(problem, self.second_start);
-        let second_end = r2.location_id(problem, self.second_end);
-        let next_second_end = r2.next_location_id(problem, self.second_end);
+        let previous_second_start = r2.previous_location_id(problem, self.params.second_start);
+        let second_start = r2.location_id(problem, self.params.second_start);
+        let second_end = r2.location_id(problem, self.params.second_end);
+        let next_second_end = r2.next_location_id(problem, self.params.second_end);
 
         let mut delta = 0.0;
 
@@ -62,14 +103,114 @@ impl IntensifyOp for CrossExchangeOperator {
     }
 
     fn is_valid(&self, solution: &WorkingSolution) -> bool {
-        todo!()
+        let first_route = solution.route(self.params.first_route_id);
+        let second_route = solution.route(self.params.second_route_id);
+
+        first_route.is_valid_tw_change(
+            solution.problem(),
+            self.second_route_moved_jobs(solution),
+            self.params.first_start,
+            self.params.first_end + 1,
+        ) && second_route.is_valid_tw_change(
+            solution.problem(),
+            self.first_route_moved_jobs(solution),
+            self.params.second_start,
+            self.params.second_end + 1,
+        )
     }
 
     fn apply(&self, problem: &VehicleRoutingProblem, solution: &mut WorkingSolution) {
-        todo!()
+        let first_route_moved_jobs: Vec<JobId> = self.first_route_moved_jobs(solution).collect();
+        let second_route_moved_jobs: Vec<JobId> = self.second_route_moved_jobs(solution).collect();
+
+        let first_route = solution.route_mut(self.params.first_route_id);
+        first_route.replace_activities(
+            problem,
+            &second_route_moved_jobs,
+            self.params.first_start,
+            self.params.first_end + 1,
+        );
+
+        let second_route = solution.route_mut(self.params.second_route_id);
+        second_route.replace_activities(
+            problem,
+            &first_route_moved_jobs,
+            self.params.second_start,
+            self.params.second_end + 1,
+        );
     }
 
     fn updated_routes(&self) -> Vec<usize> {
-        vec![self.first_route_id, self.second_route_id]
+        vec![self.params.first_route_id, self.params.second_route_id]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use crate::{
+        solver::intensify::{
+            cross_exchange::{CrossExchangeOperator, CrossExchangeOperatorParams},
+            intensify_operator::IntensifyOp,
+        },
+        test_utils::{self, TestRoute},
+    };
+
+    #[test]
+    fn test_cross_exchange() {
+        let locations = test_utils::create_location_grid(10, 10);
+
+        let services = test_utils::create_basic_services(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        let vehicles = test_utils::create_basic_vehicles(vec![0, 0]);
+        let problem = Arc::new(test_utils::create_test_problem(
+            locations, services, vehicles,
+        ));
+
+        let mut solution = test_utils::create_test_working_solution(
+            Arc::clone(&problem),
+            vec![
+                TestRoute {
+                    vehicle_id: 0,
+                    service_ids: vec![0, 1, 2, 3, 4, 5],
+                },
+                TestRoute {
+                    vehicle_id: 1,
+                    service_ids: vec![6, 7, 8, 9, 10],
+                },
+            ],
+        );
+
+        let operator = CrossExchangeOperator::new(CrossExchangeOperatorParams {
+            first_route_id: 0,
+            first_start: 1,
+            first_end: 3,
+
+            second_route_id: 1,
+            second_start: 1,
+            second_end: 2,
+        });
+
+        operator.apply(&problem, &mut solution);
+
+        assert_eq!(
+            solution
+                .route(0)
+                .activities()
+                .iter()
+                .map(|activity| activity.service_id())
+                .collect::<Vec<_>>(),
+            vec![0, 7, 8, 4, 5],
+        );
+
+        assert_eq!(
+            solution
+                .route(1)
+                .activities()
+                .iter()
+                .map(|activity| activity.service_id())
+                .collect::<Vec<_>>(),
+            vec![6, 1, 2, 3, 9, 10],
+        );
     }
 }
