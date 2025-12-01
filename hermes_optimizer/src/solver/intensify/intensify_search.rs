@@ -4,9 +4,11 @@ use crate::{
     problem::{vehicle::VehicleId, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{
         intensify::{
+            cross_exchange::{CrossExchangeOperator, CrossExchangeOperatorParams},
             intensify_operator::{IntensifyOp, IntensifyOperator},
             inter_relocate::{InterRelocateOperator, InterRelocateParams},
             inter_swap::{InterSwapOperator, InterSwapOperatorParams},
+            inter_two_opt_star::{InterTwoOptStarOperator, InterTwoOptStarOperatorParams},
             or_opt::{OrOptOperator, OrOptOperatorParams},
             relocate::{RelocateOperator, RelocateOperatorParams},
             swap::{SwapOperator, SwapOperatorParams},
@@ -234,6 +236,87 @@ impl IntensifySearch {
                             self.deltas[v1][v2] = delta;
                             self.best_ops[v1][v2] = Some(IntensifyOperator::OrOpt(op));
                         }
+                    }
+                }
+            }
+        }
+
+        // CrossExchangeOperator
+        for &(v1, v2) in &self.pairs {
+            if v1 <= v2 {
+                continue;
+            }
+
+            let from_route = solution.route(v1);
+            let to_route = solution.route(v2);
+
+            // If the bbox don't intersects, no need to try exchanges
+            if !from_route.bbox_intersects(to_route) {
+                continue;
+            }
+
+            let from_route_length = from_route.activities().len();
+            let to_route_length = to_route.activities().len();
+
+            for from_pos in 0..from_route_length - 1 {
+                for to_pos in 0..to_route_length - 1 {
+                    let max_from_chain = from_route_length - from_pos;
+                    let max_to_chain = to_route_length - to_pos;
+                    let max_chain_length = max_from_chain.min(max_to_chain);
+
+                    // A chain is at least length 2
+                    for chain_length in 2..=max_chain_length {
+                        let op = CrossExchangeOperator::new(CrossExchangeOperatorParams {
+                            first_route_id: v1,
+                            second_route_id: v2,
+
+                            first_start: from_pos,
+                            second_start: to_pos,
+                            first_end: from_pos + chain_length,
+                            second_end: to_pos + chain_length,
+                        });
+
+                        let delta = op.delta(solution);
+                        if delta <= self.deltas[v1][v2] && op.is_valid(solution) {
+                            self.deltas[v1][v2] = delta;
+                            self.best_ops[v1][v2] = Some(IntensifyOperator::CrossExchange(op));
+                        }
+                    }
+                }
+            }
+        }
+
+        // InterTwoOptStarOperator
+        for &(v1, v2) in &self.pairs {
+            if v1 <= v2 {
+                continue;
+            }
+
+            let from_route = solution.route(v1);
+            let to_route = solution.route(v2);
+
+            // If the bbox don't intersects, no need to try exchanges
+            if !from_route.bbox_intersects(to_route) {
+                continue;
+            }
+
+            let from_route_length = from_route.activities().len();
+            let to_route_length = to_route.activities().len();
+
+            for from_pos in 0..from_route_length {
+                for to_pos in 0..to_route_length {
+                    let op = InterTwoOptStarOperator::new(InterTwoOptStarOperatorParams {
+                        first_route_id: v1,
+                        second_route_id: v2,
+
+                        first_from: from_pos,
+                        second_from: to_pos,
+                    });
+
+                    let delta = op.delta(solution);
+                    if delta <= self.deltas[v1][v2] && op.is_valid(solution) {
+                        self.deltas[v1][v2] = delta;
+                        self.best_ops[v1][v2] = Some(IntensifyOperator::InterTwoOptStar(op));
                     }
                 }
             }

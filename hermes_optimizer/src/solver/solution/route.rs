@@ -89,6 +89,10 @@ impl WorkingSolutionRoute {
         self.bbox = BBox::default();
     }
 
+    pub fn bbox_intersects(&self, other: &WorkingSolutionRoute) -> bool {
+        self.bbox.intersects(&other.bbox)
+    }
+
     pub fn load_at(&self, position: usize) -> &Capacity {
         &self.current_load[position + 1]
     }

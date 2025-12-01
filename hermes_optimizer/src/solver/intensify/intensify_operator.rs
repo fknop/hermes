@@ -39,6 +39,8 @@ pub enum IntensifyOperator {
 
     /// Cross-Exchange operator that exchanges segments of activities between two different routes.
     CrossExchange(CrossExchangeOperator),
+
+    InterTwoOptStar(InterTwoOptStarOperator),
 }
 
 impl IntensifyOperator {
@@ -53,6 +55,7 @@ impl IntensifyOperator {
             IntensifyOperator::InterSwap { .. } => "Inter-Swap",
             IntensifyOperator::TwoOptStar { .. } => "Two-Opt*",
             IntensifyOperator::CrossExchange { .. } => "Cross-Exchange",
+            IntensifyOperator::InterTwoOptStar { .. } => "Inter-2-Opt*",
         }
     }
 
