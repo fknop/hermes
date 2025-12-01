@@ -116,7 +116,19 @@ impl IntensifyOp for InterTwoOptStarOperator {
     }
 
     fn is_valid(&self, solution: &WorkingSolution) -> bool {
-        todo!()
+        let r1_head = self.first_route_head(solution);
+        let r1_tail = self.first_route_tail(solution);
+        let r2_head = self.second_route_head(solution);
+        let r2_tail = self.second_route_tail(solution);
+
+        let new_r1_jobs = r1_head.chain(r2_tail);
+        let new_r2_jobs = r2_head.chain(r1_tail);
+
+        let r1 = solution.route(self.params.first_route_id);
+        let r2 = solution.route(self.params.second_route_id);
+
+        r1.is_valid_tw_change(solution.problem(), new_r1_jobs, 0, r1.len())
+            && r2.is_valid_tw_change(solution.problem(), new_r2_jobs, 0, r2.len())
     }
 
     fn apply(&self, problem: &VehicleRoutingProblem, solution: &mut WorkingSolution) {

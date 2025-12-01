@@ -72,7 +72,24 @@ impl IntensifyOp for InterSwapOperator {
     }
 
     fn is_valid(&self, solution: &WorkingSolution) -> bool {
-        todo!()
+        let first_route = solution.route(self.params.first_route_id);
+        let second_route = solution.route(self.params.second_route_id);
+
+        let first_route_job = first_route.job_ids_iter(self.params.first, self.params.first + 1);
+        let second_route_job =
+            second_route.job_ids_iter(self.params.second, self.params.second + 1);
+
+        first_route.is_valid_tw_change(
+            solution.problem(),
+            second_route_job,
+            self.params.first,
+            self.params.first + 1,
+        ) && second_route.is_valid_tw_change(
+            solution.problem(),
+            first_route_job,
+            self.params.second,
+            self.params.second + 1,
+        )
     }
 
     fn apply(&self, problem: &VehicleRoutingProblem, solution: &mut WorkingSolution) {

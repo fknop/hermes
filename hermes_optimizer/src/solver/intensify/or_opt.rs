@@ -104,7 +104,29 @@ impl IntensifyOp for OrOptOperator {
     }
 
     fn is_valid(&self, solution: &WorkingSolution) -> bool {
-        todo!()
+        if self.params.from < self.params.to {
+            let route = solution.route(self.params.route_id);
+
+            let moved_jobs = self.moved_jobs(route);
+
+            route.is_valid_tw_change(
+                solution.problem(),
+                moved_jobs,
+                self.params.from,
+                self.params.to,
+            )
+        } else {
+            let route = solution.route(self.params.route_id);
+
+            let moved_jobs = self.moved_jobs(route);
+
+            route.is_valid_tw_change(
+                solution.problem(),
+                moved_jobs,
+                self.params.to,
+                self.params.from + self.params.count,
+            )
+        }
     }
 
     fn apply(&self, problem: &VehicleRoutingProblem, solution: &mut WorkingSolution) {
