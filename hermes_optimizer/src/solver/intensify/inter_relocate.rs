@@ -19,10 +19,12 @@ use crate::{
 ///    R1: ... (A) -> (B) ...
 ///    R2: ... (X) -> [from] -> (Y) ...
 /// ```
+#[derive(Debug)]
 pub struct InterRelocateOperator {
     params: InterRelocateParams,
 }
 
+#[derive(Debug)]
 pub struct InterRelocateParams {
     pub from_route_id: usize,
     pub to_route_id: usize,
@@ -51,7 +53,7 @@ impl IntensifyOp for InterRelocateOperator {
         let b = r1.next_location_id(problem, self.params.from);
 
         let x = r2.location_id(problem, self.params.to);
-        let y = r2.location_id(problem, self.params.to);
+        let y = r2.next_location_id(problem, self.params.to);
 
         let mut delta = 0.0;
 

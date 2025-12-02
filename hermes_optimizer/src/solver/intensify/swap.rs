@@ -19,10 +19,12 @@ use crate::{
 ///
 /// Note: Handles cases where 'first' and 'second' are adjacent or distant.
 /// ```
+#[derive(Debug)]
 pub struct SwapOperator {
     params: SwapOperatorParams,
 }
 
+#[derive(Debug)]
 pub struct SwapOperatorParams {
     pub route_id: usize,
     pub first: usize,
@@ -74,6 +76,18 @@ impl IntensifyOp for SwapOperator {
         let second_loc = route.location_id(problem, second);
         let next_second_loc = route.next_location_id(problem, second);
 
+        if second == first + 1 {
+            let current_cost = problem.travel_cost_or_zero(prev_first_loc, first_loc)
+                + problem.travel_cost_or_zero(first_loc, second_loc)
+                + problem.travel_cost_or_zero(second_loc, next_second_loc);
+
+            let new_cost = problem.travel_cost_or_zero(prev_first_loc, second_loc)
+                + problem.travel_cost_or_zero(second_loc, first_loc)
+                + problem.travel_cost_or_zero(first_loc, next_second_loc);
+
+            return new_cost - current_cost;
+        }
+
         let current_cost = problem.travel_cost_or_zero(prev_first_loc, first_loc)
             + problem.travel_cost_or_zero(first_loc, next_first_loc)
             + problem.travel_cost_or_zero(prev_second_loc, second_loc)
@@ -103,8 +117,6 @@ impl IntensifyOp for SwapOperator {
         let route = solution.route_mut(self.params.route_id);
         let moved_jobs: Vec<JobId> = self.moved_jobs(route).collect();
 
-        println!("{:?}", moved_jobs);
-
         solution.route_mut(self.params.route_id).replace_activities(
             problem,
             &moved_jobs,
@@ -131,7 +143,7 @@ mod tests {
     };
 
     #[test]
-    fn test_swap() {
+    fn test_swap_apply() {
         let locations = test_utils::create_location_grid(10, 10);
 
         let services = test_utils::create_basic_services(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
@@ -160,7 +172,10 @@ mod tests {
             second: 5,
         });
 
+        let distance = solution.route(0).distance(&problem);
+        let delta = operator.delta(&solution);
         operator.apply(&problem, &mut solution);
+        assert_eq!(solution.route(0).distance(&problem), distance + delta);
 
         assert_eq!(
             solution
@@ -171,5 +186,37 @@ mod tests {
                 .collect::<Vec<_>>(),
             vec![0, 5, 2, 3, 4, 1],
         );
+    }
+
+    #[test]
+    fn test_swap_delta() {
+        let locations = test_utils::create_location_grid(10, 10);
+
+        let services = test_utils::create_basic_services(vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        let vehicles = test_utils::create_basic_vehicles(vec![0, 0]);
+        let problem = Arc::new(test_utils::create_test_problem(
+            locations, services, vehicles,
+        ));
+
+        let mut solution = test_utils::create_test_working_solution(
+            Arc::clone(&problem),
+            vec![TestRoute {
+                vehicle_id: 0,
+                service_ids: vec![0, 1, 2, 3, 4, 5],
+            }],
+        );
+
+        let operator = SwapOperator::new(SwapOperatorParams {
+            route_id: 0,
+            first: 1,
+            second: 2,
+        });
+
+        let distance = solution.route(0).distance(&problem);
+        let delta = operator.delta(&solution);
+        operator.apply(&problem, &mut solution);
+        assert_eq!(solution.route(0).distance(&problem), distance + delta);
+
+        assert_eq!(delta, 2.0);
     }
 }

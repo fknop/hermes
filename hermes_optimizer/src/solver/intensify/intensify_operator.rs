@@ -18,6 +18,7 @@ pub trait IntensifyOp {
     fn updated_routes(&self) -> Vec<usize>;
 }
 
+#[derive(Debug)]
 pub enum IntensifyOperator {
     /// 2-Opt operator that reverses the segment between two indices start and end in a given route.
     TwoOpt(TwoOptOperator),
@@ -69,7 +70,7 @@ impl IntensifyOperator {
             IntensifyOperator::InterSwap(op) => op.delta(solution),
             IntensifyOperator::TwoOptStar(op) => op.delta(solution),
             IntensifyOperator::CrossExchange(op) => op.delta(solution),
-            _ => unimplemented!(),
+            IntensifyOperator::InterTwoOptStar(op) => op.delta(solution),
         }
     }
 
@@ -83,7 +84,7 @@ impl IntensifyOperator {
             IntensifyOperator::InterSwap(op) => op.apply(problem, solution),
             IntensifyOperator::TwoOptStar(op) => op.apply(problem, solution),
             IntensifyOperator::CrossExchange(op) => op.apply(problem, solution),
-            _ => unimplemented!(),
+            IntensifyOperator::InterTwoOptStar(op) => op.apply(problem, solution),
         }
     }
 
@@ -97,7 +98,7 @@ impl IntensifyOperator {
             IntensifyOperator::InterSwap(op) => op.updated_routes(),
             IntensifyOperator::TwoOptStar(op) => op.updated_routes(),
             IntensifyOperator::CrossExchange(op) => op.updated_routes(),
-            _ => unimplemented!(),
+            IntensifyOperator::InterTwoOptStar(op) => op.updated_routes(),
         }
     }
 }

@@ -151,7 +151,7 @@ impl IntensifySearch {
 
         // InterSwapOperator
         for &(v1, v2) in &self.pairs {
-            if v1 == v2 {
+            if v1 <= v2 {
                 continue;
             }
 
@@ -219,8 +219,8 @@ impl IntensifySearch {
             let route_length = route.activities().len();
 
             for from_pos in 0..route_length {
-                for to_pos in 0..=route_length {
-                    let max_length = to_pos.abs_diff(from_pos);
+                for to_pos in from_pos..=route_length {
+                    let max_length = to_pos.abs_diff(from_pos).saturating_sub(1);
 
                     // A chain is at least length 2
                     for chain_length in 2..=max_length {
@@ -262,7 +262,7 @@ impl IntensifySearch {
                 for to_pos in 0..to_route_length - 1 {
                     let max_from_chain = from_route_length - from_pos;
                     let max_to_chain = to_route_length - to_pos;
-                    let max_chain_length = max_from_chain.min(max_to_chain);
+                    let max_chain_length = max_from_chain.min(max_to_chain).saturating_sub(1);
 
                     // A chain is at least length 2
                     for chain_length in 2..=max_chain_length {
@@ -322,7 +322,7 @@ impl IntensifySearch {
             }
         }
 
-        let mut best_delta = 0.0;
+        let mut best_delta = f64::MAX;
         let mut best_v1 = None;
         let mut best_v2 = None;
         for i in 0..solution.routes().len() {
@@ -338,6 +338,14 @@ impl IntensifySearch {
         if let (Some(v1), Some(v2)) = (best_v1, best_v2)
             && let Some(op) = &self.best_ops[v1][v2]
         {
+            println!(
+                "Apply {} - delta = {} (r1 = {}, r2 = {}) op = {:?}",
+                op.operator_name(),
+                best_delta,
+                v1,
+                v2,
+                op
+            );
             op.apply(problem, solution);
 
             self.pairs.clear();

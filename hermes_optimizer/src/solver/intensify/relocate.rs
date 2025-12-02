@@ -22,10 +22,12 @@ use crate::{
 /// Edges Modified: (A->from), (from->C), (X->Y)
 /// Edges Created:  (A->C),    (X->from), (from->Y)
 /// ```
+#[derive(Debug)]
 pub struct RelocateOperator {
     params: RelocateOperatorParams,
 }
 
+#[derive(Debug)]
 pub struct RelocateOperatorParams {
     pub route_id: usize,
     pub from: usize,
@@ -34,7 +36,7 @@ pub struct RelocateOperatorParams {
 
 impl RelocateOperator {
     pub fn new(params: RelocateOperatorParams) -> Self {
-        if params.from == params.to {
+        if params.from == params.to || params.from + 1 == params.to {
             panic!("RelocateOperator 'from' and 'to' positions must be different");
         }
 
@@ -51,16 +53,13 @@ impl IntensifyOp for RelocateOperator {
         let from = route.location_id(problem, self.params.from);
         let next_from = route.next_location_id(problem, self.params.from);
 
-        let prev_to = if self.params.to < self.params.from {
-            route.location_id(problem, self.params.to.wrapping_sub(1))
-        } else {
-            route.location_id(problem, self.params.to)
-        };
+        let prev_to = route.previous_location_id(problem, self.params.to);
         let next_to = route.location_id(problem, self.params.to);
 
         let current_cost = problem.travel_cost_or_zero(prev_from, from)
             + problem.travel_cost_or_zero(from, next_from)
             + problem.travel_cost_or_zero(prev_to, next_to);
+
         let new_cost = problem.travel_cost_or_zero(prev_from, next_from)
             + problem.travel_cost_or_zero(prev_to, from)
             + problem.travel_cost_or_zero(from, next_to);
@@ -75,7 +74,15 @@ impl IntensifyOp for RelocateOperator {
         // A - B - C - D - E - F
         // Moving B after E, in_between_jobs will be C - D - E
         if self.params.from < self.params.to {
-            let in_between_jobs = route.job_ids_iter(self.params.from + 1, self.params.to + 1);
+            let in_between_jobs = route.job_ids_iter(self.params.from + 1, self.params.to);
+
+            if self.params.from + 1 > route.len() {
+                println!("{:?}", self);
+            }
+
+            if self.params.to > route.len() {
+                println!("{:?}", self);
+            }
 
             // Contains C - D - E - B
             let iterator = in_between_jobs.chain(std::iter::once(job_id));
@@ -88,6 +95,10 @@ impl IntensifyOp for RelocateOperator {
         } else {
             // Moving E before B, in_between_jobs will be E - B - C - D
             let in_between_jobs = route.job_ids_iter(self.params.to, self.params.from);
+
+            if self.params.from > route.len() {
+                println!("{:?}", self);
+            }
 
             // Contains E - B - C - D
             let iterator = std::iter::once(job_id).chain(in_between_jobs);
@@ -152,11 +163,10 @@ mod tests {
             to: 4,
         });
 
+        let distance = solution.route(0).distance(&problem);
         let delta = operator.delta(&solution);
-
-        assert_eq!(delta, 6.0);
-
         operator.apply(&problem, &mut solution);
+        assert_eq!(solution.route(0).distance(&problem), distance + delta);
 
         assert_eq!(
             solution
@@ -166,6 +176,98 @@ mod tests {
                 .map(|activity| activity.service_id())
                 .collect::<Vec<_>>(),
             vec![0, 2, 3, 1, 4, 5]
+        );
+    }
+
+    #[test]
+    fn test_relocate_end_of_route() {
+        let locations = test_utils::create_location_grid(10, 10);
+
+        let services = test_utils::create_basic_services(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        let vehicles = test_utils::create_basic_vehicles(vec![0, 0]);
+        let problem = Arc::new(test_utils::create_test_problem(
+            locations, services, vehicles,
+        ));
+
+        let mut solution = test_utils::create_test_working_solution(
+            Arc::clone(&problem),
+            vec![
+                TestRoute {
+                    vehicle_id: 0,
+                    service_ids: vec![0, 1, 2, 3, 4, 5],
+                },
+                TestRoute {
+                    vehicle_id: 1,
+                    service_ids: vec![6, 7, 8, 9, 10],
+                },
+            ],
+        );
+
+        let operator = RelocateOperator::new(RelocateOperatorParams {
+            route_id: 0,
+            from: 1,
+            to: 6,
+        });
+
+        let distance = solution.route(0).distance(&problem);
+        let delta = operator.delta(&solution);
+        operator.apply(&problem, &mut solution);
+        assert_eq!(solution.route(0).distance(&problem), distance + delta);
+
+        assert_eq!(
+            solution
+                .route(0)
+                .activities()
+                .iter()
+                .map(|activity| activity.service_id())
+                .collect::<Vec<_>>(),
+            vec![0, 2, 3, 4, 5, 1]
+        );
+    }
+
+    #[test]
+    fn test_relocate_start_of_route() {
+        let locations = test_utils::create_location_grid(10, 10);
+
+        let services = test_utils::create_basic_services(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        let vehicles = test_utils::create_basic_vehicles(vec![0, 0]);
+        let problem = Arc::new(test_utils::create_test_problem(
+            locations, services, vehicles,
+        ));
+
+        let mut solution = test_utils::create_test_working_solution(
+            Arc::clone(&problem),
+            vec![
+                TestRoute {
+                    vehicle_id: 0,
+                    service_ids: vec![0, 1, 2, 3, 4, 5],
+                },
+                TestRoute {
+                    vehicle_id: 1,
+                    service_ids: vec![6, 7, 8, 9, 10],
+                },
+            ],
+        );
+
+        let operator = RelocateOperator::new(RelocateOperatorParams {
+            route_id: 0,
+            from: 1,
+            to: 0,
+        });
+
+        let distance = solution.route(0).distance(&problem);
+        let delta = operator.delta(&solution);
+        operator.apply(&problem, &mut solution);
+        assert_eq!(solution.route(0).distance(&problem), distance + delta);
+
+        assert_eq!(
+            solution
+                .route(0)
+                .activities()
+                .iter()
+                .map(|activity| activity.service_id())
+                .collect::<Vec<_>>(),
+            vec![1, 0, 2, 3, 4, 5]
         );
     }
 }

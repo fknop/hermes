@@ -22,10 +22,12 @@ use crate::{
 ///
 /// Effect: Moves a whole cluster of stops to a better location.
 /// ```
+#[derive(Debug)]
 pub struct OrOptOperator {
     params: OrOptOperatorParams,
 }
 
+#[derive(Debug)]
 pub struct OrOptOperatorParams {
     pub route_id: usize,
     pub from: usize,
@@ -40,14 +42,13 @@ impl OrOptOperator {
         }
 
         if params.from == params.to {
-            panic!("OrOptOperator: 'from' and 'to' positions must be different.");
+            panic!(
+                "OrOptOperator: 'from' ({}) and 'to' ({}) positions must be different.",
+                params.from, params.to
+            );
         }
 
-        if params.from + params.count > params.to && params.to > params.from {
-            panic!("OrOptOperator: Overlapping segments are not allowed.");
-        }
-
-        if params.to + params.count > params.from && params.from > params.to {
+        if params.from + params.count >= params.to && params.to > params.from {
             panic!("OrOptOperator: Overlapping segments are not allowed.");
         }
 
@@ -85,17 +86,18 @@ impl IntensifyOp for OrOptOperator {
         let A = route.previous_location_id(problem, self.params.from);
         let from = route.location_id(problem, self.params.from);
 
-        let end = route.location_id(problem, self.params.from + self.params.count);
-        let B = route.next_location_id(problem, self.params.from + self.params.count);
+        let end = route.location_id(problem, self.params.from + self.params.count - 1);
+        let B = route.next_location_id(problem, self.params.from + self.params.count - 1);
 
-        let X = route.location_id(problem, self.params.to);
-        let Y = route.next_location_id(problem, self.params.to);
+        let X = route.location_id(problem, self.params.to - 1);
+        let Y = route.next_location_id(problem, self.params.to - 1);
 
         let mut delta = 0.0;
 
         delta -= problem.travel_cost_or_zero(A, from);
         delta -= problem.travel_cost_or_zero(end, B);
         delta -= problem.travel_cost_or_zero(X, Y);
+
         delta += problem.travel_cost_or_zero(A, B);
         delta += problem.travel_cost_or_zero(X, from);
         delta += problem.travel_cost_or_zero(end, Y);
@@ -199,7 +201,10 @@ mod tests {
             to: 5,
         });
 
+        let distance = solution.route(0).distance(&problem);
+        let delta = operator.delta(&solution);
         operator.apply(&problem, &mut solution);
+        assert_eq!(solution.route(0).distance(&problem), distance + delta);
 
         assert_eq!(
             solution
@@ -219,7 +224,10 @@ mod tests {
             to: 2,
         });
 
+        let distance = solution.route(0).distance(&problem);
+        let delta = operator.delta(&solution);
         operator.apply(&problem, &mut solution);
+        assert_eq!(solution.route(0).distance(&problem), distance + delta);
 
         assert_eq!(
             solution
@@ -230,5 +238,111 @@ mod tests {
                 .collect::<Vec<_>>(),
             vec![0, 4, 3, 5, 1, 2, 6, 7],
         );
+    }
+
+    #[test]
+    fn test_or_opt_end_of_route() {
+        let locations = test_utils::create_location_grid(10, 10);
+
+        let services = test_utils::create_basic_services(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        let vehicles = test_utils::create_basic_vehicles(vec![0, 0]);
+        let problem = Arc::new(test_utils::create_test_problem(
+            locations, services, vehicles,
+        ));
+
+        let mut solution = test_utils::create_test_working_solution(
+            Arc::clone(&problem),
+            vec![
+                TestRoute {
+                    vehicle_id: 0,
+                    service_ids: vec![0, 1, 2, 3, 4, 5, 6, 7],
+                },
+                TestRoute {
+                    vehicle_id: 1,
+                    service_ids: vec![8, 9, 10],
+                },
+            ],
+        );
+
+        // Move [1, 2, 3] to position after 4
+        let operator = OrOptOperator::new(OrOptOperatorParams {
+            route_id: 0,
+            from: 1,
+            count: 3,
+            to: 8,
+        });
+
+        let distance = solution.route(0).distance(&problem);
+        let delta = operator.delta(&solution);
+        operator.apply(&problem, &mut solution);
+        assert_eq!(solution.route(0).distance(&problem), distance + delta);
+
+        assert_eq!(
+            solution
+                .route(0)
+                .activities()
+                .iter()
+                .map(|activity| activity.service_id())
+                .collect::<Vec<_>>(),
+            vec![0, 4, 5, 6, 7, 1, 2, 3],
+        );
+    }
+
+    #[test]
+    fn test_or_opt_delta() {
+        let locations = test_utils::create_location_grid(20, 20);
+
+        let services = test_utils::create_basic_services(vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+        let vehicles = test_utils::create_basic_vehicles(vec![0, 0]);
+        let problem = Arc::new(test_utils::create_test_problem(
+            locations, services, vehicles,
+        ));
+
+        let mut solution = test_utils::create_test_working_solution(
+            Arc::clone(&problem),
+            vec![TestRoute {
+                vehicle_id: 0,
+                service_ids: vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+            }],
+        );
+
+        // Move [0..8] to position after 9
+        let operator = OrOptOperator::new(OrOptOperatorParams {
+            route_id: 0,
+            from: 0,
+            count: 9,
+            to: 10,
+        });
+
+        let distance = solution.route(0).distance(&problem);
+        assert_eq!(distance, 11.0);
+
+        let delta = operator.delta(&solution);
+
+        operator.apply(&problem, &mut solution);
+
+        assert_eq!(solution.route(0).distance(&problem), distance + delta);
+        assert_eq!(delta, 18.0);
+
+        assert_eq!(
+            solution
+                .route(0)
+                .activities()
+                .iter()
+                .map(|activity| activity.service_id())
+                .collect::<Vec<_>>(),
+            vec![9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 10],
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "OrOptOperator: Overlapping segments are not allowed.")]
+    fn test_or_opt_consecutive() {
+        OrOptOperator::new(OrOptOperatorParams {
+            route_id: 0,
+            from: 1,
+            count: 3,
+            to: 4,
+        });
     }
 }

@@ -30,6 +30,7 @@ use crate::{
             vehicle_cost_constraint::VehicleCostConstraint,
             waiting_duration_constraint::WaitingDurationConstraint,
         },
+        intensify::intensify_search::IntensifySearch,
         statistics::SearchStatisticsIteration,
     },
 };
@@ -288,49 +289,49 @@ impl Search {
                             noise_generator: thread_noise_generator
                         };
 
-                        // let mut should_intensify = false;
+                        let mut should_intensify = false;
 
                         loop {
 
 
-                            // should_intensify = false; // should_intensify || state.iterations_without_improvement > 500;
+                            should_intensify =  should_intensify || state.iterations_without_improvement > 500;
 
-                            // if should_intensify {
-                            //     let mut intensify_search = IntensifySearch::new(&self.problem);
+                            if should_intensify {
+                                let mut intensify_search = IntensifySearch::new(&self.problem);
 
-                            //     let best_selector = SelectBestSelector;
-                            //     let (mut working_solution, current_score) = {
-                            //         let solutions_guard = state.best_solutions.read();
-                            //         if !solutions_guard.is_empty()
-                            //             && let Some(AcceptedSolution {
-                            //                 solution, score, ..
-                            //             }) =best_selector
-                            //                 .select_solution(&solutions_guard, &mut thread_rng)
-                            //         {
-                            //             (solution.clone(), *score)
-                            //         } else {
-                            //             panic!("No solutions selected");
-                            //         }
-                            //     }; // Lock is released here
-
-
-                            //     let intensify_iterations = 500.min(max_iterations.unwrap_or(usize::MAX) - state.iteration);
-
-                            //     intensify_search.intensify(&self.problem, &mut working_solution, intensify_iterations);
-
-                            //     state.iteration += intensify_iterations;
-                            //     let iteration_info = IterationInfo {
-                            //         iteration: state.iteration,
-                            //         ruin_strategy: None,
-                            //         recreate_strategy: None,
-                            //         current_score,
-                            //     };
-                            //     self.update_solutions(working_solution, &mut state, iteration_info);
-                            //     should_intensify = false;
+                                let best_selector = SelectBestSelector;
+                                let (mut working_solution, current_score) = {
+                                    let solutions_guard = state.best_solutions.read();
+                                    if !solutions_guard.is_empty()
+                                        && let Some(AcceptedSolution {
+                                            solution, score, ..
+                                        }) =best_selector
+                                            .select_solution(&solutions_guard, &mut thread_rng)
+                                    {
+                                        (solution.clone(), *score)
+                                    } else {
+                                        panic!("No solutions selected");
+                                    }
+                                }; // Lock is released here
 
 
-                            // }
-                            // else {
+                                let intensify_iterations = 1000.min(max_iterations.unwrap_or(usize::MAX) - state.iteration);
+
+                                intensify_search.intensify(&self.problem, &mut working_solution, intensify_iterations);
+
+                                state.iteration += intensify_iterations;
+                                let iteration_info = IterationInfo {
+                                    iteration: state.iteration,
+                                    ruin_strategy: None,
+                                    recreate_strategy: None,
+                                    current_score,
+                                };
+                                self.update_solutions(working_solution, &mut state, iteration_info);
+                                should_intensify = false;
+
+
+                            }
+                            else {
                                 state.iteration += 1;
 
                                 if (state.iteration).is_multiple_of(500) {
@@ -345,7 +346,7 @@ impl Search {
                                 }
 
                                 self.perform_iteration(&mut state, &mut thread_rng);
-                            // }
+                            }
 
 
 

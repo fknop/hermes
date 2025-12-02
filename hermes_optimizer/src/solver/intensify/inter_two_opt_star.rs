@@ -38,10 +38,12 @@ use crate::{
 ///
 /// **Note:** Unlike standard 2-Opt, this usually **preserves the direction** of the tails
 /// (i.e., it does not reverse the order of activities within the tail).
+#[derive(Debug)]
 pub struct InterTwoOptStarOperator {
     params: InterTwoOptStarOperatorParams,
 }
 
+#[derive(Debug)]
 pub struct InterTwoOptStarOperatorParams {
     pub first_route_id: usize,
     pub second_route_id: usize,

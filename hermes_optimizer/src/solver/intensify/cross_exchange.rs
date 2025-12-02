@@ -19,10 +19,12 @@ use crate::{
 ///    R1: ... (A) -> [s_start ... s_end] -> (B) ...
 ///    R2: ... (X) -> [f_start ... f_end] -> (Y) ...
 /// ```
+#[derive(Debug)]
 pub struct CrossExchangeOperator {
     params: CrossExchangeOperatorParams,
 }
 
+#[derive(Debug)]
 pub struct CrossExchangeOperatorParams {
     pub first_route_id: usize,
     pub second_route_id: usize,

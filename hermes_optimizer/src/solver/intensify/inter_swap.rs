@@ -18,10 +18,12 @@ use crate::{
 ///    R1: ... (A) -> [second] -> (B) ...
 ///    R2: ... (X) -> [first] -> (Y) ...
 /// ```
+#[derive(Debug)]
 pub struct InterSwapOperator {
     params: InterSwapOperatorParams,
 }
 
+#[derive(Debug)]
 pub struct InterSwapOperatorParams {
     pub first_route_id: usize,
     pub second_route_id: usize,

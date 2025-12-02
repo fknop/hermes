@@ -24,10 +24,12 @@ use crate::{
 /// Edges Removed: (prev->from), (to->next)
 /// Edges Added:   (prev->to),   (from->next)
 /// ```
+#[derive(Debug)]
 pub struct TwoOptOperator {
     params: TwoOptParams,
 }
 
+#[derive(Debug)]
 pub struct TwoOptParams {
     pub route_id: usize,
     pub from: usize,
@@ -97,6 +99,14 @@ impl IntensifyOp for TwoOptOperator {
     fn is_valid(&self, solution: &WorkingSolution) -> bool {
         let route = solution.route(self.params.route_id);
 
+        if self.params.to + 1 > route.len() {
+            println!("{:?}", self);
+        }
+
+        if self.params.from >= route.len() {
+            println!("{:?}", self);
+        }
+
         route.is_valid_tw_change(
             solution.problem(),
             route
@@ -157,17 +167,20 @@ mod tests {
             ],
         );
 
-        let two_opt = TwoOptOperator::new(TwoOptParams {
+        let operator = TwoOptOperator::new(TwoOptParams {
             route_id: 0,
             from: 1,
             to: 4,
         });
 
-        let delta = two_opt.delta(&solution);
+        let delta = operator.delta(&solution);
 
         assert_eq!(delta, 6.0);
 
-        two_opt.apply(&problem, &mut solution);
+        let distance = solution.route(0).distance(&problem);
+        let delta = operator.delta(&solution);
+        operator.apply(&problem, &mut solution);
+        assert_eq!(solution.route(0).distance(&problem), distance + delta);
 
         assert_eq!(
             solution
@@ -177,6 +190,52 @@ mod tests {
                 .map(|activity| activity.service_id())
                 .collect::<Vec<_>>(),
             vec![0, 4, 3, 2, 1, 5]
+        );
+    }
+
+    #[test]
+    fn test_two_opt_end_of_route() {
+        let locations = test_utils::create_location_grid(10, 10);
+
+        let services = test_utils::create_basic_services(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        let vehicles = test_utils::create_basic_vehicles(vec![0, 0]);
+        let problem = Arc::new(test_utils::create_test_problem(
+            locations, services, vehicles,
+        ));
+
+        let mut solution = test_utils::create_test_working_solution(
+            Arc::clone(&problem),
+            vec![
+                TestRoute {
+                    vehicle_id: 0,
+                    service_ids: vec![0, 1, 2, 3, 4, 5],
+                },
+                TestRoute {
+                    vehicle_id: 1,
+                    service_ids: vec![6, 7, 8, 9, 10],
+                },
+            ],
+        );
+
+        let operator = TwoOptOperator::new(TwoOptParams {
+            route_id: 0,
+            from: 1,
+            to: 5,
+        });
+
+        let distance = solution.route(0).distance(&problem);
+        let delta = operator.delta(&solution);
+        operator.apply(&problem, &mut solution);
+        assert_eq!(solution.route(0).distance(&problem), distance + delta);
+
+        assert_eq!(
+            solution
+                .route(0)
+                .activities()
+                .iter()
+                .map(|activity| activity.service_id())
+                .collect::<Vec<_>>(),
+            vec![0, 5, 4, 3, 2, 1]
         );
     }
 }

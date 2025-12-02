@@ -119,6 +119,10 @@ impl TravelCostMatrix {
 
     #[inline(always)]
     pub fn travel_cost(&self, from: usize, to: usize) -> Cost {
+        if from == to {
+            return 0.0;
+        }
+
         self.costs[self.get_index(from, to)]
     }
 

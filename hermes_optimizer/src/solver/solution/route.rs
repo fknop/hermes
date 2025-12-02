@@ -90,6 +90,10 @@ impl WorkingSolutionRoute {
     }
 
     pub fn bbox_intersects(&self, other: &WorkingSolutionRoute) -> bool {
+        if self.is_empty() || other.is_empty() {
+            return false; // TODO: build this into bbox properly
+        }
+
         self.bbox.intersects(&other.bbox)
     }
 
@@ -460,7 +464,7 @@ impl WorkingSolutionRoute {
     }
 
     pub fn move_activity(&mut self, problem: &VehicleRoutingProblem, from: usize, to: usize) {
-        if from >= self.activities.len() || to >= self.activities.len() || from == to {
+        if from > self.activities.len() || to > self.activities.len() || from == to {
             return;
         }
 
@@ -664,6 +668,10 @@ impl WorkingSolutionRoute {
         start: usize,
         end: usize,
     ) -> impl DoubleEndedIterator<Item = JobId> + '_ {
+        if end > self.activities.len() || start > self.activities.len() || start > end {
+            println!("{} -> {}", start, end)
+        }
+
         self.activities[start..end]
             .iter()
             .map(|activity| activity.job_id)
