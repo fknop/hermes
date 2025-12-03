@@ -677,7 +677,7 @@ impl WorkingSolutionRoute {
             .map(|activity| activity.job_id)
     }
 
-    pub fn replace_data_iter<'a, I>(
+    pub fn updated_activities_iter<'a, I>(
         &'a self,
         problem: &'a VehicleRoutingProblem,
         jobs_iter: I,
@@ -1040,7 +1040,8 @@ mod tests {
         route.insert_service(&problem, 1, 2);
         route.insert_service(&problem, 2, 1);
 
-        let mut iterator = route.replace_data_iter(&problem, route.job_ids_iter(1, 3).rev(), 1, 3);
+        let mut iterator =
+            route.updated_activities_iter(&problem, route.job_ids_iter(1, 3).rev(), 1, 3);
 
         assert_eq!(
             iterator.next(),
@@ -1048,6 +1049,7 @@ mod tests {
                 arrival_time: "2025-11-30T10:40:00+02:00".parse().unwrap(),
                 waiting_duration: SignedDuration::ZERO,
                 departure_time: "2025-11-30T10:50:00+02:00".parse().unwrap(),
+                job_id: JobId::Service(1),
             })
         );
 
@@ -1057,6 +1059,7 @@ mod tests {
                 arrival_time: "2025-11-30T11:20:00+02:00".parse().unwrap(),
                 waiting_duration: SignedDuration::ZERO,
                 departure_time: "2025-11-30T11:30:00+02:00".parse().unwrap(),
+                job_id: JobId::Service(2),
             })
         );
 

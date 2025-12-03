@@ -41,13 +41,19 @@ impl RouteConstraint for ShiftConstraint {
 
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
         let problem = context.problem();
+        let route = context.insertion.route(context.solution);
+        let vehicle = route.vehicle(problem);
+
+        if vehicle.latest_end_time().is_none() {
+            return Score::zero();
+        }
+
+        let new_end = context.compute_vehicle_end();
 
         match *context.insertion {
-            Insertion::ExistingRoute(ExistingRouteInsertion { route_id, .. }) => {
-                let route = context.solution.route(route_id);
+            Insertion::ExistingRoute(ExistingRouteInsertion { .. }) => {
                 let vehicle = route.vehicle(problem);
                 let current_end = route.end(problem);
-                let new_end = context.end;
 
                 if let Some(latest_end) = vehicle.latest_end_time() {
                     // New violation, old route was not violating the constraint
@@ -80,11 +86,11 @@ impl RouteConstraint for ShiftConstraint {
                 let vehicle = problem.vehicle(vehicle_id);
 
                 if let Some(latest_end) = vehicle.latest_end_time()
-                    && context.end > latest_end
+                    && new_end > latest_end
                 {
                     Score::of(
                         self.score_level(),
-                        (context.end.as_second() - latest_end.as_second()) as f64,
+                        (new_end.as_second() - latest_end.as_second()) as f64,
                     )
                 } else {
                     Score::zero()

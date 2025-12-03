@@ -41,8 +41,16 @@ impl RouteConstraint for MaximumWorkingDurationConstraint {
 
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
         let problem = context.problem();
+        let route = context.insertion.route(context.solution);
+        let vehicle = route.vehicle(problem);
 
-        let new_working_duration = context.end.duration_since(context.start);
+        if vehicle.maximum_working_duration().is_none() {
+            return Score::zero();
+        }
+
+        let new_start = context.compute_vehicle_start();
+        let new_end = context.compute_vehicle_end();
+        let new_working_duration = new_end.duration_since(new_start);
 
         match *context.insertion {
             Insertion::ExistingRoute(ExistingRouteInsertion { route_id, .. }) => {

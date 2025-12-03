@@ -1,10 +1,14 @@
 use jiff::{SignedDuration, Timestamp};
 
 use crate::{
-    problem::{service::ServiceId, vehicle_routing_problem::VehicleRoutingProblem},
-    solver::solution::utils::{
-        compute_activity_arrival_time, compute_departure_time, compute_first_activity_arrival_time,
-        compute_vehicle_end, compute_vehicle_start, compute_waiting_duration,
+    problem::{job::JobId, service::ServiceId, vehicle_routing_problem::VehicleRoutingProblem},
+    solver::solution::{
+        route_update_iterator::RouteUpdateIterator,
+        utils::{
+            compute_activity_arrival_time, compute_departure_time,
+            compute_first_activity_arrival_time, compute_vehicle_end, compute_vehicle_start,
+            compute_waiting_duration,
+        },
     },
 };
 
@@ -26,19 +30,59 @@ pub struct InsertionContext<'a> {
     pub problem: &'a VehicleRoutingProblem,
     pub solution: &'a WorkingSolution,
     pub insertion: &'a Insertion,
-    pub activities: Vec<ActivityInsertionContext>,
-    pub start: Timestamp,
-    pub end: Timestamp,
     pub waiting_duration_delta: SignedDuration,
 }
 
-impl InsertionContext<'_> {
-    pub fn inserted_activity(&self) -> &ActivityInsertionContext {
-        &self.activities[self.insertion.position()]
-    }
-
+impl<'a> InsertionContext<'a> {
     pub fn problem(&self) -> &VehicleRoutingProblem {
         self.problem
+    }
+
+    pub fn compute_vehicle_start(&self) -> Timestamp {
+        let route = self.insertion.route(self.solution);
+
+        if self.insertion.position() == 0 {
+            let vehicle_id = route.vehicle_id();
+            compute_vehicle_start(
+                self.problem,
+                vehicle_id,
+                self.insertion.service_id(),
+                compute_first_activity_arrival_time(
+                    self.problem,
+                    vehicle_id,
+                    self.insertion.service_id(),
+                ),
+            )
+        } else {
+            route.start(self.problem)
+        }
+    }
+
+    pub fn updated_activities_iter(
+        &'a self,
+    ) -> RouteUpdateIterator<'a, impl Iterator<Item = JobId>> {
+        let route = self.insertion.route(self.solution);
+        let job_id = self.insertion.job_id();
+        route.updated_activities_iter(
+            self.problem,
+            std::iter::once(job_id)
+                .chain(route.job_ids_iter(self.insertion.position(), route.len())),
+            self.insertion.position(),
+            route.len() + 1,
+        )
+    }
+
+    pub fn compute_vehicle_end(&self) -> Timestamp {
+        let route = self.insertion.route(self.solution);
+
+        let last_service = self.updated_activities_iter().last().unwrap();
+
+        compute_vehicle_end(
+            self.problem,
+            route.vehicle_id(),
+            last_service.job_id.into(),
+            last_service.departure_time,
+        )
     }
 }
 
@@ -50,19 +94,6 @@ pub fn compute_insertion_context<'a>(
     match insertion {
         Insertion::ExistingRoute(context) => {
             let route = solution.route(context.route_id);
-            let mut activities = Vec::with_capacity(route.activities().len() + 1);
-
-            activities.extend(
-                route
-                    .activities()
-                    .iter()
-                    .take(context.position)
-                    .map(|activity| ActivityInsertionContext {
-                        service_id: activity.service_id(),
-                        arrival_time: activity.arrival_time(),
-                        departure_time: activity.departure_time(),
-                    }),
-            );
 
             let mut arrival_time = if route.is_empty() || context.position == 0 {
                 compute_first_activity_arrival_time(problem, route.vehicle_id(), context.service_id)
@@ -82,11 +113,6 @@ pub fn compute_insertion_context<'a>(
 
             let mut waiting_duration_delta =
                 compute_waiting_duration(problem.service(context.service_id), arrival_time);
-            activities.push(ActivityInsertionContext {
-                service_id: context.service_id,
-                arrival_time,
-                departure_time,
-            });
 
             let mut last_service_id = context.service_id;
 
@@ -109,32 +135,13 @@ pub fn compute_insertion_context<'a>(
                 departure_time =
                     compute_departure_time(problem, arrival_time, waiting_duration, service_id);
 
-                activities.push(ActivityInsertionContext {
-                    service_id,
-                    arrival_time,
-                    departure_time,
-                });
-
                 last_service_id = service_id;
             }
 
             InsertionContext {
                 problem,
-                start: compute_vehicle_start(
-                    problem,
-                    route.vehicle_id(),
-                    activities[0].service_id,
-                    activities[0].arrival_time,
-                ),
-                end: compute_vehicle_end(
-                    problem,
-                    route.vehicle_id(),
-                    activities[activities.len() - 1].service_id,
-                    activities[activities.len() - 1].departure_time,
-                ),
                 solution,
                 waiting_duration_delta,
-                activities,
                 insertion,
             }
         }
@@ -145,39 +152,13 @@ pub fn compute_insertion_context<'a>(
                 context.service_id,
             );
 
-            let departure_time = compute_departure_time(
-                problem,
-                arrival_time,
-                compute_waiting_duration(problem.service(context.service_id), arrival_time),
-                context.service_id,
-            );
-
             let waiting_duration =
                 compute_waiting_duration(problem.service(context.service_id), arrival_time);
-
-            let activities = vec![ActivityInsertionContext {
-                service_id: context.service_id,
-                arrival_time,
-                departure_time,
-            }];
 
             InsertionContext {
                 problem,
                 waiting_duration_delta: waiting_duration,
-                start: compute_vehicle_start(
-                    problem,
-                    context.vehicle_id,
-                    activities[0].service_id,
-                    activities[0].arrival_time,
-                ),
-                end: compute_vehicle_end(
-                    problem,
-                    context.vehicle_id,
-                    activities[activities.len() - 1].service_id,
-                    activities[activities.len() - 1].departure_time,
-                ),
                 solution,
-                activities,
                 insertion,
             }
         }

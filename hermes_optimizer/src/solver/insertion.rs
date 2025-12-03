@@ -1,5 +1,5 @@
 use crate::{
-    problem::{service::ServiceId, vehicle::VehicleId},
+    problem::{job::JobId, service::ServiceId, vehicle::VehicleId},
     solver::solution::{route::WorkingSolutionRoute, working_solution::WorkingSolution},
 };
 
@@ -28,6 +28,10 @@ impl Insertion {
             Insertion::NewRoute(ctx) => ctx.service_id,
             Insertion::ExistingRoute(ctx) => ctx.service_id,
         }
+    }
+
+    pub fn job_id(&self) -> JobId {
+        JobId::Service(self.service_id())
     }
 
     pub fn position(&self) -> usize {

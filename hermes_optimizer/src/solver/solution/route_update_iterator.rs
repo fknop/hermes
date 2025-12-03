@@ -19,6 +19,7 @@ pub struct RouteUpdateActivityData {
     pub arrival_time: Timestamp,
     pub departure_time: Timestamp,
     pub waiting_duration: SignedDuration,
+    pub job_id: JobId,
 }
 
 pub struct RouteUpdateIterator<'a, I> {
@@ -120,6 +121,7 @@ where
                 arrival_time,
                 departure_time,
                 waiting_duration,
+                job_id,
             })
         } else {
             None

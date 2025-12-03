@@ -49,7 +49,7 @@ impl RouteConstraint for WaitingDurationConstraint {
     }
 
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
-        if !context.problem.has_waiting_duration_cost() {
+        if !context.problem.has_waiting_duration_cost() || !context.problem.has_time_windows() {
             return Score::zero();
         }
 
