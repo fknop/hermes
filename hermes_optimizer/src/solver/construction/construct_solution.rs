@@ -108,7 +108,7 @@ fn create_initial_routes(problem: &VehicleRoutingProblem, solution: &mut Working
         .unwrap();
 
     // Sort by urgency
-    interior.sort_by(|&a, &b| {
+    interior.sort_unstable_by(|&a, &b| {
         let service_a = problem.service(a);
         let service_b = problem.service(b);
 

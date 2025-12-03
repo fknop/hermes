@@ -97,7 +97,7 @@ impl RegretInsertion {
                 }
 
                 // Sort insertions by score to find the best ones
-                potential_insertions.sort_by(|a, b| a.0.cmp(&b.0));
+                potential_insertions.sort_unstable_by(|a, b| a.0.cmp(&b.0));
 
                 // 2. Calculate the regret value for this service
                 let best_insertion = &potential_insertions[0];

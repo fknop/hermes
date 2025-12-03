@@ -5,3 +5,6 @@ members = ["hermes", "hermes_api", "hermes_core", "hermes_optimizer"]
 
 [profile.release]
 debug = true
+
+[build]
+rustflags = ["-Csymbol-mangling-version=v0"]

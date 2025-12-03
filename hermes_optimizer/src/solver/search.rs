@@ -532,7 +532,7 @@ impl Search {
                         score,
                         score_analysis,
                     });
-                    guard.sort_by(|a, b| a.score.cmp(&b.score));
+                    guard.sort_unstable_by(|a, b| a.score.cmp(&b.score));
 
                     if is_best {
                         // info!(

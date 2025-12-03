@@ -27,7 +27,7 @@ static GLOBAL: MiMalloc = MiMalloc;
 async fn main() {
     tracing_subscriber::fmt().with_max_level(Level::INFO).init();
 
-    let hermes = Hermes::from_directory("./data");
+    let hermes = Hermes::from_directory("./data/be");
 
     let app_state = Arc::new(AppState {
         hermes,

@@ -84,7 +84,7 @@ impl RuinSolution for RuinTimeRelated {
         let distance_influence = 1.0;
         let time_influence = 10.0;
 
-        related_activities.sort_by(|a, b| {
+        related_activities.sort_unstable_by(|a, b| {
             RuinTimeRelated::relatedness(
                 a,
                 max_distance,

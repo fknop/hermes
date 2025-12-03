@@ -93,7 +93,7 @@ impl BestInsertion {
             BestInsertionSortMethod::Random => {
                 unassigned_services.shuffle(rng);
             }
-            BestInsertionSortMethod::Demand => unassigned_services.sort_by(|a, b| {
+            BestInsertionSortMethod::Demand => unassigned_services.sort_unstable_by(|a, b| {
                 // Not perfect but good enough for sorting purposes.
                 let first_demand_a = problem.job(*a).demand().get(0);
                 let first_demand_b = problem.job(*b).demand().get(0);
@@ -101,7 +101,7 @@ impl BestInsertion {
                 first_demand_a.total_cmp(&first_demand_b)
             }),
             BestInsertionSortMethod::Far => {
-                unassigned_services.sort_by_key(|&service| {
+                unassigned_services.sort_unstable_by_key(|&service| {
                     let distance_from_depot = problem
                         .vehicles()
                         .iter()
@@ -119,7 +119,7 @@ impl BestInsertion {
                 });
             }
             BestInsertionSortMethod::Close => {
-                unassigned_services.sort_by_key(|&service| {
+                unassigned_services.sort_unstable_by_key(|&service| {
                     let distance_from_depot = problem
                         .vehicles()
                         .iter()
@@ -137,7 +137,7 @@ impl BestInsertion {
                 });
             }
             BestInsertionSortMethod::TimeWindow => {
-                unassigned_services.sort_by_key(|&service_id| {
+                unassigned_services.sort_unstable_by_key(|&service_id| {
                     let service = problem.service(service_id);
 
                     let end = service
