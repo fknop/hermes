@@ -88,7 +88,7 @@ impl TwoOptOperator {
 }
 
 impl IntensifyOp for TwoOptOperator {
-    fn delta(&self, solution: &WorkingSolution) -> f64 {
+    fn transport_cost_delta(&self, solution: &WorkingSolution) -> f64 {
         if solution.problem().is_symmetric() {
             self.symmetric_delta(solution)
         } else {
@@ -173,12 +173,12 @@ mod tests {
             to: 4,
         });
 
-        let delta = operator.delta(&solution);
+        let delta = operator.transport_cost_delta(&solution);
 
         assert_eq!(delta, 6.0);
 
         let distance = solution.route(0).distance(&problem);
-        let delta = operator.delta(&solution);
+        let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
         assert_eq!(solution.route(0).distance(&problem), distance + delta);
 
@@ -224,7 +224,7 @@ mod tests {
         });
 
         let distance = solution.route(0).distance(&problem);
-        let delta = operator.delta(&solution);
+        let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
         assert_eq!(solution.route(0).distance(&problem), distance + delta);
 

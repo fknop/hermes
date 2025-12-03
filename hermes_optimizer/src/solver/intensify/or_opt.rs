@@ -79,7 +79,7 @@ impl OrOptOperator {
 }
 
 impl IntensifyOp for OrOptOperator {
-    fn delta(&self, solution: &WorkingSolution) -> f64 {
+    fn transport_cost_delta(&self, solution: &WorkingSolution) -> f64 {
         let problem = solution.problem();
         let route = solution.route(self.params.route_id);
 
@@ -202,7 +202,7 @@ mod tests {
         });
 
         let distance = solution.route(0).distance(&problem);
-        let delta = operator.delta(&solution);
+        let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
         assert_eq!(solution.route(0).distance(&problem), distance + delta);
 
@@ -225,7 +225,7 @@ mod tests {
         });
 
         let distance = solution.route(0).distance(&problem);
-        let delta = operator.delta(&solution);
+        let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
         assert_eq!(solution.route(0).distance(&problem), distance + delta);
 
@@ -273,7 +273,7 @@ mod tests {
         });
 
         let distance = solution.route(0).distance(&problem);
-        let delta = operator.delta(&solution);
+        let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
         assert_eq!(solution.route(0).distance(&problem), distance + delta);
 
@@ -317,7 +317,7 @@ mod tests {
         let distance = solution.route(0).distance(&problem);
         assert_eq!(distance, 11.0);
 
-        let delta = operator.delta(&solution);
+        let delta = operator.transport_cost_delta(&solution);
 
         operator.apply(&problem, &mut solution);
 

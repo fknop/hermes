@@ -326,6 +326,8 @@ impl Search {
                                     recreate_strategy: None,
                                     current_score,
                                 };
+
+                                info!("finished intensying");
                                 self.update_solutions(working_solution, &mut state, iteration_info);
                                 should_intensify = false;
 

@@ -125,11 +125,32 @@ fn find_in_set_benchmark(c: &mut Criterion) -> () {
     });
 }
 
+fn sort_benchmark(c: &mut Criterion) -> () {
+    let base_vec: Vec<usize> = (0..1000).map(|_| rng().random_range(0..5000)).collect();
+
+    c.bench_function("sort unstable", |b| {
+        let mut vec = base_vec.clone();
+        b.iter(|| {
+            vec.sort_unstable();
+            black_box(&vec);
+        })
+    });
+
+    c.bench_function("sort stable", |b| {
+        let mut vec = base_vec.clone();
+        b.iter(|| {
+            vec.sort();
+            black_box(&vec);
+        })
+    });
+}
+
 criterion_group!(
     benches,
     capacity_benchmark,
     satisfies_demand_benchmark,
     over_capacity_demand_benchmark,
     find_in_set_benchmark,
+    sort_benchmark
 );
 criterion_main!(benches);

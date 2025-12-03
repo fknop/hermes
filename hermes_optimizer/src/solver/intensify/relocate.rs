@@ -45,7 +45,7 @@ impl RelocateOperator {
 }
 
 impl IntensifyOp for RelocateOperator {
-    fn delta(&self, solution: &WorkingSolution) -> f64 {
+    fn transport_cost_delta(&self, solution: &WorkingSolution) -> f64 {
         let problem = solution.problem();
         let route = solution.route(self.params.route_id);
 
@@ -76,14 +76,6 @@ impl IntensifyOp for RelocateOperator {
         if self.params.from < self.params.to {
             let in_between_jobs = route.job_ids_iter(self.params.from + 1, self.params.to);
 
-            if self.params.from + 1 > route.len() {
-                println!("{:?}", self);
-            }
-
-            if self.params.to > route.len() {
-                println!("{:?}", self);
-            }
-
             // Contains C - D - E - B
             let iterator = in_between_jobs.chain(std::iter::once(job_id));
             route.is_valid_tw_change(
@@ -95,10 +87,6 @@ impl IntensifyOp for RelocateOperator {
         } else {
             // Moving E before B, in_between_jobs will be E - B - C - D
             let in_between_jobs = route.job_ids_iter(self.params.to, self.params.from);
-
-            if self.params.from > route.len() {
-                println!("{:?}", self);
-            }
 
             // Contains E - B - C - D
             let iterator = std::iter::once(job_id).chain(in_between_jobs);
@@ -113,7 +101,35 @@ impl IntensifyOp for RelocateOperator {
 
     fn apply(&self, problem: &VehicleRoutingProblem, solution: &mut WorkingSolution) {
         let route = solution.route_mut(self.params.route_id);
-        route.move_activity(problem, self.params.from, self.params.to);
+        let job_id = route.activities()[self.params.from].job_id();
+
+        if self.params.from < self.params.to {
+            let in_between_jobs = route.job_ids_iter(self.params.from + 1, self.params.to);
+
+            // Contains C - D - E - B
+            let iterator = in_between_jobs.chain(std::iter::once(job_id));
+
+            route.replace_activities(
+                problem,
+                &iterator.collect::<Vec<_>>(),
+                self.params.from,
+                self.params.to,
+            );
+        } else {
+            // Moving E before B, in_between_jobs will be E - B - C - D
+            let in_between_jobs = route.job_ids_iter(self.params.to, self.params.from);
+
+            // Contains E - B - C - D
+            let iterator = std::iter::once(job_id).chain(in_between_jobs);
+            route.replace_activities(
+                problem,
+                &iterator.collect::<Vec<_>>(),
+                self.params.to,
+                self.params.from + 1,
+            );
+        }
+
+        // route.move_activity(problem, self.params.from, self.params.to);
     }
 
     fn updated_routes(&self) -> Vec<usize> {
@@ -164,7 +180,7 @@ mod tests {
         });
 
         let distance = solution.route(0).distance(&problem);
-        let delta = operator.delta(&solution);
+        let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
         assert_eq!(solution.route(0).distance(&problem), distance + delta);
 
@@ -210,7 +226,7 @@ mod tests {
         });
 
         let distance = solution.route(0).distance(&problem);
-        let delta = operator.delta(&solution);
+        let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
         assert_eq!(solution.route(0).distance(&problem), distance + delta);
 
@@ -256,7 +272,7 @@ mod tests {
         });
 
         let distance = solution.route(0).distance(&problem);
-        let delta = operator.delta(&solution);
+        let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
         assert_eq!(solution.route(0).distance(&problem), distance + delta);
 
@@ -302,7 +318,7 @@ mod tests {
         });
 
         let distance = solution.route(0).distance(&problem);
-        let delta = operator.delta(&solution);
+        let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
         assert_eq!(solution.route(0).distance(&problem), distance + delta);
 
@@ -314,6 +330,52 @@ mod tests {
                 .map(|activity| activity.service_id())
                 .collect::<Vec<_>>(),
             vec![1, 0, 2, 3, 4, 5]
+        );
+    }
+
+    #[test]
+    fn test_relocate_before_end_of_route() {
+        let locations = test_utils::create_location_grid(10, 10);
+
+        let services = test_utils::create_basic_services(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        let vehicles = test_utils::create_basic_vehicles(vec![0, 0]);
+        let problem = Arc::new(test_utils::create_test_problem(
+            locations, services, vehicles,
+        ));
+
+        let mut solution = test_utils::create_test_working_solution(
+            Arc::clone(&problem),
+            vec![
+                TestRoute {
+                    vehicle_id: 0,
+                    service_ids: vec![0, 1, 2, 3, 4, 5],
+                },
+                TestRoute {
+                    vehicle_id: 1,
+                    service_ids: vec![6, 7, 8, 9, 10],
+                },
+            ],
+        );
+
+        let operator = RelocateOperator::new(RelocateOperatorParams {
+            route_id: 0,
+            from: 1,
+            to: 5,
+        });
+
+        let distance = solution.route(0).distance(&problem);
+        let delta = operator.transport_cost_delta(&solution);
+        operator.apply(&problem, &mut solution);
+        assert_eq!(solution.route(0).distance(&problem), distance + delta);
+
+        assert_eq!(
+            solution
+                .route(0)
+                .activities()
+                .iter()
+                .map(|activity| activity.service_id())
+                .collect::<Vec<_>>(),
+            vec![0, 2, 3, 4, 1, 5]
         );
     }
 }

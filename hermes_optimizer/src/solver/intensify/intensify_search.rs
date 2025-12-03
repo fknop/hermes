@@ -1,5 +1,7 @@
 use std::f64;
 
+use tracing::debug;
+
 use crate::{
     problem::{vehicle::VehicleId, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{
@@ -19,13 +21,14 @@ use crate::{
 };
 
 type VehiclePair = (VehicleId, VehicleId);
+
 pub struct IntensifySearch {
     pairs: Vec<VehiclePair>,
     deltas: Vec<Vec<f64>>,
     best_ops: Vec<Vec<Option<IntensifyOperator>>>,
 }
 
-const MAX_DELTA: f64 = f64::MAX;
+const MAX_DELTA: f64 = 0.0;
 
 impl IntensifySearch {
     pub fn new(problem: &VehicleRoutingProblem) -> Self {
@@ -61,12 +64,19 @@ impl IntensifySearch {
         solution: &mut WorkingSolution,
         iterations: usize,
     ) {
-        for _ in 0..iterations {
-            self.run_iteration(problem, solution);
+        for i in 0..iterations {
+            if !self.run_iteration(problem, solution) {
+                debug!("Break iteration at {}", i);
+                break;
+            }
         }
     }
 
-    fn run_iteration(&mut self, problem: &VehicleRoutingProblem, solution: &mut WorkingSolution) {
+    fn run_iteration(
+        &mut self,
+        problem: &VehicleRoutingProblem,
+        solution: &mut WorkingSolution,
+    ) -> bool {
         // TwoOptOperator
         for &(v1, v2) in &self.pairs {
             if v1 != v2 {
@@ -83,7 +93,7 @@ impl IntensifySearch {
                     });
 
                     let delta = op.delta(solution);
-                    if delta <= self.deltas[v1][v2] && op.is_valid(solution) {
+                    if delta < self.deltas[v1][v2] && op.is_valid(solution) {
                         self.deltas[v1][v2] = delta;
                         self.best_ops[v1][v2] = Some(IntensifyOperator::TwoOpt(op));
                     }
@@ -116,7 +126,7 @@ impl IntensifySearch {
                     });
 
                     let delta = op.delta(solution);
-                    if delta <= self.deltas[v1][v2] && op.is_valid(solution) {
+                    if delta < self.deltas[v1][v2] && op.is_valid(solution) {
                         self.deltas[v1][v2] = delta;
                         self.best_ops[v1][v2] = Some(IntensifyOperator::Relocate(op));
                     }
@@ -141,7 +151,7 @@ impl IntensifySearch {
                     });
 
                     let delta = op.delta(solution);
-                    if delta <= self.deltas[v1][v2] && op.is_valid(solution) {
+                    if delta < self.deltas[v1][v2] && op.is_valid(solution) {
                         self.deltas[v1][v2] = delta;
                         self.best_ops[v1][v2] = Some(IntensifyOperator::Swap(op));
                     }
@@ -168,7 +178,7 @@ impl IntensifySearch {
                     });
 
                     let delta = op.delta(solution);
-                    if delta <= self.deltas[v1][v2] && op.is_valid(solution) {
+                    if delta < self.deltas[v1][v2] && op.is_valid(solution) {
                         self.deltas[v1][v2] = delta;
                         self.best_ops[v1][v2] = Some(IntensifyOperator::InterSwap(op));
                     }
@@ -201,7 +211,7 @@ impl IntensifySearch {
                     });
 
                     let delta = op.delta(solution);
-                    if delta <= self.deltas[v1][v2] && op.is_valid(solution) {
+                    if delta < self.deltas[v1][v2] && op.is_valid(solution) {
                         self.deltas[v1][v2] = delta;
                         self.best_ops[v1][v2] = Some(IntensifyOperator::InterRelocate(op));
                     }
@@ -232,7 +242,7 @@ impl IntensifySearch {
                         });
 
                         let delta = op.delta(solution);
-                        if delta <= self.deltas[v1][v2] && op.is_valid(solution) {
+                        if delta < self.deltas[v1][v2] && op.is_valid(solution) {
                             self.deltas[v1][v2] = delta;
                             self.best_ops[v1][v2] = Some(IntensifyOperator::OrOpt(op));
                         }
@@ -277,7 +287,7 @@ impl IntensifySearch {
                         });
 
                         let delta = op.delta(solution);
-                        if delta <= self.deltas[v1][v2] && op.is_valid(solution) {
+                        if delta < self.deltas[v1][v2] && op.is_valid(solution) {
                             self.deltas[v1][v2] = delta;
                             self.best_ops[v1][v2] = Some(IntensifyOperator::CrossExchange(op));
                         }
@@ -303,8 +313,8 @@ impl IntensifySearch {
             let from_route_length = from_route.activities().len();
             let to_route_length = to_route.activities().len();
 
-            for from_pos in 0..from_route_length {
-                for to_pos in 0..to_route_length {
+            for from_pos in 0..from_route_length - 1 {
+                for to_pos in 0..to_route_length - 1 {
                     let op = InterTwoOptStarOperator::new(InterTwoOptStarOperatorParams {
                         first_route_id: v1,
                         second_route_id: v2,
@@ -314,7 +324,7 @@ impl IntensifySearch {
                     });
 
                     let delta = op.delta(solution);
-                    if delta <= self.deltas[v1][v2] && op.is_valid(solution) {
+                    if delta < self.deltas[v1][v2] && op.is_valid(solution) {
                         self.deltas[v1][v2] = delta;
                         self.best_ops[v1][v2] = Some(IntensifyOperator::InterTwoOptStar(op));
                     }
@@ -322,7 +332,7 @@ impl IntensifySearch {
             }
         }
 
-        let mut best_delta = f64::MAX;
+        let mut best_delta = 0.0;
         let mut best_v1 = None;
         let mut best_v2 = None;
         for i in 0..solution.routes().len() {
@@ -338,14 +348,17 @@ impl IntensifySearch {
         if let (Some(v1), Some(v2)) = (best_v1, best_v2)
             && let Some(op) = &self.best_ops[v1][v2]
         {
-            println!(
-                "Apply {} - delta = {} (r1 = {}, r2 = {}) op = {:?}",
+            debug!(
+                "Apply {} - delta = {} (r1 = {}, r2 = {}) (r1.len() = {}, r2.len() = {}), op = {:?}",
                 op.operator_name(),
                 best_delta,
                 v1,
                 v2,
+                solution.route(v1).activities().len(),
+                solution.route(v2).activities().len(),
                 op
             );
+
             op.apply(problem, solution);
 
             self.pairs.clear();
@@ -353,6 +366,7 @@ impl IntensifySearch {
             let updated_routes = op.updated_routes();
             for &updated_route in &updated_routes {
                 self.deltas[updated_route].fill(MAX_DELTA);
+
                 self.best_ops[updated_route].fill_with(|| None);
             }
 
@@ -367,6 +381,10 @@ impl IntensifySearch {
                     }
                 }
             }
+
+            true
+        } else {
+            false
         }
     }
 }

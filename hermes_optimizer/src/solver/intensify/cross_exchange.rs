@@ -71,7 +71,7 @@ impl CrossExchangeOperator {
 }
 
 impl IntensifyOp for CrossExchangeOperator {
-    fn delta(&self, solution: &WorkingSolution) -> f64 {
+    fn transport_cost_delta(&self, solution: &WorkingSolution) -> f64 {
         let problem = solution.problem();
 
         let r1 = solution.route(self.params.first_route_id);
@@ -193,8 +193,13 @@ mod tests {
             second_end: 2,
         });
 
+        let distances = solution.route(0).distance(&problem) + solution.route(1).distance(&problem);
+        let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
-
+        assert_eq!(
+            solution.route(0).distance(&problem) + solution.route(1).distance(&problem),
+            distances + delta,
+        );
         assert_eq!(
             solution
                 .route(0)

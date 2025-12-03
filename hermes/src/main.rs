@@ -8,7 +8,7 @@ use hermes_optimizer::{
 };
 use jiff::SignedDuration;
 use mimalloc::MiMalloc;
-use tracing::{info, warn};
+use tracing::{Level, info, warn};
 
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
@@ -213,7 +213,7 @@ fn create_solomon_dataset() -> Vec<SolomonDataset> {
 }
 
 fn main() {
-    tracing_subscriber::fmt::init();
+    tracing_subscriber::fmt().with_max_level(Level::INFO).init();
 
     let datasets = create_solomon_dataset();
 

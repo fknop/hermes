@@ -12,10 +12,18 @@ use crate::{
 };
 
 pub trait IntensifyOp {
-    fn delta(&self, solution: &WorkingSolution) -> f64;
+    fn transport_cost_delta(&self, solution: &WorkingSolution) -> f64;
+    fn fixed_route_cost_delta(&self, _solution: &WorkingSolution) -> f64 {
+        0.0
+    }
+
     fn is_valid(&self, solution: &WorkingSolution) -> bool;
     fn apply(&self, problem: &VehicleRoutingProblem, solution: &mut WorkingSolution);
     fn updated_routes(&self) -> Vec<usize>;
+
+    fn delta(&self, solution: &WorkingSolution) -> f64 {
+        self.transport_cost_delta(solution) + self.fixed_route_cost_delta(solution)
+    }
 }
 
 #[derive(Debug)]
@@ -62,15 +70,15 @@ impl IntensifyOperator {
 
     pub fn delta(&self, solution: &WorkingSolution) -> f64 {
         match self {
-            IntensifyOperator::TwoOpt(op) => op.delta(solution),
-            IntensifyOperator::Relocate(op) => op.delta(solution),
-            IntensifyOperator::Swap(op) => op.delta(solution),
-            IntensifyOperator::OrOpt(op) => op.delta(solution),
-            IntensifyOperator::InterRelocate(op) => op.delta(solution),
-            IntensifyOperator::InterSwap(op) => op.delta(solution),
-            IntensifyOperator::TwoOptStar(op) => op.delta(solution),
-            IntensifyOperator::CrossExchange(op) => op.delta(solution),
-            IntensifyOperator::InterTwoOptStar(op) => op.delta(solution),
+            IntensifyOperator::TwoOpt(op) => op.transport_cost_delta(solution),
+            IntensifyOperator::Relocate(op) => op.transport_cost_delta(solution),
+            IntensifyOperator::Swap(op) => op.transport_cost_delta(solution),
+            IntensifyOperator::OrOpt(op) => op.transport_cost_delta(solution),
+            IntensifyOperator::InterRelocate(op) => op.transport_cost_delta(solution),
+            IntensifyOperator::InterSwap(op) => op.transport_cost_delta(solution),
+            IntensifyOperator::TwoOptStar(op) => op.transport_cost_delta(solution),
+            IntensifyOperator::CrossExchange(op) => op.transport_cost_delta(solution),
+            IntensifyOperator::InterTwoOptStar(op) => op.transport_cost_delta(solution),
         }
     }
 

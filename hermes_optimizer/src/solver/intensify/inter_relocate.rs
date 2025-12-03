@@ -43,7 +43,7 @@ impl InterRelocateOperator {
 }
 
 impl IntensifyOp for InterRelocateOperator {
-    fn delta(&self, solution: &WorkingSolution) -> f64 {
+    fn transport_cost_delta(&self, solution: &WorkingSolution) -> f64 {
         let problem = solution.problem();
         let r1 = solution.route(self.params.from_route_id);
         let r2 = solution.route(self.params.to_route_id);
@@ -52,8 +52,8 @@ impl IntensifyOp for InterRelocateOperator {
         let a = r1.previous_location_id(problem, self.params.from);
         let b = r1.next_location_id(problem, self.params.from);
 
-        let x = r2.location_id(problem, self.params.to);
-        let y = r2.next_location_id(problem, self.params.to);
+        let x = r2.previous_location_id(problem, self.params.to);
+        let y = r2.location_id(problem, self.params.to);
 
         let mut delta = 0.0;
 
@@ -66,6 +66,16 @@ impl IntensifyOp for InterRelocateOperator {
         delta += problem.travel_cost_or_zero(from, y);
 
         delta
+    }
+
+    fn fixed_route_cost_delta(&self, solution: &WorkingSolution) -> f64 {
+        let r1 = solution.route(self.params.from_route_id);
+
+        if r1.len() == 1 {
+            -solution.problem().fixed_vehicle_costs()
+        } else {
+            0.0
+        }
     }
 
     fn is_valid(&self, solution: &WorkingSolution) -> bool {
@@ -145,7 +155,13 @@ mod tests {
             to: 4,
         });
 
+        let distances = solution.route(0).distance(&problem) + solution.route(1).distance(&problem);
+        let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
+        assert_eq!(
+            solution.route(0).distance(&problem) + solution.route(1).distance(&problem),
+            distances + delta,
+        );
 
         assert_eq!(
             solution

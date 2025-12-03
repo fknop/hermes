@@ -94,7 +94,7 @@ impl InterTwoOptStarOperator {
 }
 
 impl IntensifyOp for InterTwoOptStarOperator {
-    fn delta(&self, solution: &WorkingSolution) -> f64 {
+    fn transport_cost_delta(&self, solution: &WorkingSolution) -> f64 {
         let problem = solution.problem();
         let r1 = solution.route(self.params.first_route_id);
         let r2 = solution.route(self.params.second_route_id);
@@ -167,7 +167,7 @@ mod tests {
     };
 
     #[test]
-    fn test_cross_exchange() {
+    fn test_inter_two_opt_star() {
         let locations = test_utils::create_location_grid(10, 10);
 
         let services = test_utils::create_basic_services(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
@@ -198,7 +198,13 @@ mod tests {
             second_from: 2,
         });
 
+        let distances = solution.route(0).distance(&problem) + solution.route(1).distance(&problem);
+        let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
+        assert_eq!(
+            solution.route(0).distance(&problem) + solution.route(1).distance(&problem),
+            distances + delta,
+        );
 
         assert_eq!(
             solution
@@ -222,7 +228,7 @@ mod tests {
     }
 
     #[test]
-    fn test_cross_exchange_small_route() {
+    fn test_inter_two_opt_star_2() {
         let locations = test_utils::create_location_grid(10, 10);
 
         let services = test_utils::create_basic_services(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
@@ -253,7 +259,13 @@ mod tests {
             second_from: 3,
         });
 
+        let distances = solution.route(0).distance(&problem) + solution.route(1).distance(&problem);
+        let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
+        assert_eq!(
+            solution.route(0).distance(&problem) + solution.route(1).distance(&problem),
+            distances + delta,
+        );
 
         assert_eq!(
             solution
@@ -274,5 +286,41 @@ mod tests {
                 .collect::<Vec<_>>(),
             vec![6, 7, 8, 9, 5],
         );
+    }
+
+    #[test]
+    fn test_inter_two_opt_star_last_activity() {
+        let locations = test_utils::create_location_grid(10, 10);
+
+        let services = test_utils::create_basic_services(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        let vehicles = test_utils::create_basic_vehicles(vec![0, 0]);
+        let problem = Arc::new(test_utils::create_test_problem(
+            locations, services, vehicles,
+        ));
+
+        let mut solution = test_utils::create_test_working_solution(
+            Arc::clone(&problem),
+            vec![
+                TestRoute {
+                    vehicle_id: 0,
+                    service_ids: vec![0, 1, 2, 3, 4, 5],
+                },
+                TestRoute {
+                    vehicle_id: 1,
+                    service_ids: vec![6, 7, 8, 9, 10],
+                },
+            ],
+        );
+
+        let operator = InterTwoOptStarOperator::new(InterTwoOptStarOperatorParams {
+            first_route_id: 0,
+            second_route_id: 1,
+
+            first_from: 5,
+            second_from: 4,
+        });
+
+        let delta = operator.transport_cost_delta(&solution);
+        assert_eq!(delta, 0.0);
     }
 }
