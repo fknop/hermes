@@ -19,9 +19,9 @@ pub fn compute_insertion_score(
     {
         score += constraint.compute_insertion_score(context);
 
-        // if score.hard_score > 0.0 && skip_hard_failure {
-        //     return score;
-        // }
+        if score.hard_score > 0.0 && skip_hard_failure {
+            return score;
+        }
     }
 
     for constraint in constraints
