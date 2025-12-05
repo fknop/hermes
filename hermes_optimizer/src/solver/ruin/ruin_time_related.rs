@@ -1,20 +1,35 @@
 use jiff::SignedDuration;
 
 use crate::{
-    problem::travel_cost_matrix::Distance, solver::solution::working_solution::WorkingSolution,
+    problem::{amount::AmountExpression, travel_cost_matrix::Distance},
+    solver::solution::working_solution::WorkingSolution,
 };
 
 use super::{ruin_context::RuinContext, ruin_solution::RuinSolution};
 
 pub struct RuinTimeRelated;
 
+/*
+*   fn default() -> Self {
+      Self {
+          distance_weight: 9.0,
+          time_weight: 3.0,
+          demand_weight: 2.0,
+          same_vehicle_weight: 5.0,
+          determinism: 6.0,
+      }
+  }
+*/
+
+const TIME_RELATEDNESS_WEIGHT: f64 = 3.0;
+const DISTANCE_RELATEDNESS_WEIGHT: f64 = 9.0;
+const DEMAND_RELATEDNESS_WEIGHT: f64 = 2.0;
+
 impl RuinTimeRelated {
     fn relatedness(
         activity: &RelatednessToTargetActivity,
         max_distance: Distance,
         max_time: SignedDuration,
-        distance_influence: f64,
-        time_influence: f64,
     ) -> f64 {
         let time_relatedness = if max_time.is_zero() {
             0.0
@@ -28,7 +43,9 @@ impl RuinTimeRelated {
             activity.distance / max_distance
         };
 
-        time_influence * time_relatedness + distance_influence * distance_relatedness
+        TIME_RELATEDNESS_WEIGHT * time_relatedness
+            + DISTANCE_RELATEDNESS_WEIGHT * distance_relatedness
+            + DEMAND_RELATEDNESS_WEIGHT * activity.normalized_demand
     }
 }
 
@@ -70,10 +87,18 @@ impl RuinSolution for RuinTimeRelated {
                     activity.service(context.problem).location_id(),
                 );
 
+                let demand_difference = (solution.problem().normalized_demand(target_activity_id)
+                    - solution.problem().normalized_demand(activity.service_id()))
+                .iter()
+                .map(|value| value.abs())
+                .sum::<f64>()
+                    / solution.problem().capacity_dimensions() as f64;
+
                 related_activities.push(RelatednessToTargetActivity {
                     service_id: activity.service_id(),
                     time: time_difference,
                     distance,
+                    normalized_demand: demand_difference,
                 });
 
                 max_distance = max_distance.max(distance);
@@ -81,27 +106,15 @@ impl RuinSolution for RuinTimeRelated {
             }
         }
 
-        let distance_influence = 1.0;
-        let time_influence = 10.0;
-
         related_activities.sort_unstable_by(|a, b| {
-            RuinTimeRelated::relatedness(
-                a,
-                max_distance,
-                max_time,
-                distance_influence,
-                time_influence,
-            )
-            .total_cmp(&RuinTimeRelated::relatedness(
-                b,
-                max_distance,
-                max_time,
-                distance_influence,
-                time_influence,
-            ))
+            RuinTimeRelated::relatedness(a, max_distance, max_time)
+                .total_cmp(&RuinTimeRelated::relatedness(b, max_distance, max_time))
         });
 
         let mut remaining_to_remove = context.num_activities_to_remove;
+
+        solution.remove_activity(target_route_id, target_activity_id);
+        remaining_to_remove -= 1;
 
         for related_activity in related_activities {
             if remaining_to_remove == 0 {
@@ -121,4 +134,5 @@ struct RelatednessToTargetActivity {
     service_id: usize,
     time: SignedDuration,
     distance: Distance,
+    normalized_demand: f64,
 }

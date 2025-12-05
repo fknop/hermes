@@ -1,6 +1,6 @@
 use std::{
     cmp::Ordering,
-    ops::{Add, AddAssign, Index, Sub, SubAssign},
+    ops::{Add, AddAssign, Index, IndexMut, Sub, SubAssign},
 };
 
 use serde::{Deserialize, Serialize};
@@ -46,6 +46,12 @@ impl Amount {
 
     pub fn empty() -> Self {
         Self::EMPTY
+    }
+
+    pub fn with_capacity(capacity: usize) -> Self {
+        let mut vec = SmallVec::with_capacity(capacity);
+        vec.resize(capacity, 0.0);
+        Amount(vec)
     }
 
     pub fn from_vec(vec: Vec<f64>) -> Self {
@@ -101,6 +107,17 @@ impl Index<usize> for Amount {
     #[inline]
     fn index(&self, index: usize) -> &Self::Output {
         &self.0[index]
+    }
+}
+
+impl IndexMut<usize> for Amount {
+    #[inline]
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        if index >= self.0.len() {
+            self.0.resize(index + 1, 0.0);
+        }
+
+        &mut self.0[index]
     }
 }
 

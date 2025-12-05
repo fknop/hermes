@@ -25,15 +25,6 @@ impl RuinSolution for RuinRadial {
         {
             solution.remove_service(service_id);
         }
-
-        // let random_service_id = problem.random_service(rng);
-
-        // for service_id in problem
-        //     .nearest_services(random_service_id)
-        //     .take(num_activities_to_remove)
-        // {
-        //     solution.remove_service(service_id);
-        // }
     }
 }
 
@@ -43,12 +34,9 @@ mod tests {
 
     use crate::{
         problem::service::ServiceId,
-        solver::{
-            ruin::{
-                ruin_context::RuinContext, ruin_params::RuinParams, ruin_radial::RuinRadial,
-                ruin_solution::RuinSolution,
-            },
-            solver_params::SolverParams,
+        solver::ruin::{
+            ruin_context::RuinContext, ruin_params::RuinParams, ruin_radial::RuinRadial,
+            ruin_solution::RuinSolution,
         },
         test_utils::{self, TestRoute},
     };

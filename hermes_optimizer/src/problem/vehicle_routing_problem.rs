@@ -5,11 +5,13 @@ use uuid::Timestamp;
 use crate::{
     problem::{
         amount::AmountExpression,
+        capacity::Capacity,
         job::Job,
         service::{Service, ServiceId},
         shipment::Shipment,
     },
     solver::constraints::transport_cost_constraint::TRANSPORT_COST_WEIGHT,
+    utils::zip_longest::zip_longest,
 };
 
 use super::{
@@ -20,9 +22,8 @@ use super::{
     vehicle::{Vehicle, VehicleId},
 };
 
-// TODO: precompute capacity normalization
-
-type PrecomputedAverageCostFromDepot = Vec<f64>;
+type PrecomputedAverageCostFromDepot = Vec<Cost>;
+type PrecomputedNormalizedDemands = Vec<Capacity>;
 
 pub struct VehicleRoutingProblem {
     locations: Vec<Location>,
@@ -31,12 +32,60 @@ pub struct VehicleRoutingProblem {
     travel_costs: TravelCostMatrix,
     service_location_index: ServiceLocationIndex,
 
-    precomputed_average_cost_from_depot: PrecomputedAverageCostFromDepot,
     has_time_windows: bool,
     has_capacity: bool,
+
+    precomputed_capacity_dimensions: usize,
+    precomputed_normalized_demands: PrecomputedNormalizedDemands,
+    precomputed_average_cost_from_depot: PrecomputedAverageCostFromDepot,
+}
+
+struct VehicleRoutingProblemParams {
+    locations: Vec<Location>,
+    vehicles: Vec<Vehicle>,
+    jobs: Vec<Job>,
+    travel_costs: TravelCostMatrix,
+    distance_method: DistanceMethod,
 }
 
 impl VehicleRoutingProblem {
+    fn new(params: VehicleRoutingProblemParams) -> Self {
+        let service_location_index =
+            ServiceLocationIndex::new(&params.locations, &params.jobs, params.distance_method);
+
+        let precomputed_average_cost_from_depot =
+            VehicleRoutingProblem::precompute_average_cost_from_depot(
+                &params.locations,
+                &params.vehicles,
+                &params.travel_costs,
+            );
+
+        let precomputed_normalized_demands =
+            VehicleRoutingProblem::precompute_normalized_demands(&params.jobs);
+
+        let precomputed_capacity_dimensions = params
+            .jobs
+            .iter()
+            .map(|job| job.demand())
+            .chain(params.vehicles.iter().map(|vehicle| vehicle.capacity()))
+            .map(|capacity| capacity.len())
+            .max()
+            .unwrap_or(0);
+
+        Self {
+            has_time_windows: params.jobs.iter().any(|job| job.has_time_windows()),
+            has_capacity: params.jobs.iter().any(|job| !job.demand().is_empty()),
+            locations: params.locations,
+            vehicles: params.vehicles,
+            jobs: params.jobs,
+            travel_costs: params.travel_costs,
+            service_location_index,
+            precomputed_average_cost_from_depot,
+            precomputed_normalized_demands,
+            precomputed_capacity_dimensions,
+        }
+    }
+
     pub fn jobs(&self) -> &[Job] {
         &self.jobs
     }
@@ -199,6 +248,41 @@ impl VehicleRoutingProblem {
         self.precomputed_average_cost_from_depot[location_id]
     }
 
+    pub fn normalized_demand(&self, index: usize) -> &Capacity {
+        &self.precomputed_normalized_demands[index]
+    }
+
+    pub fn capacity_dimensions(&self) -> usize {
+        self.precomputed_capacity_dimensions
+    }
+
+    fn precompute_normalized_demands(jobs: &[Job]) -> PrecomputedNormalizedDemands {
+        let mut max_capacity: Capacity = Capacity::empty();
+
+        for job in jobs.iter() {
+            max_capacity.update_max(job.demand());
+        }
+
+        jobs.iter()
+            .map(|job| {
+                let mut normalized_demand = Capacity::with_capacity(max_capacity.len());
+                zip_longest(job.demand().iter(), max_capacity.iter())
+                    .enumerate()
+                    .for_each(|(index, (demand, max))| {
+                        let normalized = if let (Some(demand), Some(max)) = (demand, max) {
+                            if max > 0.0 { demand / max } else { 0.0 }
+                        } else {
+                            0.0
+                        };
+
+                        normalized_demand[index] = normalized;
+                    });
+
+                normalized_demand
+            })
+            .collect()
+    }
+
     fn precompute_average_cost_from_depot(
         locations: &[Location],
         vehicles: &[Vehicle],
@@ -280,31 +364,16 @@ impl VehicleRoutingProblemBuilder {
 
         let jobs = services.into_iter().map(Job::Service).collect::<Vec<Job>>();
 
-        let service_location_index = ServiceLocationIndex::new(
-            &locations,
-            &jobs,
-            // TODO: benchmark which is best ?
-            self.distance_method.unwrap_or(DistanceMethod::Haversine),
-        );
+        let distance_method = self.distance_method.unwrap_or(DistanceMethod::Haversine);
 
         let vehicles = self.vehicles.expect("Expected list of vehicles");
 
-        let precomputed_average_cost_from_depot =
-            VehicleRoutingProblem::precompute_average_cost_from_depot(
-                &locations,
-                &vehicles,
-                &travel_costs,
-            );
-
-        VehicleRoutingProblem {
+        VehicleRoutingProblem::new(VehicleRoutingProblemParams {
             locations,
             vehicles,
-            has_time_windows: jobs.iter().any(|job| job.has_time_windows()),
-            has_capacity: jobs.iter().any(|job| !job.demand().is_empty()),
-            precomputed_average_cost_from_depot,
-            travel_costs,
-            service_location_index,
             jobs,
-        }
+            travel_costs,
+            distance_method,
+        })
     }
 }
