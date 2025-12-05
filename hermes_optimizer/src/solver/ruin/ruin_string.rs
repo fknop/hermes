@@ -8,6 +8,7 @@ use crate::{problem::job::JobId, solver::solution::working_solution::WorkingSolu
 
 use super::{ruin_context::RuinContext, ruin_solution::RuinSolution};
 
+// TODO: support shipments
 pub struct RuinString {
     /// Min numbers of string to ruin
     k_min: usize,

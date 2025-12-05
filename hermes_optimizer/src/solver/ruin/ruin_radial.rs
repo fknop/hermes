@@ -2,6 +2,7 @@ use crate::solver::solution::working_solution::WorkingSolution;
 
 use super::{ruin_context::RuinContext, ruin_solution::RuinSolution};
 
+// TODO: support shipments
 pub struct RuinRadial;
 
 impl RuinSolution for RuinRadial {

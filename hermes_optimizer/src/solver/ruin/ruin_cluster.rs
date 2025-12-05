@@ -8,6 +8,7 @@ use crate::{
 
 use super::{ruin_context::RuinContext, ruin_solution::RuinSolution};
 
+// TODO: support shipments
 pub struct RuinCluster;
 
 impl RuinSolution for RuinCluster {
