@@ -4,7 +4,7 @@
 use fxhash::FxHashSet;
 use rand::seq::IndexedRandom;
 
-use crate::solver::solution::working_solution::WorkingSolution;
+use crate::{problem::job::JobId, solver::solution::working_solution::WorkingSolution};
 
 use super::{ruin_context::RuinContext, ruin_solution::RuinSolution};
 
@@ -149,10 +149,10 @@ impl RuinSolution for RuinString {
 
         let mut ruined_routes = FxHashSet::<usize>::default();
 
-        let mut seed_service = context.problem.random_service(context.rng);
+        let mut seed_job = context.problem.random_job(context.rng);
 
         while ruined_routes.len() < k {
-            let route_id = solution.route_of_service(seed_service);
+            let route_id = solution.route_of_service(seed_job);
 
             if let Some(route_id) = route_id {
                 if context.rng.random_bool(0.5) {
@@ -166,9 +166,9 @@ impl RuinSolution for RuinString {
 
             let nearest_service_of_different_route = context
                 .problem
-                .nearest_services(seed_service)
-                .find(|&service_id| {
-                    if let Some(route_id) = solution.route_of_service(service_id) {
+                .nearest_jobs(JobId::Service(seed_job))
+                .find(|&job_id| {
+                    if let Some(route_id) = solution.route_of_job(job_id) {
                         !ruined_routes.contains(&route_id)
                     } else {
                         false
@@ -176,7 +176,7 @@ impl RuinSolution for RuinString {
                 });
 
             if let Some(service_id) = nearest_service_of_different_route {
-                seed_service = service_id;
+                seed_job = service_id.index();
             } else {
                 // No more services to ruin, break the loop
                 break;

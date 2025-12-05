@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::problem::{capacity::Capacity, service::Service, shipment::Shipment};
 
 #[derive(Hash, Debug, Clone, Copy, Eq, PartialEq)]
@@ -17,6 +19,16 @@ impl JobId {
             JobId::Service(id) => *id,
             JobId::ShipmentPickup(id) => *id,
             JobId::ShipmentDelivery(id) => *id,
+        }
+    }
+}
+
+impl Display for JobId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            JobId::Service(id) => write!(f, "Service({})", id),
+            JobId::ShipmentPickup(id) => write!(f, "ShipmentPickup({})", id),
+            JobId::ShipmentDelivery(id) => write!(f, "ShipmentDelivery({})", id),
         }
     }
 }

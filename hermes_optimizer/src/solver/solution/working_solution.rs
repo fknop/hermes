@@ -152,6 +152,14 @@ impl WorkingSolution {
             .map(|(index, _)| index)
     }
 
+    pub fn route_of_job(&self, job_id: JobId) -> Option<usize> {
+        self.routes
+            .iter()
+            .enumerate()
+            .find(|(_, route)| route.contains_job(job_id))
+            .map(|(index, _)| index)
+    }
+
     pub fn insert_service(&mut self, insertion: &Insertion) {
         match insertion {
             Insertion::ExistingRoute(context) => {

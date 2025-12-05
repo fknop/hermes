@@ -2,13 +2,13 @@ use geo::{Distance, Haversine};
 use rstar::primitives::GeomWithData;
 use rstar::{AABB, Envelope, PointDistance, RTree, RTreeObject};
 
-use crate::problem::job::Job;
+use crate::problem::job::{Job, JobId};
 
 use super::distance_method::DistanceMethod;
 use super::location::Location;
 
 pub struct IndexedData {
-    job_id: usize,
+    job_id: JobId,
 }
 
 pub enum IndexedPoint {
@@ -76,11 +76,17 @@ impl ServiceLocationIndex {
         for (job_id, job) in jobs.iter().enumerate() {
             match job {
                 Job::Service(service) => {
-                    location_ids.push((job_id, service.location_id()));
+                    location_ids.push((JobId::Service(job_id), service.location_id()));
                 }
                 Job::Shipment(shipment) => {
-                    location_ids.push((job_id, shipment.pickup().location_id()));
-                    location_ids.push((job_id, shipment.delivery().location_id()));
+                    location_ids.push((
+                        JobId::ShipmentPickup(job_id),
+                        shipment.pickup().location_id(),
+                    ));
+                    location_ids.push((
+                        JobId::ShipmentDelivery(job_id),
+                        shipment.delivery().location_id(),
+                    ));
                 }
             }
         }
@@ -111,7 +117,7 @@ impl ServiceLocationIndex {
         ServiceLocationIndex { tree }
     }
 
-    pub fn nearest_neighbor_iter<'a, P>(&'a self, point: P) -> impl Iterator<Item = usize> + 'a
+    pub fn nearest_neighbor_iter<'a, P>(&'a self, point: P) -> impl Iterator<Item = JobId> + 'a
     where
         P: Into<geo::Point>,
     {
@@ -130,10 +136,7 @@ mod tests {
     use serde::Deserialize;
     use serde_json;
 
-    use crate::problem::{
-        job::JobId,
-        service::{Service, ServiceId},
-    };
+    use crate::problem::service::{Service, ServiceId};
 
     use super::*;
 
@@ -165,7 +168,7 @@ mod tests {
             DistanceMethod::Haversine,
         );
 
-        let nearest: Vec<ServiceId> = index
+        let nearest: Vec<JobId> = index
             .nearest_neighbor_iter(geo::Point::new(locations[0].x(), locations[0].y()))
             .collect();
 

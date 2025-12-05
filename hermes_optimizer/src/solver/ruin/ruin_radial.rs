@@ -19,11 +19,11 @@ impl RuinSolution for RuinRadial {
     {
         let random_location_id = problem.random_location(rng);
 
-        for service_id in problem
-            .nearest_services_of_location(random_location_id)
+        for job_id in problem
+            .nearest_jobs_of_location(random_location_id)
             .take(num_activities_to_remove)
         {
-            solution.remove_service(service_id);
+            solution.remove_service(job_id.index());
         }
     }
 }

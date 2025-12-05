@@ -6,7 +6,7 @@ use crate::{
     problem::{
         amount::AmountExpression,
         capacity::Capacity,
-        job::Job,
+        job::{Job, JobId},
         service::{Service, ServiceId},
         shipment::Shipment,
     },
@@ -129,7 +129,7 @@ impl VehicleRoutingProblem {
         rng.random_range(0..self.locations.len())
     }
 
-    pub fn random_service<R>(&self, rng: &mut R) -> usize
+    pub fn random_job<R>(&self, rng: &mut R) -> usize
     where
         R: rand::Rng,
     {
@@ -150,6 +150,25 @@ impl VehicleRoutingProblem {
 
     pub fn location(&self, location_id: usize) -> &Location {
         &self.locations[location_id]
+    }
+
+    pub fn job_location_id(&self, job_id: JobId) -> LocationId {
+        // Can't use match here because if let bindings are experimental
+        if let JobId::Service(service_id) = job_id
+            && let Job::Service(service) = &self.jobs[service_id]
+        {
+            service.location_id()
+        } else if let JobId::ShipmentPickup(shipment_id) = job_id
+            && let Job::Shipment(shipment) = &self.jobs[shipment_id]
+        {
+            shipment.pickup().location_id()
+        } else if let JobId::ShipmentDelivery(shipment_id) = job_id
+            && let Job::Shipment(shipment) = &self.jobs[shipment_id]
+        {
+            shipment.delivery().location_id()
+        } else {
+            panic!("Job {job_id} is not valid");
+        }
     }
 
     pub fn service_location(&self, service_id: ServiceId) -> &Location {
@@ -213,23 +232,14 @@ impl VehicleRoutingProblem {
         100000.0 //self.max_cost() // Placeholder for the static cost of a route
     }
 
-    pub fn nearest_services_of_location(
-        &self,
-        location_id: usize,
-    ) -> impl Iterator<Item = ServiceId> {
+    pub fn nearest_jobs_of_location(&self, location_id: usize) -> impl Iterator<Item = JobId> {
         let location = &self.locations[location_id];
         self.service_location_index.nearest_neighbor_iter(location)
     }
 
-    pub fn nearest_services(&self, job_id: ServiceId) -> impl Iterator<Item = ServiceId> {
-        let job = &self.jobs[job_id];
-        match job {
-            Job::Service(service) => {
-                let location_id = service.location_id();
-                self.nearest_services_of_location(location_id)
-            }
-            Job::Shipment(_) => unimplemented!("Shipment not implemented"),
-        }
+    pub fn nearest_jobs(&self, job_id: JobId) -> impl Iterator<Item = JobId> {
+        let job_location_id = self.job_location_id(job_id);
+        self.nearest_jobs_of_location(job_location_id)
     }
 
     pub fn is_symmetric(&self) -> bool {
