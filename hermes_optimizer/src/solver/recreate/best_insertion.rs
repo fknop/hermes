@@ -102,36 +102,16 @@ impl BestInsertion {
             }),
             BestInsertionSortMethod::Far => {
                 unassigned_services.sort_unstable_by_key(|&service| {
-                    let distance_from_depot = problem
-                        .vehicles()
-                        .iter()
-                        .filter_map(|vehicle| vehicle.depot_location_id())
-                        .map(|depot_location_id| {
-                            problem.travel_distance(
-                                depot_location_id,
-                                problem.service_location(service).id(),
-                            )
-                        })
-                        .sum::<Distance>()
-                        / problem.vehicles().len() as Distance;
+                    let distance_from_depot =
+                        problem.average_cost_from_depot(problem.service_location(service).id());
 
                     -distance_from_depot.round() as i64
                 });
             }
             BestInsertionSortMethod::Close => {
                 unassigned_services.sort_unstable_by_key(|&service| {
-                    let distance_from_depot = problem
-                        .vehicles()
-                        .iter()
-                        .filter_map(|vehicle| vehicle.depot_location_id())
-                        .map(|depot_location_id| {
-                            problem.travel_distance(
-                                depot_location_id,
-                                problem.service_location(service).id(),
-                            )
-                        })
-                        .sum::<Distance>()
-                        / problem.vehicles().len() as Distance;
+                    let distance_from_depot =
+                        problem.average_cost_from_depot(problem.service_location(service).id());
 
                     distance_from_depot.round() as i64
                 });

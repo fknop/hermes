@@ -1,4 +1,6 @@
 use jiff::SignedDuration;
+use rayon::iter::{IntoParallelRefIterator, ParallelExtend, ParallelIterator};
+use uuid::Timestamp;
 
 use crate::{
     problem::{
@@ -18,6 +20,10 @@ use super::{
     vehicle::{Vehicle, VehicleId},
 };
 
+// TODO: precompute capacity normalization
+
+type PrecomputedAverageCostFromDepot = Vec<f64>;
+
 pub struct VehicleRoutingProblem {
     locations: Vec<Location>,
     vehicles: Vec<Vehicle>,
@@ -25,6 +31,7 @@ pub struct VehicleRoutingProblem {
     travel_costs: TravelCostMatrix,
     service_location_index: ServiceLocationIndex,
 
+    precomputed_average_cost_from_depot: PrecomputedAverageCostFromDepot,
     has_time_windows: bool,
     has_capacity: bool,
 }
@@ -187,6 +194,29 @@ impl VehicleRoutingProblem {
     pub fn has_capacity(&self) -> bool {
         self.has_capacity
     }
+
+    pub fn average_cost_from_depot(&self, location_id: LocationId) -> Distance {
+        self.precomputed_average_cost_from_depot[location_id]
+    }
+
+    fn precompute_average_cost_from_depot(
+        locations: &[Location],
+        vehicles: &[Vehicle],
+        matrix: &TravelCostMatrix,
+    ) -> PrecomputedAverageCostFromDepot {
+        let mut precomputed_average_cost_from_depot = Vec::with_capacity(locations.len());
+
+        precomputed_average_cost_from_depot.extend(locations.iter().map(|location_id| {
+            vehicles
+                .iter()
+                .filter_map(|vehicle| vehicle.depot_location_id())
+                .map(|depot_location_id| matrix.travel_cost(depot_location_id, location_id.id()))
+                .sum::<Distance>()
+                / vehicles.len() as Distance
+        }));
+
+        precomputed_average_cost_from_depot
+    }
 }
 
 #[derive(Default)]
@@ -257,12 +287,21 @@ impl VehicleRoutingProblemBuilder {
             self.distance_method.unwrap_or(DistanceMethod::Haversine),
         );
 
+        let vehicles = self.vehicles.expect("Expected list of vehicles");
+
+        let precomputed_average_cost_from_depot =
+            VehicleRoutingProblem::precompute_average_cost_from_depot(
+                &locations,
+                &vehicles,
+                &travel_costs,
+            );
+
         VehicleRoutingProblem {
             locations,
-            vehicles: self.vehicles.expect("Expected list of vehicles"),
+            vehicles,
             has_time_windows: jobs.iter().any(|job| job.has_time_windows()),
             has_capacity: jobs.iter().any(|job| !job.demand().is_empty()),
-
+            precomputed_average_cost_from_depot,
             travel_costs,
             service_location_index,
             jobs,

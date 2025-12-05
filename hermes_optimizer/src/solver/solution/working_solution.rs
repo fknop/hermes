@@ -12,7 +12,7 @@ use crate::{
 pub struct WorkingSolution {
     problem: Arc<VehicleRoutingProblem>,
     routes: Vec<WorkingSolutionRoute>,
-    unassigned_services: FxHashSet<ServiceId>,
+    unassigned_jobs: FxHashSet<ServiceId>,
 }
 
 impl WorkingSolution {
@@ -28,16 +28,16 @@ impl WorkingSolution {
         WorkingSolution {
             problem,
             routes,
-            unassigned_services,
+            unassigned_jobs: unassigned_services,
         }
     }
 
     pub fn is_empty(&self) -> bool {
-        self.unassigned_services.len() == self.problem.jobs().len()
+        self.unassigned_jobs.len() == self.problem.jobs().len()
     }
 
     pub fn is_unassigned(&self, service_id: ServiceId) -> bool {
-        self.unassigned_services.contains(&service_id)
+        self.unassigned_jobs.contains(&service_id)
     }
 
     pub fn total_transport_costs(&self) -> f64 {
@@ -105,11 +105,7 @@ impl WorkingSolution {
     }
 
     pub fn unassigned_services(&self) -> &FxHashSet<ServiceId> {
-        &self.unassigned_services
-    }
-
-    pub fn unassigned_services_mut(&mut self) -> &mut FxHashSet<ServiceId> {
-        &mut self.unassigned_services
+        &self.unassigned_jobs
     }
 
     pub fn problem(&self) -> &VehicleRoutingProblem {
@@ -152,7 +148,7 @@ impl WorkingSolution {
         self.routes
             .iter()
             .enumerate()
-            .find(|(_, route)| route.contains_service(service_id))
+            .find(|(_, route)| route.contains_job(JobId::Service(service_id)))
             .map(|(index, _)| index)
     }
 
@@ -161,7 +157,7 @@ impl WorkingSolution {
             Insertion::ExistingRoute(context) => {
                 let route = &mut self.routes[context.route_id];
                 route.insert_service(&self.problem, context.position, context.service_id);
-                self.unassigned_services.remove(&context.service_id);
+                self.unassigned_jobs.remove(&context.service_id);
             }
             Insertion::NewRoute(context) => {
                 // panic!("Shouldn't use Insertion::NewRoute anymore");
@@ -169,7 +165,7 @@ impl WorkingSolution {
                 let route = &mut self.routes[context.vehicle_id];
                 route.insert_service(&self.problem, 0, context.service_id);
                 // self.routes.push(new_route);
-                self.unassigned_services.remove(&context.service_id);
+                self.unassigned_jobs.remove(&context.service_id);
             }
         }
     }
@@ -180,18 +176,18 @@ impl WorkingSolution {
         }
 
         let route = &mut self.routes[route_id];
-        if let Some(service_id) = route.remove_activity(&self.problem, activity_id) {
-            self.unassigned_services.insert(service_id);
+        if let Some(job_id) = route.remove_activity(&self.problem, activity_id) {
+            self.unassigned_jobs.insert(job_id.index());
         }
     }
 
-    pub fn remove_service(&mut self, service_id: ServiceId) -> bool {
+    pub fn remove_job(&mut self, job_id: JobId) -> bool {
         let mut removed = false;
         for route in self.routes.iter_mut() {
-            removed = route.remove_service(&self.problem, service_id);
+            removed = route.remove_job(&self.problem, job_id);
 
             if removed {
-                self.unassigned_services.insert(service_id);
+                self.unassigned_jobs.insert(job_id.index());
                 break;
             }
         }
@@ -199,14 +195,18 @@ impl WorkingSolution {
         removed
     }
 
+    pub fn remove_service(&mut self, service_id: ServiceId) -> bool {
+        self.remove_job(JobId::Service(service_id))
+    }
+
     pub fn remove_service_from_route(&mut self, route_id: usize, service_id: ServiceId) -> bool {
         let mut removed = false;
         let route = &mut self.routes[route_id];
-        if route.contains_service(service_id) {
-            removed = route.remove_service(&self.problem, service_id);
+        if route.contains_job(JobId::Service(service_id)) {
+            removed = route.remove_job(&self.problem, JobId::Service(service_id));
 
             if removed {
-                self.unassigned_services.insert(service_id);
+                self.unassigned_jobs.insert(service_id);
             }
         }
 
@@ -222,7 +222,7 @@ impl WorkingSolution {
     pub fn remove_route(&mut self, route_id: usize) -> usize {
         let removed = self.routes[route_id].activities.len();
         for activity in self.routes[route_id].activities.iter() {
-            self.unassigned_services.insert(activity.job_id.into());
+            self.unassigned_jobs.insert(activity.job_id.into());
         }
 
         // TODO: reset to avoid reallocations

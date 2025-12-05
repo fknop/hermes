@@ -1,4 +1,4 @@
-use fxhash::FxHashSet;
+use fxhash::{FxHashMap, FxHashSet};
 use jiff::{SignedDuration, Timestamp};
 
 use crate::{
@@ -25,7 +25,9 @@ use crate::{
 #[derive(Clone)]
 pub struct WorkingSolutionRoute {
     pub(super) vehicle_id: VehicleId,
-    pub(super) services: FxHashSet<ServiceId>,
+    // Map of JobId to index in activities vector
+    pub(super) jobs: FxHashMap<JobId, usize>,
+
     pub(super) activities: Vec<WorkingSolutionRouteActivity>,
 
     pub(super) fwd_load_pickups: Vec<Capacity>,
@@ -55,7 +57,7 @@ impl WorkingSolutionRoute {
     pub fn empty(problem: &VehicleRoutingProblem, vehicle_id: VehicleId) -> Self {
         let mut route = WorkingSolutionRoute {
             vehicle_id,
-            services: FxHashSet::default(),
+            jobs: FxHashMap::default(),
             activities: Vec::new(),
             bbox: BBox::default(),
             updated_in_iteration: false,
@@ -83,7 +85,7 @@ impl WorkingSolutionRoute {
     }
 
     pub fn reset(&mut self) {
-        self.services.clear();
+        self.jobs.clear();
         self.activities.clear();
 
         self.bbox = BBox::default();
@@ -109,8 +111,8 @@ impl WorkingSolutionRoute {
         &self.fwd_load_peaks[i]
     }
 
-    pub fn contains_service(&self, service_id: ServiceId) -> bool {
-        self.services.contains(&service_id)
+    pub fn contains_job(&self, job_id: JobId) -> bool {
+        self.jobs.contains_key(&job_id)
     }
 
     pub fn has_start(&self, problem: &VehicleRoutingProblem) -> bool {
@@ -386,46 +388,71 @@ impl WorkingSolutionRoute {
         &mut self,
         problem: &VehicleRoutingProblem,
         activity_id: usize,
-    ) -> Option<ServiceId> {
+    ) -> Option<JobId> {
         if activity_id >= self.activities.len() {
             return None;
         }
 
         let activity = &self.activities[activity_id];
-        let service_id = activity.service_id();
+        let job_id = activity.job_id();
 
-        if !self.services.contains(&service_id) {
+        if !self.jobs.contains_key(&job_id) {
             return None;
         }
 
-        self.services.remove(&activity.job_id.into());
-
         self.activities.remove(activity_id);
-
+        self.jobs.remove(&job_id);
+        for (index, activity) in self.activities.iter().skip(activity_id).enumerate() {
+            self.jobs.insert(activity.job_id(), index + activity_id);
+        }
         // self.update_next_activities(problem, activity_id);
 
         self.updated_in_iteration = true;
 
-        Some(service_id)
+        Some(job_id)
     }
 
-    pub fn remove_service(
-        &mut self,
-        problem: &VehicleRoutingProblem,
-        service_id: ServiceId,
-    ) -> bool {
-        if !self.contains_service(service_id) {
+    pub fn remove_job(&mut self, problem: &VehicleRoutingProblem, job_id: JobId) -> bool {
+        if !self.contains_job(job_id) {
             return false; // Service is not in the route
         }
 
-        let activity_id = self
-            .activities
-            .iter()
-            .position(|activity| activity.job_id == JobId::Service(service_id))
-            .unwrap();
-
-        self.remove_activity(problem, activity_id).is_some()
+        if let Some(&activity_id) = self.jobs.get(&job_id) {
+            match job_id {
+                JobId::Service(_) => self.remove_activity(problem, activity_id).is_some(),
+                JobId::ShipmentPickup(id) => {
+                    let delivery = self.jobs.get(&JobId::ShipmentDelivery(id));
+                    self.remove_activity(problem, *delivery.unwrap());
+                    self.remove_activity(problem, activity_id).is_some()
+                }
+                JobId::ShipmentDelivery(id) => {
+                    self.remove_activity(problem, activity_id);
+                    let pickup = self.jobs.get(&JobId::ShipmentPickup(id));
+                    self.remove_activity(problem, *pickup.unwrap()).is_some()
+                }
+            }
+        } else {
+            false
+        }
     }
+
+    // pub fn remove_service(
+    //     &mut self,
+    //     problem: &VehicleRoutingProblem,
+    //     service_id: ServiceId,
+    // ) -> bool {
+    //     if !self.contains_service(service_id) {
+    //         return false; // Service is not in the route
+    //     }
+
+    //     let activity_id = self
+    //         .activities
+    //         .iter()
+    //         .position(|activity| activity.job_id == JobId::Service(service_id))
+    //         .unwrap();
+
+    //     self.remove_activity(problem, activity_id).is_some()
+    // }
 
     pub fn insert_service(
         &mut self,
@@ -433,11 +460,9 @@ impl WorkingSolutionRoute {
         position: usize,
         service_id: ServiceId,
     ) {
-        if self.services.contains(&service_id) {
+        if self.jobs.contains_key(&JobId::Service(service_id)) {
             return;
         }
-
-        self.services.insert(service_id);
 
         self.activities.insert(
             position,
@@ -486,9 +511,13 @@ impl WorkingSolutionRoute {
     }
 
     fn update_activity_data(&mut self, problem: &VehicleRoutingProblem) {
-        self.services.clear();
-        self.services
-            .extend(self.activities.iter().map(|activity| activity.service_id()));
+        self.jobs.clear();
+        self.jobs.extend(
+            self.activities
+                .iter()
+                .enumerate()
+                .map(|(index, activity)| (activity.job_id(), index)),
+        );
         self.update_data(problem);
         self.update_bbox(problem);
     }

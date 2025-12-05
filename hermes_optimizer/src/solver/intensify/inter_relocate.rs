@@ -98,12 +98,12 @@ impl IntensifyOp for InterRelocateOperator {
     }
 
     fn apply(&self, problem: &VehicleRoutingProblem, solution: &mut WorkingSolution) {
-        if let Some(service_id) = solution
+        if let Some(job_id) = solution
             .route_mut(self.params.from_route_id)
             .remove_activity(problem, self.params.from)
         {
             let route_to = solution.route_mut(self.params.to_route_id);
-            route_to.insert_service(problem, self.params.to, service_id);
+            route_to.insert_service(problem, self.params.to, job_id.index());
         }
     }
 

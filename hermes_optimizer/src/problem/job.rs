@@ -1,6 +1,6 @@
 use crate::problem::{capacity::Capacity, service::Service, shipment::Shipment};
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[derive(Hash, Debug, Clone, Copy, Eq, PartialEq)]
 pub enum JobId {
     Service(usize),
     ShipmentPickup(usize),
@@ -10,6 +10,14 @@ pub enum JobId {
 impl JobId {
     pub fn is_shipment(&self) -> bool {
         matches!(self, JobId::ShipmentPickup(_) | JobId::ShipmentDelivery(_))
+    }
+
+    pub fn index(&self) -> usize {
+        match self {
+            JobId::Service(id) => *id,
+            JobId::ShipmentPickup(id) => *id,
+            JobId::ShipmentDelivery(id) => *id,
+        }
     }
 }
 
