@@ -12,6 +12,8 @@ pub struct RuinParams {
 
     pub ruin_minimum_size: usize,
     pub ruin_maximum_size: usize,
+
+    pub ruin_worst_determinism: f64,
 }
 
 impl Default for RuinParams {
@@ -30,6 +32,8 @@ impl Default for RuinParams {
             ruin_maximum_ratio: 0.5,
             ruin_minimum_size: 3,
             ruin_maximum_size: 60,
+
+            ruin_worst_determinism: 3.0,
         }
     }
 }

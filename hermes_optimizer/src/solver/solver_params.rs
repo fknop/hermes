@@ -102,15 +102,15 @@ impl Default for SolverParams {
             recreate: RecreateParams::default(),
             search_threads: Threads::Single,
             insertion_threads: Threads::Multi(4),
-            noise_level: 0.15,
+            noise_level: 0.025,
             noise_probability: 0.15,
 
             alns_iterations_without_improvement_reset: 2000,
             alns_segment_iterations: 100,
-            alns_reaction_factor: 0.8,
-            alns_best_factor: 12.0,
-            alns_improvement_factor: 6.0,
-            alns_accepted_worst_factor: 1.0,
+            alns_reaction_factor: 0.3,
+            alns_best_factor: 33.0,
+            alns_improvement_factor: 9.0,
+            alns_accepted_worst_factor: 13.0,
 
             debug_options: SolverParamsDebugOptions {
                 enable_local_search: true,

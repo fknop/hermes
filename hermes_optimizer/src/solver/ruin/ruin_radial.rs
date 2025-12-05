@@ -43,8 +43,12 @@ mod tests {
 
     use crate::{
         problem::service::ServiceId,
-        solver::ruin::{
-            ruin_context::RuinContext, ruin_radial::RuinRadial, ruin_solution::RuinSolution,
+        solver::{
+            ruin::{
+                ruin_context::RuinContext, ruin_params::RuinParams, ruin_radial::RuinRadial,
+                ruin_solution::RuinSolution,
+            },
+            solver_params::SolverParams,
         },
         test_utils::{self, TestRoute},
     };
@@ -88,6 +92,7 @@ mod tests {
         ruin_radial.ruin_solution(
             &mut solution,
             RuinContext {
+                params: &RuinParams::default(),
                 problem: &problem,
                 rng: &mut rng,
                 num_activities_to_remove: 2,

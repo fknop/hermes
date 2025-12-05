@@ -296,7 +296,7 @@ impl Search {
                         loop {
 
 
-                            should_intensify =  should_intensify || state.iterations_without_improvement > 500;
+                            should_intensify = false; // should_intensify || state.iterations_without_improvement > 500;
 
                             if should_intensify {
                                 let mut intensify_search = IntensifySearch::new(&self.problem);
@@ -627,6 +627,7 @@ impl Search {
                 problem: &self.problem,
                 num_activities_to_remove: self.create_num_activities_to_remove(state, rng),
                 rng,
+                params: &self.params.ruin,
             },
         );
 

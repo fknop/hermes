@@ -4,7 +4,7 @@ use fxhash::FxHashSet;
 use rand::seq::IteratorRandom;
 
 use crate::{
-    problem::{service::ServiceId, vehicle_routing_problem::VehicleRoutingProblem},
+    problem::{job::JobId, service::ServiceId, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{insertion::Insertion, solution::route::WorkingSolutionRoute},
 };
 
@@ -186,7 +186,6 @@ impl WorkingSolution {
     }
 
     pub fn remove_service(&mut self, service_id: ServiceId) -> bool {
-        // let mut route_to_remove = None;
         let mut removed = false;
         for route in self.routes.iter_mut() {
             removed = route.remove_service(&self.problem, service_id);

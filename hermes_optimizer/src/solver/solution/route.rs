@@ -294,6 +294,10 @@ impl WorkingSolutionRoute {
         &self.activities
     }
 
+    pub fn activity(&self, index: usize) -> &WorkingSolutionRouteActivity {
+        &self.activities[index]
+    }
+
     pub fn total_initial_load(&self) -> &Capacity {
         &self.current_load[0]
     }
