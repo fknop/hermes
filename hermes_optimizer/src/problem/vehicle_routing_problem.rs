@@ -1,6 +1,4 @@
 use jiff::SignedDuration;
-use rayon::iter::{IntoParallelRefIterator, ParallelExtend, ParallelIterator};
-use uuid::Timestamp;
 
 use crate::{
     problem::{
@@ -9,7 +7,6 @@ use crate::{
         job::{Job, JobId, JobTask},
         service::{Service, ServiceId},
         shipment::Shipment,
-        time_window::TimeWindow,
     },
     solver::constraints::transport_cost_constraint::TRANSPORT_COST_WEIGHT,
     utils::zip_longest::zip_longest,
@@ -197,8 +194,7 @@ impl VehicleRoutingProblem {
     }
 
     pub fn travel_time(&self, from: LocationId, to: LocationId) -> jiff::SignedDuration {
-        let travel_time_seconds = self.travel_costs.travel_time(from, to);
-        jiff::SignedDuration::from_secs(travel_time_seconds)
+        self.travel_costs.travel_time(from, to)
     }
 
     pub fn travel_cost(&self, from: LocationId, to: LocationId) -> Cost {

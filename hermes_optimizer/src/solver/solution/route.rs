@@ -747,8 +747,10 @@ impl WorkingSolutionRoute {
         start: usize,
         end: usize,
     ) -> bool {
-        self.is_valid_tw_change(problem, job_ids.clone(), start, end)
-            && self.is_valid_capacity_change(problem, job_ids, start, end)
+        let is_valid_tw_change = self.is_valid_tw_change(problem, job_ids.clone(), start, end);
+        let is_valid_capacity_change = self.is_valid_capacity_change(problem, job_ids, start, end);
+
+        is_valid_tw_change && is_valid_capacity_change
     }
 
     /// Checks whether inserting the given job IDs between the given [start, end) indices is valid
@@ -892,7 +894,6 @@ impl WorkingSolutionRoute {
 
         // Check the new initial load against vehicle capacity
         if !is_capacity_satisfied(vehicle.capacity(), &new_initial_load) {
-            println!("initial load not satisfied");
             return false;
         }
 
@@ -901,7 +902,6 @@ impl WorkingSolutionRoute {
         if start > 0 {
             let peak_load_before_insertion = &self.fwd_load_peaks[start] + &delivery_load_delta;
             if !is_capacity_satisfied(vehicle.capacity(), &peak_load_before_insertion) {
-                println!("peak load not satisfied");
                 return false;
             }
         }
@@ -1376,6 +1376,147 @@ mod tests {
         let is_valid =
             route.is_valid_capacity_change(&problem, [JobId::Service(6)].into_iter(), 3, 3);
 
+        assert!(!is_valid);
+    }
+
+    fn create_problem_for_tw_change(services: Vec<TimeWindow>) -> VehicleRoutingProblem {
+        // 10 locations from (0, 0) to (9, 0)
+        let locations = test_utils::create_location_grid(1, 10);
+
+        let mut vehicle_builder = VehicleBuilder::default();
+        vehicle_builder.set_depot_location_id(0);
+        vehicle_builder.set_capacity(Capacity::from_vec(vec![100.0]));
+        vehicle_builder.set_vehicle_id(String::from("vehicle"));
+        let vehicle = vehicle_builder.build();
+        let vehicles = vec![vehicle];
+
+        let services = services
+            .into_iter()
+            .enumerate()
+            .map(|(i, time_window)| {
+                let mut service_builder = ServiceBuilder::default();
+                service_builder.set_demand(Capacity::from_vec(vec![10.0]));
+                service_builder.set_external_id(format!("service_{}", i + 1));
+                service_builder.set_service_duration(SignedDuration::from_mins(10));
+                service_builder.set_location_id(i + 1);
+                service_builder.set_time_window(time_window);
+                service_builder.build()
+            })
+            .collect::<Vec<_>>();
+
+        let mut builder = VehicleRoutingProblemBuilder::default();
+        // Travel time of 30 mins between consecutive locations
+        builder.set_travel_costs(TravelCostMatrix::from_constant(
+            &locations,
+            SignedDuration::from_mins(30).as_secs(),
+            100.0,
+            SignedDuration::from_mins(30).as_secs_f64(),
+        ));
+        builder.set_locations(locations);
+        builder.set_vehicles(vehicles);
+        builder.set_services(services);
+
+        builder.build()
+    }
+
+    #[test]
+    fn test_is_valid_tw_change_delivery_only() {
+        // Vehicle starts at depot (location 0) at 08:00
+        // Travel time between locations is 30 mins, service duration is 10 mins
+        // So arrival at location 1 is 08:30, departure is 08:40
+        // Arrival at location 2 is 09:10, departure is 09:20
+        // etc.
+        let problem = create_problem_for_tw_change(vec![
+            TimeWindow::from_iso(
+                Some("2025-11-30T08:00:00+02:00"),
+                Some("2025-11-30T09:00:00+02:00"),
+            ), // 0: TW ends at 09:00
+            TimeWindow::from_iso(
+                Some("2025-11-30T08:00:00+02:00"),
+                Some("2025-11-30T10:00:00+02:00"),
+            ), // 1: TW ends at 10:00
+            TimeWindow::from_iso(
+                Some("2025-11-30T08:00:00+02:00"),
+                Some("2025-11-30T11:00:00+02:00"),
+            ), // 2: TW ends at 11:00
+            TimeWindow::from_iso(
+                Some("2025-11-30T08:00:00+02:00"),
+                Some("2025-11-30T12:00:00+02:00"),
+            ), // 3: TW ends at 12:00
+            TimeWindow::from_iso(
+                Some("2025-11-30T08:00:00+02:00"),
+                Some("2025-11-30T08:35:00+02:00"),
+            ), // 4: TW ends at 08:35 (tight)
+            TimeWindow::from_iso(
+                Some("2025-11-30T08:00:00+02:00"),
+                Some("2025-11-30T14:00:00+02:00"),
+            ), // 5: TW ends at 14:00 (relaxed)
+        ]);
+
+        let mut route = WorkingSolutionRoute::empty(&problem, 0);
+        // Route: 0 -> 1 -> 2 (arrival times: 08:30, 09:10, 09:50)
+        route.insert_service(&problem, 0, 0);
+        route.insert_service(&problem, 1, 1);
+        route.insert_service(&problem, 2, 2);
+
+        // Test 1: Replace service 1 with service 3 (same position, later TW)
+        // This should be valid since service 3 has a later end time
+        let is_valid = route.is_valid_tw_change(&problem, std::iter::once(JobId::Service(3)), 1, 2);
+        assert!(is_valid);
+
+        // Test 2: Replace service 1 with service 5 (relaxed TW)
+        let is_valid = route.is_valid_tw_change(&problem, std::iter::once(JobId::Service(5)), 1, 2);
+        assert!(is_valid);
+
+        // Test 3: Insert service 4 (tight TW ending at 08:35) before service 0
+        // Service 0 arrives at 08:30, so inserting 4 before would push 0 later
+        // Service 4 arrives at 08:30 which is before its TW end of 08:35 - valid
+        let is_valid = route.is_valid_tw_change(&problem, std::iter::once(JobId::Service(4)), 0, 0);
+        assert!(is_valid);
+
+        // Test 4: Insert service 4 (tight TW) after service 0
+        // After serving 0 (depart 08:40), arrive at 4's location at 09:10
+        // But service 4's TW ends at 08:35, so this should be invalid
+        let is_valid = route.is_valid_tw_change(&problem, std::iter::once(JobId::Service(4)), 1, 1);
+        assert!(!is_valid);
+
+        // Test 5: Replace service 0 with service 4
+        // Service 4 would arrive at 08:30 (within TW ending 08:35) - valid
+        let is_valid = route.is_valid_tw_change(&problem, std::iter::once(JobId::Service(4)), 0, 1);
+        assert!(is_valid);
+
+        // Test 6: Insert service 5 at end
+        // After route 0->1->2, departing at 10:00, arrive at 5 at 10:30
+        // Service 5's TW ends at 14:00, so this is valid
+        let is_valid = route.is_valid_tw_change(&problem, std::iter::once(JobId::Service(5)), 3, 3);
+        assert!(is_valid);
+
+        // Test 7: Remove service 0 (replace with nothing)
+        // This should be valid as it only makes subsequent services earlier
+        let is_valid = route.is_valid_tw_change(&problem, [].into_iter(), 0, 1);
+        assert!(is_valid);
+
+        // Test 8: Remove service 2 (replace with nothing)
+        // This should be valid
+        let is_valid = route.is_valid_tw_change(&problem, [].into_iter(), 2, 3);
+        assert!(is_valid);
+
+        // Test 9: Insert 3 and 5, replace 1 by 3
+        let is_valid = route.is_valid_tw_change(
+            &problem,
+            [JobId::Service(3), JobId::Service(5)].into_iter(),
+            1,
+            2,
+        );
+        assert!(is_valid);
+
+        // Test 9: Insert 4 and 5, replace 1 by 4
+        let is_valid = route.is_valid_tw_change(
+            &problem,
+            [JobId::Service(4), JobId::Service(5)].into_iter(),
+            1,
+            2,
+        );
         assert!(!is_valid);
     }
 }

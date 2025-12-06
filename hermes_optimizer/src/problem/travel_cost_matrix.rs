@@ -1,3 +1,4 @@
+use jiff::SignedDuration;
 use serde::Deserialize;
 
 use super::location::Location;
@@ -58,7 +59,7 @@ impl TravelCostMatrix {
                 // Assume average speed of 50km/h
                 let speed = 50.0 / 3.6;
                 times[i * num_locations + j] =
-                    (distances[i * num_locations + j] / speed).round() as Time;
+                    (((distances[i * num_locations + j]) / speed) * 1000.0).round() as Time;
                 costs[i * num_locations + j] = distances[i * num_locations + j]
             }
         }
@@ -81,7 +82,8 @@ impl TravelCostMatrix {
         for (i, from) in locations.iter().enumerate() {
             for (j, to) in locations.iter().enumerate() {
                 distances[i * num_locations + j] = from.euclidian_distance(to);
-                times[i * num_locations + j] = distances[i * num_locations + j].round() as i64;
+                times[i * num_locations + j] =
+                    (distances[i * num_locations + j] * 1000.0).round() as i64;
                 costs[i * num_locations + j] = distances[i * num_locations + j]
             }
         }
@@ -100,7 +102,7 @@ impl TravelCostMatrix {
         let num_locations = locations.len();
         TravelCostMatrix {
             distances: vec![distance; num_locations * num_locations],
-            times: vec![time; num_locations * num_locations],
+            times: vec![time * 1000; num_locations * num_locations],
             costs: vec![cost; num_locations * num_locations],
             num_locations,
             is_symmetric: true,
@@ -109,12 +111,20 @@ impl TravelCostMatrix {
 
     #[inline(always)]
     pub fn travel_distance(&self, from: usize, to: usize) -> Distance {
+        if from == to {
+            return 0.0;
+        }
+
         self.distances[self.get_index(from, to)]
     }
 
     #[inline(always)]
-    pub fn travel_time(&self, from: usize, to: usize) -> Time {
-        self.times[self.get_index(from, to)]
+    pub fn travel_time(&self, from: usize, to: usize) -> SignedDuration {
+        if from == to {
+            return SignedDuration::ZERO;
+        }
+
+        SignedDuration::from_millis(self.times[self.get_index(from, to)])
     }
 
     #[inline(always)]

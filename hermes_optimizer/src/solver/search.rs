@@ -294,10 +294,12 @@ impl Search {
 
 
                         loop {
-                           let should_intensify = false; //state.iterations_without_improvement > 500 && (
+                           // let should_intensify = false; //state.iterations_without_improvement > 500 && (
                                // At least 500 iterations have passed since last intensify
                                 // state.iteration - state.last_intensify_iteration.unwrap_or(0) > 2000
                             // );
+                            //
+                            let should_intensify = state.iteration - state.last_intensify_iteration.unwrap_or(0) > 1000;
 
                             if should_intensify {
                                 let mut intensify_search = IntensifySearch::new(&self.problem);

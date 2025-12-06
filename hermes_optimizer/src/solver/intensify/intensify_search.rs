@@ -3,7 +3,7 @@ use std::f64;
 use tracing::{debug, info};
 
 use crate::{
-    problem::{vehicle::VehicleId, vehicle_routing_problem::VehicleRoutingProblem},
+    problem::{job::JobId, vehicle::VehicleId, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{
         intensify::{
             cross_exchange::{CrossExchangeOperator, CrossExchangeOperatorParams},
@@ -212,6 +212,28 @@ impl IntensifySearch {
                     });
 
                     let delta = op.delta(solution);
+
+                    if from_pos == 33 && to_pos == 0 {
+                        let r1 = solution.route(v1);
+                        let r2 = solution.route(v2);
+
+                        if !r1.is_empty() && !r2.is_empty() {
+                            let a = solution.route(v1).activity(from_pos).job_id();
+                            let b = solution.route(v2).activity(to_pos).job_id();
+
+                            if a == JobId::Service(92) && b == JobId::Service(4) {
+                                println!(
+                                    "{:?}, delta: {}, {}, {}, is_valid: {}",
+                                    op,
+                                    delta,
+                                    solution.route(v1).activity(from_pos).job_id(),
+                                    solution.route(v2).activity(to_pos).job_id(),
+                                    op.is_valid(solution)
+                                );
+                            }
+                        }
+                    }
+
                     if delta < self.deltas[v1][v2] && op.is_valid(solution) {
                         self.deltas[v1][v2] = delta;
                         self.best_ops[v1][v2] = Some(IntensifyOperator::InterRelocate(op));
