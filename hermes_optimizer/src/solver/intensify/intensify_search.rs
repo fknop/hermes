@@ -1,6 +1,6 @@
 use std::f64;
 
-use tracing::debug;
+use tracing::{debug, info};
 
 use crate::{
     problem::{vehicle::VehicleId, vehicle_routing_problem::VehicleRoutingProblem},
@@ -63,13 +63,14 @@ impl IntensifySearch {
         problem: &VehicleRoutingProblem,
         solution: &mut WorkingSolution,
         iterations: usize,
-    ) {
+    ) -> usize {
         for i in 0..iterations {
             if !self.run_iteration(problem, solution) {
-                debug!("Break iteration at {}", i);
-                break;
+                return i + 1;
             }
         }
+
+        iterations
     }
 
     fn run_iteration(
@@ -270,9 +271,9 @@ impl IntensifySearch {
 
             for from_pos in 0..from_route_length - 1 {
                 for to_pos in 0..to_route_length - 1 {
-                    let max_from_chain = from_route_length - from_pos;
-                    let max_to_chain = to_route_length - to_pos;
-                    let max_chain_length = max_from_chain.min(max_to_chain).saturating_sub(1);
+                    let max_from_chain = from_route_length - from_pos - 1;
+                    let max_to_chain = to_route_length - to_pos - 1;
+                    let max_chain_length = max_from_chain.min(max_to_chain);
 
                     // A chain is at least length 2
                     for chain_length in 2..=max_chain_length {
@@ -282,8 +283,8 @@ impl IntensifySearch {
 
                             first_start: from_pos,
                             second_start: to_pos,
-                            first_end: from_pos + chain_length,
-                            second_end: to_pos + chain_length,
+                            first_end: from_pos + chain_length - 1,
+                            second_end: to_pos + chain_length - 1,
                         });
 
                         let delta = op.delta(solution);
@@ -348,7 +349,7 @@ impl IntensifySearch {
         if let (Some(v1), Some(v2)) = (best_v1, best_v2)
             && let Some(op) = &self.best_ops[v1][v2]
         {
-            debug!(
+            info!(
                 "Apply {} - delta = {} (r1 = {}, r2 = {}) (r1.len() = {}, r2.len() = {}), op = {:?}",
                 op.operator_name(),
                 best_delta,

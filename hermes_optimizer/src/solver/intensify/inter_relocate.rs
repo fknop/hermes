@@ -70,12 +70,21 @@ impl IntensifyOp for InterRelocateOperator {
 
     fn fixed_route_cost_delta(&self, solution: &WorkingSolution) -> f64 {
         let r1 = solution.route(self.params.from_route_id);
+        let r2 = solution.route(self.params.to_route_id);
 
-        if r1.len() == 1 {
+        let r1_change = if r1.len() == 1 {
             -solution.problem().fixed_vehicle_costs()
         } else {
             0.0
-        }
+        };
+
+        let r2_change = if r2.is_empty() {
+            solution.problem().fixed_vehicle_costs()
+        } else {
+            0.0
+        };
+
+        r1_change + r2_change
     }
 
     fn is_valid(&self, solution: &WorkingSolution) -> bool {

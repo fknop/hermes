@@ -285,18 +285,19 @@ impl Search {
                             best_solutions,
                             tabu,
                             iteration: 0,
+                            last_intensify_iteration: None,
                             max_iterations,
                             global_statistics,
                             thread_statistics,
                             noise_generator: thread_noise_generator
                         };
 
-                        let mut should_intensify = false;
 
                         loop {
-
-
-                            should_intensify = false; // should_intensify || state.iterations_without_improvement > 500;
+                           let should_intensify = false; //state.iterations_without_improvement > 500 && (
+                               // At least 500 iterations have passed since last intensify
+                                // state.iteration - state.last_intensify_iteration.unwrap_or(0) > 2000
+                            // );
 
                             if should_intensify {
                                 let mut intensify_search = IntensifySearch::new(&self.problem);
@@ -317,11 +318,12 @@ impl Search {
                                 }; // Lock is released here
 
 
-                                let intensify_iterations = 1000.min(max_iterations.unwrap_or(usize::MAX) - state.iteration);
+                                let max_intensify_iterations = 2000.min(max_iterations.unwrap_or(usize::MAX) - state.iteration);
 
-                                intensify_search.intensify(&self.problem, &mut working_solution, intensify_iterations);
+                                let iterations = intensify_search.intensify(&self.problem, &mut working_solution, max_intensify_iterations);
 
-                                state.iteration += intensify_iterations;
+                                state.iteration += iterations;
+                                state.last_intensify_iteration = Some(state.iteration);
                                 let iteration_info = IterationInfo {
                                     iteration: state.iteration,
                                     ruin_strategy: None,
@@ -331,9 +333,6 @@ impl Search {
 
                                 info!("finished intensying");
                                 self.update_solutions(working_solution, &mut state, iteration_info);
-                                should_intensify = false;
-
-
                             }
                             else {
                                 state.iteration += 1;
@@ -695,6 +694,7 @@ impl IterationInfo {
 struct ThreadedSearchState {
     start: Timestamp,
     thread: usize,
+    last_intensify_iteration: Option<usize>,
     iterations_without_improvement: usize,
     alns_scores: AlnsScores<(RuinStrategy, RecreateStrategy)>,
     best_solutions: Arc<RwLock<Vec<AcceptedSolution>>>,
