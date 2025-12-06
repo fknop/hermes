@@ -294,12 +294,8 @@ impl Search {
 
 
                         loop {
-                           // let should_intensify = false; //state.iterations_without_improvement > 500 && (
-                               // At least 500 iterations have passed since last intensify
-                                // state.iteration - state.last_intensify_iteration.unwrap_or(0) > 2000
-                            // );
-                            //
-                            let should_intensify = state.iteration - state.last_intensify_iteration.unwrap_or(0) > 1000;
+
+                            let should_intensify = state.iterations_without_improvement > 500 && state.iteration - state.last_intensify_iteration.unwrap_or(0) > 1000;
 
                             if should_intensify {
                                 let mut intensify_search = IntensifySearch::new(&self.problem);
@@ -320,7 +316,7 @@ impl Search {
                                 }; // Lock is released here
 
 
-                                let max_intensify_iterations = 2000.min(max_iterations.unwrap_or(usize::MAX) - state.iteration);
+                                let max_intensify_iterations = 1500.min(max_iterations.unwrap_or(usize::MAX) - state.iteration);
 
                                 let iterations = intensify_search.intensify(&self.problem, &mut working_solution, max_intensify_iterations);
 
@@ -333,7 +329,6 @@ impl Search {
                                     current_score,
                                 };
 
-                                info!("finished intensying");
                                 self.update_solutions(working_solution, &mut state, iteration_info);
                             }
                             else {
