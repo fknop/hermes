@@ -78,7 +78,7 @@ impl IntensifyOp for RelocateOperator {
 
             // Contains C - D - E - B
             let iterator = in_between_jobs.chain(std::iter::once(job_id));
-            route.is_valid_tw_change(
+            route.is_valid_change(
                 solution.problem(),
                 iterator,
                 self.params.from,
@@ -90,7 +90,7 @@ impl IntensifyOp for RelocateOperator {
 
             // Contains E - B - C - D
             let iterator = std::iter::once(job_id).chain(in_between_jobs);
-            route.is_valid_tw_change(
+            route.is_valid_change(
                 solution.problem(),
                 iterator,
                 self.params.to,

@@ -1,6 +1,13 @@
 use std::fmt::Display;
 
-use crate::problem::{capacity::Capacity, service::Service, shipment::Shipment};
+use jiff::SignedDuration;
+
+use crate::problem::{
+    capacity::Capacity,
+    service::Service,
+    shipment::{Shipment, ShipmentLocation},
+    time_window::TimeWindow,
+};
 
 #[derive(Hash, Debug, Clone, Copy, Eq, PartialEq)]
 pub enum JobId {
@@ -39,6 +46,46 @@ impl From<JobId> for usize {
             JobId::Service(id) => id,
             JobId::ShipmentPickup(id) => id,
             JobId::ShipmentDelivery(id) => id,
+        }
+    }
+}
+
+pub enum JobTask<'a> {
+    Service(&'a Service),
+    ShipmentPickup(&'a Shipment),
+    ShipmentDelivery(&'a Shipment),
+}
+
+impl JobTask<'_> {
+    pub fn time_windows(&self) -> &[TimeWindow] {
+        match self {
+            JobTask::Service(service) => service.time_windows(),
+            JobTask::ShipmentPickup(shipment) => shipment.pickup().time_windows(),
+            JobTask::ShipmentDelivery(shipment) => shipment.delivery().time_windows(),
+        }
+    }
+
+    pub fn location_id(&self) -> usize {
+        match self {
+            JobTask::Service(service) => service.location_id(),
+            JobTask::ShipmentPickup(shipment) => shipment.pickup().location_id(),
+            JobTask::ShipmentDelivery(shipment) => shipment.delivery().location_id(),
+        }
+    }
+
+    pub fn duration(&self) -> SignedDuration {
+        match self {
+            JobTask::Service(service) => service.duration(),
+            JobTask::ShipmentPickup(shipment) => shipment.pickup().duration(),
+            JobTask::ShipmentDelivery(shipment) => shipment.delivery().duration(),
+        }
+    }
+
+    pub fn has_time_windows(&self) -> bool {
+        match self {
+            JobTask::Service(service) => service.has_time_windows(),
+            JobTask::ShipmentPickup(shipment) => shipment.pickup().has_time_windows(),
+            JobTask::ShipmentDelivery(shipment) => shipment.delivery().has_time_windows(),
         }
     }
 }

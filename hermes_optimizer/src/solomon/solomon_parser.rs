@@ -167,7 +167,7 @@ mod tests {
             match job {
                 Job::Service(service) => {
                     assert_eq!(service.external_id(), (index + 1).to_string().as_str());
-                    assert_eq!(service.service_duration(), SignedDuration::from_secs(90));
+                    assert_eq!(service.duration(), SignedDuration::from_secs(90));
                 }
                 _ => panic!("Expected all jobs to be services"),
             }

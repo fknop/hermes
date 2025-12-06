@@ -6,9 +6,10 @@ use crate::{
     problem::{
         amount::AmountExpression,
         capacity::Capacity,
-        job::{Job, JobId},
+        job::{Job, JobId, JobTask},
         service::{Service, ServiceId},
         shipment::Shipment,
+        time_window::TimeWindow,
     },
     solver::constraints::transport_cost_constraint::TRANSPORT_COST_WEIGHT,
     utils::zip_longest::zip_longest,
@@ -152,20 +153,20 @@ impl VehicleRoutingProblem {
         &self.locations[location_id]
     }
 
-    pub fn job_location_id(&self, job_id: JobId) -> LocationId {
+    pub fn job_task<'a>(&'a self, job_id: JobId) -> JobTask<'a> {
         // Can't use match here because if let bindings are experimental
         if let JobId::Service(service_id) = job_id
             && let Job::Service(service) = &self.jobs[service_id]
         {
-            service.location_id()
+            JobTask::Service(service)
         } else if let JobId::ShipmentPickup(shipment_id) = job_id
             && let Job::Shipment(shipment) = &self.jobs[shipment_id]
         {
-            shipment.pickup().location_id()
+            JobTask::ShipmentPickup(shipment)
         } else if let JobId::ShipmentDelivery(shipment_id) = job_id
             && let Job::Shipment(shipment) = &self.jobs[shipment_id]
         {
-            shipment.delivery().location_id()
+            JobTask::ShipmentDelivery(shipment)
         } else {
             panic!("Job {job_id} is not valid");
         }
@@ -238,7 +239,7 @@ impl VehicleRoutingProblem {
     }
 
     pub fn nearest_jobs(&self, job_id: JobId) -> impl Iterator<Item = JobId> {
-        let job_location_id = self.job_location_id(job_id);
+        let job_location_id = self.job_task(job_id).location_id();
         self.nearest_jobs_of_location(job_location_id)
     }
 
@@ -275,7 +276,7 @@ impl VehicleRoutingProblem {
 
         jobs.iter()
             .map(|job| {
-                let mut normalized_demand = Capacity::with_capacity(max_capacity.len());
+                let mut normalized_demand = Capacity::with_dimensions(max_capacity.len());
                 zip_longest(job.demand().iter(), max_capacity.iter())
                     .enumerate()
                     .for_each(|(index, (demand, max))| {

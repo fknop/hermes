@@ -63,7 +63,7 @@ impl InterTwoOptStarOperator {
     pub fn first_route_head<'a>(
         &self,
         solution: &'a WorkingSolution,
-    ) -> impl DoubleEndedIterator<Item = JobId> + 'a {
+    ) -> impl DoubleEndedIterator<Item = JobId> + Clone + 'a {
         let route = solution.route(self.params.first_route_id);
         route.job_ids_iter(0, self.params.first_from + 1)
     }
@@ -71,7 +71,7 @@ impl InterTwoOptStarOperator {
     pub fn first_route_tail<'a>(
         &self,
         solution: &'a WorkingSolution,
-    ) -> impl DoubleEndedIterator<Item = JobId> + 'a {
+    ) -> impl DoubleEndedIterator<Item = JobId> + Clone + 'a {
         let route = solution.route(self.params.first_route_id);
         route.job_ids_iter(self.params.first_from + 1, route.len())
     }
@@ -79,7 +79,7 @@ impl InterTwoOptStarOperator {
     pub fn second_route_head<'a>(
         &self,
         solution: &'a WorkingSolution,
-    ) -> impl DoubleEndedIterator<Item = JobId> + 'a {
+    ) -> impl DoubleEndedIterator<Item = JobId> + Clone + 'a {
         let route = solution.route(self.params.second_route_id);
         route.job_ids_iter(0, self.params.second_from + 1)
     }
@@ -87,7 +87,7 @@ impl InterTwoOptStarOperator {
     pub fn second_route_tail<'a>(
         &self,
         solution: &'a WorkingSolution,
-    ) -> impl DoubleEndedIterator<Item = JobId> + 'a {
+    ) -> impl DoubleEndedIterator<Item = JobId> + Clone + 'a {
         let route = solution.route(self.params.second_route_id);
         route.job_ids_iter(self.params.second_from + 1, route.len())
     }
@@ -129,8 +129,8 @@ impl IntensifyOp for InterTwoOptStarOperator {
         let r1 = solution.route(self.params.first_route_id);
         let r2 = solution.route(self.params.second_route_id);
 
-        r1.is_valid_tw_change(solution.problem(), new_r1_jobs, 0, r1.len())
-            && r2.is_valid_tw_change(solution.problem(), new_r2_jobs, 0, r2.len())
+        r1.is_valid_change(solution.problem(), new_r1_jobs, 0, r1.len())
+            && r2.is_valid_change(solution.problem(), new_r2_jobs, 0, r2.len())
     }
 
     fn apply(&self, problem: &VehicleRoutingProblem, solution: &mut WorkingSolution) {

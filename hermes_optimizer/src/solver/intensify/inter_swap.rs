@@ -81,12 +81,12 @@ impl IntensifyOp for InterSwapOperator {
         let second_route_job =
             second_route.job_ids_iter(self.params.second, self.params.second + 1);
 
-        first_route.is_valid_tw_change(
+        first_route.is_valid_change(
             solution.problem(),
             second_route_job,
             self.params.first,
             self.params.first + 1,
-        ) && second_route.is_valid_tw_change(
+        ) && second_route.is_valid_change(
             solution.problem(),
             first_route_job,
             self.params.second,

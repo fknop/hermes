@@ -65,6 +65,16 @@ impl WorkingSolutionRouteActivity {
         self.waiting_duration
     }
 
+    pub fn compute_time_slack(&self, problem: &VehicleRoutingProblem) -> SignedDuration {
+        let task = problem.job_task(self.job_id);
+
+        if let Some(max_end) = task.time_windows().iter().filter_map(|tw| tw.end()).max() {
+            max_end.duration_since(self.arrival_time + self.waiting_duration)
+        } else {
+            SignedDuration::MAX
+        }
+    }
+
     pub(super) fn update_arrival_time(
         &mut self,
         problem: &VehicleRoutingProblem,

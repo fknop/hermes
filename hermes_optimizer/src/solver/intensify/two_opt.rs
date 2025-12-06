@@ -107,7 +107,7 @@ impl IntensifyOp for TwoOptOperator {
             println!("{:?}", self);
         }
 
-        route.is_valid_tw_change(
+        route.is_valid_change(
             solution.problem(),
             route
                 .job_ids_iter(self.params.from, self.params.to + 1)

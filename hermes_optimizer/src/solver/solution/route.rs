@@ -3,8 +3,9 @@ use jiff::{SignedDuration, Timestamp};
 
 use crate::{
     problem::{
+        self,
         amount::AmountExpression,
-        capacity::Capacity,
+        capacity::{Capacity, is_capacity_satisfied},
         job::{Job, JobId},
         service::{ServiceId, ServiceType},
         vehicle::{Vehicle, VehicleId},
@@ -15,8 +16,8 @@ use crate::{
         route_update_iterator::RouteUpdateIterator,
         utils::{
             compute_activity_arrival_time, compute_departure_time,
-            compute_first_activity_arrival_time, compute_vehicle_end, compute_vehicle_start,
-            compute_waiting_duration,
+            compute_first_activity_arrival_time, compute_time_slack, compute_vehicle_end,
+            compute_vehicle_start, compute_waiting_duration,
         },
     },
     utils::bbox::BBox,
@@ -48,6 +49,11 @@ pub struct WorkingSolutionRoute {
     // step 0 is the start depot
     pub(super) current_load: Vec<Capacity>,
 
+    // time_slacks[i] stores the maximum time delay that can be absorbed at activity i
+    // before violating time windows of subsequent activities
+    // computed backward from end to start
+    time_slacks: Vec<SignedDuration>,
+
     bbox: BBox,
 
     updated_in_iteration: bool,
@@ -69,9 +75,10 @@ impl WorkingSolutionRoute {
             fwd_load_deliveries: Vec::new(),
             fwd_load_pickups: Vec::new(),
             fwd_load_shipments: Vec::new(),
+            time_slacks: Vec::new(),
         };
 
-        route.resize_data();
+        route.resize_data(problem);
 
         route
     }
@@ -436,24 +443,6 @@ impl WorkingSolutionRoute {
         }
     }
 
-    // pub fn remove_service(
-    //     &mut self,
-    //     problem: &VehicleRoutingProblem,
-    //     service_id: ServiceId,
-    // ) -> bool {
-    //     if !self.contains_service(service_id) {
-    //         return false; // Service is not in the route
-    //     }
-
-    //     let activity_id = self
-    //         .activities
-    //         .iter()
-    //         .position(|activity| activity.job_id == JobId::Service(service_id))
-    //         .unwrap();
-
-    //     self.remove_activity(problem, activity_id).is_some()
-    // }
-
     pub fn insert_service(
         &mut self,
         problem: &VehicleRoutingProblem,
@@ -542,32 +531,47 @@ impl WorkingSolutionRoute {
         self.bbox = bbox;
     }
 
-    fn resize_data(&mut self) {
-        self.fwd_load_pickups
-            .resize_with(self.len(), Capacity::empty);
-        self.fwd_load_deliveries
-            .resize_with(self.len(), Capacity::empty);
-        self.bwd_load_deliveries
-            .resize_with(self.len(), Capacity::empty);
-        self.bwd_load_pickups
-            .resize_with(self.len(), Capacity::empty);
-        self.fwd_load_shipments
-            .resize_with(self.len(), Capacity::empty);
+    fn resize_data(&mut self, problem: &VehicleRoutingProblem) {
+        self.fwd_load_pickups.resize_with(self.len(), || {
+            Capacity::with_dimensions(problem.capacity_dimensions())
+        });
+        self.fwd_load_deliveries.resize_with(self.len(), || {
+            Capacity::with_dimensions(problem.capacity_dimensions())
+        });
+        self.bwd_load_deliveries.resize_with(self.len(), || {
+            Capacity::with_dimensions(problem.capacity_dimensions())
+        });
+        self.bwd_load_pickups.resize_with(self.len(), || {
+            Capacity::with_dimensions(problem.capacity_dimensions())
+        });
+        self.fwd_load_shipments.resize_with(self.len(), || {
+            Capacity::with_dimensions(problem.capacity_dimensions())
+        });
 
         let steps = self.len() + 2;
-        self.fwd_load_peaks.resize_with(steps, Capacity::empty);
-        self.bwd_load_peaks.resize_with(steps, Capacity::empty);
-        self.current_load.resize_with(steps, Capacity::empty);
+        self.fwd_load_peaks.resize_with(steps, || {
+            Capacity::with_dimensions(problem.capacity_dimensions())
+        });
+        self.bwd_load_peaks.resize_with(steps, || {
+            Capacity::with_dimensions(problem.capacity_dimensions())
+        });
+        self.current_load.resize_with(steps, || {
+            Capacity::with_dimensions(problem.capacity_dimensions())
+        });
+        self.time_slacks.resize(self.len(), SignedDuration::MAX);
 
         if self.is_empty() {
-            self.fwd_load_peaks.fill_with(Capacity::empty);
-            self.bwd_load_peaks.fill_with(Capacity::empty);
-            self.current_load.fill_with(Capacity::empty);
+            self.fwd_load_peaks
+                .fill_with(|| Capacity::with_dimensions(problem.capacity_dimensions()));
+            self.bwd_load_peaks
+                .fill_with(|| Capacity::with_dimensions(problem.capacity_dimensions()));
+            self.current_load
+                .fill_with(|| Capacity::with_dimensions(problem.capacity_dimensions()));
         }
     }
 
     fn update_data(&mut self, problem: &VehicleRoutingProblem) {
-        self.resize_data();
+        self.resize_data(problem);
 
         if self.is_empty() {
             return;
@@ -686,6 +690,19 @@ impl WorkingSolutionRoute {
             peak.update_max(&self.current_load[i]);
             self.bwd_load_peaks[i].update(&peak);
         }
+
+        if problem.has_time_windows() {
+            let mut next_activity_time_slack = SignedDuration::MAX;
+            for (index, activity) in self.activities.iter().enumerate().rev() {
+                let current_time_slack =
+                    compute_time_slack(problem, activity.job_id, activity.arrival_time);
+
+                self.time_slacks[index] = current_time_slack.min(next_activity_time_slack);
+                next_activity_time_slack = self.time_slacks[index];
+            }
+        } else {
+            self.time_slacks.fill(SignedDuration::MAX);
+        }
     }
 
     pub fn random_activity<R>(&self, rng: &mut R) -> usize
@@ -700,7 +717,7 @@ impl WorkingSolutionRoute {
         &self,
         start: usize,
         end: usize,
-    ) -> impl DoubleEndedIterator<Item = JobId> + '_ {
+    ) -> impl DoubleEndedIterator<Item = JobId> + Clone + '_ {
         if end > self.activities.len() || start > self.activities.len() || start > end {
             println!("{} -> {}", start, end)
         }
@@ -721,6 +738,17 @@ impl WorkingSolutionRoute {
         I: Iterator<Item = JobId>,
     {
         RouteUpdateIterator::new(problem, self, jobs_iter, start, end)
+    }
+
+    pub fn is_valid_change(
+        &self,
+        problem: &VehicleRoutingProblem,
+        job_ids: impl Iterator<Item = JobId> + Clone,
+        start: usize,
+        end: usize,
+    ) -> bool {
+        self.is_valid_tw_change(problem, job_ids.clone(), start, end)
+            && self.is_valid_capacity_change(problem, job_ids, start, end)
     }
 
     /// Checks whether inserting the given job IDs between the given [start, end) indices is valid
@@ -774,12 +802,26 @@ impl WorkingSolutionRoute {
                 compute_waiting_duration(problem.service(service_id), arrival_time);
 
             previous_service_id = Some(service_id);
-            previous_departure_time = Some(compute_departure_time(
-                problem,
-                arrival_time,
-                waiting_duration,
-                service_id,
-            ));
+            let new_departure_time =
+                compute_departure_time(problem, arrival_time, waiting_duration, service_id);
+            previous_departure_time = Some(new_departure_time);
+
+            if let Some(&current_activity_index) = self.jobs.get(&job_id)
+                && current_activity_index >= end
+            {
+                let current_time_slack = self.time_slacks[current_activity_index];
+                let current_arrival_time = self.activities[current_activity_index].arrival_time;
+
+                if arrival_time > current_arrival_time + current_time_slack {
+                    return false;
+                }
+
+                let current_departure_time = self.activities[current_activity_index].departure_time;
+                // Early termination, if the departure time is earlier or equal to the current one, we know the next one are valid as well
+                if new_departure_time <= current_departure_time {
+                    return true;
+                }
+            }
 
             let service = problem.service(service_id);
 
@@ -798,61 +840,92 @@ impl WorkingSolutionRoute {
         start: usize,
         end: usize,
     ) -> bool {
-        if !problem.has_capacity() {
-            return true;
+        let mut added_delivery_load = Capacity::with_dimensions(problem.capacity_dimensions());
+        let mut added_pickup_load = Capacity::with_dimensions(problem.capacity_dimensions());
+
+        let mut delivery_load_delta = Capacity::with_dimensions(problem.capacity_dimensions());
+        let mut pickup_load_delta = Capacity::with_dimensions(problem.capacity_dimensions());
+        let mut shipment_load_delta = Capacity::with_dimensions(problem.capacity_dimensions());
+
+        for job_id in job_ids {
+            let job = problem.job(job_id);
+
+            match job_id {
+                JobId::Service(_) => {
+                    if let Job::Service(service) = job {
+                        match service.service_type() {
+                            ServiceType::Pickup => {
+                                pickup_load_delta += job.demand();
+                                added_pickup_load += job.demand();
+                            }
+                            ServiceType::Delivery => {
+                                delivery_load_delta += job.demand();
+                                added_delivery_load += job.demand();
+                            }
+                        }
+                    }
+                }
+                JobId::ShipmentPickup(_) => {
+                    shipment_load_delta += job.demand();
+                }
+                JobId::ShipmentDelivery(_) => {
+                    shipment_load_delta -= job.demand();
+                }
+            }
         }
 
-        let previous_activity = if start == 0 {
-            None
-        } else {
-            Some(&self.activities[start - 1])
-        };
-
-        let mut previous_service_id = previous_activity.map(|activity| activity.service_id());
-        let mut previous_departure_time =
-            previous_activity.map(|activity| activity.departure_time());
-
-        let succeeding_activities = if end < self.activities.len() {
-            &self.activities[end..]
-        } else {
-            &[]
-        };
-
-        for job_id in job_ids.chain(
-            succeeding_activities
-                .iter()
-                .map(|activity| activity.job_id()),
-        ) {
-            let service_id = job_id.into(); // TODO: handle shipments
-            let arrival_time = if let Some(previous_service_id) = previous_service_id
-                && let Some(previous_departure_time) = previous_departure_time
-            {
-                compute_activity_arrival_time(
-                    problem,
-                    previous_service_id,
-                    previous_departure_time,
-                    service_id,
-                )
+        if start < end && end <= self.len() {
+            if start > 0 {
+                delivery_load_delta -=
+                    &self.fwd_load_deliveries[end - 1] - &self.fwd_load_deliveries[start - 1];
+                pickup_load_delta -=
+                    &self.fwd_load_pickups[end - 1] - &self.fwd_load_pickups[start - 1];
             } else {
-                compute_first_activity_arrival_time(problem, self.vehicle_id, service_id)
-            };
+                delivery_load_delta -= &self.fwd_load_deliveries[end - 1];
+                pickup_load_delta -= &self.fwd_load_pickups[end - 1];
+            }
+        }
 
-            let waiting_duration =
-                compute_waiting_duration(problem.service(service_id), arrival_time);
+        let new_initial_load = &self.current_load[0] + &delivery_load_delta;
 
-            previous_service_id = Some(service_id);
-            previous_departure_time = Some(compute_departure_time(
-                problem,
-                arrival_time,
-                waiting_duration,
-                service_id,
-            ));
+        let vehicle = self.vehicle(problem);
 
-            let service = problem.service(service_id);
+        // Check the new initial load against vehicle capacity
+        if !is_capacity_satisfied(vehicle.capacity(), &new_initial_load) {
+            println!("initial load not satisfied");
+            return false;
+        }
 
-            if !service.time_windows_satisfied(arrival_time) {
+        // Check 2: Peak load before insertion point [0, start]
+        // The loads before start are increased by delivery_load_delta (more deliveries to carry)
+        if start > 0 {
+            let peak_load_before_insertion = &self.fwd_load_peaks[start] + &delivery_load_delta;
+            if !is_capacity_satisfied(vehicle.capacity(), &peak_load_before_insertion) {
+                println!("peak load not satisfied");
                 return false;
             }
+        }
+
+        // let load_at_start = &self.current_load[start] + &delivery_load_delta;
+        // if !is_capacity_satisfied(vehicle.capacity(), &load_at_start) {
+        //     println!("load at start not satisfied");
+        //     return false;
+        // }
+
+        // if !is_capacity_satisfied(vehicle.capacity(), &(load_at_start + &pickup_load_delta)) {
+        //     println!("pickup load not satisfied");
+        //     return false;
+        // }
+
+        let load_at_end = &self.current_load[start] + &delivery_load_delta + &pickup_load_delta
+            - &added_delivery_load
+            - &self.current_load[end];
+
+        if !is_capacity_satisfied(
+            vehicle.capacity(),
+            &(load_at_end + &self.bwd_load_peaks[end]),
+        ) {
+            return false;
         }
 
         true
@@ -926,6 +999,48 @@ mod tests {
         let service_3 = service_builder.build();
 
         let services = vec![service_1, service_2, service_3];
+
+        let mut builder = VehicleRoutingProblemBuilder::default();
+        builder.set_travel_costs(TravelCostMatrix::from_constant(
+            &locations,
+            SignedDuration::from_mins(30).as_secs(),
+            100.0,
+            SignedDuration::from_mins(30).as_secs_f64(),
+        ));
+        builder.set_locations(locations);
+        builder.set_vehicles(vehicles);
+        builder.set_services(services);
+
+        builder.build()
+    }
+
+    fn create_problem_for_capacity_change(
+        vehicle_capacity: Capacity,
+        services: Vec<(ServiceType, Capacity)>,
+    ) -> VehicleRoutingProblem {
+        // 10 locations from (0, 0) to (9, 0)
+        let locations = test_utils::create_location_grid(1, 10);
+
+        let mut vehicle_builder = VehicleBuilder::default();
+        vehicle_builder.set_depot_location_id(0);
+        vehicle_builder.set_capacity(vehicle_capacity);
+        vehicle_builder.set_vehicle_id(String::from("vehicle"));
+        let vehicle = vehicle_builder.build();
+        let vehicles = vec![vehicle];
+
+        let services = services
+            .into_iter()
+            .enumerate()
+            .map(|(i, (service_type, demand))| {
+                let mut service_builder = ServiceBuilder::default();
+                service_builder.set_demand(demand);
+                service_builder.set_external_id(format!("service_{}", i + 1));
+                service_builder.set_service_duration(SignedDuration::from_mins(10));
+                service_builder.set_location_id(i + 1);
+                service_builder.set_service_type(service_type);
+                service_builder.build()
+            })
+            .collect::<Vec<_>>();
 
         let mut builder = VehicleRoutingProblemBuilder::default();
         builder.set_travel_costs(TravelCostMatrix::from_constant(
@@ -1039,6 +1154,11 @@ mod tests {
             route.activities[2].departure_time,
             "2025-11-30T11:30:00+02:00".parse().unwrap()
         );
+
+        // Check time slacks
+        assert_eq!(route.time_slacks[0], SignedDuration::from_mins(40));
+        assert_eq!(route.time_slacks[1], SignedDuration::from_mins(40));
+        assert_eq!(route.time_slacks[2], SignedDuration::from_mins(40))
     }
 
     #[test]
@@ -1171,5 +1291,91 @@ mod tests {
                 .collect::<Vec<_>>(),
             vec![JobId::Service(0), JobId::Service(2), JobId::Service(1)]
         );
+    }
+
+    #[test]
+    fn test_is_valid_capacity_change_delivery_only() {
+        let problem = create_problem_for_capacity_change(
+            Capacity::from_vec(vec![50.0]),
+            vec![
+                (ServiceType::Delivery, Capacity::from_vec(vec![10.0])), // 0
+                (ServiceType::Delivery, Capacity::from_vec(vec![20.0])), // 1
+                (ServiceType::Delivery, Capacity::from_vec(vec![20.0])), // 2
+                (ServiceType::Delivery, Capacity::from_vec(vec![20.0])), // 3
+                (ServiceType::Delivery, Capacity::from_vec(vec![15.0])), // 4
+                (ServiceType::Delivery, Capacity::from_vec(vec![30.0])), // 5
+                (ServiceType::Delivery, Capacity::from_vec(vec![10.0])), // 6
+            ],
+        );
+
+        let mut route = WorkingSolutionRoute::empty(&problem, 0);
+        route.insert_service(&problem, 0, 0);
+        route.insert_service(&problem, 1, 1);
+        route.insert_service(&problem, 2, 2);
+
+        let is_valid =
+            route.is_valid_capacity_change(&problem, std::iter::once(JobId::Service(4)), 1, 2);
+        assert!(is_valid);
+
+        let is_valid =
+            route.is_valid_capacity_change(&problem, std::iter::once(JobId::Service(3)), 1, 2);
+        assert!(is_valid);
+
+        let is_valid = route.is_valid_capacity_change(
+            &problem,
+            [JobId::Service(1), JobId::Service(3)].into_iter(),
+            1,
+            3,
+        );
+        assert!(is_valid);
+
+        // Remove 0
+        let is_valid = route.is_valid_capacity_change(&problem, [].into_iter(), 0, 1);
+
+        assert!(is_valid);
+
+        // Replace 1 and 2 by 5 and 6
+        let is_valid = route.is_valid_capacity_change(
+            &problem,
+            [JobId::Service(5), JobId::Service(6)].into_iter(),
+            1,
+            3,
+        );
+
+        assert!(is_valid);
+
+        // Replace 0 by 4
+        let is_valid =
+            route.is_valid_capacity_change(&problem, [JobId::Service(4)].into_iter(), 0, 1);
+
+        assert!(!is_valid);
+
+        // Add 4 before 0
+        let is_valid =
+            route.is_valid_capacity_change(&problem, [JobId::Service(4)].into_iter(), 0, 0);
+
+        assert!(!is_valid);
+
+        // Add 4 after 0
+        let is_valid =
+            route.is_valid_capacity_change(&problem, [JobId::Service(4)].into_iter(), 1, 1);
+
+        assert!(!is_valid);
+
+        // Replace 1 and 2 by 5 and 4
+        let is_valid = route.is_valid_capacity_change(
+            &problem,
+            [JobId::Service(5), JobId::Service(4)].into_iter(),
+            1,
+            3,
+        );
+
+        assert!(!is_valid);
+
+        // Add 6 at end
+        let is_valid =
+            route.is_valid_capacity_change(&problem, [JobId::Service(6)].into_iter(), 3, 3);
+
+        assert!(!is_valid);
     }
 }

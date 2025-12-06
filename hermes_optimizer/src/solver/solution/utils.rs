@@ -1,7 +1,7 @@
-
 use jiff::{SignedDuration, Timestamp};
 
 use crate::problem::{
+    job::JobId,
     service::{Service, ServiceId},
     vehicle::VehicleId,
     vehicle_routing_problem::VehicleRoutingProblem,
@@ -117,7 +117,21 @@ pub(crate) fn compute_departure_time(
     waiting_duration: SignedDuration,
     service_id: ServiceId,
 ) -> Timestamp {
-    arrival_time + waiting_duration + problem.service(service_id).service_duration()
+    arrival_time + waiting_duration + problem.service(service_id).duration()
+}
+
+pub(crate) fn compute_time_slack(
+    problem: &VehicleRoutingProblem,
+    job_id: JobId,
+    arrival_time: Timestamp,
+) -> SignedDuration {
+    let task = problem.job_task(job_id);
+
+    if let Some(max_end) = task.time_windows().iter().filter_map(|tw| tw.end()).max() {
+        max_end.duration_since(arrival_time)
+    } else {
+        SignedDuration::MAX
+    }
 }
 
 #[cfg(test)]

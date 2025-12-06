@@ -44,7 +44,7 @@ impl SwapOperator {
     fn moved_jobs<'a>(
         &'a self,
         route: &'a WorkingSolutionRoute,
-    ) -> impl DoubleEndedIterator<Item = JobId> + 'a {
+    ) -> impl DoubleEndedIterator<Item = JobId> + Clone + 'a {
         if self.params.first < self.params.second {
             std::iter::once(route.job_id_at(self.params.second))
                 .chain(route.job_ids_iter(self.params.first + 1, self.params.second))
@@ -105,7 +105,7 @@ impl IntensifyOp for SwapOperator {
         let route = solution.route(self.params.route_id);
         let moved_jobs = self.moved_jobs(route);
 
-        route.is_valid_tw_change(
+        route.is_valid_change(
             solution.problem(),
             moved_jobs,
             self.params.first.min(self.params.second),

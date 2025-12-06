@@ -58,7 +58,7 @@ impl OrOptOperator {
     fn moved_jobs<'a>(
         &'a self,
         route: &'a WorkingSolutionRoute,
-    ) -> impl Iterator<Item = JobId> + 'a {
+    ) -> impl Iterator<Item = JobId> + Clone + 'a {
         if self.params.from < self.params.to {
             let moved_jobs =
                 route.job_ids_iter(self.params.from, self.params.from + self.params.count);
@@ -111,7 +111,7 @@ impl IntensifyOp for OrOptOperator {
 
             let moved_jobs = self.moved_jobs(route);
 
-            route.is_valid_tw_change(
+            route.is_valid_change(
                 solution.problem(),
                 moved_jobs,
                 self.params.from,
@@ -122,7 +122,7 @@ impl IntensifyOp for OrOptOperator {
 
             let moved_jobs = self.moved_jobs(route);
 
-            route.is_valid_tw_change(
+            route.is_valid_change(
                 solution.problem(),
                 moved_jobs,
                 self.params.to,

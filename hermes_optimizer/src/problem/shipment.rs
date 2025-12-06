@@ -22,10 +22,18 @@ impl ShipmentLocation {
         self.location_id
     }
 
+    pub fn time_windows(&self) -> &TimeWindows {
+        &self.time_windows
+    }
+
     pub fn time_windows_satisfied(&self, arrival_time: jiff::Timestamp) -> bool {
         self.time_windows
             .iter()
             .any(|tw| tw.is_satisfied(arrival_time))
+    }
+
+    pub fn has_time_windows(&self) -> bool {
+        self.time_windows.iter().any(|tw| !tw.is_empty())
     }
 }
 

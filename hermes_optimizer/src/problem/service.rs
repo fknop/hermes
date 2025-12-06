@@ -40,7 +40,7 @@ impl Service {
         &self.demand
     }
 
-    pub fn service_duration(&self) -> SignedDuration {
+    pub fn duration(&self) -> SignedDuration {
         self.service_duration
     }
 

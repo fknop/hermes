@@ -84,12 +84,12 @@ impl IntensifyOp for InterRelocateOperator {
 
         let source_job_id = source_route.job_id_at(self.params.from);
 
-        target_route.is_valid_tw_change(
+        target_route.is_valid_change(
             solution.problem(),
             std::iter::once(source_job_id),
             self.params.to,
             self.params.to,
-        ) && source_route.is_valid_tw_change(
+        ) && source_route.is_valid_change(
             solution.problem(),
             source_route.job_ids_iter(self.params.from + 1, self.params.from + 1),
             self.params.from,

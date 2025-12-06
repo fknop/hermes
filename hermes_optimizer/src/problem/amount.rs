@@ -48,7 +48,7 @@ impl Amount {
         Self::EMPTY
     }
 
-    pub fn with_capacity(capacity: usize) -> Self {
+    pub fn with_dimensions(capacity: usize) -> Self {
         let mut vec = SmallVec::with_capacity(capacity);
         vec.resize(capacity, 0.0);
         Amount(vec)

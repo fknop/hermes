@@ -54,7 +54,7 @@ impl CrossExchangeOperator {
     fn first_route_moved_jobs<'a>(
         &self,
         solution: &'a WorkingSolution,
-    ) -> impl DoubleEndedIterator<Item = JobId> + 'a {
+    ) -> impl DoubleEndedIterator<Item = JobId> + Clone + 'a {
         solution
             .route(self.params.first_route_id)
             .job_ids_iter(self.params.first_start, self.params.first_end + 1)
@@ -63,7 +63,7 @@ impl CrossExchangeOperator {
     fn second_route_moved_jobs<'a>(
         &self,
         solution: &'a WorkingSolution,
-    ) -> impl DoubleEndedIterator<Item = JobId> + 'a {
+    ) -> impl DoubleEndedIterator<Item = JobId> + Clone + 'a {
         solution
             .route(self.params.second_route_id)
             .job_ids_iter(self.params.second_start, self.params.second_end + 1)
@@ -108,12 +108,12 @@ impl IntensifyOp for CrossExchangeOperator {
         let first_route = solution.route(self.params.first_route_id);
         let second_route = solution.route(self.params.second_route_id);
 
-        first_route.is_valid_tw_change(
+        first_route.is_valid_change(
             solution.problem(),
             self.second_route_moved_jobs(solution),
             self.params.first_start,
             self.params.first_end + 1,
-        ) && second_route.is_valid_tw_change(
+        ) && second_route.is_valid_change(
             solution.problem(),
             self.first_route_moved_jobs(solution),
             self.params.second_start,
