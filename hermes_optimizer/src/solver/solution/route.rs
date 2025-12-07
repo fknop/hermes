@@ -27,16 +27,31 @@ pub struct WorkingSolutionRoute {
     // Map of JobId to index in activities vector
     pub(super) jobs: FxHashMap<JobId, usize>,
 
+    /// List of activity job IDs in the route order
     pub(super) activity_ids: Vec<JobId>,
 
+    /// List of arrival times at each activity
     pub(super) arrival_times: Vec<Timestamp>,
+
+    /// List of departure times at each activity
     pub(super) departure_times: Vec<Timestamp>,
+
+    /// List of waiting durations at each activity
     pub(super) waiting_durations: Vec<SignedDuration>,
 
+    /// Forward load for pickups at each activity
     pub(super) fwd_load_pickups: Vec<Capacity>,
+
+    /// Forward load for deliveries at each activity
     pub(super) fwd_load_deliveries: Vec<Capacity>,
+
+    /// Forward load for shipments at each activity
     pub(super) fwd_load_shipments: Vec<Capacity>,
+
+    /// Backward load for pickups at each activity
     pub(super) bwd_load_pickups: Vec<Capacity>,
+
+    /// Backward load for deliveries at each activity
     pub(super) bwd_load_deliveries: Vec<Capacity>,
 
     // fwd_load_peaks[i] stores the peak load up to step i
@@ -54,7 +69,7 @@ pub struct WorkingSolutionRoute {
     // time_slacks[i] stores the maximum time delay that can be absorbed at activity i
     // before violating time windows of subsequent activities
     // computed backward from end to start
-    time_slacks: Vec<SignedDuration>,
+    pub(super) time_slacks: Vec<SignedDuration>,
 
     bbox: BBox,
 
