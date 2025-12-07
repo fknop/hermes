@@ -88,6 +88,12 @@ impl JobTask<'_> {
             JobTask::ShipmentDelivery(shipment) => shipment.delivery().has_time_windows(),
         }
     }
+
+    pub fn time_windows_satisfied(&self, arrival_time: jiff::Timestamp) -> bool {
+        self.time_windows()
+            .iter()
+            .any(|tw| tw.is_satisfied(arrival_time))
+    }
 }
 
 pub enum Job {

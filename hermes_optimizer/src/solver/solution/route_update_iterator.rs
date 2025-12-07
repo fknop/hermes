@@ -17,6 +17,7 @@ pub struct RouteUpdateActivityData {
     pub departure_time: Timestamp,
     pub waiting_duration: SignedDuration,
     pub job_id: JobId,
+    pub current_position: Option<usize>,
 }
 
 pub struct RouteUpdateIterator<'a, I> {
@@ -88,32 +89,30 @@ where
             {
                 compute_activity_arrival_time(
                     self.problem,
-                    previous_job_id.into(),
+                    previous_job_id,
                     previous_departure_time,
-                    job_id.into(),
+                    job_id,
                 )
             } else {
-                compute_first_activity_arrival_time(
-                    self.problem,
-                    self.route.vehicle_id,
-                    job_id.into(),
-                )
+                compute_first_activity_arrival_time(self.problem, self.route.vehicle_id, job_id)
             };
 
-            let waiting_duration =
-                compute_waiting_duration(self.problem.service(job_id.into()), arrival_time);
+            let waiting_duration = compute_waiting_duration(self.problem, job_id, arrival_time);
 
             let departure_time =
-                compute_departure_time(self.problem, arrival_time, waiting_duration, job_id.into());
+                compute_departure_time(self.problem, arrival_time, waiting_duration, job_id);
 
             self.previous_job_id = Some(job_id);
             self.previous_departure_time = Some(departure_time);
+
+            let current_position = self.route.jobs.get(&job_id).copied();
 
             Some(RouteUpdateActivityData {
                 arrival_time,
                 departure_time,
                 waiting_duration,
                 job_id,
+                current_position,
             })
         } else {
             None

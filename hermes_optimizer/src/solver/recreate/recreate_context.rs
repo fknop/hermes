@@ -5,7 +5,7 @@ use crate::{
     solver::{
         constraints::{compute_insertion_score::compute_insertion_score, constraint::Constraint},
         insertion::{ExistingRouteInsertion, Insertion, NewRouteInsertion},
-        insertion_context::compute_insertion_context,
+        insertion_context::InsertionContext,
         noise::NoiseGenerator,
         score::Score,
         solution::working_solution::WorkingSolution,
@@ -41,7 +41,7 @@ impl<'a> RecreateContext<'a> {
             }
         };
 
-        let context = compute_insertion_context(self.problem, solution, insertion);
+        let context = InsertionContext::new(self.problem, solution, insertion);
         compute_insertion_score(self.constraints, &context, best_score)
             + self.noise_generator.map_or(Score::ZERO, |noise_generator| {
                 Score::soft(noise_generator.create_noise(context.insertion.service_id()))

@@ -55,12 +55,22 @@ impl RouteConstraint for WaitingDurationConstraint {
             return Score::zero();
         }
 
+        let mut delta = SignedDuration::ZERO;
+
+        for activity_info in context.updated_activities_iter() {
+            let new_waiting_duration = activity_info.waiting_duration;
+            let old_waiting_duration = activity_info
+                .current_position
+                .map(|position| context.route().waiting_duration(position))
+                .unwrap_or(SignedDuration::ZERO);
+
+            delta += new_waiting_duration;
+            delta -= old_waiting_duration;
+        }
+
         Score::of(
             self.score_level(),
-            context
-                .solution
-                .problem()
-                .waiting_duration_cost(context.waiting_duration_delta),
+            context.solution.problem().waiting_duration_cost(delta),
         )
     }
 }

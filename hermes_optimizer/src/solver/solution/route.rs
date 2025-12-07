@@ -248,13 +248,13 @@ impl WorkingSolutionRoute {
             if self.has_start(problem) {
                 costs += problem.travel_cost(
                     depot_location_id,
-                    self.first().service(problem).location_id(),
+                    self.first().job_task(problem).location_id(),
                 );
             }
 
             if self.has_end(problem) {
                 costs += problem.travel_cost(
-                    self.last().service(problem).location_id(),
+                    self.last().job_task(problem).location_id(),
                     depot_location_id,
                 );
             }
@@ -361,6 +361,10 @@ impl WorkingSolutionRoute {
 
     pub fn departure_time(&self, index: usize) -> Timestamp {
         self.departure_times[index]
+    }
+
+    pub fn waiting_duration(&self, index: usize) -> SignedDuration {
+        self.waiting_durations[index]
     }
 
     pub fn total_initial_load(&self) -> &Capacity {
@@ -668,23 +672,23 @@ impl WorkingSolutionRoute {
             self.fwd_load_shipments[i].update(&current_load_shipments);
 
             self.arrival_times[i] = if i == 0 {
-                compute_first_activity_arrival_time(problem, self.vehicle_id, job_id.index())
+                compute_first_activity_arrival_time(problem, self.vehicle_id, job_id)
             } else {
                 compute_activity_arrival_time(
                     problem,
-                    self.activity_ids[i - 1].index(),
+                    self.activity_ids[i - 1],
                     self.departure_times[i - 1],
-                    job_id.index(),
+                    job_id,
                 )
             };
 
             self.waiting_durations[i] =
-                compute_waiting_duration(problem.service(job_id.index()), self.arrival_times[i]);
+                compute_waiting_duration(problem, job_id, self.arrival_times[i]);
             self.departure_times[i] = compute_departure_time(
                 problem,
                 self.arrival_times[i],
                 self.waiting_durations[i],
-                job_id.index(),
+                job_id,
             );
         }
 
@@ -815,10 +819,10 @@ impl WorkingSolutionRoute {
             return true;
         }
 
-        let mut previous_service_id = if start == 0 {
+        let mut previous_job_id = if start == 0 {
             None
         } else {
-            Some(self.activity_ids[start - 1].index())
+            Some(self.activity_ids[start - 1])
         };
 
         let mut previous_departure_time = if start == 0 {
@@ -834,26 +838,24 @@ impl WorkingSolutionRoute {
         };
 
         for job_id in job_ids.chain(succeeding_activities.iter().copied()) {
-            let service_id = job_id.into(); // TODO: handle shipments
-            let arrival_time = if let Some(previous_service_id) = previous_service_id
+            let arrival_time = if let Some(previous_job_id) = previous_job_id
                 && let Some(previous_departure_time) = previous_departure_time
             {
                 compute_activity_arrival_time(
                     problem,
-                    previous_service_id,
+                    previous_job_id,
                     previous_departure_time,
-                    service_id,
+                    job_id,
                 )
             } else {
-                compute_first_activity_arrival_time(problem, self.vehicle_id, service_id)
+                compute_first_activity_arrival_time(problem, self.vehicle_id, job_id)
             };
 
-            let waiting_duration =
-                compute_waiting_duration(problem.service(service_id), arrival_time);
+            let waiting_duration = compute_waiting_duration(problem, job_id, arrival_time);
 
-            previous_service_id = Some(service_id);
+            previous_job_id = Some(job_id);
             let new_departure_time =
-                compute_departure_time(problem, arrival_time, waiting_duration, service_id);
+                compute_departure_time(problem, arrival_time, waiting_duration, job_id);
             previous_departure_time = Some(new_departure_time);
 
             if let Some(&current_activity_index) = self.jobs.get(&job_id)
@@ -873,9 +875,10 @@ impl WorkingSolutionRoute {
                 }
             }
 
-            let service = problem.service(service_id);
-
-            if !service.time_windows_satisfied(arrival_time) {
+            if !problem
+                .job_task(job_id)
+                .time_windows_satisfied(arrival_time)
+            {
                 return false;
             }
         }
@@ -1289,6 +1292,7 @@ mod tests {
                 waiting_duration: SignedDuration::ZERO,
                 departure_time: "2025-11-30T10:50:00+02:00".parse().unwrap(),
                 job_id: JobId::Service(1),
+                current_position: Some(2)
             })
         );
 
@@ -1299,6 +1303,7 @@ mod tests {
                 waiting_duration: SignedDuration::ZERO,
                 departure_time: "2025-11-30T11:30:00+02:00".parse().unwrap(),
                 job_id: JobId::Service(2),
+                current_position: Some(1)
             })
         );
 

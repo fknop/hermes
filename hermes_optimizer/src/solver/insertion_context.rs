@@ -1,14 +1,11 @@
-use jiff::{SignedDuration, Timestamp};
+use jiff::Timestamp;
 
 use crate::{
     problem::{job::JobId, service::ServiceId, vehicle_routing_problem::VehicleRoutingProblem},
     solver::solution::{
+        route::WorkingSolutionRoute,
         route_update_iterator::RouteUpdateIterator,
-        utils::{
-            compute_activity_arrival_time, compute_departure_time,
-            compute_first_activity_arrival_time, compute_vehicle_end, compute_vehicle_start,
-            compute_waiting_duration,
-        },
+        utils::{compute_first_activity_arrival_time, compute_vehicle_end, compute_vehicle_start},
     },
 };
 
@@ -30,12 +27,27 @@ pub struct InsertionContext<'a> {
     pub problem: &'a VehicleRoutingProblem,
     pub solution: &'a WorkingSolution,
     pub insertion: &'a Insertion,
-    pub waiting_duration_delta: SignedDuration,
 }
 
 impl<'a> InsertionContext<'a> {
+    pub fn new(
+        problem: &'a VehicleRoutingProblem,
+        solution: &'a WorkingSolution,
+        insertion: &'a Insertion,
+    ) -> Self {
+        InsertionContext {
+            problem,
+            solution,
+            insertion,
+        }
+    }
+
     pub fn problem(&self) -> &VehicleRoutingProblem {
         self.problem
+    }
+
+    pub fn route(&self) -> &WorkingSolutionRoute {
+        self.insertion.route(self.solution)
     }
 
     pub fn compute_vehicle_start(&self) -> Timestamp {
@@ -50,7 +62,7 @@ impl<'a> InsertionContext<'a> {
                 compute_first_activity_arrival_time(
                     self.problem,
                     vehicle_id,
-                    self.insertion.service_id(),
+                    self.insertion.job_id(),
                 ),
             )
         } else {
@@ -83,84 +95,5 @@ impl<'a> InsertionContext<'a> {
             last_service.job_id.into(),
             last_service.departure_time,
         )
-    }
-}
-
-pub fn compute_insertion_context<'a>(
-    problem: &'a VehicleRoutingProblem,
-    solution: &'a WorkingSolution,
-    insertion: &'a Insertion,
-) -> InsertionContext<'a> {
-    match insertion {
-        Insertion::ExistingRoute(context) => {
-            let route = solution.route(context.route_id);
-
-            let mut arrival_time = if route.is_empty() || context.position == 0 {
-                compute_first_activity_arrival_time(problem, route.vehicle_id(), context.service_id)
-            } else {
-                let previous_activity = &route.activity(context.position - 1);
-                compute_activity_arrival_time(
-                    problem,
-                    previous_activity.job_id().index(),
-                    previous_activity.departure_time(),
-                    context.service_id,
-                )
-            };
-            let mut waiting_duration =
-                compute_waiting_duration(problem.service(context.service_id), arrival_time);
-            let mut departure_time =
-                compute_departure_time(problem, arrival_time, waiting_duration, context.service_id);
-
-            let mut waiting_duration_delta =
-                compute_waiting_duration(problem.service(context.service_id), arrival_time);
-
-            let mut last_service_id = context.service_id;
-
-            // We don't do +1 here because the list didn't change
-            for i in context.position..route.activity_ids().len() {
-                let service_id = route.activity(i).job_id().index();
-                arrival_time = compute_activity_arrival_time(
-                    problem,
-                    last_service_id,
-                    departure_time,
-                    service_id,
-                );
-
-                waiting_duration_delta -= route.activity(i).waiting_duration();
-
-                waiting_duration =
-                    compute_waiting_duration(problem.service(context.service_id), arrival_time);
-                waiting_duration_delta += waiting_duration;
-
-                departure_time =
-                    compute_departure_time(problem, arrival_time, waiting_duration, service_id);
-
-                last_service_id = service_id;
-            }
-
-            InsertionContext {
-                problem,
-                solution,
-                waiting_duration_delta,
-                insertion,
-            }
-        }
-        Insertion::NewRoute(context) => {
-            let arrival_time = compute_first_activity_arrival_time(
-                problem,
-                context.vehicle_id,
-                context.service_id,
-            );
-
-            let waiting_duration =
-                compute_waiting_duration(problem.service(context.service_id), arrival_time);
-
-            InsertionContext {
-                problem,
-                waiting_duration_delta: waiting_duration,
-                solution,
-                insertion,
-            }
-        }
     }
 }
