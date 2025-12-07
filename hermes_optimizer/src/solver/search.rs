@@ -295,7 +295,7 @@ impl Search {
 
                         loop {
 
-                            let should_intensify = state.iterations_without_improvement > 500 && state.iteration - state.last_intensify_iteration.unwrap_or(0) > 1000;
+                            let should_intensify =  state.iterations_without_improvement > 500 && state.iteration - state.last_intensify_iteration.unwrap_or(0) > 1000;
 
                             if should_intensify {
                                 let mut intensify_search = IntensifySearch::new(&self.problem);

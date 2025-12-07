@@ -214,7 +214,7 @@ impl VehicleRoutingProblem {
     }
 
     pub fn waiting_duration_weight(&self) -> f64 {
-        10.0
+        1.0
     }
 
     pub fn has_waiting_duration_cost(&self) -> bool {
