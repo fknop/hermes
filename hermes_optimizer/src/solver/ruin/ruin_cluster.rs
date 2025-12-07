@@ -34,7 +34,7 @@ impl RuinSolution for RuinCluster {
 
             let service_ids = solution
                 .route(route_id)
-                .activities()
+                .activity_ids()
                 .iter()
                 .map(|job_id| job_id.index())
                 .collect::<Vec<_>>();

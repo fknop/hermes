@@ -29,7 +29,7 @@ impl RouteConstraint for WaitingDurationConstraint {
         }
 
         let waiting_duration = route
-            .activities()
+            .activity_ids()
             .iter()
             .enumerate()
             .map(|(index, _)| {

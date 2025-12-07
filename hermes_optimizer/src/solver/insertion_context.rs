@@ -117,7 +117,7 @@ pub fn compute_insertion_context<'a>(
             let mut last_service_id = context.service_id;
 
             // We don't do +1 here because the list didn't change
-            for i in context.position..route.activities().len() {
+            for i in context.position..route.activity_ids().len() {
                 let service_id = route.activity(i).job_id().index();
                 arrival_time = compute_activity_arrival_time(
                     problem,

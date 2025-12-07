@@ -85,8 +85,8 @@ impl IntensifySearch {
             }
 
             let route = solution.route(v1);
-            for from in 0..route.activities().len() {
-                for to in (from + 2)..route.activities().len() {
+            for from in 0..route.activity_ids().len() {
+                for to in (from + 2)..route.activity_ids().len() {
                     let op = TwoOptOperator::new(TwoOptParams {
                         route_id: v1,
                         from,
@@ -110,8 +110,8 @@ impl IntensifySearch {
 
             let route = solution.route(v1);
 
-            for from_pos in 0..route.activities().len() {
-                for to_pos in 0..=route.activities().len() {
+            for from_pos in 0..route.activity_ids().len() {
+                for to_pos in 0..=route.activity_ids().len() {
                     if from_pos == to_pos {
                         continue;
                     }
@@ -143,8 +143,8 @@ impl IntensifySearch {
 
             let route = solution.route(v1);
 
-            for from_pos in 0..route.activities().len() {
-                for to_pos in from_pos + 1..route.activities().len() {
+            for from_pos in 0..route.activity_ids().len() {
+                for to_pos in from_pos + 1..route.activity_ids().len() {
                     let op = SwapOperator::new(SwapOperatorParams {
                         route_id: v1,
                         first: from_pos,
@@ -169,8 +169,8 @@ impl IntensifySearch {
             let from_route = solution.route(v1);
             let to_route = solution.route(v2);
 
-            for from_pos in 0..from_route.activities().len() {
-                for to_pos in 0..to_route.activities().len() {
+            for from_pos in 0..from_route.activity_ids().len() {
+                for to_pos in 0..to_route.activity_ids().len() {
                     let op = InterSwapOperator::new(InterSwapOperatorParams {
                         first_route_id: v1,
                         second_route_id: v2,
@@ -196,14 +196,14 @@ impl IntensifySearch {
             let from_route = solution.route(v1);
             let to_route = solution.route(v2);
 
-            for from_pos in 0..from_route.activities().len() {
+            for from_pos in 0..from_route.activity_ids().len() {
                 let from_job_id = from_route.job_id_at(from_pos);
 
                 if from_job_id.is_shipment() {
                     continue; // skip shipments for inter-relocate
                 }
 
-                for to_pos in 0..=to_route.activities().len() {
+                for to_pos in 0..=to_route.activity_ids().len() {
                     let op = InterRelocateOperator::new(InterRelocateParams {
                         from_route_id: v1,
                         to_route_id: v2,
@@ -228,7 +228,7 @@ impl IntensifySearch {
             }
 
             let route = solution.route(v1);
-            let route_length = route.activities().len();
+            let route_length = route.activity_ids().len();
 
             for from_pos in 0..route_length {
                 for to_pos in from_pos..=route_length {
@@ -267,8 +267,8 @@ impl IntensifySearch {
                 continue;
             }
 
-            let from_route_length = from_route.activities().len();
-            let to_route_length = to_route.activities().len();
+            let from_route_length = from_route.activity_ids().len();
+            let to_route_length = to_route.activity_ids().len();
 
             for from_pos in 0..from_route_length - 1 {
                 for to_pos in 0..to_route_length - 1 {
@@ -312,8 +312,8 @@ impl IntensifySearch {
                 continue;
             }
 
-            let from_route_length = from_route.activities().len();
-            let to_route_length = to_route.activities().len();
+            let from_route_length = from_route.activity_ids().len();
+            let to_route_length = to_route.activity_ids().len();
 
             for from_pos in 0..from_route_length - 1 {
                 for to_pos in 0..to_route_length - 1 {
@@ -356,8 +356,8 @@ impl IntensifySearch {
                 best_delta,
                 v1,
                 v2,
-                solution.route(v1).activities().len(),
-                solution.route(v2).activities().len(),
+                solution.route(v1).activity_ids().len(),
+                solution.route(v2).activity_ids().len(),
                 op
             );
 

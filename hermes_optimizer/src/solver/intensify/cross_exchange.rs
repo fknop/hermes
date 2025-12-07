@@ -203,7 +203,7 @@ mod tests {
         assert_eq!(
             solution
                 .route(0)
-                .activities()
+                .activity_ids()
                 .iter()
                 .map(|job_id| job_id.index())
                 .collect::<Vec<_>>(),
@@ -213,7 +213,7 @@ mod tests {
         assert_eq!(
             solution
                 .route(1)
-                .activities()
+                .activity_ids()
                 .iter()
                 .map(|job_id| job_id.index())
                 .collect::<Vec<_>>(),

@@ -44,7 +44,7 @@ fn transform_solution(accepted_solution: &AcceptedSolution) -> BenchmarkSolution
         .map(|route| {
             let mut activities: Vec<BenchmarkSolutionActivity> = vec![];
 
-            activities.extend(route.activities().iter().map(|activity| {
+            activities.extend(route.activity_ids().iter().map(|activity| {
                 BenchmarkSolutionActivity::Service(BenchmarkServiceActivity {
                     service_id: activity.index(),
                 })

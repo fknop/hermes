@@ -325,7 +325,7 @@ pub fn construct_solution(
     while !satisfied {
         let mut service_to_remove = None;
         for route in solution.routes() {
-            for (i, _) in route.activities().iter().enumerate() {
+            for (i, _) in route.activity_ids().iter().enumerate() {
                 let activity = route.activity(i);
                 let time_window_score = TimeWindowConstraint::compute_time_window_score(
                     ScoreLevel::Hard,

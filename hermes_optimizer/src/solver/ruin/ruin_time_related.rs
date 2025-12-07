@@ -61,7 +61,7 @@ impl RuinSolution for RuinTimeRelated {
 
         let target_activity_id = context
             .rng
-            .random_range(0..routes[target_route_id].activities().len());
+            .random_range(0..routes[target_route_id].activity_ids().len());
 
         let target_activity = &routes[target_route_id].activity(target_activity_id);
 
@@ -70,7 +70,7 @@ impl RuinSolution for RuinTimeRelated {
 
         let mut related_activities: Vec<RelatednessToTargetActivity> = Vec::new();
         for (route_index, route) in routes.iter().enumerate() {
-            for (activity_index, _) in route.activities().iter().enumerate() {
+            for (activity_index, _) in route.activity_ids().iter().enumerate() {
                 if target_activity_id == activity_index && target_route_id == route_index {
                     continue; // Skip the target activity itself
                 }

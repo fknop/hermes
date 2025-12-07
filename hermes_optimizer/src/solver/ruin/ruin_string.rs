@@ -78,7 +78,7 @@ impl RuinString {
         R: rand::Rng,
     {
         let route = solution.route(route_id);
-        let route_length = route.activities().len();
+        let route_length = route.activity_ids().len();
         let string_length = rng.random_range(self.l_min..=self.l_max).min(route_length);
 
         let random_activity = rng.random_range(0..route_length);
@@ -101,7 +101,7 @@ impl RuinString {
         R: rand::Rng,
     {
         let route = solution.route(route_id);
-        let route_length = route.activities().len();
+        let route_length = route.activity_ids().len();
         let string_length = rng.random_range(self.l_min..=self.l_max).min(route_length);
         let preserved_string_length =
             Self::compute_preserved_length(string_length, route_length, rng);

@@ -149,7 +149,7 @@ impl BestInsertion {
             let routes = solution.routes();
 
             for (route_id, route) in routes.iter().enumerate() {
-                for position in 0..=route.activities().len() {
+                for position in 0..=route.activity_ids().len() {
                     if self.should_blink(context.rng) {
                         continue;
                     }

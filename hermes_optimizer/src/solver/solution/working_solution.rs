@@ -62,11 +62,11 @@ impl WorkingSolution {
                 return false;
             }
 
-            if route.activities.len() != other_route.activities.len() {
+            if route.activity_ids.len() != other_route.activity_ids.len() {
                 return false;
             }
 
-            if !route.activities.eq(&other_route.activities) {
+            if !route.activity_ids.eq(&other_route.activity_ids) {
                 return false;
             }
         }
@@ -220,8 +220,8 @@ impl WorkingSolution {
     }
 
     pub fn remove_route(&mut self, route_id: usize) -> usize {
-        let removed = self.routes[route_id].activities.len();
-        for job_id in self.routes[route_id].activities.iter() {
+        let removed = self.routes[route_id].activity_ids.len();
+        for job_id in self.routes[route_id].activity_ids.iter() {
             self.unassigned_jobs.insert(job_id.index());
         }
 

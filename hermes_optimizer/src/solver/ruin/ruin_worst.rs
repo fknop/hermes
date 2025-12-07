@@ -23,7 +23,7 @@ fn compute_savings(
         Some(route.activity(index - 1).job_task(problem).location_id())
     };
 
-    let next_location_id = if index == route.activities().len() - 1 {
+    let next_location_id = if index == route.activity_ids().len() - 1 {
         if vehicle.should_return_to_depot() {
             vehicle.depot_location_id()
         } else {
@@ -74,7 +74,7 @@ impl RuinSolution for RuinWorst {
             candidates.clear();
             candidates.extend(solution.non_empty_routes_iter().flat_map(|route| {
                 route
-                    .activities()
+                    .activity_ids()
                     .iter()
                     .enumerate()
                     .map(|(index, &job_id)| {

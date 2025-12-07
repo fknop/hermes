@@ -41,13 +41,13 @@ impl GlobalConstraint for TransportCostConstraint {
                 }
             }
 
-            for (index, &job_id) in route.activities().iter().enumerate() {
+            for (index, &job_id) in route.activity_ids().iter().enumerate() {
                 if index == 0 {
                     // Skip the first activity, as it is already counted with the depot
                     continue;
                 }
 
-                let previous_activity_job_id = route.activities()[index - 1];
+                let previous_activity_job_id = route.activity_ids()[index - 1];
                 cost += problem.travel_cost(
                     problem.job_task(previous_activity_job_id).location_id(),
                     problem.job_task(job_id).location_id(),
@@ -114,12 +114,12 @@ impl GlobalConstraint for TransportCostConstraint {
                     previous_location_id = Some(depot_id);
                 }
 
-                let activities = route.activities();
+                let activities = route.activity_ids();
                 next_location_id = Some(problem.job_task(activities[0]).location_id());
             }
-            Some(route) if position >= route.activities().len() => {
+            Some(route) if position >= route.activity_ids().len() => {
                 // Inserting at the end
-                let activities = route.activities();
+                let activities = route.activity_ids();
                 previous_location_id = Some(
                     problem
                         .job_task(activities[activities.len() - 1])
@@ -133,7 +133,7 @@ impl GlobalConstraint for TransportCostConstraint {
                 }
             }
             Some(route) => {
-                let activities = route.activities();
+                let activities = route.activity_ids();
                 previous_location_id =
                     Some(problem.job_task(activities[position - 1]).location_id());
                 next_location_id = Some(problem.job_task(activities[position]).location_id());

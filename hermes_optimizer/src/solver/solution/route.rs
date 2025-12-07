@@ -27,7 +27,7 @@ pub struct WorkingSolutionRoute {
     // Map of JobId to index in activities vector
     pub(super) jobs: FxHashMap<JobId, usize>,
 
-    pub(super) activities: Vec<JobId>,
+    pub(super) activity_ids: Vec<JobId>,
 
     pub(super) arrival_times: Vec<Timestamp>,
     pub(super) departure_times: Vec<Timestamp>,
@@ -69,7 +69,7 @@ impl WorkingSolutionRoute {
             bbox: BBox::default(),
             updated_in_iteration: false,
 
-            activities: Vec::new(),
+            activity_ids: Vec::new(),
             arrival_times: Vec::new(),
             departure_times: Vec::new(),
             waiting_durations: Vec::new(),
@@ -90,16 +90,16 @@ impl WorkingSolutionRoute {
     }
 
     pub fn len(&self) -> usize {
-        self.activities.len()
+        self.activity_ids.len()
     }
 
     pub fn is_empty(&self) -> bool {
-        self.activities.is_empty()
+        self.activity_ids.is_empty()
     }
 
     pub fn reset(&mut self) {
         self.jobs.clear();
-        self.activities.clear();
+        self.activity_ids.clear();
 
         self.bbox = BBox::default();
     }
@@ -147,7 +147,7 @@ impl WorkingSolutionRoute {
             location_ids.push(depot_location.id());
         }
 
-        for &job_id in &self.activities {
+        for &job_id in &self.activity_ids {
             location_ids.push(problem.job_task(job_id).location_id());
         }
 
@@ -181,7 +181,7 @@ impl WorkingSolutionRoute {
     }
 
     pub fn job_id_at(&self, position: usize) -> JobId {
-        self.activities[position]
+        self.activity_ids[position]
     }
 
     pub fn duration(&self, problem: &VehicleRoutingProblem) -> SignedDuration {
@@ -210,14 +210,14 @@ impl WorkingSolutionRoute {
             }
         }
 
-        for (index, &job_id) in self.activities.iter().enumerate() {
+        for (index, &job_id) in self.activity_ids.iter().enumerate() {
             if index == 0 {
                 // Skip the first activity, as it is already counted with the depot
                 continue;
             }
 
             transport_duration += problem.travel_time(
-                problem.job_task(self.activities[index - 1]).location_id(),
+                problem.job_task(self.activity_ids[index - 1]).location_id(),
                 problem.job_task(job_id).location_id(),
             );
         }
@@ -245,14 +245,14 @@ impl WorkingSolutionRoute {
             }
         }
 
-        for (index, &activity) in self.activities.iter().enumerate() {
+        for (index, &activity) in self.activity_ids.iter().enumerate() {
             if index == 0 {
                 // Skip the first activity, as it is already counted with the depot
                 continue;
             }
 
             costs += problem.travel_cost(
-                problem.job_task(self.activities[index - 1]).location_id(),
+                problem.job_task(self.activity_ids[index - 1]).location_id(),
                 problem.job_task(activity).location_id(),
             );
         }
@@ -280,14 +280,14 @@ impl WorkingSolutionRoute {
             }
         }
 
-        for (index, &job_id) in self.activities.iter().enumerate() {
+        for (index, &job_id) in self.activity_ids.iter().enumerate() {
             if index == 0 {
                 // Skip the first activity, as it is already counted with the depot
                 continue;
             }
 
             distance += problem.travel_distance(
-                problem.job_task(self.activities[index - 1]).location_id(),
+                problem.job_task(self.activity_ids[index - 1]).location_id(),
                 problem.job_task(job_id).location_id(),
             );
         }
@@ -297,7 +297,7 @@ impl WorkingSolutionRoute {
 
     pub fn first(&self) -> RouteActivityInfo {
         assert!(
-            self.len() > 0,
+            !self.is_empty(),
             "cannot call WorkingSolutionRoute::first() on empty route"
         );
         self.activity(0)
@@ -305,18 +305,22 @@ impl WorkingSolutionRoute {
 
     pub fn last(&self) -> RouteActivityInfo {
         assert!(
-            self.len() > 0,
+            !self.is_empty(),
             "cannot call WorkingSolutionRoute::last() on empty route"
         );
         self.activity(self.len() - 1)
     }
 
-    pub fn activities(&self) -> &[JobId] {
-        &self.activities
+    pub fn activity_ids(&self) -> &[JobId] {
+        &self.activity_ids
+    }
+
+    pub fn activity_id(&self, index: usize) -> JobId {
+        self.activity_ids[index]
     }
 
     pub fn activities_iter(&self) -> impl Iterator<Item = RouteActivityInfo> {
-        self.activities
+        self.activity_ids
             .iter()
             .enumerate()
             .map(move |(index, _)| self.activity(index))
@@ -324,12 +328,12 @@ impl WorkingSolutionRoute {
 
     pub fn activity(&self, index: usize) -> RouteActivityInfo {
         assert!(
-            self.len() > 0,
+            !self.is_empty(),
             "cannot call WorkingSolutionRoute::activity() on empty route"
         );
 
         RouteActivityInfo {
-            job_id: self.activities[index],
+            job_id: self.activity_ids[index],
             arrival_time: self.arrival_times[index],
             departure_time: self.departure_times[index],
             waiting_duration: self.waiting_durations[index],
@@ -384,7 +388,7 @@ impl WorkingSolutionRoute {
     }
 
     pub fn location_id(&self, problem: &VehicleRoutingProblem, position: usize) -> Option<usize> {
-        self.activities
+        self.activity_ids
             .get(position)
             .map(|&job_id| problem.job_task(job_id).location_id())
     }
@@ -397,10 +401,10 @@ impl WorkingSolutionRoute {
         if position == 0 {
             let vehicle = self.vehicle(problem);
             vehicle.depot_location_id()
-        } else if position <= self.activities.len() {
+        } else if position <= self.activity_ids.len() {
             Some(
                 problem
-                    .job_task(self.activities[position - 1])
+                    .job_task(self.activity_ids[position - 1])
                     .location_id(),
             )
         } else {
@@ -413,7 +417,7 @@ impl WorkingSolutionRoute {
         problem: &VehicleRoutingProblem,
         position: usize,
     ) -> Option<usize> {
-        let next_job_id = self.activities.get(position + 1);
+        let next_job_id = self.activity_ids.get(position + 1);
 
         match next_job_id {
             Some(&job_id) => Some(problem.job_task(job_id).location_id()),
@@ -433,19 +437,19 @@ impl WorkingSolutionRoute {
         problem: &VehicleRoutingProblem,
         activity_id: usize,
     ) -> Option<JobId> {
-        if activity_id >= self.activities.len() {
+        if activity_id >= self.activity_ids.len() {
             return None;
         }
 
-        let job_id = self.activities[activity_id];
+        let job_id = self.activity_ids[activity_id];
 
         if !self.jobs.contains_key(&job_id) {
             return None;
         }
 
-        self.activities.remove(activity_id);
+        self.activity_ids.remove(activity_id);
         self.jobs.remove(&job_id);
-        for (index, &job_id) in self.activities.iter().skip(activity_id).enumerate() {
+        for (index, &job_id) in self.activity_ids.iter().skip(activity_id).enumerate() {
             self.jobs.insert(job_id, index + activity_id);
         }
         // self.update_next_activities(problem, activity_id);
@@ -489,7 +493,8 @@ impl WorkingSolutionRoute {
             return;
         }
 
-        self.activities.insert(position, JobId::Service(service_id));
+        self.activity_ids
+            .insert(position, JobId::Service(service_id));
         self.updated_in_iteration = true;
 
         // Update the arrival times and departure times of subsequent activities
@@ -503,26 +508,27 @@ impl WorkingSolutionRoute {
         start: usize,
         end: usize,
     ) {
-        self.activities.splice(start..end, job_ids.iter().copied());
+        self.activity_ids
+            .splice(start..end, job_ids.iter().copied());
 
         // Update the arrival times and departure times of subsequent activities
         self.update_activity_data(problem);
     }
 
     pub fn move_activity(&mut self, problem: &VehicleRoutingProblem, from: usize, to: usize) {
-        if from > self.activities.len() || to > self.activities.len() || from == to {
+        if from > self.activity_ids.len() || to > self.activity_ids.len() || from == to {
             return;
         }
 
-        let activity = self.activities.remove(from);
-        self.activities
+        let activity = self.activity_ids.remove(from);
+        self.activity_ids
             .insert(if to > from { to - 1 } else { to }, activity);
 
         self.update_activity_data(problem);
     }
 
     pub fn swap_activities(&mut self, problem: &VehicleRoutingProblem, i: usize, j: usize) {
-        self.activities.swap(i, j);
+        self.activity_ids.swap(i, j);
 
         self.update_activity_data(problem);
     }
@@ -530,7 +536,7 @@ impl WorkingSolutionRoute {
     fn update_activity_data(&mut self, problem: &VehicleRoutingProblem) {
         self.jobs.clear();
         self.jobs.extend(
-            self.activities
+            self.activity_ids
                 .iter()
                 .enumerate()
                 .map(|(index, &job_id)| (job_id, index)),
@@ -551,7 +557,7 @@ impl WorkingSolutionRoute {
     fn update_bbox(&mut self, problem: &VehicleRoutingProblem) {
         let mut bbox = BBox::default();
 
-        for &job_id in &self.activities {
+        for &job_id in &self.activity_ids {
             let location_id = problem.job_task(job_id).location_id();
             let location = problem.location(location_id);
             bbox.extend(location);
@@ -618,7 +624,7 @@ impl WorkingSolutionRoute {
         let mut current_load_shipments = Capacity::empty();
 
         for i in 0..len {
-            let job_id = self.activities[i];
+            let job_id = self.activity_ids[i];
             let job = problem.job(job_id);
 
             match job_id {
@@ -651,7 +657,7 @@ impl WorkingSolutionRoute {
             } else {
                 compute_activity_arrival_time(
                     problem,
-                    self.activities[i - 1].index(),
+                    self.activity_ids[i - 1].index(),
                     self.departure_times[i - 1],
                     job_id.index(),
                 )
@@ -675,7 +681,7 @@ impl WorkingSolutionRoute {
         current_load_pickups.reset();
 
         for i in (0..len).rev() {
-            let job_id = self.activities[i];
+            let job_id = self.activity_ids[i];
             let job = problem.job(job_id);
 
             self.bwd_load_deliveries[i].update(&current_load_deliveries);
@@ -720,7 +726,7 @@ impl WorkingSolutionRoute {
 
         if problem.has_time_windows() {
             let mut next_activity_time_slack = SignedDuration::MAX;
-            for (index, &activity_job_id) in self.activities.iter().enumerate().rev() {
+            for (index, &activity_job_id) in self.activity_ids.iter().enumerate().rev() {
                 let current_time_slack =
                     compute_time_slack(problem, activity_job_id, self.arrival_times[index]);
 
@@ -736,11 +742,11 @@ impl WorkingSolutionRoute {
     where
         R: rand::Rng,
     {
-        rng.random_range(0..self.activities.len())
+        rng.random_range(0..self.activity_ids.len())
     }
 
     pub fn job_ids(&self, start: usize, end: usize) -> &[JobId] {
-        &self.activities[start..end]
+        &self.activity_ids[start..end]
     }
 
     /// Returns an iterator over the job IDs in the route between the given [start, end) indices
@@ -749,11 +755,11 @@ impl WorkingSolutionRoute {
         start: usize,
         end: usize,
     ) -> impl DoubleEndedIterator<Item = JobId> + Clone + '_ {
-        if end > self.activities.len() || start > self.activities.len() || start > end {
+        if end > self.activity_ids.len() || start > self.activity_ids.len() || start > end {
             println!("{} -> {}", start, end)
         }
 
-        self.activities[start..end].iter().copied()
+        self.activity_ids[start..end].iter().copied()
     }
 
     pub fn updated_activities_iter<'a, I>(
@@ -797,7 +803,7 @@ impl WorkingSolutionRoute {
         let mut previous_service_id = if start == 0 {
             None
         } else {
-            Some(self.activities[start - 1].index())
+            Some(self.activity_ids[start - 1].index())
         };
 
         let mut previous_departure_time = if start == 0 {
@@ -806,8 +812,8 @@ impl WorkingSolutionRoute {
             Some(self.departure_times[start - 1])
         };
 
-        let succeeding_activities = if end < self.activities.len() {
-            &self.activities[end..]
+        let succeeding_activities = if end < self.activity_ids.len() {
+            &self.activity_ids[end..]
         } else {
             &[]
         };
@@ -1303,14 +1309,14 @@ mod tests {
 
         assert_eq!(route.len(), 3);
         assert_eq!(
-            route.activities.iter().copied().collect::<Vec<_>>(),
+            route.activity_ids.iter().copied().collect::<Vec<_>>(),
             vec![JobId::Service(1), JobId::Service(2), JobId::Service(0)]
         );
 
         route.replace_activities(&problem, &[JobId::Service(0), JobId::Service(2)], 1, 3);
 
         assert_eq!(
-            route.activities.iter().copied().collect::<Vec<_>>(),
+            route.activity_ids.iter().copied().collect::<Vec<_>>(),
             vec![JobId::Service(1), JobId::Service(0), JobId::Service(2)]
         );
     }
@@ -1329,7 +1335,7 @@ mod tests {
 
         assert_eq!(route.len(), 2);
         assert_eq!(
-            route.activities.iter().copied().collect::<Vec<_>>(),
+            route.activity_ids.iter().copied().collect::<Vec<_>>(),
             vec![JobId::Service(0), JobId::Service(1)]
         );
 
@@ -1337,7 +1343,7 @@ mod tests {
 
         assert_eq!(route.len(), 3);
         assert_eq!(
-            route.activities.iter().copied().collect::<Vec<_>>(),
+            route.activity_ids.iter().copied().collect::<Vec<_>>(),
             vec![JobId::Service(0), JobId::Service(2), JobId::Service(1)]
         );
     }

@@ -91,7 +91,7 @@ mod tests {
         assert_eq!(
             solution
                 .route(0)
-                .activities()
+                .activity_ids()
                 .iter()
                 .copied()
                 .collect::<Vec<JobId>>(),

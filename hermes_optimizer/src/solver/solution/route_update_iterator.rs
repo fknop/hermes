@@ -44,8 +44,8 @@ where
         start: usize,
         end: usize,
     ) -> Self {
-        let succeeding_activities = if end < route.activities.len() {
-            &route.activities[end..]
+        let succeeding_activities = if end < route.activity_ids.len() {
+            &route.activity_ids[end..]
         } else {
             &[]
         };

@@ -27,7 +27,7 @@ impl ConstructionBestInsertion {
                         let routes = solution.routes();
 
                         for (route_id, route) in routes.iter().enumerate() {
-                            for position in 0..=route.activities().len() {
+                            for position in 0..=route.activity_ids().len() {
                                 let insertion = if route.is_empty() {
                                     Insertion::NewRoute(NewRouteInsertion {
                                         service_id,

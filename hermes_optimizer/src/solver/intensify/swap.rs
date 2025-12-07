@@ -180,7 +180,7 @@ mod tests {
         assert_eq!(
             solution
                 .route(0)
-                .activities()
+                .activity_ids()
                 .iter()
                 .map(|activity| activity.index())
                 .collect::<Vec<_>>(),
