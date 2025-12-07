@@ -31,7 +31,9 @@ impl RouteConstraint for WaitingDurationConstraint {
         let waiting_duration = route
             .activities()
             .iter()
-            .map(|activity| {
+            .enumerate()
+            .map(|(index, _)| {
+                let activity = route.activity(index);
                 if activity.waiting_duration().as_secs()
                     > problem.acceptable_service_waiting_duration_secs()
                 {

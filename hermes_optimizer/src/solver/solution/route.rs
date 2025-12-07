@@ -1,13 +1,12 @@
-use fxhash::{FxHashMap, FxHashSet};
+use fxhash::FxHashMap;
 use jiff::{SignedDuration, Timestamp};
 
 use crate::{
     problem::{
-        self,
         amount::AmountExpression,
         capacity::{Capacity, is_capacity_satisfied},
-        job::{Job, JobId},
-        service::{ServiceId, ServiceType},
+        job::{Job, JobId, JobTask},
+        service::{Service, ServiceId, ServiceType},
         vehicle::{Vehicle, VehicleId},
         vehicle_routing_problem::VehicleRoutingProblem,
     },
@@ -30,6 +29,10 @@ pub struct WorkingSolutionRoute {
     pub(super) jobs: FxHashMap<JobId, usize>,
 
     pub(super) activities: Vec<WorkingSolutionRouteActivity>,
+
+    pub(super) arrival_times: Vec<Timestamp>,
+    pub(super) departure_times: Vec<Timestamp>,
+    pub(super) waiting_durations: Vec<SignedDuration>,
 
     pub(super) fwd_load_pickups: Vec<Capacity>,
     pub(super) fwd_load_deliveries: Vec<Capacity>,
@@ -67,6 +70,10 @@ impl WorkingSolutionRoute {
             activities: Vec::new(),
             bbox: BBox::default(),
             updated_in_iteration: false,
+
+            arrival_times: Vec::new(),
+            departure_times: Vec::new(),
+            waiting_durations: Vec::new(),
             fwd_load_peaks: Vec::new(),
             bwd_load_peaks: Vec::new(),
             current_load: Vec::new(),
@@ -160,7 +167,7 @@ impl WorkingSolutionRoute {
             problem,
             self.vehicle_id,
             first.service_id(),
-            first.arrival_time(),
+            self.arrival_times[0],
         )
     }
 
@@ -170,7 +177,7 @@ impl WorkingSolutionRoute {
             problem,
             self.vehicle_id,
             last.service_id(),
-            last.departure_time(),
+            self.departure_times[self.len() - 1],
         )
     }
 
@@ -303,8 +310,28 @@ impl WorkingSolutionRoute {
         &self.activities
     }
 
-    pub fn activity(&self, index: usize) -> &WorkingSolutionRouteActivity {
-        &self.activities[index]
+    pub fn activities_iter(&self) -> impl Iterator<Item = RouteActivityInfo> {
+        self.activities
+            .iter()
+            .enumerate()
+            .map(move |(index, _)| self.activity(index))
+    }
+
+    pub fn activity(&self, index: usize) -> RouteActivityInfo {
+        RouteActivityInfo {
+            job_id: self.activities[index].job_id,
+            arrival_time: self.arrival_times[index],
+            departure_time: self.departure_times[index],
+            waiting_duration: self.waiting_durations[index],
+        }
+    }
+
+    pub fn arrival_time(&self, index: usize) -> Timestamp {
+        self.arrival_times[index]
+    }
+
+    pub fn departure_time(&self, index: usize) -> Timestamp {
+        self.departure_times[index]
     }
 
     pub fn total_initial_load(&self) -> &Capacity {
@@ -316,10 +343,7 @@ impl WorkingSolutionRoute {
     }
 
     pub fn total_waiting_duration(&self) -> SignedDuration {
-        self.activities
-            .iter()
-            .map(|activity| activity.waiting_duration)
-            .sum()
+        self.waiting_durations.iter().sum()
     }
 
     pub fn vehicle_id(&self) -> VehicleId {
@@ -532,6 +556,11 @@ impl WorkingSolutionRoute {
     }
 
     fn resize_data(&mut self, problem: &VehicleRoutingProblem) {
+        self.arrival_times.resize(self.len(), Timestamp::MAX);
+        self.departure_times.resize(self.len(), Timestamp::MAX);
+        self.waiting_durations
+            .resize(self.len(), SignedDuration::ZERO);
+
         self.fwd_load_pickups.resize_with(self.len(), || {
             Capacity::with_dimensions(problem.capacity_dimensions())
         });
@@ -584,9 +613,7 @@ impl WorkingSolutionRoute {
         let mut current_load_shipments = Capacity::empty();
 
         for i in 0..len {
-            let (first, second) = self.activities.split_at_mut(i);
-            let previous_activity = first.last();
-            let current_activity = &mut second[0];
+            let current_activity = &self.activities[i];
             let job_id = current_activity.job_id();
             let job = problem.job(job_id);
 
@@ -615,29 +642,29 @@ impl WorkingSolutionRoute {
             self.fwd_load_deliveries[i].update(&current_load_deliveries);
             self.fwd_load_shipments[i].update(&current_load_shipments);
 
-            match previous_activity {
-                Some(previous_activity) => {
-                    current_activity.update_arrival_time(
-                        problem,
-                        compute_activity_arrival_time(
-                            problem,
-                            previous_activity.job_id.into(),
-                            previous_activity.departure_time,
-                            current_activity.job_id.into(),
-                        ),
-                    );
-                }
-                None => {
-                    current_activity.update_arrival_time(
-                        problem,
-                        compute_first_activity_arrival_time(
-                            problem,
-                            self.vehicle_id,
-                            current_activity.job_id.into(),
-                        ),
-                    );
-                }
-            }
+            self.arrival_times[i] = if i == 0 {
+                compute_first_activity_arrival_time(
+                    problem,
+                    self.vehicle_id,
+                    current_activity.job_id.into(),
+                )
+            } else {
+                compute_activity_arrival_time(
+                    problem,
+                    self.activities[i - 1].job_id.index(),
+                    self.departure_times[i - 1],
+                    current_activity.job_id.into(),
+                )
+            };
+
+            self.waiting_durations[i] =
+                compute_waiting_duration(problem.service(job_id.index()), self.arrival_times[i]);
+            self.departure_times[i] = compute_departure_time(
+                problem,
+                self.arrival_times[i],
+                self.waiting_durations[i],
+                job_id.index(),
+            );
         }
 
         assert!(self.fwd_load_shipments[self.len() - 1].is_empty());
@@ -695,7 +722,7 @@ impl WorkingSolutionRoute {
             let mut next_activity_time_slack = SignedDuration::MAX;
             for (index, activity) in self.activities.iter().enumerate().rev() {
                 let current_time_slack =
-                    compute_time_slack(problem, activity.job_id, activity.arrival_time);
+                    compute_time_slack(problem, activity.job_id, self.arrival_times[index]);
 
                 self.time_slacks[index] = current_time_slack.min(next_activity_time_slack);
                 next_activity_time_slack = self.time_slacks[index];
@@ -765,15 +792,17 @@ impl WorkingSolutionRoute {
             return true;
         }
 
-        let previous_activity = if start == 0 {
+        let mut previous_service_id = if start == 0 {
             None
         } else {
-            Some(&self.activities[start - 1])
+            Some(self.activities[start - 1].job_id().index())
         };
 
-        let mut previous_service_id = previous_activity.map(|activity| activity.service_id());
-        let mut previous_departure_time =
-            previous_activity.map(|activity| activity.departure_time());
+        let mut previous_departure_time = if start == 0 {
+            None
+        } else {
+            Some(self.departure_times[start - 1])
+        };
 
         let succeeding_activities = if end < self.activities.len() {
             &self.activities[end..]
@@ -812,13 +841,13 @@ impl WorkingSolutionRoute {
                 && current_activity_index >= end
             {
                 let current_time_slack = self.time_slacks[current_activity_index];
-                let current_arrival_time = self.activities[current_activity_index].arrival_time;
+                let current_arrival_time = self.arrival_times[current_activity_index];
 
                 if arrival_time > current_arrival_time + current_time_slack {
                     return false;
                 }
 
-                let current_departure_time = self.activities[current_activity_index].departure_time;
+                let current_departure_time = self.departure_times[current_activity_index];
                 // Early termination, if the departure time is earlier or equal to the current one, we know the next one are valid as well
                 if new_departure_time <= current_departure_time {
                     return true;
@@ -929,6 +958,44 @@ impl WorkingSolutionRoute {
         }
 
         true
+    }
+}
+
+pub struct RouteActivityInfo {
+    pub(super) job_id: JobId,
+    pub(super) arrival_time: Timestamp,
+    pub(super) departure_time: Timestamp,
+    pub(super) waiting_duration: SignedDuration,
+}
+
+impl RouteActivityInfo {
+    pub fn departure_time(&self) -> Timestamp {
+        self.departure_time
+    }
+
+    pub fn arrival_time(&self) -> Timestamp {
+        self.arrival_time
+    }
+
+    pub fn waiting_duration(&self) -> SignedDuration {
+        self.waiting_duration
+    }
+
+    pub fn job_id(&self) -> JobId {
+        self.job_id
+    }
+
+    #[deprecated]
+    pub fn service<'a>(&self, problem: &'a VehicleRoutingProblem) -> &'a Service {
+        problem.service(self.job_id.into())
+    }
+
+    pub fn job<'a>(&self, problem: &'a VehicleRoutingProblem) -> &'a Job {
+        problem.job(self.job_id.index())
+    }
+
+    pub fn job_task<'a>(&self, problem: &'a VehicleRoutingProblem) -> JobTask<'a> {
+        problem.job_task(self.job_id)
     }
 }
 
@@ -1124,34 +1191,34 @@ mod tests {
 
         // Check arrival times
         assert_eq!(
-            route.activities[0].arrival_time,
+            route.arrival_times[0],
             "2025-11-30T10:00:00+02:00".parse().unwrap()
         );
         assert_eq!(
-            route.activities[1].arrival_time,
+            route.arrival_times[1],
             "2025-11-30T10:40:00+02:00".parse().unwrap()
         );
         assert_eq!(
-            route.activities[2].arrival_time,
+            route.arrival_times[2],
             "2025-11-30T11:20:00+02:00".parse().unwrap()
         );
 
         // Check waiting durations
-        assert_eq!(route.activities[0].waiting_duration, SignedDuration::ZERO);
-        assert_eq!(route.activities[1].waiting_duration, SignedDuration::ZERO);
-        assert_eq!(route.activities[2].waiting_duration, SignedDuration::ZERO);
+        assert_eq!(route.waiting_durations[0], SignedDuration::ZERO);
+        assert_eq!(route.waiting_durations[1], SignedDuration::ZERO);
+        assert_eq!(route.waiting_durations[2], SignedDuration::ZERO);
 
         // Check departure times
         assert_eq!(
-            route.activities[0].departure_time,
+            route.departure_times[0],
             "2025-11-30T10:10:00+02:00".parse().unwrap()
         );
         assert_eq!(
-            route.activities[1].departure_time,
+            route.departure_times[1],
             "2025-11-30T10:50:00+02:00".parse().unwrap()
         );
         assert_eq!(
-            route.activities[2].departure_time,
+            route.departure_times[2],
             "2025-11-30T11:30:00+02:00".parse().unwrap()
         );
 

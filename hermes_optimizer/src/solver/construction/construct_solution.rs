@@ -325,15 +325,16 @@ pub fn construct_solution(
     while !satisfied {
         let mut service_to_remove = None;
         for route in solution.routes() {
-            for (i, activity) in route.activities().iter().enumerate() {
+            for (i, _) in route.activities().iter().enumerate() {
+                let activity = route.activity(i);
                 let time_window_score = TimeWindowConstraint::compute_time_window_score(
                     ScoreLevel::Hard,
-                    activity.service(problem).time_windows(),
+                    activity.job_task(problem).time_windows(),
                     activity.arrival_time(),
                 );
 
                 if time_window_score.hard_score > 0.0 {
-                    service_to_remove = Some(activity.service_id());
+                    service_to_remove = Some(activity.job_id().index());
                     break;
                 }
 
@@ -342,7 +343,7 @@ pub fn construct_solution(
                 let load = route.load_at(i);
 
                 if !is_capacity_satisfied(vehicle.capacity(), load) {
-                    service_to_remove = Some(activity.service_id());
+                    service_to_remove = Some(activity.job_id().index());
                     break;
                 }
             }

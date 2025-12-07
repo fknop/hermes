@@ -98,10 +98,10 @@ pub fn compute_insertion_context<'a>(
             let mut arrival_time = if route.is_empty() || context.position == 0 {
                 compute_first_activity_arrival_time(problem, route.vehicle_id(), context.service_id)
             } else {
-                let previous_activity = &route.activities()[context.position - 1];
+                let previous_activity = &route.activity(context.position - 1);
                 compute_activity_arrival_time(
                     problem,
-                    previous_activity.service_id(),
+                    previous_activity.job_id().index(),
                     previous_activity.departure_time(),
                     context.service_id,
                 )
@@ -126,7 +126,7 @@ pub fn compute_insertion_context<'a>(
                     service_id,
                 );
 
-                waiting_duration_delta -= route.activities()[i].waiting_duration();
+                waiting_duration_delta -= route.activity(i).waiting_duration();
 
                 waiting_duration =
                     compute_waiting_duration(problem.service(context.service_id), arrival_time);

@@ -8,7 +8,10 @@ use crate::{
         insertion_context::InsertionContext,
         score::Score,
         score_level::ScoreLevel,
-        solution::{activity::WorkingSolutionRouteActivity, route::WorkingSolutionRoute},
+        solution::{
+            activity::WorkingSolutionRouteActivity,
+            route::{RouteActivityInfo, WorkingSolutionRoute},
+        },
     },
 };
 
@@ -65,11 +68,11 @@ impl ActivityConstraint for TimeWindowConstraint {
         &self,
         problem: &VehicleRoutingProblem,
         _route: &WorkingSolutionRoute,
-        activity: &WorkingSolutionRouteActivity,
+        activity: &RouteActivityInfo,
     ) -> Score {
         TimeWindowConstraint::compute_time_window_score(
             self.score_level(),
-            activity.service(problem).time_windows(),
+            activity.job_task(problem).time_windows(),
             activity.arrival_time(),
         )
     }

@@ -306,7 +306,7 @@ impl Search {
                                     if !solutions_guard.is_empty()
                                         && let Some(AcceptedSolution {
                                             solution, score, ..
-                                        }) =best_selector
+                                        }) = best_selector
                                             .select_solution(&solutions_guard, &mut thread_rng)
                                     {
                                         (solution.clone(), *score)

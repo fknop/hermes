@@ -51,12 +51,16 @@ impl Constraint {
                 solution
                     .non_empty_routes_iter()
                     .fold(Score::zero(), |acc, route| {
-                        acc + route
-                            .activities()
-                            .iter()
-                            .fold(Score::zero(), |acc, activity| {
-                                acc + constraint.compute_score(problem, route, activity)
-                            })
+                        acc + route.activities().iter().enumerate().fold(
+                            Score::zero(),
+                            |acc, (index, _)| {
+                                acc + constraint.compute_score(
+                                    problem,
+                                    route,
+                                    &route.activity(index),
+                                )
+                            },
+                        )
                     })
             }
         }

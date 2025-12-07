@@ -116,9 +116,9 @@ fn transform_solution(accepted_solution: &AcceptedSolution, hermes: &Hermes) -> 
                 }));
             }
 
-            activities.extend(route.activities().iter().map(|activity| {
+            activities.extend(route.activities_iter().map(|activity| {
                 ApiSolutionActivity::Service(ApiServiceActivity {
-                    service_id: activity.service_id(),
+                    service_id: activity.job_id().index(),
                     arrival_time: activity.arrival_time(),
                     departure_time: activity.departure_time(),
                     waiting_duration: activity.waiting_duration(),

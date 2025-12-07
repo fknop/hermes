@@ -57,7 +57,7 @@ where
         };
 
         let previous_activity = if start > 0 {
-            Some(&route.activities[start - 1])
+            Some(&route.activity(start - 1))
         } else {
             None
         };
@@ -71,8 +71,8 @@ where
             succeeding_iter: succeeding_activities
                 .iter()
                 .map(|activity| activity.job_id()),
-            previous_job_id: previous_activity.map(|activity| activity.job_id()),
-            previous_departure_time: previous_activity.map(|activity| activity.departure_time()),
+            previous_job_id: previous_activity.map(|activity| activity.job_id),
+            previous_departure_time: previous_activity.map(|activity| activity.departure_time),
         }
     }
 }

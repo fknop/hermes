@@ -63,17 +63,19 @@ impl RuinSolution for RuinTimeRelated {
             .rng
             .random_range(0..routes[target_route_id].activities().len());
 
-        let target_activity = &routes[target_route_id].activities()[target_activity_id];
+        let target_activity = &routes[target_route_id].activity(target_activity_id);
 
         let mut max_distance: Distance = 0.0;
         let mut max_time: SignedDuration = SignedDuration::ZERO;
 
         let mut related_activities: Vec<RelatednessToTargetActivity> = Vec::new();
         for (route_index, route) in routes.iter().enumerate() {
-            for (activity_index, activity) in route.activities().iter().enumerate() {
+            for (activity_index, _) in route.activities().iter().enumerate() {
                 if target_activity_id == activity_index && target_route_id == route_index {
                     continue; // Skip the target activity itself
                 }
+
+                let activity = route.activity(activity_index);
 
                 let target_arrival =
                     target_activity.arrival_time() /*+ target_activity.waiting_duration()*/;
@@ -84,19 +86,21 @@ impl RuinSolution for RuinTimeRelated {
                     )
                     .abs();
                 let distance = context.problem.travel_distance(
-                    target_activity.service(context.problem).location_id(),
-                    activity.service(context.problem).location_id(),
+                    target_activity.job_task(context.problem).location_id(),
+                    activity.job_task(context.problem).location_id(),
                 );
 
                 let demand_difference = (solution.problem().normalized_demand(target_activity_id)
-                    - solution.problem().normalized_demand(activity.service_id()))
+                    - solution
+                        .problem()
+                        .normalized_demand(activity.job_id().index()))
                 .iter()
                 .map(|value| value.abs())
                 .sum::<f64>()
                     / solution.problem().capacity_dimensions() as f64;
 
                 related_activities.push(RelatednessToTargetActivity {
-                    service_id: activity.service_id(),
+                    service_id: activity.job_id().index(),
                     time: time_difference,
                     distance,
                     normalized_demand: demand_difference,
