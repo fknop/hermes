@@ -8,10 +8,7 @@ use crate::{
         insertion_context::InsertionContext,
         score::Score,
         score_level::ScoreLevel,
-        solution::{
-            activity::WorkingSolutionRouteActivity,
-            route::{RouteActivityInfo, WorkingSolutionRoute},
-        },
+        solution::route::{RouteActivityInfo, WorkingSolutionRoute},
     },
 };
 

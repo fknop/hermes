@@ -69,7 +69,7 @@ impl IntensifyOp for RelocateOperator {
 
     fn is_valid(&self, solution: &WorkingSolution) -> bool {
         let route = solution.route(self.params.route_id);
-        let job_id = route.activities()[self.params.from].job_id();
+        let job_id = route.activities()[self.params.from];
 
         // A - B - C - D - E - F
         // Moving B after E, in_between_jobs will be C - D - E
@@ -101,7 +101,7 @@ impl IntensifyOp for RelocateOperator {
 
     fn apply(&self, problem: &VehicleRoutingProblem, solution: &mut WorkingSolution) {
         let route = solution.route_mut(self.params.route_id);
-        let job_id = route.activities()[self.params.from].job_id();
+        let job_id = route.activities()[self.params.from];
 
         if self.params.from < self.params.to {
             let in_between_jobs = route.job_ids_iter(self.params.from + 1, self.params.to);
@@ -189,7 +189,7 @@ mod tests {
                 .route(0)
                 .activities()
                 .iter()
-                .map(|activity| activity.service_id())
+                .map(|activity| activity.index())
                 .collect::<Vec<_>>(),
             vec![0, 2, 3, 1, 4, 5]
         );
@@ -235,7 +235,7 @@ mod tests {
                 .route(0)
                 .activities()
                 .iter()
-                .map(|activity| activity.service_id())
+                .map(|activity| activity.index())
                 .collect::<Vec<_>>(),
             vec![1, 2, 0, 3, 4, 5]
         );
@@ -281,7 +281,7 @@ mod tests {
                 .route(0)
                 .activities()
                 .iter()
-                .map(|activity| activity.service_id())
+                .map(|activity| activity.index())
                 .collect::<Vec<_>>(),
             vec![0, 2, 3, 4, 5, 1]
         );
@@ -327,7 +327,7 @@ mod tests {
                 .route(0)
                 .activities()
                 .iter()
-                .map(|activity| activity.service_id())
+                .map(|activity| activity.index())
                 .collect::<Vec<_>>(),
             vec![1, 0, 2, 3, 4, 5]
         );
@@ -373,7 +373,7 @@ mod tests {
                 .route(0)
                 .activities()
                 .iter()
-                .map(|activity| activity.service_id())
+                .map(|activity| activity.index())
                 .collect::<Vec<_>>(),
             vec![0, 2, 3, 4, 1, 5]
         );

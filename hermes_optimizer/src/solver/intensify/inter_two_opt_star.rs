@@ -211,7 +211,7 @@ mod tests {
                 .route(0)
                 .activities()
                 .iter()
-                .map(|activity| activity.service_id())
+                .map(|activity| activity.index())
                 .collect::<Vec<_>>(),
             vec![0, 1, 2, 9, 10],
         );
@@ -221,7 +221,7 @@ mod tests {
                 .route(1)
                 .activities()
                 .iter()
-                .map(|activity| activity.service_id())
+                .map(|activity| activity.index())
                 .collect::<Vec<_>>(),
             vec![6, 7, 8, 3, 4, 5],
         );
@@ -272,7 +272,7 @@ mod tests {
                 .route(0)
                 .activities()
                 .iter()
-                .map(|activity| activity.service_id())
+                .map(|activity| activity.index())
                 .collect::<Vec<_>>(),
             vec![0, 1, 2, 3, 4, 10],
         );
@@ -282,7 +282,7 @@ mod tests {
                 .route(1)
                 .activities()
                 .iter()
-                .map(|activity| activity.service_id())
+                .map(|activity| activity.index())
                 .collect::<Vec<_>>(),
             vec![6, 7, 8, 9, 5],
         );

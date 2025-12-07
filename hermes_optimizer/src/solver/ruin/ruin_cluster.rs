@@ -36,7 +36,7 @@ impl RuinSolution for RuinCluster {
                 .route(route_id)
                 .activities()
                 .iter()
-                .map(|activity| activity.service_id())
+                .map(|job_id| job_id.index())
                 .collect::<Vec<_>>();
 
             let mut removed_service_ids = vec![];

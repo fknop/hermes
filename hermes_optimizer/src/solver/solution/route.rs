@@ -11,7 +11,6 @@ use crate::{
         vehicle_routing_problem::VehicleRoutingProblem,
     },
     solver::solution::{
-        activity::WorkingSolutionRouteActivity,
         route_update_iterator::RouteUpdateIterator,
         utils::{
             compute_activity_arrival_time, compute_departure_time,
@@ -28,7 +27,7 @@ pub struct WorkingSolutionRoute {
     // Map of JobId to index in activities vector
     pub(super) jobs: FxHashMap<JobId, usize>,
 
-    pub(super) activities: Vec<WorkingSolutionRouteActivity>,
+    pub(super) activities: Vec<JobId>,
 
     pub(super) arrival_times: Vec<Timestamp>,
     pub(super) departure_times: Vec<Timestamp>,
@@ -67,10 +66,10 @@ impl WorkingSolutionRoute {
         let mut route = WorkingSolutionRoute {
             vehicle_id,
             jobs: FxHashMap::default(),
-            activities: Vec::new(),
             bbox: BBox::default(),
             updated_in_iteration: false,
 
+            activities: Vec::new(),
             arrival_times: Vec::new(),
             departure_times: Vec::new(),
             waiting_durations: Vec::new(),
@@ -148,8 +147,8 @@ impl WorkingSolutionRoute {
             location_ids.push(depot_location.id());
         }
 
-        for activity in &self.activities {
-            location_ids.push(activity.service(problem).location_id());
+        for &job_id in &self.activities {
+            location_ids.push(problem.job_task(job_id).location_id());
         }
 
         if self.has_end(problem)
@@ -166,7 +165,7 @@ impl WorkingSolutionRoute {
         compute_vehicle_start(
             problem,
             self.vehicle_id,
-            first.service_id(),
+            first.job_id().index(),
             self.arrival_times[0],
         )
     }
@@ -176,13 +175,13 @@ impl WorkingSolutionRoute {
         compute_vehicle_end(
             problem,
             self.vehicle_id,
-            last.service_id(),
+            last.job_id().index(),
             self.departure_times[self.len() - 1],
         )
     }
 
     pub fn job_id_at(&self, position: usize) -> JobId {
-        self.activities[position].job_id
+        self.activities[position]
     }
 
     pub fn duration(&self, problem: &VehicleRoutingProblem) -> SignedDuration {
@@ -199,27 +198,27 @@ impl WorkingSolutionRoute {
             if self.has_start(problem) {
                 transport_duration += problem.travel_time(
                     depot_location_id,
-                    self.first().service(problem).location_id(),
+                    self.first().job_task(problem).location_id(),
                 );
             }
 
             if self.has_end(problem) {
                 transport_duration += problem.travel_time(
-                    self.last().service(problem).location_id(),
+                    self.last().job_task(problem).location_id(),
                     depot_location_id,
                 );
             }
         }
 
-        for (index, activity) in self.activities.iter().enumerate() {
+        for (index, &job_id) in self.activities.iter().enumerate() {
             if index == 0 {
                 // Skip the first activity, as it is already counted with the depot
                 continue;
             }
 
             transport_duration += problem.travel_time(
-                self.activities[index - 1].service(problem).location_id(),
-                activity.service(problem).location_id(),
+                problem.job_task(self.activities[index - 1]).location_id(),
+                problem.job_task(job_id).location_id(),
             );
         }
 
@@ -246,15 +245,15 @@ impl WorkingSolutionRoute {
             }
         }
 
-        for (index, activity) in self.activities.iter().enumerate() {
+        for (index, &activity) in self.activities.iter().enumerate() {
             if index == 0 {
                 // Skip the first activity, as it is already counted with the depot
                 continue;
             }
 
             costs += problem.travel_cost(
-                self.activities[index - 1].service(problem).location_id(),
-                activity.service(problem).location_id(),
+                problem.job_task(self.activities[index - 1]).location_id(),
+                problem.job_task(activity).location_id(),
             );
         }
 
@@ -269,44 +268,50 @@ impl WorkingSolutionRoute {
             if self.has_start(problem) {
                 distance += problem.travel_distance(
                     depot_location_id,
-                    self.first().service(problem).location_id(),
+                    self.first().job_task(problem).location_id(),
                 );
             }
 
             if self.has_end(problem) {
                 distance += problem.travel_distance(
-                    self.last().service(problem).location_id(),
+                    self.last().job_task(problem).location_id(),
                     depot_location_id,
                 );
             }
         }
 
-        for (index, activity) in self.activities.iter().enumerate() {
+        for (index, &job_id) in self.activities.iter().enumerate() {
             if index == 0 {
                 // Skip the first activity, as it is already counted with the depot
                 continue;
             }
 
             distance += problem.travel_distance(
-                self.activities[index - 1].service(problem).location_id(),
-                activity.service(problem).location_id(),
+                problem.job_task(self.activities[index - 1]).location_id(),
+                problem.job_task(job_id).location_id(),
             );
         }
 
         distance
     }
 
-    pub fn first(&self) -> &WorkingSolutionRouteActivity {
-        // Empty routes should not be allowed
-        &self.activities[0]
+    pub fn first(&self) -> RouteActivityInfo {
+        assert!(
+            self.len() > 0,
+            "cannot call WorkingSolutionRoute::first() on empty route"
+        );
+        self.activity(0)
     }
 
-    pub fn last(&self) -> &WorkingSolutionRouteActivity {
-        // Empty routes should not be allowed
-        &self.activities[self.activities().len() - 1]
+    pub fn last(&self) -> RouteActivityInfo {
+        assert!(
+            self.len() > 0,
+            "cannot call WorkingSolutionRoute::last() on empty route"
+        );
+        self.activity(self.len() - 1)
     }
 
-    pub fn activities(&self) -> &[WorkingSolutionRouteActivity] {
+    pub fn activities(&self) -> &[JobId] {
         &self.activities
     }
 
@@ -318,8 +323,13 @@ impl WorkingSolutionRoute {
     }
 
     pub fn activity(&self, index: usize) -> RouteActivityInfo {
+        assert!(
+            self.len() > 0,
+            "cannot call WorkingSolutionRoute::activity() on empty route"
+        );
+
         RouteActivityInfo {
-            job_id: self.activities[index].job_id,
+            job_id: self.activities[index],
             arrival_time: self.arrival_times[index],
             departure_time: self.departure_times[index],
             waiting_duration: self.waiting_durations[index],
@@ -376,7 +386,7 @@ impl WorkingSolutionRoute {
     pub fn location_id(&self, problem: &VehicleRoutingProblem, position: usize) -> Option<usize> {
         self.activities
             .get(position)
-            .map(|activity| activity.service(problem).location_id())
+            .map(|&job_id| problem.job_task(job_id).location_id())
     }
 
     pub fn previous_location_id(
@@ -388,8 +398,11 @@ impl WorkingSolutionRoute {
             let vehicle = self.vehicle(problem);
             vehicle.depot_location_id()
         } else if position <= self.activities.len() {
-            let previous_activity = &self.activities[position - 1];
-            Some(previous_activity.service(problem).location_id())
+            Some(
+                problem
+                    .job_task(self.activities[position - 1])
+                    .location_id(),
+            )
         } else {
             None
         }
@@ -400,10 +413,10 @@ impl WorkingSolutionRoute {
         problem: &VehicleRoutingProblem,
         position: usize,
     ) -> Option<usize> {
-        let next_activity = self.activities.get(position + 1);
+        let next_job_id = self.activities.get(position + 1);
 
-        match next_activity {
-            Some(activity) => Some(activity.service(problem).location_id()),
+        match next_job_id {
+            Some(&job_id) => Some(problem.job_task(job_id).location_id()),
             None => {
                 let vehicle = self.vehicle(problem);
                 if vehicle.should_return_to_depot() {
@@ -424,8 +437,7 @@ impl WorkingSolutionRoute {
             return None;
         }
 
-        let activity = &self.activities[activity_id];
-        let job_id = activity.job_id();
+        let job_id = self.activities[activity_id];
 
         if !self.jobs.contains_key(&job_id) {
             return None;
@@ -433,8 +445,8 @@ impl WorkingSolutionRoute {
 
         self.activities.remove(activity_id);
         self.jobs.remove(&job_id);
-        for (index, activity) in self.activities.iter().skip(activity_id).enumerate() {
-            self.jobs.insert(activity.job_id(), index + activity_id);
+        for (index, &job_id) in self.activities.iter().skip(activity_id).enumerate() {
+            self.jobs.insert(job_id, index + activity_id);
         }
         // self.update_next_activities(problem, activity_id);
 
@@ -477,10 +489,7 @@ impl WorkingSolutionRoute {
             return;
         }
 
-        self.activities.insert(
-            position,
-            WorkingSolutionRouteActivity::invalid(JobId::Service(service_id)),
-        );
+        self.activities.insert(position, JobId::Service(service_id));
         self.updated_in_iteration = true;
 
         // Update the arrival times and departure times of subsequent activities
@@ -494,12 +503,7 @@ impl WorkingSolutionRoute {
         start: usize,
         end: usize,
     ) {
-        self.activities.splice(
-            start..end,
-            job_ids
-                .iter()
-                .map(|&job_id| WorkingSolutionRouteActivity::invalid(job_id)),
-        );
+        self.activities.splice(start..end, job_ids.iter().copied());
 
         // Update the arrival times and departure times of subsequent activities
         self.update_activity_data(problem);
@@ -529,7 +533,7 @@ impl WorkingSolutionRoute {
             self.activities
                 .iter()
                 .enumerate()
-                .map(|(index, activity)| (activity.job_id(), index)),
+                .map(|(index, &job_id)| (job_id, index)),
         );
         self.update_data(problem);
         self.update_bbox(problem);
@@ -547,8 +551,9 @@ impl WorkingSolutionRoute {
     fn update_bbox(&mut self, problem: &VehicleRoutingProblem) {
         let mut bbox = BBox::default();
 
-        for activity in &self.activities {
-            let location = problem.service_location(activity.service_id());
+        for &job_id in &self.activities {
+            let location_id = problem.job_task(job_id).location_id();
+            let location = problem.location(location_id);
             bbox.extend(location);
         }
 
@@ -613,8 +618,7 @@ impl WorkingSolutionRoute {
         let mut current_load_shipments = Capacity::empty();
 
         for i in 0..len {
-            let current_activity = &self.activities[i];
-            let job_id = current_activity.job_id();
+            let job_id = self.activities[i];
             let job = problem.job(job_id);
 
             match job_id {
@@ -643,17 +647,13 @@ impl WorkingSolutionRoute {
             self.fwd_load_shipments[i].update(&current_load_shipments);
 
             self.arrival_times[i] = if i == 0 {
-                compute_first_activity_arrival_time(
-                    problem,
-                    self.vehicle_id,
-                    current_activity.job_id.into(),
-                )
+                compute_first_activity_arrival_time(problem, self.vehicle_id, job_id.index())
             } else {
                 compute_activity_arrival_time(
                     problem,
-                    self.activities[i - 1].job_id.index(),
+                    self.activities[i - 1].index(),
                     self.departure_times[i - 1],
-                    current_activity.job_id.into(),
+                    job_id.index(),
                 )
             };
 
@@ -675,7 +675,7 @@ impl WorkingSolutionRoute {
         current_load_pickups.reset();
 
         for i in (0..len).rev() {
-            let job_id = self.activities[i].job_id;
+            let job_id = self.activities[i];
             let job = problem.job(job_id);
 
             self.bwd_load_deliveries[i].update(&current_load_deliveries);
@@ -720,9 +720,9 @@ impl WorkingSolutionRoute {
 
         if problem.has_time_windows() {
             let mut next_activity_time_slack = SignedDuration::MAX;
-            for (index, activity) in self.activities.iter().enumerate().rev() {
+            for (index, &activity_job_id) in self.activities.iter().enumerate().rev() {
                 let current_time_slack =
-                    compute_time_slack(problem, activity.job_id, self.arrival_times[index]);
+                    compute_time_slack(problem, activity_job_id, self.arrival_times[index]);
 
                 self.time_slacks[index] = current_time_slack.min(next_activity_time_slack);
                 next_activity_time_slack = self.time_slacks[index];
@@ -739,6 +739,10 @@ impl WorkingSolutionRoute {
         rng.random_range(0..self.activities.len())
     }
 
+    pub fn job_ids(&self, start: usize, end: usize) -> &[JobId] {
+        &self.activities[start..end]
+    }
+
     /// Returns an iterator over the job IDs in the route between the given [start, end) indices
     pub fn job_ids_iter(
         &self,
@@ -749,9 +753,7 @@ impl WorkingSolutionRoute {
             println!("{} -> {}", start, end)
         }
 
-        self.activities[start..end]
-            .iter()
-            .map(|activity| activity.job_id)
+        self.activities[start..end].iter().copied()
     }
 
     pub fn updated_activities_iter<'a, I>(
@@ -795,7 +797,7 @@ impl WorkingSolutionRoute {
         let mut previous_service_id = if start == 0 {
             None
         } else {
-            Some(self.activities[start - 1].job_id().index())
+            Some(self.activities[start - 1].index())
         };
 
         let mut previous_departure_time = if start == 0 {
@@ -810,11 +812,7 @@ impl WorkingSolutionRoute {
             &[]
         };
 
-        for job_id in job_ids.chain(
-            succeeding_activities
-                .iter()
-                .map(|activity| activity.job_id()),
-        ) {
+        for job_id in job_ids.chain(succeeding_activities.iter().copied()) {
             let service_id = job_id.into(); // TODO: handle shipments
             let arrival_time = if let Some(previous_service_id) = previous_service_id
                 && let Some(previous_departure_time) = previous_departure_time
@@ -1305,22 +1303,14 @@ mod tests {
 
         assert_eq!(route.len(), 3);
         assert_eq!(
-            route
-                .activities
-                .iter()
-                .map(|a| a.job_id)
-                .collect::<Vec<_>>(),
+            route.activities.iter().copied().collect::<Vec<_>>(),
             vec![JobId::Service(1), JobId::Service(2), JobId::Service(0)]
         );
 
         route.replace_activities(&problem, &[JobId::Service(0), JobId::Service(2)], 1, 3);
 
         assert_eq!(
-            route
-                .activities
-                .iter()
-                .map(|a| a.job_id)
-                .collect::<Vec<_>>(),
+            route.activities.iter().copied().collect::<Vec<_>>(),
             vec![JobId::Service(1), JobId::Service(0), JobId::Service(2)]
         );
     }
@@ -1339,11 +1329,7 @@ mod tests {
 
         assert_eq!(route.len(), 2);
         assert_eq!(
-            route
-                .activities
-                .iter()
-                .map(|a| a.job_id)
-                .collect::<Vec<_>>(),
+            route.activities.iter().copied().collect::<Vec<_>>(),
             vec![JobId::Service(0), JobId::Service(1)]
         );
 
@@ -1351,11 +1337,7 @@ mod tests {
 
         assert_eq!(route.len(), 3);
         assert_eq!(
-            route
-                .activities
-                .iter()
-                .map(|a| a.job_id)
-                .collect::<Vec<_>>(),
+            route.activities.iter().copied().collect::<Vec<_>>(),
             vec![JobId::Service(0), JobId::Service(2), JobId::Service(1)]
         );
     }

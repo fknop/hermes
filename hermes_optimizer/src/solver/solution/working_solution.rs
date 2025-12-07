@@ -66,15 +66,7 @@ impl WorkingSolution {
                 return false;
             }
 
-            if !route
-                .activities
-                .iter()
-                .map(|activity| activity.job_id)
-                .eq(other_route
-                    .activities
-                    .iter()
-                    .map(|activity| activity.job_id))
-            {
+            if !route.activities.eq(&other_route.activities) {
                 return false;
             }
         }
@@ -229,8 +221,8 @@ impl WorkingSolution {
 
     pub fn remove_route(&mut self, route_id: usize) -> usize {
         let removed = self.routes[route_id].activities.len();
-        for activity in self.routes[route_id].activities.iter() {
-            self.unassigned_jobs.insert(activity.job_id.into());
+        for job_id in self.routes[route_id].activities.iter() {
+            self.unassigned_jobs.insert(job_id.index());
         }
 
         // TODO: reset to avoid reallocations

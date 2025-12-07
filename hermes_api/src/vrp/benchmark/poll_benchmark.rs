@@ -5,9 +5,7 @@ use axum::{
     response::IntoResponse,
 };
 use hermes_optimizer::solver::{
-    accepted_solution::AcceptedSolution,
-    solver::SolverStatus,
-    statistics::SearchStatistics,
+    accepted_solution::AcceptedSolution, solver::SolverStatus, statistics::SearchStatistics,
 };
 use serde::Serialize;
 use uuid::Uuid;
@@ -48,7 +46,7 @@ fn transform_solution(accepted_solution: &AcceptedSolution) -> BenchmarkSolution
 
             activities.extend(route.activities().iter().map(|activity| {
                 BenchmarkSolutionActivity::Service(BenchmarkServiceActivity {
-                    service_id: activity.service_id(),
+                    service_id: activity.index(),
                 })
             }));
 

@@ -34,7 +34,7 @@ mod tests {
     use std::sync::Arc;
 
     use crate::{
-        problem::service::ServiceId,
+        problem::{job::JobId, service::ServiceId},
         solver::ruin::{
             ruin_context::RuinContext, ruin_params::RuinParams, ruin_radial::RuinRadial,
             ruin_solution::RuinSolution,
@@ -93,9 +93,9 @@ mod tests {
                 .route(0)
                 .activities()
                 .iter()
-                .map(|activity| activity.service_id())
-                .collect::<Vec<ServiceId>>(),
-            vec![1, 3]
+                .copied()
+                .collect::<Vec<JobId>>(),
+            vec![JobId::Service(1), JobId::Service(3)]
         );
     }
 }

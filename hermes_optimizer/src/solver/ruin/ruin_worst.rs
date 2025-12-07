@@ -20,7 +20,7 @@ fn compute_savings(
     let previous_location_id = if index == 0 {
         vehicle.depot_location_id()
     } else {
-        Some(route.activities()[index - 1].service(problem).location_id())
+        Some(route.activity(index - 1).job_task(problem).location_id())
     };
 
     let next_location_id = if index == route.activities().len() - 1 {
@@ -30,10 +30,10 @@ fn compute_savings(
             None
         }
     } else {
-        Some(route.activities()[index + 1].service(problem).location_id())
+        Some(route.activity(index + 1).job_task(problem).location_id())
     };
 
-    let location_id = activity.service(problem).location_id();
+    let location_id = activity.job_task(problem).location_id();
 
     let travel_cost_previous = if let Some(previous_location_id) = previous_location_id {
         problem.travel_cost(previous_location_id, location_id)
@@ -77,9 +77,9 @@ impl RuinSolution for RuinWorst {
                     .activities()
                     .iter()
                     .enumerate()
-                    .map(|(index, activity)| {
+                    .map(|(index, &job_id)| {
                         let savings = compute_savings(solution.problem(), route, index);
-                        (activity.job_id(), savings)
+                        (job_id, savings)
                     })
             }));
 

@@ -27,33 +27,30 @@ impl GlobalConstraint for TransportCostConstraint {
         for route in solution.non_empty_routes_iter() {
             let vehicle = route.vehicle(problem);
 
-            let activities = route.activities();
-
             if let Some(depot_location_id) = vehicle.depot_location_id() {
                 cost += problem.travel_cost(
                     depot_location_id,
-                    activities[0].service(problem).location_id(),
+                    route.first().job_task(problem).location_id(),
                 );
 
                 if vehicle.should_return_to_depot() {
                     cost += problem.travel_cost(
-                        activities[activities.len() - 1]
-                            .service(problem)
-                            .location_id(),
+                        route.last().job_task(problem).location_id(),
                         depot_location_id,
                     )
                 }
             }
 
-            for (index, activity) in activities.iter().enumerate() {
+            for (index, &job_id) in route.activities().iter().enumerate() {
                 if index == 0 {
                     // Skip the first activity, as it is already counted with the depot
                     continue;
                 }
 
+                let previous_activity_job_id = route.activities()[index - 1];
                 cost += problem.travel_cost(
-                    activities[index - 1].service(problem).location_id(),
-                    activity.service(problem).location_id(),
+                    problem.job_task(previous_activity_job_id).location_id(),
+                    problem.job_task(job_id).location_id(),
                 )
             }
         }
@@ -118,14 +115,14 @@ impl GlobalConstraint for TransportCostConstraint {
                 }
 
                 let activities = route.activities();
-                next_location_id = Some(activities[0].service(problem).location_id());
+                next_location_id = Some(problem.job_task(activities[0]).location_id());
             }
             Some(route) if position >= route.activities().len() => {
                 // Inserting at the end
                 let activities = route.activities();
                 previous_location_id = Some(
-                    activities[activities.len() - 1]
-                        .service(problem)
+                    problem
+                        .job_task(activities[activities.len() - 1])
                         .location_id(),
                 );
 
@@ -138,8 +135,8 @@ impl GlobalConstraint for TransportCostConstraint {
             Some(route) => {
                 let activities = route.activities();
                 previous_location_id =
-                    Some(activities[position - 1].service(problem).location_id());
-                next_location_id = Some(activities[position].service(problem).location_id());
+                    Some(problem.job_task(activities[position - 1]).location_id());
+                next_location_id = Some(problem.job_task(activities[position]).location_id());
             }
         }
 

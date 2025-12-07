@@ -1,11 +1,8 @@
-use std::iter::Map;
-
 use jiff::{SignedDuration, Timestamp};
 
 use crate::{
     problem::{job::JobId, vehicle_routing_problem::VehicleRoutingProblem},
     solver::solution::{
-        activity::WorkingSolutionRouteActivity,
         route::WorkingSolutionRoute,
         utils::{
             compute_activity_arrival_time, compute_departure_time,
@@ -27,10 +24,7 @@ pub struct RouteUpdateIterator<'a, I> {
     route: &'a WorkingSolutionRoute,
     jobs_iter: I,
 
-    succeeding_iter: Map<
-        std::slice::Iter<'a, WorkingSolutionRouteActivity>,
-        fn(&'a WorkingSolutionRouteActivity) -> JobId,
-    >,
+    succeeding_iter: std::slice::Iter<'a, JobId>,
 
     index: usize,
     end: usize,
@@ -68,9 +62,7 @@ where
             end,
             index: start,
             jobs_iter,
-            succeeding_iter: succeeding_activities
-                .iter()
-                .map(|activity| activity.job_id()),
+            succeeding_iter: succeeding_activities.iter(),
             previous_job_id: previous_activity.map(|activity| activity.job_id),
             previous_departure_time: previous_activity.map(|activity| activity.departure_time),
         }
@@ -87,7 +79,7 @@ where
         let mut job_id = self.jobs_iter.next();
 
         if job_id.is_none() && self.index >= self.end {
-            job_id = self.succeeding_iter.next();
+            job_id = self.succeeding_iter.next().copied();
         }
 
         if let Some(job_id) = job_id {

@@ -182,7 +182,7 @@ mod tests {
                 .route(0)
                 .activities()
                 .iter()
-                .map(|activity| activity.service_id())
+                .map(|activity| activity.index())
                 .collect::<Vec<_>>(),
             vec![0, 5, 2, 3, 4, 1],
         );
