@@ -4,7 +4,7 @@ use serde::Deserialize;
 use super::location::Location;
 
 pub type Distance = f64;
-pub type Time = i64;
+pub type Time = f64;
 pub type Cost = f64;
 
 /// This matrix use a flat structure to store distances, times, and costs between locations.
@@ -50,7 +50,7 @@ impl TravelCostMatrix {
     pub fn from_haversine(locations: &[Location]) -> Self {
         let num_locations = locations.len();
         let mut distances: Vec<Distance> = vec![0.0; num_locations * num_locations];
-        let mut times: Vec<Time> = vec![0; num_locations * num_locations];
+        let mut times: Vec<Time> = vec![0.0; num_locations * num_locations];
         let mut costs: Vec<Cost> = vec![0.0; num_locations * num_locations];
 
         for (i, from) in locations.iter().enumerate() {
@@ -58,8 +58,7 @@ impl TravelCostMatrix {
                 distances[i * num_locations + j] = from.haversine_distance(to);
                 // Assume average speed of 50km/h
                 let speed = 50.0 / 3.6;
-                times[i * num_locations + j] =
-                    (((distances[i * num_locations + j]) / speed) * 1000.0).round() as Time;
+                times[i * num_locations + j] = (distances[i * num_locations + j]) / speed;
                 costs[i * num_locations + j] = distances[i * num_locations + j]
             }
         }
@@ -76,14 +75,13 @@ impl TravelCostMatrix {
     pub fn from_euclidian(locations: &[Location]) -> Self {
         let num_locations = locations.len();
         let mut distances: Vec<Distance> = vec![0.0; num_locations * num_locations];
-        let mut times: Vec<Time> = vec![0; num_locations * num_locations];
+        let mut times: Vec<Time> = vec![0.0; num_locations * num_locations];
         let mut costs: Vec<Cost> = vec![0.0; num_locations * num_locations];
 
         for (i, from) in locations.iter().enumerate() {
             for (j, to) in locations.iter().enumerate() {
                 distances[i * num_locations + j] = from.euclidian_distance(to);
-                times[i * num_locations + j] =
-                    (distances[i * num_locations + j] * 1000.0).round() as i64;
+                times[i * num_locations + j] = distances[i * num_locations + j];
                 costs[i * num_locations + j] = distances[i * num_locations + j]
             }
         }
@@ -98,11 +96,11 @@ impl TravelCostMatrix {
     }
 
     #[cfg(test)]
-    pub fn from_constant(locations: &[Location], time: i64, distance: f64, cost: f64) -> Self {
+    pub fn from_constant(locations: &[Location], time: f64, distance: f64, cost: f64) -> Self {
         let num_locations = locations.len();
         TravelCostMatrix {
             distances: vec![distance; num_locations * num_locations],
-            times: vec![time * 1000; num_locations * num_locations],
+            times: vec![time; num_locations * num_locations],
             costs: vec![cost; num_locations * num_locations],
             num_locations,
             is_symmetric: true,
@@ -124,7 +122,7 @@ impl TravelCostMatrix {
             return SignedDuration::ZERO;
         }
 
-        SignedDuration::from_millis(self.times[self.get_index(from, to)])
+        SignedDuration::from_secs_f64(self.times[self.get_index(from, to)])
     }
 
     #[inline(always)]

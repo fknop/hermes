@@ -172,7 +172,7 @@ impl VehicleRoutingProblem {
     pub fn service_location(&self, service_id: ServiceId) -> &Location {
         if let Job::Service(service) = &self.jobs[service_id] {
             let location_id = service.location_id();
-            return &self.locations[location_id];
+            &self.locations[location_id]
         } else {
             panic!("Job {service_id} is not a service");
         }

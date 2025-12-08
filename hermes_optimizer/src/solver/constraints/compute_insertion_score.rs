@@ -31,5 +31,5 @@ pub fn compute_insertion_score(
         score += constraint.compute_insertion_score(context);
     }
 
-    return score;
+    score
 }

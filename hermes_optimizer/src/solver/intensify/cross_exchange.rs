@@ -1,8 +1,7 @@
 use crate::{
     problem::{job::JobId, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{
-        intensify::intensify_operator::IntensifyOp,
-        solution::{route::WorkingSolutionRoute, working_solution::WorkingSolution},
+        intensify::intensify_operator::IntensifyOp, solution::working_solution::WorkingSolution,
     },
 };
 

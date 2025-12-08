@@ -1,10 +1,7 @@
 use jiff::{SignedDuration, Timestamp};
 
 use crate::problem::{
-    job::JobId,
-    service::{Service, ServiceId},
-    vehicle::VehicleId,
-    vehicle_routing_problem::VehicleRoutingProblem,
+    job::JobId, vehicle::VehicleId, vehicle_routing_problem::VehicleRoutingProblem,
 };
 
 pub(crate) fn compute_first_activity_arrival_time(
@@ -44,14 +41,14 @@ pub(crate) fn compute_first_activity_arrival_time(
 pub(crate) fn compute_vehicle_start(
     problem: &VehicleRoutingProblem,
     vehicle_id: VehicleId,
-    first_service_id: ServiceId,
+    job_id: JobId,
     first_arrival_time: Timestamp,
 ) -> Timestamp {
     let vehicle = problem.vehicle(vehicle_id);
-    let service = problem.service(first_service_id);
+    let job_task = problem.job_task(job_id);
 
     if let Some(depot_location) = problem.vehicle_depot_location(vehicle_id) {
-        let travel_time = problem.travel_time(depot_location.id(), service.location_id());
+        let travel_time = problem.travel_time(depot_location.id(), job_task.location_id());
 
         first_arrival_time - travel_time - vehicle.depot_duration()
     } else {
@@ -62,15 +59,15 @@ pub(crate) fn compute_vehicle_start(
 pub(crate) fn compute_vehicle_end(
     problem: &VehicleRoutingProblem,
     vehicle_id: VehicleId,
-    last_service_id: ServiceId,
+    job_id: JobId,
     last_departure_time: Timestamp,
 ) -> Timestamp {
-    let service = problem.service(last_service_id);
+    let job_task = problem.job_task(job_id);
     let vehicle = problem.vehicle(vehicle_id);
     if let Some(depot_location_id) = vehicle.depot_location_id()
         && vehicle.should_return_to_depot()
     {
-        let travel_time = problem.travel_time(service.location_id(), depot_location_id);
+        let travel_time = problem.travel_time(job_task.location_id(), depot_location_id);
 
         last_departure_time + travel_time + vehicle.end_depot_duration()
     } else {

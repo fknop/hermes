@@ -6,7 +6,7 @@ use serde::Serialize;
 
 use crate::{
     problem::{
-        amount::AmountExpression, service::ServiceId, travel_cost_matrix::Distance,
+        amount::AmountExpression, job::Job, service::ServiceId, travel_cost_matrix::Distance,
         vehicle_routing_problem::VehicleRoutingProblem,
     },
     solver::{
@@ -83,17 +83,17 @@ impl BestInsertion {
         }
     }
 
-    pub fn sort_unassigned_services(
+    pub fn sort_unassigned_jobs(
         &self,
         problem: &VehicleRoutingProblem,
-        unassigned_services: &mut [ServiceId],
+        unassigned_jobs: &mut [ServiceId],
         rng: &mut SmallRng,
     ) {
         match self.sort_method {
             BestInsertionSortMethod::Random => {
-                unassigned_services.shuffle(rng);
+                unassigned_jobs.shuffle(rng);
             }
-            BestInsertionSortMethod::Demand => unassigned_services.sort_unstable_by(|a, b| {
+            BestInsertionSortMethod::Demand => unassigned_jobs.sort_unstable_by(|a, b| {
                 // Not perfect but good enough for sorting purposes.
                 let first_demand_a = problem.job(*a).demand().get(0);
                 let first_demand_b = problem.job(*b).demand().get(0);
@@ -101,30 +101,49 @@ impl BestInsertion {
                 first_demand_a.total_cmp(&first_demand_b)
             }),
             BestInsertionSortMethod::Far => {
-                unassigned_services.sort_unstable_by_key(|&service| {
-                    let distance_from_depot =
-                        problem.average_cost_from_depot(problem.service_location(service).id());
+                unassigned_jobs.sort_unstable_by_key(|&id| match problem.job(id) {
+                    Job::Shipment(shipment) => {
+                        let pickup_distance =
+                            problem.average_cost_from_depot(shipment.pickup().location_id());
+                        let delivery_distance =
+                            problem.average_cost_from_depot(shipment.delivery().location_id());
 
-                    -distance_from_depot.round() as i64
+                        let avg_distance = (pickup_distance + delivery_distance) / 2.0;
+                        -avg_distance.round() as i64
+                    }
+                    Job::Service(service) => {
+                        let distance_from_depot =
+                            problem.average_cost_from_depot(service.location_id());
+                        -distance_from_depot.round() as i64
+                    }
                 });
             }
             BestInsertionSortMethod::Close => {
-                unassigned_services.sort_unstable_by_key(|&service| {
-                    let distance_from_depot =
-                        problem.average_cost_from_depot(problem.service_location(service).id());
+                unassigned_jobs.sort_unstable_by_key(|&id| match problem.job(id) {
+                    Job::Shipment(shipment) => {
+                        let pickup_distance =
+                            problem.average_cost_from_depot(shipment.pickup().location_id());
+                        let delivery_distance =
+                            problem.average_cost_from_depot(shipment.delivery().location_id());
 
-                    distance_from_depot.round() as i64
-                });
+                        let avg_distance = (pickup_distance + delivery_distance) / 2.0;
+                        avg_distance.round() as i64
+                    }
+                    Job::Service(service) => {
+                        let distance_from_depot =
+                            problem.average_cost_from_depot(service.location_id());
+                        distance_from_depot.round() as i64
+                    }
+                })
             }
             BestInsertionSortMethod::TimeWindow => {
-                unassigned_services.sort_unstable_by_key(|&service_id| {
-                    let service = problem.service(service_id);
+                unassigned_jobs.sort_unstable_by_key(|&job_id| {
+                    let time_windows = match problem.job(job_id) {
+                        Job::Service(service) => service.time_windows(),
+                        Job::Shipment(shipment) => shipment.pickup().time_windows(),
+                    };
 
-                    let end = service
-                        .time_windows()
-                        .iter()
-                        .filter_map(|tw| tw.end())
-                        .max();
+                    let end = time_windows.iter().filter_map(|tw| tw.end()).max();
 
                     end.unwrap_or(Timestamp::MAX)
                 });
@@ -207,7 +226,7 @@ impl RecreateSolution for BestInsertion {
         let mut unassigned_services: Vec<_> =
             solution.unassigned_services().iter().copied().collect();
 
-        self.sort_unassigned_services(context.problem, &mut unassigned_services, context.rng);
+        self.sort_unassigned_jobs(context.problem, &mut unassigned_services, context.rng);
         // unassigned_services.shuffle(context.rng);
 
         self.insert_services(&unassigned_services, solution, context);

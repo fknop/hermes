@@ -58,7 +58,7 @@ impl<'a> InsertionContext<'a> {
             compute_vehicle_start(
                 self.problem,
                 vehicle_id,
-                self.insertion.service_id(),
+                self.insertion.job_id(),
                 compute_first_activity_arrival_time(
                     self.problem,
                     vehicle_id,

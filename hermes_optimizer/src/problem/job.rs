@@ -3,10 +3,7 @@ use std::fmt::Display;
 use jiff::SignedDuration;
 
 use crate::problem::{
-    capacity::Capacity,
-    service::Service,
-    shipment::{Shipment, ShipmentLocation},
-    time_window::TimeWindow,
+    capacity::Capacity, service::Service, shipment::Shipment, time_window::TimeWindow,
 };
 
 #[derive(Hash, Debug, Clone, Copy, Eq, PartialEq)]

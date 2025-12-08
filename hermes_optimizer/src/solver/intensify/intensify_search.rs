@@ -1,6 +1,6 @@
 use std::f64;
 
-use tracing::{debug, info};
+use tracing::debug;
 
 use crate::{
     problem::{job::JobId, vehicle::VehicleId, vehicle_routing_problem::VehicleRoutingProblem},
@@ -85,7 +85,12 @@ impl IntensifySearch {
             }
 
             let route = solution.route(v1);
-            for from in 0..route.activity_ids().len() {
+
+            if route.len() < 4 {
+                continue; // need at least 4 activities to perform 2-opt
+            }
+
+            for from in 0..route.activity_ids().len() - 2 {
                 for to in (from + 2)..route.activity_ids().len() {
                     let op = TwoOptOperator::new(TwoOptParams {
                         route_id: v1,
@@ -111,7 +116,33 @@ impl IntensifySearch {
             let route = solution.route(v1);
 
             for from_pos in 0..route.activity_ids().len() {
-                for to_pos in 0..=route.activity_ids().len() {
+                let from_id = route.job_id_at(from_pos);
+
+                let (to_pos_start, to_pos_end) = match from_id {
+                    JobId::ShipmentPickup(index) => {
+                        let delivery_position = route
+                            .job_position(JobId::ShipmentDelivery(index))
+                            .unwrap_or_else(|| {
+                                panic!(
+                                    "Shipment pickup {from_id} has no delivery in the same route"
+                                )
+                            });
+                        (from_pos + 1, delivery_position)
+                    }
+                    JobId::ShipmentDelivery(index) => {
+                        let pickup_position = route
+                            .job_position(JobId::ShipmentPickup(index))
+                            .unwrap_or_else(|| {
+                                panic!(
+                                    "Shipment delivery {from_id} has no pickup in the same route"
+                                )
+                            });
+                        (pickup_position + 1, route.len())
+                    }
+                    JobId::Service(_) => (0, route.len()),
+                };
+
+                for to_pos in to_pos_start..=to_pos_end {
                     if from_pos == to_pos {
                         continue;
                     }

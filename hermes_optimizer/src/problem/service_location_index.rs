@@ -163,7 +163,7 @@ mod tests {
             &services
                 .iter()
                 .cloned()
-                .map(|service| Job::Service(service))
+                .map(Job::Service)
                 .collect::<Vec<_>>(),
             DistanceMethod::Haversine,
         );

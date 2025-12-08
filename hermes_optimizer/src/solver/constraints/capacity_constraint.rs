@@ -1,14 +1,12 @@
 use crate::{
     problem::{
         amount::AmountExpression,
-        capacity::{Capacity, is_capacity_satisfied, over_capacity_demand},
+        capacity::{is_capacity_satisfied, over_capacity_demand},
         service::ServiceType,
         vehicle_routing_problem::VehicleRoutingProblem,
     },
     solver::{
-        insertion_context::InsertionContext,
-        score::Score,
-        score_level::ScoreLevel,
+        insertion_context::InsertionContext, score::Score, score_level::ScoreLevel,
         solution::route::WorkingSolutionRoute,
     },
 };
@@ -30,25 +28,6 @@ impl Default for CapacityConstraint {
 impl CapacityConstraint {
     pub fn new(score_level: ScoreLevel) -> Self {
         CapacityConstraint { score_level }
-    }
-}
-
-impl CapacityConstraint {
-    fn compute_capacity_score(
-        &self,
-        vehicle_capacity: &Capacity,
-        initial_load: &Capacity,
-        cumulative_load: &Capacity,
-    ) -> Score {
-        let load = initial_load + cumulative_load;
-        if is_capacity_satisfied(vehicle_capacity, &load) {
-            Score::zero()
-        } else {
-            Score::of(
-                self.score_level,
-                over_capacity_demand(vehicle_capacity, &load),
-            )
-        }
     }
 }
 

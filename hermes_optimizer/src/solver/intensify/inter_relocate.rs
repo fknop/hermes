@@ -127,10 +127,9 @@ impl IntensifyOp for InterRelocateOperator {
 
 #[cfg(test)]
 mod tests {
-    use std::{env, sync::Arc};
+    use std::sync::Arc;
 
     use crate::{
-        solomon::solomon_parser::SolomonParser,
         solver::intensify::{
             intensify_operator::IntensifyOp,
             inter_relocate::{InterRelocateOperator, InterRelocateParams},

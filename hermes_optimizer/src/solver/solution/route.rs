@@ -180,7 +180,7 @@ impl WorkingSolutionRoute {
         compute_vehicle_start(
             problem,
             self.vehicle_id,
-            first.job_id().index(),
+            first.job_id(),
             self.arrival_times[0],
         )
     }
@@ -190,13 +190,17 @@ impl WorkingSolutionRoute {
         compute_vehicle_end(
             problem,
             self.vehicle_id,
-            last.job_id().index(),
+            last.job_id(),
             self.departure_times[self.len() - 1],
         )
     }
 
     pub fn job_id_at(&self, position: usize) -> JobId {
         self.activity_ids[position]
+    }
+
+    pub fn job_position(&self, job_id: JobId) -> Option<usize> {
+        self.jobs.get(&job_id).copied()
     }
 
     pub fn duration(&self, problem: &VehicleRoutingProblem) -> SignedDuration {
@@ -471,7 +475,6 @@ impl WorkingSolutionRoute {
         for (index, &job_id) in self.activity_ids.iter().skip(activity_id).enumerate() {
             self.jobs.insert(job_id, index + activity_id);
         }
-        // self.update_next_activities(problem, activity_id);
 
         self.updated_in_iteration = true;
 
@@ -1092,7 +1095,7 @@ mod tests {
         let mut builder = VehicleRoutingProblemBuilder::default();
         builder.set_travel_costs(TravelCostMatrix::from_constant(
             &locations,
-            SignedDuration::from_mins(30).as_secs(),
+            SignedDuration::from_mins(30).as_secs_f64(),
             100.0,
             SignedDuration::from_mins(30).as_secs_f64(),
         ));
@@ -1134,7 +1137,7 @@ mod tests {
         let mut builder = VehicleRoutingProblemBuilder::default();
         builder.set_travel_costs(TravelCostMatrix::from_constant(
             &locations,
-            SignedDuration::from_mins(30).as_secs(),
+            SignedDuration::from_mins(30).as_secs_f64(),
             100.0,
             SignedDuration::from_mins(30).as_secs_f64(),
         ));
@@ -1483,7 +1486,7 @@ mod tests {
         // Travel time of 30 mins between consecutive locations
         builder.set_travel_costs(TravelCostMatrix::from_constant(
             &locations,
-            SignedDuration::from_mins(30).as_secs(),
+            SignedDuration::from_mins(30).as_secs_f64(),
             100.0,
             SignedDuration::from_mins(30).as_secs_f64(),
         ));
