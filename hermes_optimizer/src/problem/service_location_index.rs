@@ -2,13 +2,13 @@ use geo::{Distance, Haversine};
 use rstar::primitives::GeomWithData;
 use rstar::{AABB, Envelope, PointDistance, RTree, RTreeObject};
 
-use crate::problem::job::{Job, JobId};
+use crate::problem::job::{ActivityId, Job};
 
 use super::distance_method::DistanceMethod;
 use super::location::Location;
 
 pub struct IndexedData {
-    job_id: JobId,
+    job_id: ActivityId,
 }
 
 pub enum IndexedPoint {
@@ -76,15 +76,15 @@ impl ServiceLocationIndex {
         for (job_id, job) in jobs.iter().enumerate() {
             match job {
                 Job::Service(service) => {
-                    location_ids.push((JobId::Service(job_id), service.location_id()));
+                    location_ids.push((ActivityId::Service(job_id), service.location_id()));
                 }
                 Job::Shipment(shipment) => {
                     location_ids.push((
-                        JobId::ShipmentPickup(job_id),
+                        ActivityId::ShipmentPickup(job_id),
                         shipment.pickup().location_id(),
                     ));
                     location_ids.push((
-                        JobId::ShipmentDelivery(job_id),
+                        ActivityId::ShipmentDelivery(job_id),
                         shipment.delivery().location_id(),
                     ));
                 }
@@ -117,7 +117,7 @@ impl ServiceLocationIndex {
         ServiceLocationIndex { tree }
     }
 
-    pub fn nearest_neighbor_iter<'a, P>(&'a self, point: P) -> impl Iterator<Item = JobId> + 'a
+    pub fn nearest_neighbor_iter<'a, P>(&'a self, point: P) -> impl Iterator<Item = ActivityId> + 'a
     where
         P: Into<geo::Point>,
     {
@@ -168,7 +168,7 @@ mod tests {
             DistanceMethod::Haversine,
         );
 
-        let nearest: Vec<JobId> = index
+        let nearest: Vec<ActivityId> = index
             .nearest_neighbor_iter(geo::Point::new(locations[0].x(), locations[0].y()))
             .collect();
 

@@ -1,5 +1,5 @@
 use crate::{
-    problem::{job::JobId, vehicle_routing_problem::VehicleRoutingProblem},
+    problem::{job::ActivityId, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{
         intensify::intensify_operator::IntensifyOp,
         solution::{route::WorkingSolutionRoute, working_solution::WorkingSolution},
@@ -44,7 +44,7 @@ impl SwapOperator {
     fn moved_jobs<'a>(
         &'a self,
         route: &'a WorkingSolutionRoute,
-    ) -> impl DoubleEndedIterator<Item = JobId> + Clone + 'a {
+    ) -> impl DoubleEndedIterator<Item = ActivityId> + Clone + 'a {
         if self.params.first < self.params.second {
             std::iter::once(route.job_id(self.params.second))
                 .chain(route.job_ids_iter(self.params.first + 1, self.params.second))
@@ -115,7 +115,7 @@ impl IntensifyOp for SwapOperator {
 
     fn apply(&self, problem: &VehicleRoutingProblem, solution: &mut WorkingSolution) {
         let route = solution.route_mut(self.params.route_id);
-        let moved_jobs: Vec<JobId> = self.moved_jobs(route).collect();
+        let moved_jobs: Vec<ActivityId> = self.moved_jobs(route).collect();
 
         solution.route_mut(self.params.route_id).replace_activities(
             problem,

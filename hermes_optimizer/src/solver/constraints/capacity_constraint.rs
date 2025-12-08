@@ -2,12 +2,13 @@ use crate::{
     problem::{
         amount::AmountExpression,
         capacity::{is_capacity_satisfied, over_capacity_demand},
+        job::Job,
         service::ServiceType,
         vehicle_routing_problem::VehicleRoutingProblem,
     },
     solver::{
-        insertion_context::InsertionContext, score::Score, score_level::ScoreLevel,
-        solution::route::WorkingSolutionRoute,
+        insertion::Insertion, insertion_context::InsertionContext, score::Score,
+        score_level::ScoreLevel, solution::route::WorkingSolutionRoute,
     },
 };
 
@@ -62,9 +63,9 @@ impl RouteConstraint for CapacityConstraint {
 
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
         let problem = context.problem();
-        let service = problem.service(context.insertion.service_id());
+        let job = problem.job(context.insertion.job_index());
 
-        if service.demand().is_empty() {
+        if job.demand().is_empty() {
             return Score::zero();
         }
 
@@ -73,35 +74,41 @@ impl RouteConstraint for CapacityConstraint {
         let route = context.insertion.route(context.solution);
         let vehicle = route.vehicle(problem);
 
-        match service.service_type() {
-            ServiceType::Pickup => {
-                if !is_capacity_satisfied(
-                    vehicle.capacity(),
-                    &(service.demand() + route.bwd_load_peak(context.insertion.position())),
-                ) {
-                    score += Score::of(
-                        self.score_level,
-                        over_capacity_demand(
+        match &context.insertion {
+            &Insertion::Service(insertion) => {
+                let service = problem.service(insertion.job_index);
+                match service.service_type() {
+                    ServiceType::Pickup => {
+                        if !is_capacity_satisfied(
                             vehicle.capacity(),
-                            &(service.demand() + route.bwd_load_peak(context.insertion.position())),
-                        ),
-                    );
+                            &(service.demand() + route.bwd_load_peak(insertion.position)),
+                        ) {
+                            score += Score::of(
+                                self.score_level,
+                                over_capacity_demand(
+                                    vehicle.capacity(),
+                                    &(service.demand() + route.bwd_load_peak(insertion.position)),
+                                ),
+                            )
+                        }
+                    }
+                    ServiceType::Delivery => {
+                        if !is_capacity_satisfied(
+                            vehicle.capacity(),
+                            &(service.demand() + route.fwd_load_peak(insertion.position)),
+                        ) {
+                            score += Score::of(
+                                self.score_level,
+                                over_capacity_demand(
+                                    vehicle.capacity(),
+                                    &(service.demand() + route.fwd_load_peak(insertion.position)),
+                                ),
+                            );
+                        }
+                    }
                 }
             }
-            ServiceType::Delivery => {
-                if !is_capacity_satisfied(
-                    vehicle.capacity(),
-                    &(service.demand() + route.fwd_load_peak(context.insertion.position())),
-                ) {
-                    score += Score::of(
-                        self.score_level,
-                        over_capacity_demand(
-                            vehicle.capacity(),
-                            &(service.demand() + route.fwd_load_peak(context.insertion.position())),
-                        ),
-                    );
-                }
-            }
+            _ => unimplemented!(),
         }
 
         score

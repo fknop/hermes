@@ -1,11 +1,19 @@
+use either::Either;
 use jiff::Timestamp;
 
 use crate::{
-    problem::{job::JobId, service::ServiceId, vehicle_routing_problem::VehicleRoutingProblem},
-    solver::solution::{
-        route::WorkingSolutionRoute,
-        route_update_iterator::RouteUpdateIterator,
-        utils::{compute_first_activity_arrival_time, compute_vehicle_end, compute_vehicle_start},
+    problem::{
+        self, job::ActivityId, service::ServiceId, vehicle_routing_problem::VehicleRoutingProblem,
+    },
+    solver::{
+        insertion::{ServiceInsertion, ShipmentInsertion},
+        solution::{
+            route::WorkingSolutionRoute,
+            route_update_iterator::RouteUpdateIterator,
+            utils::{
+                compute_first_activity_arrival_time, compute_vehicle_end, compute_vehicle_start,
+            },
+        },
     },
 };
 
@@ -53,35 +61,88 @@ impl<'a> InsertionContext<'a> {
     pub fn compute_vehicle_start(&self) -> Timestamp {
         let route = self.insertion.route(self.solution);
 
-        if self.insertion.position() == 0 {
-            let vehicle_id = route.vehicle_id();
-            compute_vehicle_start(
-                self.problem,
-                vehicle_id,
-                self.insertion.job_id(),
-                compute_first_activity_arrival_time(
-                    self.problem,
-                    vehicle_id,
-                    self.insertion.job_id(),
-                ),
-            )
-        } else {
-            route.start(self.problem)
+        match self.insertion {
+            &Insertion::Service(ServiceInsertion {
+                route_id,
+                job_index,
+                position,
+            }) => {
+                if position == 0 {
+                    let job_id = ActivityId::Service(job_index);
+                    compute_vehicle_start(
+                        self.problem,
+                        route_id,
+                        job_id,
+                        compute_first_activity_arrival_time(self.problem, route_id, job_id),
+                    )
+                } else {
+                    route.start(self.problem)
+                }
+            }
+            &Insertion::Shipment(ShipmentInsertion {
+                job_index,
+                pickup_position,
+                route_id,
+                ..
+            }) => {
+                if pickup_position == 0 {
+                    let job_id = ActivityId::ShipmentPickup(job_index);
+                    compute_vehicle_start(
+                        self.problem,
+                        route_id,
+                        job_id,
+                        compute_first_activity_arrival_time(self.problem, route_id, job_id),
+                    )
+                } else {
+                    route.start(self.problem)
+                }
+            }
         }
     }
 
     pub fn updated_activities_iter(
         &'a self,
-    ) -> RouteUpdateIterator<'a, impl Iterator<Item = JobId>> {
+    ) -> RouteUpdateIterator<
+        'a,
+        Either<impl Iterator<Item = ActivityId>, impl Iterator<Item = ActivityId>>,
+    > {
         let route = self.insertion.route(self.solution);
-        let job_id = self.insertion.job_id();
-        route.updated_activities_iter(
-            self.problem,
-            std::iter::once(job_id)
-                .chain(route.job_ids_iter(self.insertion.position(), route.len())),
-            self.insertion.position(),
-            route.len() + 1,
-        )
+
+        match self.insertion {
+            &Insertion::Service(ServiceInsertion {
+                job_index,
+                position,
+                ..
+            }) => {
+                let activity_id = ActivityId::Service(job_index);
+
+                route.updated_activities_iter(
+                    self.problem,
+                    Either::Left(
+                        std::iter::once(activity_id)
+                            .chain(route.job_ids_iter(position, route.len())),
+                    ),
+                    position,
+                    route.len() + 1,
+                )
+            }
+            &Insertion::Shipment(ShipmentInsertion {
+                job_index,
+                pickup_position,
+                delivery_position,
+                ..
+            }) => route.updated_activities_iter(
+                self.problem,
+                Either::Right(
+                    std::iter::once(ActivityId::ShipmentPickup(job_index))
+                        .chain(route.job_ids_iter(pickup_position, delivery_position))
+                        .chain(std::iter::once(ActivityId::ShipmentDelivery(job_index)))
+                        .chain(route.job_ids_iter(delivery_position, route.len())),
+                ),
+                pickup_position,
+                route.len() + 2,
+            ),
+        }
     }
 
     pub fn compute_vehicle_end(&self) -> Timestamp {

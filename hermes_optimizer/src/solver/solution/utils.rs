@@ -1,13 +1,13 @@
 use jiff::{SignedDuration, Timestamp};
 
 use crate::problem::{
-    job::JobId, vehicle::VehicleId, vehicle_routing_problem::VehicleRoutingProblem,
+    job::ActivityId, vehicle::VehicleId, vehicle_routing_problem::VehicleRoutingProblem,
 };
 
 pub(crate) fn compute_first_activity_arrival_time(
     problem: &VehicleRoutingProblem,
     vehicle_id: VehicleId,
-    job_id: JobId,
+    job_id: ActivityId,
 ) -> Timestamp {
     let task = problem.job_task(job_id);
 
@@ -41,7 +41,7 @@ pub(crate) fn compute_first_activity_arrival_time(
 pub(crate) fn compute_vehicle_start(
     problem: &VehicleRoutingProblem,
     vehicle_id: VehicleId,
-    job_id: JobId,
+    job_id: ActivityId,
     first_arrival_time: Timestamp,
 ) -> Timestamp {
     let vehicle = problem.vehicle(vehicle_id);
@@ -59,7 +59,7 @@ pub(crate) fn compute_vehicle_start(
 pub(crate) fn compute_vehicle_end(
     problem: &VehicleRoutingProblem,
     vehicle_id: VehicleId,
-    job_id: JobId,
+    job_id: ActivityId,
     last_departure_time: Timestamp,
 ) -> Timestamp {
     let job_task = problem.job_task(job_id);
@@ -77,9 +77,9 @@ pub(crate) fn compute_vehicle_end(
 
 pub(crate) fn compute_activity_arrival_time(
     problem: &VehicleRoutingProblem,
-    previous_job_id: JobId,
+    previous_job_id: ActivityId,
     previous_activity_departure_time: Timestamp,
-    id: JobId,
+    id: ActivityId,
 ) -> Timestamp {
     let travel_time = problem.travel_time(
         problem.job_task(previous_job_id).location_id(),
@@ -91,7 +91,7 @@ pub(crate) fn compute_activity_arrival_time(
 
 pub(crate) fn compute_waiting_duration(
     problem: &VehicleRoutingProblem,
-    job_id: JobId,
+    job_id: ActivityId,
     arrival_time: Timestamp,
 ) -> SignedDuration {
     SignedDuration::from_secs(
@@ -111,14 +111,14 @@ pub(crate) fn compute_departure_time(
     problem: &VehicleRoutingProblem,
     arrival_time: Timestamp,
     waiting_duration: SignedDuration,
-    job_id: JobId,
+    job_id: ActivityId,
 ) -> Timestamp {
     arrival_time + waiting_duration + problem.job_task(job_id).duration()
 }
 
 pub(crate) fn compute_time_slack(
     problem: &VehicleRoutingProblem,
-    job_id: JobId,
+    job_id: ActivityId,
     arrival_time: Timestamp,
 ) -> SignedDuration {
     let task = problem.job_task(job_id);

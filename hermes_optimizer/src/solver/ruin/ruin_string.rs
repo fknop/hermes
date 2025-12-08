@@ -4,7 +4,7 @@
 use fxhash::FxHashSet;
 use rand::seq::IndexedRandom;
 
-use crate::{problem::job::JobId, solver::solution::working_solution::WorkingSolution};
+use crate::{problem::job::ActivityId, solver::solution::working_solution::WorkingSolution};
 
 use super::{ruin_context::RuinContext, ruin_solution::RuinSolution};
 
@@ -168,7 +168,7 @@ impl RuinSolution for RuinString {
 
             let nearest_service_of_different_route = context
                 .problem
-                .nearest_jobs(JobId::Service(seed_job))
+                .nearest_jobs(ActivityId::Service(seed_job))
                 .find(|&job_id| {
                     if let Some(route_id) = solution.route_of_job(job_id) {
                         // TODO: tests intersection, it maybe be too restrictive

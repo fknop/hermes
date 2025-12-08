@@ -1,5 +1,5 @@
 use crate::{
-    problem::{job::JobId, vehicle_routing_problem::VehicleRoutingProblem},
+    problem::{job::ActivityId, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{
         intensify::intensify_operator::IntensifyOp,
         solution::{route::WorkingSolutionRoute, working_solution::WorkingSolution},
@@ -58,7 +58,7 @@ impl OrOptOperator {
     fn moved_jobs<'a>(
         &'a self,
         route: &'a WorkingSolutionRoute,
-    ) -> impl Iterator<Item = JobId> + Clone + 'a {
+    ) -> impl Iterator<Item = ActivityId> + Clone + 'a {
         if self.params.from < self.params.to {
             let moved_jobs =
                 route.job_ids_iter(self.params.from, self.params.from + self.params.count);

@@ -1,7 +1,7 @@
 use jiff::{SignedDuration, Timestamp};
 
 use crate::{
-    problem::{job::JobId, vehicle_routing_problem::VehicleRoutingProblem},
+    problem::{job::ActivityId, vehicle_routing_problem::VehicleRoutingProblem},
     solver::solution::{
         route::WorkingSolutionRoute,
         utils::{
@@ -16,7 +16,7 @@ pub struct RouteUpdateActivityData {
     pub arrival_time: Timestamp,
     pub departure_time: Timestamp,
     pub waiting_duration: SignedDuration,
-    pub job_id: JobId,
+    pub job_id: ActivityId,
     pub current_position: Option<usize>,
 }
 
@@ -25,18 +25,18 @@ pub struct RouteUpdateIterator<'a, I> {
     route: &'a WorkingSolutionRoute,
     jobs_iter: I,
 
-    succeeding_iter: std::slice::Iter<'a, JobId>,
+    succeeding_iter: std::slice::Iter<'a, ActivityId>,
 
     index: usize,
     end: usize,
 
-    previous_job_id: Option<JobId>,
+    previous_job_id: Option<ActivityId>,
     previous_departure_time: Option<Timestamp>,
 }
 
 impl<'a, I> RouteUpdateIterator<'a, I>
 where
-    I: Iterator<Item = JobId>,
+    I: Iterator<Item = ActivityId>,
 {
     pub fn new(
         problem: &'a VehicleRoutingProblem,
@@ -72,7 +72,7 @@ where
 
 impl<I> Iterator for RouteUpdateIterator<'_, I>
 where
-    I: Iterator<Item = JobId>,
+    I: Iterator<Item = ActivityId>,
 {
     type Item = RouteUpdateActivityData;
 

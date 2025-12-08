@@ -1,5 +1,5 @@
 use crate::{
-    problem::{job::JobId, vehicle_routing_problem::VehicleRoutingProblem},
+    problem::{job::ActivityId, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{
         intensify::intensify_operator::IntensifyOp, solution::working_solution::WorkingSolution,
     },
@@ -63,7 +63,7 @@ impl InterTwoOptStarOperator {
     pub fn first_route_head<'a>(
         &self,
         solution: &'a WorkingSolution,
-    ) -> impl DoubleEndedIterator<Item = JobId> + Clone + 'a {
+    ) -> impl DoubleEndedIterator<Item = ActivityId> + Clone + 'a {
         let route = solution.route(self.params.first_route_id);
         route.job_ids_iter(0, self.params.first_from + 1)
     }
@@ -71,7 +71,7 @@ impl InterTwoOptStarOperator {
     pub fn first_route_tail<'a>(
         &self,
         solution: &'a WorkingSolution,
-    ) -> impl DoubleEndedIterator<Item = JobId> + Clone + 'a {
+    ) -> impl DoubleEndedIterator<Item = ActivityId> + Clone + 'a {
         let route = solution.route(self.params.first_route_id);
         route.job_ids_iter(self.params.first_from + 1, route.len())
     }
@@ -79,7 +79,7 @@ impl InterTwoOptStarOperator {
     pub fn second_route_head<'a>(
         &self,
         solution: &'a WorkingSolution,
-    ) -> impl DoubleEndedIterator<Item = JobId> + Clone + 'a {
+    ) -> impl DoubleEndedIterator<Item = ActivityId> + Clone + 'a {
         let route = solution.route(self.params.second_route_id);
         route.job_ids_iter(0, self.params.second_from + 1)
     }
@@ -87,7 +87,7 @@ impl InterTwoOptStarOperator {
     pub fn second_route_tail<'a>(
         &self,
         solution: &'a WorkingSolution,
-    ) -> impl DoubleEndedIterator<Item = JobId> + Clone + 'a {
+    ) -> impl DoubleEndedIterator<Item = ActivityId> + Clone + 'a {
         let route = solution.route(self.params.second_route_id);
         route.job_ids_iter(self.params.second_from + 1, route.len())
     }

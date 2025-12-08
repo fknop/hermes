@@ -4,7 +4,7 @@ use crate::{
     problem::{
         amount::AmountExpression,
         capacity::Capacity,
-        job::{Job, JobId, JobTask},
+        job::{ActivityId, Job, JobTask},
         service::{Service, ServiceId},
         shipment::Shipment,
     },
@@ -157,17 +157,17 @@ impl VehicleRoutingProblem {
         &self.locations[location_id]
     }
 
-    pub fn job_task<'a>(&'a self, job_id: JobId) -> JobTask<'a> {
+    pub fn job_task<'a>(&'a self, job_id: ActivityId) -> JobTask<'a> {
         // Can't use match here because if let bindings are experimental
-        if let JobId::Service(service_id) = job_id
+        if let ActivityId::Service(service_id) = job_id
             && let Job::Service(service) = &self.jobs[service_id]
         {
             JobTask::Service(service)
-        } else if let JobId::ShipmentPickup(shipment_id) = job_id
+        } else if let ActivityId::ShipmentPickup(shipment_id) = job_id
             && let Job::Shipment(shipment) = &self.jobs[shipment_id]
         {
             JobTask::ShipmentPickup(shipment)
-        } else if let JobId::ShipmentDelivery(shipment_id) = job_id
+        } else if let ActivityId::ShipmentDelivery(shipment_id) = job_id
             && let Job::Shipment(shipment) = &self.jobs[shipment_id]
         {
             JobTask::ShipmentDelivery(shipment)
@@ -236,12 +236,12 @@ impl VehicleRoutingProblem {
         100000.0 //self.max_cost() // Placeholder for the static cost of a route
     }
 
-    pub fn nearest_jobs_of_location(&self, location_id: usize) -> impl Iterator<Item = JobId> {
+    pub fn nearest_jobs_of_location(&self, location_id: usize) -> impl Iterator<Item = ActivityId> {
         let location = &self.locations[location_id];
         self.service_location_index.nearest_neighbor_iter(location)
     }
 
-    pub fn nearest_jobs(&self, job_id: JobId) -> impl Iterator<Item = JobId> {
+    pub fn nearest_jobs(&self, job_id: ActivityId) -> impl Iterator<Item = ActivityId> {
         let job_location_id = self.job_task(job_id).location_id();
         self.nearest_jobs_of_location(job_location_id)
     }

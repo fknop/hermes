@@ -1,50 +1,52 @@
 use crate::{
-    problem::{job::JobId, service::ServiceId, vehicle::VehicleId},
+    problem::{job::ActivityId, service::ServiceId, vehicle::VehicleId},
     solver::solution::{route::WorkingSolutionRoute, working_solution::WorkingSolution},
 };
 
 #[derive(Clone)]
-pub struct ExistingRouteInsertion {
+pub struct ServiceInsertion {
     pub route_id: usize,
-    pub service_id: ServiceId,
+    pub job_index: usize,
     pub position: usize,
 }
 
 #[derive(Clone)]
-pub struct NewRouteInsertion {
-    pub service_id: ServiceId,
-    pub vehicle_id: VehicleId,
+pub struct ShipmentInsertion {
+    pub route_id: usize,
+    pub job_index: usize,
+
+    /// Position of the pickup
+    pub pickup_position: usize,
+
+    /// This is the position before the pickup has been inserted
+    pub delivery_position: usize,
 }
 
 #[derive(Clone)]
 pub enum Insertion {
-    NewRoute(NewRouteInsertion),
-    ExistingRoute(ExistingRouteInsertion),
+    Service(ServiceInsertion),
+    Shipment(ShipmentInsertion),
 }
 
 impl Insertion {
-    pub fn service_id(&self) -> ServiceId {
+    pub fn job_index(&self) -> usize {
         match self {
-            Insertion::NewRoute(ctx) => ctx.service_id,
-            Insertion::ExistingRoute(ctx) => ctx.service_id,
+            Insertion::Service(ctx) => ctx.job_index,
+            Insertion::Shipment(ctx) => ctx.job_index,
         }
     }
 
-    pub fn job_id(&self) -> JobId {
-        JobId::Service(self.service_id())
-    }
-
-    pub fn position(&self) -> usize {
-        match self {
-            Insertion::NewRoute(_) => 0,
-            Insertion::ExistingRoute(ctx) => ctx.position,
-        }
-    }
+    // pub fn position(&self) -> usize {
+    //     match self {
+    //         Insertion::NewRoute(_) => 0,
+    //         Insertion::ExistingRoute(ctx) => ctx.position,
+    //     }
+    // }
 
     pub fn route<'a>(&self, solution: &'a WorkingSolution) -> &'a WorkingSolutionRoute {
         match self {
-            Insertion::NewRoute(ctx) => solution.route(ctx.vehicle_id),
-            Insertion::ExistingRoute(ctx) => solution.route(ctx.route_id),
+            Insertion::Service(ctx) => solution.route(ctx.route_id),
+            Insertion::Shipment(ctx) => solution.route(ctx.route_id),
         }
     }
 }

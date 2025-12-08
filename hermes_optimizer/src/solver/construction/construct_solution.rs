@@ -20,7 +20,7 @@ use crate::{
             vehicle_cost_constraint::VehicleCostConstraint,
             waiting_duration_constraint::WaitingDurationConstraint,
         },
-        insertion::{Insertion, NewRouteInsertion},
+        insertion::{Insertion, ServiceInsertion},
         recreate::{
             construction_best_insertion::ConstructionBestInsertion,
             recreate_context::RecreateContext,
@@ -207,9 +207,10 @@ fn create_initial_routes(problem: &VehicleRoutingProblem, solution: &mut Working
 
     for &customer in &seed_customers {
         let vehicle_id = solution.available_vehicles_iter().next().unwrap();
-        solution.insert_service(&Insertion::NewRoute(NewRouteInsertion {
-            service_id: customer,
-            vehicle_id,
+        solution.insert(&Insertion::Service(ServiceInsertion {
+            route_id: vehicle_id,
+            job_index: customer,
+            position: 0,
         }));
     }
 }
@@ -225,7 +226,7 @@ pub fn construct_solution(
     create_initial_routes(problem, &mut solution);
 
     let unassigned_services = solution
-        .unassigned_services()
+        .unassigned_jobs()
         .iter()
         .cloned()
         .collect::<Vec<_>>();

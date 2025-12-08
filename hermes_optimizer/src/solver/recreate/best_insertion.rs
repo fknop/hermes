@@ -10,7 +10,7 @@ use crate::{
         vehicle_routing_problem::VehicleRoutingProblem,
     },
     solver::{
-        insertion::{ExistingRouteInsertion, Insertion, NewRouteInsertion},
+        insertion::{Insertion, ServiceInsertion},
         score::Score,
         solution::working_solution::WorkingSolution,
     },
@@ -173,18 +173,11 @@ impl BestInsertion {
                         continue;
                     }
 
-                    let insertion = if route.is_empty() {
-                        Insertion::NewRoute(NewRouteInsertion {
-                            service_id,
-                            vehicle_id: route.vehicle_id(),
-                        })
-                    } else {
-                        Insertion::ExistingRoute(ExistingRouteInsertion {
-                            route_id,
-                            service_id,
-                            position,
-                        })
-                    };
+                    let insertion = Insertion::Service(ServiceInsertion {
+                        route_id,
+                        job_index: service_id,
+                        position,
+                    });
 
                     let score =
                         context.compute_insertion_score(solution, &insertion, Some(&best_score));
@@ -213,7 +206,7 @@ impl BestInsertion {
             // }
 
             if let Some(insertion) = best_insertion {
-                solution.insert_service(&insertion);
+                solution.insert(&insertion);
             } else {
                 panic!("No insertion possible")
             }
@@ -223,8 +216,7 @@ impl BestInsertion {
 
 impl RecreateSolution for BestInsertion {
     fn recreate_solution(&self, solution: &mut WorkingSolution, context: RecreateContext) {
-        let mut unassigned_services: Vec<_> =
-            solution.unassigned_services().iter().copied().collect();
+        let mut unassigned_services: Vec<_> = solution.unassigned_jobs().iter().copied().collect();
 
         self.sort_unassigned_jobs(context.problem, &mut unassigned_services, context.rng);
         // unassigned_services.shuffle(context.rng);

@@ -1,5 +1,5 @@
 use crate::{
-    problem::{job::JobId, vehicle_routing_problem::VehicleRoutingProblem},
+    problem::{job::ActivityId, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{
         intensify::intensify_operator::IntensifyOp, solution::working_solution::WorkingSolution,
     },
@@ -53,7 +53,7 @@ impl CrossExchangeOperator {
     fn first_route_moved_jobs<'a>(
         &self,
         solution: &'a WorkingSolution,
-    ) -> impl DoubleEndedIterator<Item = JobId> + Clone + 'a {
+    ) -> impl DoubleEndedIterator<Item = ActivityId> + Clone + 'a {
         solution
             .route(self.params.first_route_id)
             .job_ids_iter(self.params.first_start, self.params.first_end + 1)
@@ -62,7 +62,7 @@ impl CrossExchangeOperator {
     fn second_route_moved_jobs<'a>(
         &self,
         solution: &'a WorkingSolution,
-    ) -> impl DoubleEndedIterator<Item = JobId> + Clone + 'a {
+    ) -> impl DoubleEndedIterator<Item = ActivityId> + Clone + 'a {
         solution
             .route(self.params.second_route_id)
             .job_ids_iter(self.params.second_start, self.params.second_end + 1)
@@ -121,8 +121,10 @@ impl IntensifyOp for CrossExchangeOperator {
     }
 
     fn apply(&self, problem: &VehicleRoutingProblem, solution: &mut WorkingSolution) {
-        let first_route_moved_jobs: Vec<JobId> = self.first_route_moved_jobs(solution).collect();
-        let second_route_moved_jobs: Vec<JobId> = self.second_route_moved_jobs(solution).collect();
+        let first_route_moved_jobs: Vec<ActivityId> =
+            self.first_route_moved_jobs(solution).collect();
+        let second_route_moved_jobs: Vec<ActivityId> =
+            self.second_route_moved_jobs(solution).collect();
 
         let first_route = solution.route_mut(self.params.first_route_id);
         first_route.replace_activities(

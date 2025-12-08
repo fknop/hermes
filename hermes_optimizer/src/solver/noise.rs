@@ -12,14 +12,14 @@ pub struct NoiseGenerator {
 
 impl NoiseGenerator {
     pub fn new(
-        num_services: usize,
+        num_jobs: usize,
         max_cost: f64,
         noise_probability: f64,
         noise_level: f64,
         rng: &mut SmallRng,
     ) -> Self {
         NoiseGenerator {
-            rngs: (0..num_services)
+            rngs: (0..num_jobs)
                 .map(|_| Mutex::new(SmallRng::from_rng(rng)))
                 .collect(),
             noise_probability,
@@ -28,8 +28,8 @@ impl NoiseGenerator {
         }
     }
 
-    pub fn create_noise(&self, service_id: ServiceId) -> f64 {
-        let mut rng = self.rngs[service_id].lock();
+    pub fn create_noise(&self, index: ServiceId) -> f64 {
+        let mut rng = self.rngs[index].lock();
 
         if rng.random_bool(self.noise_probability) {
             self.noise_level * self.max_cost * rng.random_range(0.0..=1.0)

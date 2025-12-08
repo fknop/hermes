@@ -1,10 +1,7 @@
 use crate::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
-        insertion::{ExistingRouteInsertion, Insertion, NewRouteInsertion},
-        insertion_context::InsertionContext,
-        score::Score,
-        score_level::ScoreLevel,
+        insertion_context::InsertionContext, score::Score, score_level::ScoreLevel,
         solution::route::WorkingSolutionRoute,
     },
 };
@@ -41,7 +38,7 @@ impl RouteConstraint for ShiftConstraint {
 
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
         let problem = context.problem();
-        let route = context.insertion.route(context.solution);
+        let route = context.route();
         let vehicle = route.vehicle(problem);
 
         if vehicle.latest_end_time().is_none() {
@@ -50,52 +47,46 @@ impl RouteConstraint for ShiftConstraint {
 
         let new_end = context.compute_vehicle_end();
 
-        match *context.insertion {
-            Insertion::ExistingRoute(ExistingRouteInsertion { .. }) => {
-                let vehicle = route.vehicle(problem);
-                let current_end = route.end(problem);
-
-                if let Some(latest_end) = vehicle.latest_end_time() {
-                    // New violation, old route was not violating the constraint
-                    if new_end > latest_end && current_end <= latest_end {
-                        return Score::of(
-                            self.score_level(),
-                            new_end.duration_since(latest_end).as_secs_f64(),
-                        );
-
-                        // Both are violating the constraint, we compute the delta between the two
-                    } else if current_end > latest_end && new_end > latest_end {
-                        return Score::of(
-                            self.score_level(),
-                            new_end.duration_since(current_end).as_secs_f64(),
-                        );
-                        // Current duration is violating, new one is not
-                    } else if current_end > latest_end && new_end <= latest_end {
-                        return Score::of(
-                            self.score_level(),
-                            latest_end.duration_since(current_end).as_secs_f64(),
-                        );
-                    } else {
-                        return Score::zero();
-                    }
-                }
-
+        if route.is_empty() {
+            if let Some(latest_end) = vehicle.latest_end_time()
+                && new_end > latest_end
+            {
+                Score::of(
+                    self.score_level(),
+                    (new_end.as_second() - latest_end.as_second()) as f64,
+                )
+            } else {
                 Score::zero()
             }
-            Insertion::NewRoute(NewRouteInsertion { vehicle_id, .. }) => {
-                let vehicle = problem.vehicle(vehicle_id);
+        } else {
+            let current_end = route.end(problem);
 
-                if let Some(latest_end) = vehicle.latest_end_time()
-                    && new_end > latest_end
-                {
-                    Score::of(
+            if let Some(latest_end) = vehicle.latest_end_time() {
+                // New violation, old route was not violating the constraint
+                if new_end > latest_end && current_end <= latest_end {
+                    return Score::of(
                         self.score_level(),
-                        (new_end.as_second() - latest_end.as_second()) as f64,
-                    )
+                        new_end.duration_since(latest_end).as_secs_f64(),
+                    );
+
+                    // Both are violating the constraint, we compute the delta between the two
+                } else if current_end > latest_end && new_end > latest_end {
+                    return Score::of(
+                        self.score_level(),
+                        new_end.duration_since(current_end).as_secs_f64(),
+                    );
+                    // Current duration is violating, new one is not
+                } else if current_end > latest_end && new_end <= latest_end {
+                    return Score::of(
+                        self.score_level(),
+                        latest_end.duration_since(current_end).as_secs_f64(),
+                    );
                 } else {
-                    Score::zero()
+                    return Score::zero();
                 }
             }
+
+            Score::zero()
         }
     }
 }

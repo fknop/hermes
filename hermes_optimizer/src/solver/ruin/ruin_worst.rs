@@ -1,7 +1,7 @@
 use std::f64;
 
 use crate::{
-    problem::{job::JobId, vehicle_routing_problem::VehicleRoutingProblem},
+    problem::{job::ActivityId, vehicle_routing_problem::VehicleRoutingProblem},
     solver::solution::{route::WorkingSolutionRoute, working_solution::WorkingSolution},
 };
 
@@ -65,7 +65,8 @@ impl RuinSolution for RuinWorst {
     {
         let p = context.params.ruin_worst_determinism;
 
-        let mut candidates: Vec<(JobId, f64)> = Vec::with_capacity(solution.problem().jobs().len());
+        let mut candidates: Vec<(ActivityId, f64)> =
+            Vec::with_capacity(solution.problem().jobs().len());
         for _ in 0..context.num_activities_to_remove {
             if solution.is_empty() {
                 return;

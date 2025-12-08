@@ -34,7 +34,7 @@ mod tests {
     use std::sync::Arc;
 
     use crate::{
-        problem::job::JobId,
+        problem::job::ActivityId,
         solver::ruin::{
             ruin_context::RuinContext, ruin_params::RuinParams, ruin_radial::RuinRadial,
             ruin_solution::RuinSolution,
@@ -90,7 +90,7 @@ mod tests {
 
         assert_eq!(
             solution.route(0).activity_ids().to_vec(),
-            vec![JobId::Service(1), JobId::Service(3)]
+            vec![ActivityId::Service(1), ActivityId::Service(3)]
         );
     }
 }

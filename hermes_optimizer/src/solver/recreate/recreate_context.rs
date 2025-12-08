@@ -4,7 +4,7 @@ use crate::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
         constraints::{compute_insertion_score::compute_insertion_score, constraint::Constraint},
-        insertion::{ExistingRouteInsertion, Insertion, NewRouteInsertion},
+        insertion::Insertion,
         insertion_context::InsertionContext,
         noise::NoiseGenerator,
         score::Score,
@@ -27,24 +27,10 @@ impl<'a> RecreateContext<'a> {
         insertion: &Insertion,
         best_score: Option<&Score>,
     ) -> Score {
-        // Temporary check until enum is reworked
-        match insertion {
-            Insertion::NewRoute(NewRouteInsertion { vehicle_id, .. }) => {
-                if !solution.route(*vehicle_id).is_empty() {
-                    panic!("NewRouteInsertion should only be used on empty routes");
-                }
-            }
-            Insertion::ExistingRoute(ExistingRouteInsertion { route_id, .. }) => {
-                if solution.route(*route_id).is_empty() {
-                    panic!("ExistingRouteInsertion shouldn't be used on empty routes");
-                }
-            }
-        };
-
         let context = InsertionContext::new(self.problem, solution, insertion);
         compute_insertion_score(self.constraints, &context, best_score)
             + self.noise_generator.map_or(Score::ZERO, |noise_generator| {
-                Score::soft(noise_generator.create_noise(context.insertion.service_id()))
+                Score::soft(noise_generator.create_noise(context.insertion.job_index()))
             })
     }
 }

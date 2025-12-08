@@ -7,42 +7,45 @@ use crate::problem::{
 };
 
 #[derive(Hash, Debug, Clone, Copy, Eq, PartialEq)]
-pub enum JobId {
+pub enum ActivityId {
     Service(usize),
     ShipmentPickup(usize),
     ShipmentDelivery(usize),
 }
 
-impl JobId {
+impl ActivityId {
     pub fn is_shipment(&self) -> bool {
-        matches!(self, JobId::ShipmentPickup(_) | JobId::ShipmentDelivery(_))
+        matches!(
+            self,
+            ActivityId::ShipmentPickup(_) | ActivityId::ShipmentDelivery(_)
+        )
     }
 
     pub fn index(&self) -> usize {
         match self {
-            JobId::Service(id) => *id,
-            JobId::ShipmentPickup(id) => *id,
-            JobId::ShipmentDelivery(id) => *id,
+            ActivityId::Service(id) => *id,
+            ActivityId::ShipmentPickup(id) => *id,
+            ActivityId::ShipmentDelivery(id) => *id,
         }
     }
 }
 
-impl Display for JobId {
+impl Display for ActivityId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            JobId::Service(id) => write!(f, "Service({})", id),
-            JobId::ShipmentPickup(id) => write!(f, "ShipmentPickup({})", id),
-            JobId::ShipmentDelivery(id) => write!(f, "ShipmentDelivery({})", id),
+            ActivityId::Service(id) => write!(f, "Service({})", id),
+            ActivityId::ShipmentPickup(id) => write!(f, "ShipmentPickup({})", id),
+            ActivityId::ShipmentDelivery(id) => write!(f, "ShipmentDelivery({})", id),
         }
     }
 }
 
-impl From<JobId> for usize {
-    fn from(job_id: JobId) -> Self {
+impl From<ActivityId> for usize {
+    fn from(job_id: ActivityId) -> Self {
         match job_id {
-            JobId::Service(id) => id,
-            JobId::ShipmentPickup(id) => id,
-            JobId::ShipmentDelivery(id) => id,
+            ActivityId::Service(id) => id,
+            ActivityId::ShipmentPickup(id) => id,
+            ActivityId::ShipmentDelivery(id) => id,
         }
     }
 }

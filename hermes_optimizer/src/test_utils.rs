@@ -12,7 +12,7 @@ use crate::{
         vehicle_routing_problem::{VehicleRoutingProblem, VehicleRoutingProblemBuilder},
     },
     solver::{
-        insertion::{ExistingRouteInsertion, Insertion, NewRouteInsertion},
+        insertion::{Insertion, ServiceInsertion},
         solution::working_solution::WorkingSolution,
     },
 };
@@ -93,19 +93,12 @@ pub fn create_test_working_solution(
     let mut solution = WorkingSolution::new(problem);
 
     for (route_id, route) in routes.iter().enumerate() {
-        for (index, service_id) in route.service_ids.iter().enumerate() {
-            if index == 0 {
-                solution.insert_service(&Insertion::NewRoute(NewRouteInsertion {
-                    vehicle_id: route.vehicle_id,
-                    service_id: *service_id,
-                }));
-            } else {
-                solution.insert_service(&Insertion::ExistingRoute(ExistingRouteInsertion {
-                    position: index,
-                    route_id,
-                    service_id: *service_id,
-                }));
-            }
+        for (index, &service_id) in route.service_ids.iter().enumerate() {
+            solution.insert(&Insertion::Service(ServiceInsertion {
+                route_id,
+                job_index: service_id,
+                position: index,
+            }));
         }
     }
 

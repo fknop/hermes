@@ -1,8 +1,8 @@
 use crate::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
-        insertion::Insertion, insertion_context::InsertionContext, score::Score,
-        score_level::ScoreLevel, solution::route::WorkingSolutionRoute,
+        insertion_context::InsertionContext, score::Score, score_level::ScoreLevel,
+        solution::route::WorkingSolutionRoute,
     },
 };
 
@@ -22,11 +22,12 @@ impl RouteConstraint for VehicleCostConstraint {
     }
 
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
-        match context.insertion {
-            Insertion::ExistingRoute(_) => Score::of(self.score_level(), 0.0),
-            Insertion::NewRoute(_) => {
-                Score::of(self.score_level(), context.problem().fixed_vehicle_costs())
-            }
+        let route = context.route();
+
+        if route.is_empty() {
+            Score::of(self.score_level(), context.problem().fixed_vehicle_costs())
+        } else {
+            Score::zero()
         }
     }
 }

@@ -2,7 +2,7 @@ use fxhash::FxHashSet;
 use rand::seq::IndexedRandom;
 
 use crate::{
-    problem::job::JobId, solver::solution::working_solution::WorkingSolution,
+    problem::job::ActivityId, solver::solution::working_solution::WorkingSolution,
     utils::kruskal::kruskal_cluster,
 };
 
@@ -63,7 +63,7 @@ impl RuinSolution for RuinCluster {
             if remaining_to_remove > 0 {
                 if let Some(new_service_id) = solution
                     .problem()
-                    .nearest_jobs(JobId::Service(
+                    .nearest_jobs(ActivityId::Service(
                         removed_service_ids.choose(rng).cloned().unwrap(),
                     ))
                     .find(|&service_id| {

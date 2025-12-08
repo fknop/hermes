@@ -3,7 +3,9 @@ use std::f64;
 use tracing::debug;
 
 use crate::{
-    problem::{job::JobId, vehicle::VehicleId, vehicle_routing_problem::VehicleRoutingProblem},
+    problem::{
+        job::ActivityId, vehicle::VehicleId, vehicle_routing_problem::VehicleRoutingProblem,
+    },
     solver::{
         intensify::{
             cross_exchange::{CrossExchangeOperator, CrossExchangeOperatorParams},
@@ -119,9 +121,9 @@ impl IntensifySearch {
                 let from_id = route.job_id(from_pos);
 
                 let (to_pos_start, to_pos_end) = match from_id {
-                    JobId::ShipmentPickup(index) => {
+                    ActivityId::ShipmentPickup(index) => {
                         let delivery_position = route
-                            .job_position(JobId::ShipmentDelivery(index))
+                            .job_position(ActivityId::ShipmentDelivery(index))
                             .unwrap_or_else(|| {
                                 panic!(
                                     "Shipment pickup {from_id} has no delivery in the same route"
@@ -129,9 +131,9 @@ impl IntensifySearch {
                             });
                         (from_pos + 1, delivery_position)
                     }
-                    JobId::ShipmentDelivery(index) => {
+                    ActivityId::ShipmentDelivery(index) => {
                         let pickup_position = route
-                            .job_position(JobId::ShipmentPickup(index))
+                            .job_position(ActivityId::ShipmentPickup(index))
                             .unwrap_or_else(|| {
                                 panic!(
                                     "Shipment delivery {from_id} has no pickup in the same route"
@@ -139,7 +141,7 @@ impl IntensifySearch {
                             });
                         (pickup_position + 1, route.len())
                     }
-                    JobId::Service(_) => (0, route.len()),
+                    ActivityId::Service(_) => (0, route.len()),
                 };
 
                 for to_pos in to_pos_start..=to_pos_end {

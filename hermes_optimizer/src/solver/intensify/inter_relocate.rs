@@ -1,7 +1,9 @@
 use crate::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
-        intensify::intensify_operator::IntensifyOp, solution::working_solution::WorkingSolution,
+        insertion::{Insertion, ServiceInsertion},
+        intensify::intensify_operator::IntensifyOp,
+        solution::working_solution::WorkingSolution,
     },
 };
 
@@ -116,7 +118,14 @@ impl IntensifyOp for InterRelocateOperator {
             .remove_activity(problem, self.params.from)
         {
             let route_to = solution.route_mut(self.params.to_route_id);
-            route_to.insert_service(problem, self.params.to, job_id.index());
+            route_to.insert(
+                problem,
+                &Insertion::Service(ServiceInsertion {
+                    route_id: self.params.to_route_id,
+                    position: self.params.to,
+                    job_index: job_id.index(),
+                }),
+            );
         }
     }
 

@@ -1,7 +1,7 @@
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 use crate::solver::{
-    insertion::{ExistingRouteInsertion, Insertion, NewRouteInsertion},
+    insertion::{Insertion, ServiceInsertion},
     score::Score,
     solution::working_solution::WorkingSolution,
 };
@@ -14,32 +14,25 @@ pub struct ConstructionBestInsertion;
 impl ConstructionBestInsertion {
     pub fn insert_services(solution: &mut WorkingSolution, context: RecreateContext) {
         context.thread_pool.install(|| {
-            while !solution.unassigned_services().is_empty() {
+            while !solution.unassigned_jobs().is_empty() {
                 let mut best_insertion: Option<Insertion> = None;
                 let mut best_score = Score::MAX;
 
                 let results = solution
-                    .unassigned_services()
+                    .unassigned_jobs()
                     .par_iter()
-                    .map(|&service_id| {
+                    .map(|&job_id| {
                         let mut best_insertion_for_service: Option<Insertion> = None;
                         let mut best_score_for_service = Score::MAX;
                         let routes = solution.routes();
 
                         for (route_id, route) in routes.iter().enumerate() {
                             for position in 0..=route.activity_ids().len() {
-                                let insertion = if route.is_empty() {
-                                    Insertion::NewRoute(NewRouteInsertion {
-                                        service_id,
-                                        vehicle_id: route.vehicle_id(),
-                                    })
-                                } else {
-                                    Insertion::ExistingRoute(ExistingRouteInsertion {
-                                        route_id,
-                                        service_id,
-                                        position,
-                                    })
-                                };
+                                let insertion = Insertion::Service(ServiceInsertion {
+                                    route_id,
+                                    job_index: job_id,
+                                    position,
+                                });
 
                                 let score = context.compute_insertion_score(
                                     solution,
@@ -122,7 +115,7 @@ impl ConstructionBestInsertion {
                 // }
 
                 if let Some(insertion) = best_insertion {
-                    solution.insert_service(&insertion);
+                    solution.insert(&insertion);
                 } else {
                     panic!("No insertion possible")
                 }

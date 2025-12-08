@@ -2,7 +2,7 @@ use rand::Rng;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 use crate::solver::{
-    insertion::{ExistingRouteInsertion, Insertion, NewRouteInsertion},
+    insertion::{Insertion, ServiceInsertion},
     score::Score,
     solution::working_solution::WorkingSolution,
 };
@@ -46,12 +46,12 @@ impl RegretInsertion {
         context: &mut RecreateContext,
     ) -> Option<Insertion> {
         let regret_values: Vec<(Score, Insertion)> = solution
-            .unassigned_services()
+            .unassigned_jobs()
             .par_iter()
             .filter_map(|&service_id| {
                 let mut potential_insertions: Vec<(Score, Insertion)> = Vec::with_capacity(
                     // One insertion after each activity
-                    (context.problem.jobs().len() - solution.unassigned_services().len())
+                    (context.problem.jobs().len() - solution.unassigned_jobs().len())
                     // One insertion at the start of every route
                     + solution.routes().len(),
                 );
@@ -60,18 +60,12 @@ impl RegretInsertion {
                 for (route_id, route) in solution.routes().iter().enumerate() {
                     // We can insert at any position, including the end
                     for position in 0..=route.activity_ids().len() {
-                        let insertion = if route.is_empty() {
-                            Insertion::NewRoute(NewRouteInsertion {
-                                service_id,
-                                vehicle_id: route.vehicle_id(),
-                            })
-                        } else {
-                            Insertion::ExistingRoute(ExistingRouteInsertion {
-                                route_id,
-                                service_id,
-                                position,
-                            })
-                        };
+                        let insertion = Insertion::Service(ServiceInsertion {
+                            route_id,
+                            job_index: service_id,
+                            position,
+                        });
+
                         let score = context.compute_insertion_score(solution, &insertion, None);
 
                         // Only consider valid insertions
@@ -144,7 +138,7 @@ impl RegretInsertion {
         //         + solution.num_available_vehicles(),
         // );
 
-        while !solution.unassigned_services().is_empty() {
+        while !solution.unassigned_jobs().is_empty() {
             // let mut best_insertion_for_max_regret: Option<Insertion> = None;
             // let mut max_regret = Score::MIN;
 
@@ -221,7 +215,7 @@ impl RegretInsertion {
 
             // 4. Perform the insertion of the service with the highest regret
             if let Some(insertion) = best_insertion_for_max_regret {
-                solution.insert_service(&insertion);
+                solution.insert(&insertion);
             } else {
                 panic!("no insertion possible");
                 // If no service could be inserted (e.g., all remaining are infeasible),

@@ -4,7 +4,9 @@ use fxhash::FxHashSet;
 use rand::seq::IteratorRandom;
 
 use crate::{
-    problem::{job::JobId, service::ServiceId, vehicle_routing_problem::VehicleRoutingProblem},
+    problem::{
+        job::ActivityId, service::ServiceId, vehicle_routing_problem::VehicleRoutingProblem,
+    },
     solver::{insertion::Insertion, solution::route::WorkingSolutionRoute},
 };
 
@@ -96,7 +98,7 @@ impl WorkingSolution {
             })
     }
 
-    pub fn unassigned_services(&self) -> &FxHashSet<ServiceId> {
+    pub fn unassigned_jobs(&self) -> &FxHashSet<ServiceId> {
         &self.unassigned_jobs
     }
 
@@ -140,32 +142,27 @@ impl WorkingSolution {
         self.routes
             .iter()
             .enumerate()
-            .find(|(_, route)| route.contains_job(JobId::Service(service_id)))
+            .find(|(_, route)| route.contains_job(ActivityId::Service(service_id)))
             .map(|(index, _)| index)
     }
 
-    pub fn route_of_job(&self, job_id: JobId) -> Option<usize> {
+    pub fn route_of_job(&self, activity_id: ActivityId) -> Option<usize> {
         self.routes
             .iter()
             .enumerate()
-            .find(|(_, route)| route.contains_job(job_id))
+            .find(|(_, route)| route.contains_job(activity_id))
             .map(|(index, _)| index)
     }
 
-    pub fn insert_service(&mut self, insertion: &Insertion) {
+    pub fn insert(&mut self, insertion: &Insertion) {
         match insertion {
-            Insertion::ExistingRoute(context) => {
+            Insertion::Service(context) => {
                 let route = &mut self.routes[context.route_id];
-                route.insert_service(&self.problem, context.position, context.service_id);
-                self.unassigned_jobs.remove(&context.service_id);
+                route.insert(&self.problem, insertion);
+                self.unassigned_jobs.remove(&context.job_index);
             }
-            Insertion::NewRoute(context) => {
-                // panic!("Shouldn't use Insertion::NewRoute anymore");
-                // let mut new_route = WorkingSolutionRoute::empty(context.vehicle_id);
-                let route = &mut self.routes[context.vehicle_id];
-                route.insert_service(&self.problem, 0, context.service_id);
-                // self.routes.push(new_route);
-                self.unassigned_jobs.remove(&context.service_id);
+            Insertion::Shipment(context) => {
+                unimplemented!()
             }
         }
     }
@@ -181,7 +178,7 @@ impl WorkingSolution {
         }
     }
 
-    pub fn remove_job(&mut self, job_id: JobId) -> bool {
+    pub fn remove_job(&mut self, job_id: ActivityId) -> bool {
         let mut removed = false;
         for route in self.routes.iter_mut() {
             removed = route.remove_job(&self.problem, job_id);
@@ -196,14 +193,14 @@ impl WorkingSolution {
     }
 
     pub fn remove_service(&mut self, service_id: ServiceId) -> bool {
-        self.remove_job(JobId::Service(service_id))
+        self.remove_job(ActivityId::Service(service_id))
     }
 
     pub fn remove_service_from_route(&mut self, route_id: usize, service_id: ServiceId) -> bool {
         let mut removed = false;
         let route = &mut self.routes[route_id];
-        if route.contains_job(JobId::Service(service_id)) {
-            removed = route.remove_job(&self.problem, JobId::Service(service_id));
+        if route.contains_job(ActivityId::Service(service_id)) {
+            removed = route.remove_job(&self.problem, ActivityId::Service(service_id));
 
             if removed {
                 self.unassigned_jobs.insert(service_id);

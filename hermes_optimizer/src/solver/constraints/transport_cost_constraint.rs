@@ -19,10 +19,6 @@ impl GlobalConstraint for TransportCostConstraint {
     fn compute_score(&self, solution: &WorkingSolution) -> Score {
         let problem = solution.problem();
 
-        if !problem.has_time_windows() {
-            return Score::zero();
-        }
-
         let mut cost = 0.0;
         for route in solution.non_empty_routes_iter() {
             let vehicle = route.vehicle(problem);
@@ -61,101 +57,29 @@ impl GlobalConstraint for TransportCostConstraint {
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
         let problem = context.problem();
 
-        if !problem.has_time_windows() {
-            return Score::zero();
-        }
+        let route = context.route();
 
-        let service_id = context.insertion.service_id();
-        let service = problem.service(service_id);
-
-        let vehicle = match context.insertion {
-            Insertion::ExistingRoute(existing_route) => context
-                .solution
-                .route(existing_route.route_id)
-                .vehicle(problem),
-            Insertion::NewRoute(new_route) => problem.vehicle(new_route.vehicle_id),
+        let position = match context.insertion {
+            Insertion::Service(service_insertion) => service_insertion.position,
+            Insertion::Shipment(_) => unimplemented!(),
         };
 
-        let route = match context.insertion {
-            Insertion::ExistingRoute(existing_route) => {
-                Some(context.solution.route(existing_route.route_id))
+        let previous_location_id = route.previous_location_id(problem, position);
+        let next_location_id = route.location_id(problem, position);
+
+        let location_id = match &context.insertion {
+            Insertion::Service(service_insertion) => {
+                problem.service(service_insertion.job_index).location_id()
             }
-            Insertion::NewRoute(_) => None,
+            Insertion::Shipment(_) => unimplemented!(),
         };
 
-        let depot_location_id = vehicle.depot_location_id();
-
-        let mut previous_location_id = None;
-        let mut next_location_id = None;
-
-        let position = context.insertion.position();
-
-        match route {
-            None => {
-                if let Some(depot_id) = depot_location_id {
-                    previous_location_id = Some(depot_id);
-
-                    if vehicle.should_return_to_depot() {
-                        next_location_id = Some(depot_id);
-                    }
-                }
-            }
-            Some(route) if route.is_empty() => {
-                if let Some(depot_id) = depot_location_id {
-                    previous_location_id = Some(depot_id);
-
-                    if vehicle.should_return_to_depot() {
-                        next_location_id = Some(depot_id);
-                    }
-                }
-            }
-            Some(route) if position == 0 => {
-                if let Some(depot_id) = depot_location_id {
-                    previous_location_id = Some(depot_id);
-                }
-
-                let activities = route.activity_ids();
-                next_location_id = Some(problem.job_task(activities[0]).location_id());
-            }
-            Some(route) if position >= route.activity_ids().len() => {
-                // Inserting at the end
-                let activities = route.activity_ids();
-                previous_location_id = Some(
-                    problem
-                        .job_task(activities[activities.len() - 1])
-                        .location_id(),
-                );
-
-                if let Some(depot_id) = depot_location_id
-                    && vehicle.should_return_to_depot()
-                {
-                    next_location_id = Some(depot_id);
-                }
-            }
-            Some(route) => {
-                let activities = route.activity_ids();
-                previous_location_id =
-                    Some(problem.job_task(activities[position - 1]).location_id());
-                next_location_id = Some(problem.job_task(activities[position]).location_id());
-            }
-        }
-
-        let old_cost =
-            if let (Some(previous), Some(next)) = (previous_location_id, next_location_id) {
-                problem.travel_cost(previous, next)
-            } else {
-                0.0
-            };
+        let old_cost = problem.travel_cost_or_zero(previous_location_id, next_location_id);
 
         let mut new_cost = 0.0;
 
-        if let Some(previous) = previous_location_id {
-            new_cost += problem.travel_cost(previous, service.location_id());
-        }
-
-        if let Some(next) = next_location_id {
-            new_cost += problem.travel_cost(service.location_id(), next);
-        }
+        new_cost += problem.travel_cost_or_zero(previous_location_id, Some(location_id));
+        new_cost += problem.travel_cost_or_zero(Some(location_id), next_location_id);
 
         let travel_cost_delta = new_cost - old_cost;
 
