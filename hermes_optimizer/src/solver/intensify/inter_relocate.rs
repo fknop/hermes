@@ -91,7 +91,7 @@ impl IntensifyOp for InterRelocateOperator {
         let source_route = solution.route(self.params.from_route_id);
         let target_route = solution.route(self.params.to_route_id);
 
-        let source_job_id = source_route.job_id_at(self.params.from);
+        let source_job_id = source_route.job_id(self.params.from);
 
         let is_target_route_valid = target_route.is_valid_change(
             solution.problem(),

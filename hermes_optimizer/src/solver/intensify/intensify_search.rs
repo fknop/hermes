@@ -116,7 +116,7 @@ impl IntensifySearch {
             let route = solution.route(v1);
 
             for from_pos in 0..route.activity_ids().len() {
-                let from_id = route.job_id_at(from_pos);
+                let from_id = route.job_id(from_pos);
 
                 let (to_pos_start, to_pos_end) = match from_id {
                     JobId::ShipmentPickup(index) => {
@@ -228,7 +228,7 @@ impl IntensifySearch {
             let to_route = solution.route(v2);
 
             for from_pos in 0..from_route.activity_ids().len() {
-                let from_job_id = from_route.job_id_at(from_pos);
+                let from_job_id = from_route.job_id(from_pos);
 
                 if from_job_id.is_shipment() {
                     continue; // skip shipments for inter-relocate

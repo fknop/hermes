@@ -20,8 +20,7 @@ impl RuinSolution for RuinRandom {
             if let Some(route_id) = solution.random_non_empty_route(rng) {
                 let route = solution.route(route_id);
                 let position = route.random_activity(rng);
-                let activity = route.activity(position);
-                solution.remove_job(activity.job_id());
+                solution.remove_job(route.job_id(position));
             } else {
                 break;
             }

@@ -195,7 +195,7 @@ impl WorkingSolutionRoute {
         )
     }
 
-    pub fn job_id_at(&self, position: usize) -> JobId {
+    pub fn job_id(&self, position: usize) -> JobId {
         self.activity_ids[position]
     }
 
@@ -455,30 +455,33 @@ impl WorkingSolutionRoute {
         }
     }
 
+    fn remove(&mut self, position: usize) -> Option<JobId> {
+        if position >= self.activity_ids.len() {
+            return None;
+        }
+
+        let job_id = self.activity_ids[position];
+        self.activity_ids.remove(position);
+        Some(job_id)
+    }
+
     pub fn remove_activity(
         &mut self,
         problem: &VehicleRoutingProblem,
-        activity_id: usize,
+        position: usize,
     ) -> Option<JobId> {
-        if activity_id >= self.activity_ids.len() {
-            return None;
+        if let Some(job_id) = self.remove(position) {
+            self.jobs.remove(&job_id);
+            for (index, &job_id) in self.activity_ids.iter().skip(position).enumerate() {
+                self.jobs.insert(job_id, index + position);
+            }
+
+            self.updated_in_iteration = true;
+
+            Some(job_id)
+        } else {
+            None
         }
-
-        let job_id = self.activity_ids[activity_id];
-
-        if !self.jobs.contains_key(&job_id) {
-            return None;
-        }
-
-        self.activity_ids.remove(activity_id);
-        self.jobs.remove(&job_id);
-        for (index, &job_id) in self.activity_ids.iter().skip(activity_id).enumerate() {
-            self.jobs.insert(job_id, index + activity_id);
-        }
-
-        self.updated_in_iteration = true;
-
-        Some(job_id)
     }
 
     pub fn remove_job(&mut self, problem: &VehicleRoutingProblem, job_id: JobId) -> bool {
@@ -572,8 +575,7 @@ impl WorkingSolutionRoute {
             return;
         }
 
-        self.update_data(problem);
-        self.update_bbox(problem);
+        self.update_activity_data(problem);
     }
 
     fn update_bbox(&mut self, problem: &VehicleRoutingProblem) {

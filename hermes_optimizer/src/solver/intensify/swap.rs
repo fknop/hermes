@@ -46,13 +46,13 @@ impl SwapOperator {
         route: &'a WorkingSolutionRoute,
     ) -> impl DoubleEndedIterator<Item = JobId> + Clone + 'a {
         if self.params.first < self.params.second {
-            std::iter::once(route.job_id_at(self.params.second))
+            std::iter::once(route.job_id(self.params.second))
                 .chain(route.job_ids_iter(self.params.first + 1, self.params.second))
-                .chain(std::iter::once(route.job_id_at(self.params.first)))
+                .chain(std::iter::once(route.job_id(self.params.first)))
         } else {
-            std::iter::once(route.job_id_at(self.params.first))
+            std::iter::once(route.job_id(self.params.first))
                 .chain(route.job_ids_iter(self.params.second + 1, self.params.first))
-                .chain(std::iter::once(route.job_id_at(self.params.second)))
+                .chain(std::iter::once(route.job_id(self.params.second)))
         }
     }
 }
