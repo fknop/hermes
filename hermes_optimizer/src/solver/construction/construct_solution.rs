@@ -360,6 +360,8 @@ pub fn construct_solution(
         }
     }
 
+    solution.resync();
+
     ConstructionBestInsertion::insert_services(
         &mut solution,
         RecreateContext {

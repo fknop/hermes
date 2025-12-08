@@ -36,6 +36,9 @@ pub struct VehicleRoutingProblem {
     precomputed_capacity_dimensions: usize,
     precomputed_normalized_demands: PrecomputedNormalizedDemands,
     precomputed_average_cost_from_depot: PrecomputedAverageCostFromDepot,
+
+    /// Normalized weight for converting waiting duration into cost
+    waiting_duration_weight: f64,
 }
 
 struct VehicleRoutingProblemParams {
@@ -70,6 +73,9 @@ impl VehicleRoutingProblem {
             .max()
             .unwrap_or(0);
 
+        let waiting_duration_weight =
+            VehicleRoutingProblem::precompute_waiting_duration_weight(&params.travel_costs);
+
         Self {
             has_time_windows: params.jobs.iter().any(|job| job.has_time_windows()),
             has_capacity: params.jobs.iter().any(|job| !job.demand().is_empty()),
@@ -81,6 +87,7 @@ impl VehicleRoutingProblem {
             precomputed_average_cost_from_depot,
             precomputed_normalized_demands,
             precomputed_capacity_dimensions,
+            waiting_duration_weight,
         }
     }
 
@@ -214,7 +221,7 @@ impl VehicleRoutingProblem {
     }
 
     pub fn waiting_duration_weight(&self) -> f64 {
-        1.0
+        self.waiting_duration_weight
     }
 
     pub fn has_waiting_duration_cost(&self) -> bool {
@@ -261,6 +268,24 @@ impl VehicleRoutingProblem {
 
     pub fn capacity_dimensions(&self) -> usize {
         self.precomputed_capacity_dimensions
+    }
+
+    fn precompute_waiting_duration_weight(travel_cost_matrix: &TravelCostMatrix) -> f64 {
+        let sum = travel_cost_matrix
+            .times()
+            .iter()
+            .zip(travel_cost_matrix.costs().iter())
+            .filter_map(|(&time, &cost)| {
+                if time > 0.0 && cost > 0.0 {
+                    Some(cost / time)
+                } else {
+                    None
+                }
+            })
+            .sum::<f64>();
+
+        sum / (travel_cost_matrix.num_locations().pow(2) - travel_cost_matrix.num_locations())
+            as f64
     }
 
     fn precompute_normalized_demands(jobs: &[Job]) -> PrecomputedNormalizedDemands {

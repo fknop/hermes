@@ -141,4 +141,20 @@ impl TravelCostMatrix {
     pub fn is_symmetric(&self) -> bool {
         self.is_symmetric
     }
+
+    pub fn num_locations(&self) -> usize {
+        self.num_locations
+    }
+
+    pub(super) fn times(&self) -> &[Time] {
+        &self.times
+    }
+
+    pub(super) fn distances(&self) -> &[Distance] {
+        &self.distances
+    }
+
+    pub(super) fn costs(&self) -> &[Cost] {
+        &self.costs
+    }
 }

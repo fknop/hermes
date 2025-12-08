@@ -593,6 +593,7 @@ impl WorkingSolutionRoute {
         self.departure_times.resize(self.len(), Timestamp::MAX);
         self.waiting_durations
             .resize(self.len(), SignedDuration::ZERO);
+        self.time_slacks.resize(self.len(), SignedDuration::MAX);
 
         self.fwd_load_pickups.resize_with(self.len(), || {
             Capacity::with_dimensions(problem.capacity_dimensions())
@@ -620,7 +621,6 @@ impl WorkingSolutionRoute {
         self.current_load.resize_with(steps, || {
             Capacity::with_dimensions(problem.capacity_dimensions())
         });
-        self.time_slacks.resize(self.len(), SignedDuration::MAX);
 
         if self.is_empty() {
             self.fwd_load_peaks
@@ -749,10 +749,12 @@ impl WorkingSolutionRoute {
         if problem.has_time_windows() {
             let mut next_activity_time_slack = SignedDuration::MAX;
             for (index, &activity_job_id) in self.activity_ids.iter().enumerate().rev() {
+                assert_ne!(self.arrival_times[index], Timestamp::MAX);
                 let current_time_slack =
                     compute_time_slack(problem, activity_job_id, self.arrival_times[index]);
 
                 self.time_slacks[index] = current_time_slack.min(next_activity_time_slack);
+
                 next_activity_time_slack = self.time_slacks[index];
             }
         } else {
@@ -867,7 +869,11 @@ impl WorkingSolutionRoute {
                 let current_time_slack = self.time_slacks[current_activity_index];
                 let current_arrival_time = self.arrival_times[current_activity_index];
 
-                if arrival_time > current_arrival_time + current_time_slack {
+                if arrival_time
+                    > current_arrival_time
+                        .saturating_add(current_time_slack)
+                        .unwrap()
+                {
                     return false;
                 }
 
