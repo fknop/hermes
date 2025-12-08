@@ -305,24 +305,24 @@ impl IntensifySearch {
                 for to_pos in 0..to_route_length - 1 {
                     let max_from_chain = from_route_length - from_pos - 1;
                     let max_to_chain = to_route_length - to_pos - 1;
-                    let max_chain_length = max_from_chain.min(max_to_chain);
 
                     // A chain is at least length 2
-                    for chain_length in 2..=max_chain_length {
-                        let op = CrossExchangeOperator::new(CrossExchangeOperatorParams {
-                            first_route_id: v1,
-                            second_route_id: v2,
+                    for from_length in 2..=max_from_chain {
+                        for to_length in 2..=max_to_chain {
+                            let op = CrossExchangeOperator::new(CrossExchangeOperatorParams {
+                                first_route_id: v1,
+                                second_route_id: v2,
 
-                            first_start: from_pos,
-                            second_start: to_pos,
-                            first_end: from_pos + chain_length - 1,
-                            second_end: to_pos + chain_length - 1,
-                        });
-
-                        let delta = op.delta(solution);
-                        if delta < self.deltas[v1][v2] && op.is_valid(solution) {
-                            self.deltas[v1][v2] = delta;
-                            self.best_ops[v1][v2] = Some(IntensifyOperator::CrossExchange(op));
+                                first_start: from_pos,
+                                second_start: to_pos,
+                                first_end: from_pos + from_length - 1,
+                                second_end: to_pos + to_length - 1,
+                            });
+                            let delta = op.delta(solution);
+                            if delta < self.deltas[v1][v2] && op.is_valid(solution) {
+                                self.deltas[v1][v2] = delta;
+                                self.best_ops[v1][v2] = Some(IntensifyOperator::CrossExchange(op));
+                            }
                         }
                     }
                 }

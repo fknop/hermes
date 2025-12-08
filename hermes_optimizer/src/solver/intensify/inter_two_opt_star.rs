@@ -289,7 +289,7 @@ mod tests {
     }
 
     #[test]
-    fn test_inter_two_opt_star_last_activity() {
+    fn test_inter_two_opt_star_last_transport_cost_delta() {
         let locations = test_utils::create_location_grid(10, 10);
 
         let services = test_utils::create_basic_services(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
@@ -298,7 +298,7 @@ mod tests {
             locations, services, vehicles,
         ));
 
-        let mut solution = test_utils::create_test_working_solution(
+        let solution = test_utils::create_test_working_solution(
             Arc::clone(&problem),
             vec![
                 TestRoute {

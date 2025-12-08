@@ -153,15 +153,16 @@ impl RuinSolution for RuinString {
         let mut seed_job = context.problem.random_job(context.rng);
 
         while ruined_routes.len() < k {
-            let route_id = solution.route_of_service(seed_job);
+            let route_to_ruin = solution.route_of_service(seed_job);
 
-            if let Some(route_id) = route_id {
+            if let Some(route_id) = route_to_ruin {
                 if context.rng.random_bool(0.5) {
                     self.ruin_string(solution, context.rng, route_id);
                 } else {
                     self.ruin_split_string(solution, context.rng, route_id);
                 }
 
+                solution.resync();
                 ruined_routes.insert(route_id);
             }
 
@@ -170,7 +171,15 @@ impl RuinSolution for RuinString {
                 .nearest_jobs(JobId::Service(seed_job))
                 .find(|&job_id| {
                     if let Some(route_id) = solution.route_of_job(job_id) {
-                        !ruined_routes.contains(&route_id)
+                        // TODO: tests intersection, it maybe be too restrictive
+                        let intersects = match route_to_ruin {
+                            Some(ruined_route) => solution
+                                .route(ruined_route)
+                                .bbox_intersects(solution.route(route_id)),
+                            None => true,
+                        };
+
+                        intersects && !ruined_routes.contains(&route_id)
                     } else {
                         false
                     }

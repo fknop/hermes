@@ -355,6 +355,7 @@ pub fn construct_solution(
 
         if let Some(service_id) = service_to_remove {
             solution.remove_service(service_id);
+            solution.resync();
         } else {
             satisfied = true
         }
