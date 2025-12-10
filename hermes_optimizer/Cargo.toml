@@ -7,7 +7,6 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-either = "1.15.0"
 fxhash = "0.2.1"
 geo = { version ="0.30.0", features=["use-serde"] }
 jiff = { version = "0.2.15", features = ["serde"] }

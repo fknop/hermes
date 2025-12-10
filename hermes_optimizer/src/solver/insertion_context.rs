@@ -1,9 +1,8 @@
-use either::Either;
 use jiff::Timestamp;
 
 use crate::{
     problem::{
-        self, job::ActivityId, service::ServiceId, vehicle_routing_problem::VehicleRoutingProblem,
+        job::ActivityId, service::ServiceId, vehicle_routing_problem::VehicleRoutingProblem,
     },
     solver::{
         insertion::{ServiceInsertion, ShipmentInsertion},
@@ -61,8 +60,8 @@ impl<'a> InsertionContext<'a> {
     pub fn compute_vehicle_start(&self) -> Timestamp {
         let route = self.insertion.route(self.solution);
 
-        match self.insertion {
-            &Insertion::Service(ServiceInsertion {
+        match *self.insertion {
+            Insertion::Service(ServiceInsertion {
                 route_id,
                 job_index,
                 position,
@@ -79,7 +78,7 @@ impl<'a> InsertionContext<'a> {
                     route.start(self.problem)
                 }
             }
-            &Insertion::Shipment(ShipmentInsertion {
+            Insertion::Shipment(ShipmentInsertion {
                 job_index,
                 pickup_position,
                 route_id,
@@ -102,14 +101,11 @@ impl<'a> InsertionContext<'a> {
 
     pub fn updated_activities_iter(
         &'a self,
-    ) -> RouteUpdateIterator<
-        'a,
-        Either<impl Iterator<Item = ActivityId>, impl Iterator<Item = ActivityId>>,
-    > {
+    ) -> RouteUpdateIterator<'a, Box<dyn Iterator<Item = ActivityId> + 'a>> {
         let route = self.insertion.route(self.solution);
 
-        match self.insertion {
-            &Insertion::Service(ServiceInsertion {
+        match *self.insertion {
+            Insertion::Service(ServiceInsertion {
                 job_index,
                 position,
                 ..
@@ -118,7 +114,7 @@ impl<'a> InsertionContext<'a> {
 
                 route.updated_activities_iter(
                     self.problem,
-                    Either::Left(
+                    Box::new(
                         std::iter::once(activity_id)
                             .chain(route.job_ids_iter(position, route.len())),
                     ),
@@ -126,14 +122,14 @@ impl<'a> InsertionContext<'a> {
                     route.len() + 1,
                 )
             }
-            &Insertion::Shipment(ShipmentInsertion {
+            Insertion::Shipment(ShipmentInsertion {
                 job_index,
                 pickup_position,
                 delivery_position,
                 ..
             }) => route.updated_activities_iter(
                 self.problem,
-                Either::Right(
+                Box::new(
                     std::iter::once(ActivityId::ShipmentPickup(job_index))
                         .chain(route.job_ids_iter(pickup_position, delivery_position))
                         .chain(std::iter::once(ActivityId::ShipmentDelivery(job_index)))
@@ -153,7 +149,7 @@ impl<'a> InsertionContext<'a> {
         compute_vehicle_end(
             self.problem,
             route.vehicle_id(),
-            last_service.job_id.into(),
+            last_service.job_id,
             last_service.departure_time,
         )
     }
