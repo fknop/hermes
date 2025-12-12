@@ -1,6 +1,9 @@
+use fxhash::FxHashSet;
 use jiff::SignedDuration;
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
+
+use crate::problem::skill::Skill;
 
 use super::{capacity::Capacity, location::LocationId, time_window::TimeWindow};
 
@@ -21,6 +24,7 @@ pub struct Service {
     location_id: LocationId,
     time_windows: TimeWindows,
     demand: Capacity,
+    skills: FxHashSet<Skill>,
     service_duration: SignedDuration,
 
     #[serde(default = "ServiceType::default")]
@@ -28,6 +32,10 @@ pub struct Service {
 }
 
 impl Service {
+    pub fn skills(&self) -> &FxHashSet<Skill> {
+        &self.skills
+    }
+
     pub fn external_id(&self) -> &str {
         &self.external_id
     }
@@ -122,6 +130,7 @@ impl ServiceBuilder {
             service_duration: self.service_duration.unwrap_or(SignedDuration::ZERO),
             time_windows: SmallVec::from_vec(self.time_windows.unwrap_or_default()),
             service_type: self.service_type.unwrap_or(ServiceType::Delivery),
+            skills: FxHashSet::default(),
         }
     }
 }

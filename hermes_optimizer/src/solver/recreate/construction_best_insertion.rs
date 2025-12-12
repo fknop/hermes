@@ -1,7 +1,7 @@
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 use crate::solver::{
-    insertion::{Insertion, ServiceInsertion},
+    insertion::{Insertion, ServiceInsertion, for_each_insertion},
     score::Score,
     solution::working_solution::WorkingSolution,
 };
@@ -24,45 +24,19 @@ impl ConstructionBestInsertion {
                     .map(|&job_id| {
                         let mut best_insertion_for_service: Option<Insertion> = None;
                         let mut best_score_for_service = Score::MAX;
-                        let routes = solution.routes();
 
-                        for (route_id, route) in routes.iter().enumerate() {
-                            for position in 0..=route.activity_ids().len() {
-                                let insertion = Insertion::Service(ServiceInsertion {
-                                    route_id,
-                                    job_index: job_id,
-                                    position,
-                                });
+                        for_each_insertion(solution, job_id, |insertion| {
+                            let score = context.compute_insertion_score(
+                                solution,
+                                &insertion,
+                                Some(&best_score_for_service),
+                            );
 
-                                let score = context.compute_insertion_score(
-                                    solution,
-                                    &insertion,
-                                    Some(&best_score_for_service),
-                                );
-
-                                if score < best_score_for_service {
-                                    best_score_for_service = score;
-                                    best_insertion_for_service = Some(insertion);
-                                }
+                            if score < best_score_for_service {
+                                best_score_for_service = score;
+                                best_insertion_for_service = Some(insertion);
                             }
-                        }
-
-                        // if solution.has_available_vehicle() {
-                        //     for vehicle_id in solution.available_vehicles_iter() {
-                        //         let new_route_insertion = Insertion::NewRoute(NewRouteInsertion {
-                        //             service_id,
-                        //             vehicle_id,
-                        //         });
-
-                        //         let score =
-                        //             context.compute_insertion_score(solution, &new_route_insertion);
-
-                        //         if score < best_score_for_service {
-                        //             best_score_for_service = score;
-                        //             best_insertion_for_service = Some(new_route_insertion);
-                        //         }
-                        //     }
-                        // }
+                        });
 
                         (best_insertion_for_service, best_score_for_service)
                     })

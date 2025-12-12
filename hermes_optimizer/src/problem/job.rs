@@ -1,9 +1,10 @@
 use std::fmt::Display;
 
+use fxhash::FxHashSet;
 use jiff::SignedDuration;
 
 use crate::problem::{
-    capacity::Capacity, service::Service, shipment::Shipment, time_window::TimeWindow,
+    capacity::Capacity, service::Service, shipment::Shipment, skill::Skill, time_window::TimeWindow,
 };
 
 #[derive(Hash, Debug, Clone, Copy, Eq, PartialEq)]
@@ -102,6 +103,13 @@ pub enum Job {
 }
 
 impl Job {
+    pub fn skills(&self) -> &FxHashSet<Skill> {
+        match self {
+            Job::Service(service) => service.skills(),
+            Job::Shipment(shipment) => shipment.skills(),
+        }
+    }
+
     pub fn external_id(&self) -> &str {
         match self {
             Job::Service(service) => service.external_id(),

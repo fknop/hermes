@@ -33,6 +33,7 @@ pub struct VehicleRoutingProblem {
     has_time_windows: bool,
     has_capacity: bool,
 
+    precomputed_vehicle_compatibilities: Vec<bool>,
     precomputed_capacity_dimensions: usize,
     precomputed_normalized_demands: PrecomputedNormalizedDemands,
     precomputed_average_cost_from_depot: PrecomputedAverageCostFromDepot,
@@ -76,6 +77,12 @@ impl VehicleRoutingProblem {
         let waiting_duration_weight =
             VehicleRoutingProblem::precompute_waiting_duration_weight(&params.travel_costs);
 
+        let precomputed_vehicle_compatibilities =
+            VehicleRoutingProblem::precompute_vehicle_compatibilities(
+                &params.vehicles,
+                &params.jobs,
+            );
+
         Self {
             has_time_windows: params.jobs.iter().any(|job| job.has_time_windows()),
             has_capacity: params.jobs.iter().any(|job| !job.demand().is_empty()),
@@ -87,6 +94,7 @@ impl VehicleRoutingProblem {
             precomputed_average_cost_from_depot,
             precomputed_normalized_demands,
             precomputed_capacity_dimensions,
+            precomputed_vehicle_compatibilities,
             waiting_duration_weight,
         }
     }
@@ -268,6 +276,31 @@ impl VehicleRoutingProblem {
 
     pub fn capacity_dimensions(&self) -> usize {
         self.precomputed_capacity_dimensions
+    }
+
+    pub fn is_service_compatible_with_vehicle(
+        &self,
+        vehicle_index: usize,
+        job_index: usize,
+    ) -> bool {
+        let index = (vehicle_index * self.vehicles.len()) + job_index;
+        self.precomputed_vehicle_compatibilities[index]
+    }
+
+    fn precompute_vehicle_compatibilities(vehicles: &[Vehicle], jobs: &[Job]) -> Vec<bool> {
+        let mut compatibilities = vec![true; vehicles.len() * jobs.len()];
+
+        for (vehicle_index, vehicle) in vehicles.iter().enumerate() {
+            for (job_index, job) in jobs.iter().enumerate() {
+                //  from * self.num_locations + to
+                let index = (vehicle_index * vehicles.len()) + job_index;
+                if !vehicle.is_compatible_with(job) {
+                    compatibilities[index] = false;
+                }
+            }
+        }
+
+        compatibilities
     }
 
     fn precompute_waiting_duration_weight(travel_cost_matrix: &TravelCostMatrix) -> f64 {

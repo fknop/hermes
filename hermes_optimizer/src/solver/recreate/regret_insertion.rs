@@ -2,7 +2,7 @@ use rand::Rng;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 use crate::solver::{
-    insertion::{Insertion, ServiceInsertion},
+    insertion::{Insertion, ServiceInsertion, for_each_insertion},
     score::Score,
     solution::working_solution::WorkingSolution,
 };
@@ -56,34 +56,10 @@ impl RegretInsertion {
                     + solution.routes().len(),
                 );
 
-                // Find all possible insertions in existing routes
-                for (route_id, route) in solution.routes().iter().enumerate() {
-                    // We can insert at any position, including the end
-                    for position in 0..=route.activity_ids().len() {
-                        let insertion = Insertion::Service(ServiceInsertion {
-                            route_id,
-                            job_index: service_id,
-                            position,
-                        });
-
-                        let score = context.compute_insertion_score(solution, &insertion, None);
-
-                        // Only consider valid insertions
-                        potential_insertions.push((score, insertion));
-                    }
-                }
-
-                // Consider creating a new route if a vehicle is available
-                // if solution.has_available_vehicle() {
-                //     for vehicle_id in solution.available_vehicles_iter() {
-                //         let insertion = Insertion::NewRoute(NewRouteInsertion {
-                //             service_id,
-                //             vehicle_id,
-                //         });
-                //         let score = context.compute_insertion_score(solution, &insertion);
-                //         potential_insertions.push((score, insertion));
-                //     }
-                // }
+                for_each_insertion(solution, service_id, |insertion| {
+                    let score = context.compute_insertion_score(solution, &insertion, None);
+                    potential_insertions.push((score, insertion));
+                });
 
                 // If no valid insertion was found for this service, skip it
                 if potential_insertions.is_empty() {

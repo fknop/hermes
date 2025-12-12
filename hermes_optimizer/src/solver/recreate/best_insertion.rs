@@ -10,7 +10,7 @@ use crate::{
         vehicle_routing_problem::VehicleRoutingProblem,
     },
     solver::{
-        insertion::{Insertion, ServiceInsertion},
+        insertion::{Insertion, ServiceInsertion, ShipmentInsertion, for_each_insertion},
         score::Score,
         solution::working_solution::WorkingSolution,
     },
@@ -155,55 +155,25 @@ impl BestInsertion {
         rng.random_bool(self.blink_rate)
     }
 
-    pub fn insert_services(
+    pub fn insert_jobs(
         &self,
-        unassigned_services: &Vec<ServiceId>,
+        unassigned_jobs: &Vec<ServiceId>,
         solution: &mut WorkingSolution,
         context: RecreateContext,
     ) {
-        for &service_id in unassigned_services {
+        for &job_id in unassigned_jobs {
             let mut best_insertion: Option<Insertion> = None;
             let mut best_score = Score::MAX;
 
-            let routes = solution.routes();
+            for_each_insertion(solution, job_id, |insertion| {
+                let score =
+                    context.compute_insertion_score(solution, &insertion, Some(&best_score));
 
-            for (route_id, route) in routes.iter().enumerate() {
-                for position in 0..=route.activity_ids().len() {
-                    if self.should_blink(context.rng) {
-                        continue;
-                    }
-
-                    let insertion = Insertion::Service(ServiceInsertion {
-                        route_id,
-                        job_index: service_id,
-                        position,
-                    });
-
-                    let score =
-                        context.compute_insertion_score(solution, &insertion, Some(&best_score));
-
-                    if score < best_score {
-                        best_score = score;
-                        best_insertion = Some(insertion);
-                    }
+                if score < best_score {
+                    best_score = score;
+                    best_insertion = Some(insertion);
                 }
-            }
-
-            // if solution.has_available_vehicle() {
-            //     for vehicle_id in solution.available_vehicles_iter() {
-            //         let new_route_insertion = Insertion::NewRoute(NewRouteInsertion {
-            //             service_id,
-            //             vehicle_id,
-            //         });
-
-            //         let score = context.compute_insertion_score(solution, &new_route_insertion);
-
-            //         if score < best_score {
-            //             best_score = score;
-            //             best_insertion = Some(new_route_insertion);
-            //         }
-            //     }
-            // }
+            });
 
             if let Some(insertion) = best_insertion {
                 solution.insert(&insertion);
@@ -221,6 +191,6 @@ impl RecreateSolution for BestInsertion {
         self.sort_unassigned_jobs(context.problem, &mut unassigned_services, context.rng);
         // unassigned_services.shuffle(context.rng);
 
-        self.insert_services(&unassigned_services, solution, context);
+        self.insert_jobs(&unassigned_services, solution, context);
     }
 }

@@ -1,5 +1,9 @@
+use fxhash::FxHashSet;
 use jiff::{SignedDuration, Timestamp};
 use serde::{Deserialize, Serialize};
+use serde_with::{FromInto, serde_as};
+
+use crate::problem::{job::Job, service::Service, skill::Skill};
 
 use super::{capacity::Capacity, location::LocationId};
 
@@ -14,6 +18,7 @@ pub struct Vehicle {
     depot_duration: Option<SignedDuration>,
     end_depot_duration: Option<SignedDuration>,
     should_return_to_depot: bool,
+    skills: FxHashSet<Skill>,
 }
 
 impl Vehicle {
@@ -63,6 +68,10 @@ impl Vehicle {
 
     pub fn set_depot_location(&mut self, location_id: LocationId) {
         self.depot_location_id = Some(location_id);
+    }
+
+    pub fn is_compatible_with(&self, job: &Job) -> bool {
+        self.skills.is_subset(job.skills())
     }
 }
 
@@ -189,6 +198,7 @@ impl VehicleBuilder {
             should_return_to_depot: self.should_return_to_depot.unwrap_or(false),
             depot_duration: self.depot_duration,
             end_depot_duration: self.end_depot_duration,
+            skills: FxHashSet::default(),
         }
     }
 }
