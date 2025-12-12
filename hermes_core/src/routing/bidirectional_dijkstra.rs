@@ -597,11 +597,10 @@ where
                 break;
             }
 
-            if let Some(ref stop_condition) = stop_condition {
-                if stop_condition(self) {
+            if let Some(ref stop_condition) = stop_condition
+                && stop_condition(self) {
                     break;
                 }
-            }
         }
 
         stopwatch.stop();

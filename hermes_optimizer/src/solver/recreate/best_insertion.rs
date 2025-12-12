@@ -6,11 +6,11 @@ use serde::Serialize;
 
 use crate::{
     problem::{
-        amount::AmountExpression, job::Job, service::ServiceId, travel_cost_matrix::Distance,
+        amount::AmountExpression, job::Job, service::ServiceId,
         vehicle_routing_problem::VehicleRoutingProblem,
     },
     solver::{
-        insertion::{Insertion, ServiceInsertion, ShipmentInsertion, for_each_insertion},
+        insertion::{Insertion, for_each_insertion},
         score::Score,
         solution::working_solution::WorkingSolution,
     },

@@ -270,11 +270,9 @@ where
                         if let Some(current_weight) = node_bucket
                             .and_then(|bucket| bucket.get(&source_or_target))
                             .map(|entry| entry.weight)
-                        {
-                            if entry.weight > up_edge.weight + current_weight {
+                            && entry.weight > up_edge.weight + current_weight {
                                 nodes_to_prune.push((up_edge.node_id, source_or_target));
                             }
-                        }
                     }
                 }
             }

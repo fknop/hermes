@@ -2,7 +2,6 @@ use crate::{
     problem::{
         amount::AmountExpression,
         capacity::{is_capacity_satisfied, over_capacity_demand},
-        job::Job,
         service::ServiceType,
         vehicle_routing_problem::VehicleRoutingProblem,
     },

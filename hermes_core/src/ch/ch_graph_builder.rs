@@ -97,8 +97,8 @@ impl<'a> CHGraphBuilder<'a> {
             // Lazy recomputation of the priority
             // If the recomputed priority is less than the next node to be contracted, we re-enqueue the node
 
-            if priority != i32::MIN {
-                if let Some((_, least_priority)) = priority_queue.peek() {
+            if priority != i32::MIN
+                && let Some((_, least_priority)) = priority_queue.peek() {
                     self.recompute_priority_stopwatch.start();
                     let recomputed_priority = self.calc_priority(
                         &mut preparation_graph,
@@ -116,7 +116,6 @@ impl<'a> CHGraphBuilder<'a> {
                         continue;
                     }
                 }
-            }
 
             let mut neighbors = Vec::new();
 
@@ -186,7 +185,7 @@ impl<'a> CHGraphBuilder<'a> {
             self.contracted_nodes += 1;
 
             // TODO: better condition
-            if self.contracted_nodes % 500000 == 0 && self.added_shortcuts > 0 {
+            if self.contracted_nodes.is_multiple_of(500000) && self.added_shortcuts > 0 {
                 debug!("Recompute all remaining priorities");
                 let remaining_nodes: Vec<(NodeId, i32)> = priority_queue.to_vec();
                 priority_queue.clear();

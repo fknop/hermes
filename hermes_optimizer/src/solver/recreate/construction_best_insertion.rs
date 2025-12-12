@@ -1,7 +1,7 @@
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 use crate::solver::{
-    insertion::{Insertion, ServiceInsertion, for_each_insertion},
+    insertion::{Insertion, for_each_insertion},
     score::Score,
     solution::working_solution::WorkingSolution,
 };

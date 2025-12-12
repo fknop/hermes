@@ -166,8 +166,7 @@ impl<'a> CHPreparationGraph<'a> {
         for &outgoing_edge_id in self.outgoing_edges[shortcut.start].iter() {
             if let CHPreparationGraphEdge::Shortcut(existing_shortcut) =
                 &mut self.edges[outgoing_edge_id]
-            {
-                if existing_shortcut.end == shortcut.end {
+                && existing_shortcut.end == shortcut.end {
                     // Only update it if it has a lower weight, otherwise do nothing
                     if existing_shortcut.weight > shortcut.weight {
                         existing_shortcut.weight = shortcut.weight;
@@ -179,7 +178,6 @@ impl<'a> CHPreparationGraph<'a> {
 
                     return;
                 }
-            }
         }
 
         let edge_id = self.edges.len();

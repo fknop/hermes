@@ -559,18 +559,16 @@ impl Search {
                     },
                 );
             }
-        } else {
-            if let Some(strategy) = iteration_info.strategy() {
-                state.alns_scores.update_scores(
-                    strategy,
-                    &self.params,
-                    UpdateScoreParams {
-                        is_best: false,
-                        improved: false,
-                        accepted: false,
-                    },
-                );
-            }
+        } else if let Some(strategy) = iteration_info.strategy() {
+            state.alns_scores.update_scores(
+                strategy,
+                &self.params,
+                UpdateScoreParams {
+                    is_best: false,
+                    improved: false,
+                    accepted: false,
+                },
+            );
         }
 
         if state.iteration > 0 {

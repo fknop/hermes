@@ -1,9 +1,8 @@
 use fxhash::FxHashSet;
 use jiff::{SignedDuration, Timestamp};
 use serde::{Deserialize, Serialize};
-use serde_with::{FromInto, serde_as};
 
-use crate::problem::{job::Job, service::Service, skill::Skill};
+use crate::problem::{job::Job, skill::Skill};
 
 use super::{capacity::Capacity, location::LocationId};
 

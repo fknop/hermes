@@ -125,7 +125,7 @@ impl OsmReader {
 
                 self.accepted_ways += 1;
 
-                if self.accepted_ways % 100000 == 0 {
+                if self.accepted_ways.is_multiple_of(100000) {
                     info!("Preprocessed {} ways", self.accepted_ways);
                 }
             }
@@ -218,7 +218,7 @@ impl OsmReader {
 
                         self.processed_segments += 1;
 
-                        if self.processed_segments % 100000 == 0 {
+                        if self.processed_segments.is_multiple_of(100000) {
                             info!("Processed {} segments", self.processed_segments)
                         }
                     }
@@ -273,7 +273,7 @@ impl OsmReader {
 
         let node_count = self.routing_nodes.len() + self.geometry_nodes.len();
 
-        if node_count % 500000 == 0 {
+        if node_count.is_multiple_of(500000) {
             info!("Processed {} nodes", node_count);
         }
     }
