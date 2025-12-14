@@ -11,7 +11,7 @@ impl RuinSolution for RuinRoute {
     where
         R: rand::Rng,
     {
-        let mut remaining: i64 = context.num_activities_to_remove as i64;
+        let mut remaining: i64 = context.num_jobs_to_remove as i64;
 
         while remaining > 0 {
             let route_ids = solution

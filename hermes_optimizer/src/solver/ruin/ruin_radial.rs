@@ -2,7 +2,6 @@ use crate::solver::solution::working_solution::WorkingSolution;
 
 use super::{ruin_context::RuinContext, ruin_solution::RuinSolution};
 
-// TODO: support shipments
 pub struct RuinRadial;
 
 impl RuinSolution for RuinRadial {
@@ -11,7 +10,7 @@ impl RuinSolution for RuinRadial {
         solution: &mut WorkingSolution,
         RuinContext {
             rng,
-            num_activities_to_remove,
+            num_jobs_to_remove,
             problem,
             ..
         }: RuinContext<R>,
@@ -20,11 +19,15 @@ impl RuinSolution for RuinRadial {
     {
         let random_location_id = problem.random_location(rng);
 
-        for job_id in problem
-            .nearest_jobs_of_location(random_location_id)
-            .take(num_activities_to_remove)
-        {
-            solution.remove_service(job_id.index());
+        let mut remaining_jobs_to_remove = num_jobs_to_remove;
+        for job_id in problem.nearest_jobs_of_location(random_location_id) {
+            if solution.remove_job(job_id) {
+                remaining_jobs_to_remove -= 1;
+            }
+
+            if remaining_jobs_to_remove == 0 {
+                break;
+            }
         }
     }
 }
@@ -84,7 +87,7 @@ mod tests {
                 params: &RuinParams::default(),
                 problem: &problem,
                 rng: &mut rng,
-                num_activities_to_remove: 2,
+                num_jobs_to_remove: 2,
             },
         );
 

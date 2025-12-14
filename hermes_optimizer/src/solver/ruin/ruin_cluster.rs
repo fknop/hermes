@@ -17,7 +17,7 @@ impl RuinSolution for RuinCluster {
         solution: &mut WorkingSolution,
         RuinContext {
             rng,
-            num_activities_to_remove,
+            num_jobs_to_remove,
             problem,
             ..
         }: RuinContext<R>,
@@ -27,7 +27,7 @@ impl RuinSolution for RuinCluster {
         let mut ruined_routes: FxHashSet<usize> = FxHashSet::default();
 
         let mut target_service_id = problem.random_job(rng);
-        let mut remaining_to_remove = num_activities_to_remove;
+        let mut remaining_to_remove = num_jobs_to_remove;
 
         while remaining_to_remove > 0 {
             let route_id = solution.route_of_service(target_service_id).unwrap();

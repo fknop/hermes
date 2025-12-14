@@ -116,7 +116,7 @@ impl RuinSolution for RuinTimeRelated {
                 .total_cmp(&RuinTimeRelated::relatedness(b, max_distance, max_time))
         });
 
-        let mut remaining_to_remove = context.num_activities_to_remove;
+        let mut remaining_to_remove = context.num_jobs_to_remove;
 
         solution.remove_activity(target_route_id, target_activity_id);
         remaining_to_remove -= 1;

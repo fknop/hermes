@@ -11,5 +11,5 @@ where
     pub params: &'a RuinParams,
     pub problem: &'a VehicleRoutingProblem,
     pub rng: &'a mut R,
-    pub num_activities_to_remove: usize,
+    pub num_jobs_to_remove: usize,
 }

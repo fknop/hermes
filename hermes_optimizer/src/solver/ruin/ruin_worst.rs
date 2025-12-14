@@ -67,7 +67,7 @@ impl RuinSolution for RuinWorst {
 
         let mut candidates: Vec<(ActivityId, f64)> =
             Vec::with_capacity(solution.problem().jobs().len());
-        for _ in 0..context.num_activities_to_remove {
+        for _ in 0..context.num_jobs_to_remove {
             if solution.is_empty() {
                 return;
             }

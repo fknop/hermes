@@ -10,13 +10,13 @@ impl RuinSolution for RuinRandom {
         solution: &mut WorkingSolution,
         RuinContext {
             rng,
-            num_activities_to_remove,
+            num_jobs_to_remove,
             ..
         }: RuinContext<R>,
     ) where
         R: rand::Rng,
     {
-        for _ in 0..num_activities_to_remove {
+        for _ in 0..num_jobs_to_remove {
             if let Some(route_id) = solution.random_non_empty_route(rng) {
                 let route = solution.route(route_id);
                 let position = route.random_activity(rng);

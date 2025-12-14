@@ -589,11 +589,7 @@ impl Search {
         }
     }
 
-    fn create_num_activities_to_remove(
-        &self,
-        state: &ThreadedSearchState,
-        rng: &mut SmallRng,
-    ) -> usize {
+    fn create_num_jobs_to_remove(&self, state: &ThreadedSearchState, rng: &mut SmallRng) -> usize {
         let ruin_minimum_ratio = self.params.ruin.ruin_minimum_ratio;
         let ruin_maximum_ratio = self.params.ruin.ruin_maximum_ratio;
 
@@ -619,7 +615,7 @@ impl Search {
             solution,
             RuinContext {
                 problem: &self.problem,
-                num_activities_to_remove: self.create_num_activities_to_remove(state, rng),
+                num_jobs_to_remove: self.create_num_jobs_to_remove(state, rng),
                 rng,
                 params: &self.params.ruin,
             },
