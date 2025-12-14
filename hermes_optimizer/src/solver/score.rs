@@ -72,6 +72,10 @@ impl Score {
             soft_score: self.soft_score.round(),
         }
     }
+
+    pub fn is_failure(&self) -> bool {
+        self.hard_score > 0.0
+    }
 }
 
 impl Eq for Score {}

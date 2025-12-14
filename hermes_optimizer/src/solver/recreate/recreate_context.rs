@@ -18,6 +18,7 @@ pub struct RecreateContext<'a> {
     pub problem: &'a VehicleRoutingProblem,
     pub noise_generator: Option<&'a NoiseGenerator>,
     pub thread_pool: &'a rayon::ThreadPool,
+    pub insert_on_failure: bool,
 }
 
 impl<'a> RecreateContext<'a> {
@@ -32,5 +33,13 @@ impl<'a> RecreateContext<'a> {
             + self.noise_generator.map_or(Score::ZERO, |noise_generator| {
                 Score::soft(noise_generator.create_noise(context.insertion.job_index()))
             })
+    }
+
+    pub fn should_insert(&self, score: &Score) -> bool {
+        if self.insert_on_failure {
+            true
+        } else {
+            !score.is_failure()
+        }
     }
 }

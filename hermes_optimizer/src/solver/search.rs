@@ -639,6 +639,7 @@ impl Search {
                 noise_generator: Some(&state.noise_generator),
                 problem: &self.problem,
                 thread_pool: &self.thread_pool,
+                insert_on_failure: self.params.recreate.insert_on_failure,
             },
         );
 

@@ -175,10 +175,12 @@ impl BestInsertion {
                 }
             });
 
-            if let Some(insertion) = best_insertion {
-                solution.insert(&insertion);
-            } else {
-                panic!("No insertion possible")
+            if context.should_insert(&best_score) {
+                if let Some(insertion) = best_insertion {
+                    solution.insert(&insertion);
+                } else {
+                    panic!("No insertion possible")
+                }
             }
         }
     }

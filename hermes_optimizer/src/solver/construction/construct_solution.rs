@@ -318,6 +318,7 @@ pub fn construct_solution(
             noise_generator: None,
             problem,
             thread_pool,
+            insert_on_failure: true,
         },
     );
 
@@ -372,6 +373,7 @@ pub fn construct_solution(
             noise_generator: None,
             problem,
             thread_pool,
+            insert_on_failure: true,
         },
     );
 

@@ -1,9 +1,7 @@
 use jiff::Timestamp;
 
 use crate::{
-    problem::{
-        time_window::TimeWindow, vehicle_routing_problem::VehicleRoutingProblem,
-    },
+    problem::{time_window::TimeWindow, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{
         insertion_context::InsertionContext,
         score::Score,
@@ -98,18 +96,6 @@ impl ActivityConstraint for TimeWindowConstraint {
                 data.arrival_time,
             )
         }
-
-        // // TODO: precompute time slacks to avoid recomputing for all activities
-        // for i in context.insertion.position()..context.activities.len() {
-        //     let activity = &context.activities[i];
-        //     let service = problem.service(activity.service_id);
-
-        //     total_score += TimeWindowConstraint::compute_time_window_score(
-        //         self.score_level(),
-        //         service.time_windows(),
-        //         activity.arrival_time,
-        //     )
-        // }
 
         total_score
     }

@@ -3,11 +3,13 @@ use super::{best_insertion::BestInsertionSortMethod, recreate_strategy::Recreate
 #[derive(Clone, Debug)]
 pub struct RecreateParams {
     pub recreate_strategies: Vec<RecreateStrategy>,
+    pub insert_on_failure: bool,
 }
 
 impl Default for RecreateParams {
     fn default() -> Self {
         RecreateParams {
+            insert_on_failure: true,
             recreate_strategies: vec![
                 RecreateStrategy::RegretInsertion,
                 RecreateStrategy::BestInsertion(BestInsertionSortMethod::Random),
