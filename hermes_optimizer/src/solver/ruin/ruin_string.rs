@@ -102,9 +102,7 @@ impl RuinString {
     {
         let route = solution.route(route_id);
         let route_length = route.activity_ids().len();
-        let string_length = rng
-            .random_range(self.l_min..=self.l_max)
-            .min(route_length - 1);
+        let string_length = rng.random_range(self.l_min..=self.l_max).min(route_length);
         let preserved_string_length =
             Self::compute_preserved_length(string_length, route_length, rng);
 
@@ -143,18 +141,17 @@ impl RuinString {
             preserved_string_length,
         }: RuinSplitStringParams,
     ) {
+        let route_len = solution.route(route_id).len();
         assert!(start_of_preserved_string < string_length);
-        assert!(start <= start_of_preserved_string);
-        assert!(
-            start_of_preserved_string + preserved_string_length
-                <= start + string_length + start_of_preserved_string
-        );
+        assert!(start < route_len);
 
         let total_string_length = string_length + preserved_string_length;
 
+        assert!(total_string_length <= route_len);
+
         let mut preserved = 0;
 
-        for string_position in 0..(total_string_length) {
+        for string_position in 0..total_string_length {
             if string_position >= start_of_preserved_string
                 && string_position < start_of_preserved_string + preserved_string_length
             {
