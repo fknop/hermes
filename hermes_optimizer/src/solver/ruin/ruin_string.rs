@@ -152,14 +152,12 @@ impl RuinString {
 
         let total_string_length = string_length + preserved_string_length;
 
-        let mut string_position = 0;
         let mut preserved = 0;
 
-        for _ in start..(start + total_string_length) {
+        for string_position in 0..(total_string_length) {
             if string_position >= start_of_preserved_string
                 && string_position < start_of_preserved_string + preserved_string_length
             {
-                string_position += 1;
                 preserved += 1;
                 continue;
             }
@@ -167,7 +165,6 @@ impl RuinString {
             // s, s+1, p, p+1, s+4
 
             solution.remove_activity(route_id, start + preserved);
-            string_position += 1;
         }
     }
 }
