@@ -371,14 +371,18 @@ impl Search {
                 state.iterations_without_improvement >= max_iterations_without_improvement
             }
             Termination::Score(target_score) => {
-                if let Some(best_solution) = state.best_solutions.read().first() {
+                if let Some(best_solution) = state.best_solutions.read().first()
+                    && !best_solution.solution.has_unassigned()
+                {
                     (best_solution.score * 100.0).round() / 100.0 <= target_score
                 } else {
                     false
                 }
             }
             Termination::VehiclesAndCosts { vehicles, costs } => {
-                if let Some(best_solution) = state.best_solutions.read().first() {
+                if let Some(best_solution) = state.best_solutions.read().first()
+                    && !best_solution.solution.has_unassigned()
+                {
                     best_solution.solution.total_transport_costs() <= costs
                         && best_solution.solution.non_empty_routes_iter().count() <= vehicles
                 } else {

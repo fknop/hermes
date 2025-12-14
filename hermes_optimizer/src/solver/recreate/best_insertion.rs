@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, ops::ControlFlow};
 
 use jiff::Timestamp;
 use rand::{Rng, rngs::SmallRng, seq::SliceRandom};
@@ -20,12 +20,12 @@ use super::{recreate_context::RecreateContext, recreate_solution::RecreateSoluti
 
 #[derive(Default)]
 pub struct BestInsertion {
-    sort_method: BestInsertionSortMethod,
+    sort_method: BestInsertionSortStrategy,
     blink_rate: f64,
 }
 
 #[derive(Default, Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize)]
-pub enum BestInsertionSortMethod {
+pub enum BestInsertionSortStrategy {
     #[default]
     Random,
     Demand,
@@ -34,7 +34,7 @@ pub enum BestInsertionSortMethod {
     TimeWindow,
 }
 
-impl Display for BestInsertionSortMethod {
+impl Display for BestInsertionSortStrategy {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Random => write!(f, "Random"),
@@ -46,34 +46,15 @@ impl Display for BestInsertionSortMethod {
     }
 }
 
-impl BestInsertionSortMethod {
-    fn weight(&self) -> usize {
-        match self {
-            BestInsertionSortMethod::Random => 4,
-            BestInsertionSortMethod::Demand => 4,
-            BestInsertionSortMethod::Far => 2,
-            BestInsertionSortMethod::Close => 1,
-            BestInsertionSortMethod::TimeWindow => 1,
-        }
-    }
-}
-
-const METHODS: [BestInsertionSortMethod; 4] = [
-    BestInsertionSortMethod::Random,
-    BestInsertionSortMethod::Demand,
-    BestInsertionSortMethod::Far,
-    BestInsertionSortMethod::Close,
-];
-
 pub struct BestInsertionParams {
-    pub sort_method: BestInsertionSortMethod,
+    pub sort_strategy: BestInsertionSortStrategy,
     pub blink_rate: f64,
 }
 
 impl BestInsertion {
     pub fn new(
         BestInsertionParams {
-            sort_method,
+            sort_strategy: sort_method,
             blink_rate,
         }: BestInsertionParams,
     ) -> Self {
@@ -90,17 +71,17 @@ impl BestInsertion {
         rng: &mut SmallRng,
     ) {
         match self.sort_method {
-            BestInsertionSortMethod::Random => {
+            BestInsertionSortStrategy::Random => {
                 unassigned_jobs.shuffle(rng);
             }
-            BestInsertionSortMethod::Demand => unassigned_jobs.sort_unstable_by(|a, b| {
+            BestInsertionSortStrategy::Demand => unassigned_jobs.sort_unstable_by(|a, b| {
                 // Not perfect but good enough for sorting purposes.
                 let first_demand_a = problem.job(*a).demand().get(0);
                 let first_demand_b = problem.job(*b).demand().get(0);
 
                 first_demand_a.total_cmp(&first_demand_b)
             }),
-            BestInsertionSortMethod::Far => {
+            BestInsertionSortStrategy::Far => {
                 unassigned_jobs.sort_unstable_by_key(|&id| match problem.job(id) {
                     Job::Shipment(shipment) => {
                         let pickup_distance =
@@ -118,7 +99,7 @@ impl BestInsertion {
                     }
                 });
             }
-            BestInsertionSortMethod::Close => {
+            BestInsertionSortStrategy::Close => {
                 unassigned_jobs.sort_unstable_by_key(|&id| match problem.job(id) {
                     Job::Shipment(shipment) => {
                         let pickup_distance =
@@ -136,7 +117,7 @@ impl BestInsertion {
                     }
                 })
             }
-            BestInsertionSortMethod::TimeWindow => {
+            BestInsertionSortStrategy::TimeWindow => {
                 unassigned_jobs.sort_unstable_by_key(|&job_id| {
                     let time_windows = match problem.job(job_id) {
                         Job::Service(service) => service.time_windows(),
@@ -166,6 +147,10 @@ impl BestInsertion {
             let mut best_score = Score::MAX;
 
             for_each_insertion(solution, job_id, |insertion| {
+                if self.should_blink(context.rng) {
+                    return;
+                }
+
                 let score =
                     context.compute_insertion_score(solution, &insertion, Some(&best_score));
 

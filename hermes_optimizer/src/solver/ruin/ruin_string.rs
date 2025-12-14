@@ -102,7 +102,9 @@ impl RuinString {
     {
         let route = solution.route(route_id);
         let route_length = route.activity_ids().len();
-        let string_length = rng.random_range(self.l_min..=self.l_max).min(route_length);
+        let string_length = rng
+            .random_range(self.l_min..=self.l_max)
+            .min(route_length - 1);
         let preserved_string_length =
             Self::compute_preserved_length(string_length, route_length, rng);
 
@@ -117,6 +119,38 @@ impl RuinString {
 
         let start = possible_starts.choose(rng).cloned().unwrap();
         let start_of_preserved_string = rng.random_range(0..string_length);
+
+        self.remove_split_string(
+            solution,
+            RuinSplitStringParams {
+                route_id,
+                start,
+                start_of_preserved_string,
+                string_length,
+                preserved_string_length,
+            },
+        );
+    }
+
+    fn remove_split_string(
+        &self,
+        solution: &mut WorkingSolution,
+        RuinSplitStringParams {
+            route_id,
+            start,
+            start_of_preserved_string,
+            string_length,
+            preserved_string_length,
+        }: RuinSplitStringParams,
+    ) {
+        assert!(start_of_preserved_string < string_length);
+        assert!(start <= start_of_preserved_string);
+        assert!(
+            start_of_preserved_string + preserved_string_length
+                <= start + string_length + start_of_preserved_string
+        );
+
+        let total_string_length = string_length + preserved_string_length;
 
         let mut string_position = 0;
         let mut preserved = 0;
@@ -136,6 +170,14 @@ impl RuinString {
             string_position += 1;
         }
     }
+}
+
+struct RuinSplitStringParams {
+    route_id: usize,
+    start: usize,
+    start_of_preserved_string: usize,
+    string_length: usize,
+    preserved_string_length: usize,
 }
 
 impl RuinSolution for RuinString {
@@ -197,6 +239,10 @@ impl RuinSolution for RuinString {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
+    use crate::test_utils::{self, TestRoute};
+
     use super::*;
 
     #[test]
@@ -207,5 +253,89 @@ mod tests {
         );
 
         assert_eq!(RuinString::compute_possible_string_start(3, 4, 5), vec![2]);
+    }
+
+    #[test]
+    fn test_remove_split_string() {
+        let locations = test_utils::create_location_grid(10, 10);
+
+        let services = test_utils::create_basic_services(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        let vehicles = test_utils::create_basic_vehicles(vec![0, 0]);
+        let problem = Arc::new(test_utils::create_test_problem(
+            locations, services, vehicles,
+        ));
+
+        let mut solution = test_utils::create_test_working_solution(
+            Arc::clone(&problem),
+            vec![TestRoute {
+                vehicle_id: 0,
+                service_ids: vec![0, 1, 2, 3, 4, 5, 6, 7, 8],
+            }],
+        );
+
+        let ruin_string = RuinString::default();
+        ruin_string.remove_split_string(
+            &mut solution,
+            RuinSplitStringParams {
+                route_id: 0,
+                start: 1,
+                start_of_preserved_string: 2,
+                string_length: 3,
+                preserved_string_length: 2,
+            },
+        );
+
+        assert_eq!(
+            solution.route(0).activity_ids().to_vec(),
+            vec![
+                ActivityId::Service(0),
+                ActivityId::Service(3),
+                ActivityId::Service(4),
+                ActivityId::Service(6),
+                ActivityId::Service(7),
+                ActivityId::Service(8)
+            ]
+        )
+    }
+
+    #[test]
+    fn test_remove_split_string_2() {
+        let locations = test_utils::create_location_grid(10, 10);
+
+        let services = test_utils::create_basic_services(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        let vehicles = test_utils::create_basic_vehicles(vec![0, 0]);
+        let problem = Arc::new(test_utils::create_test_problem(
+            locations, services, vehicles,
+        ));
+
+        let mut solution = test_utils::create_test_working_solution(
+            Arc::clone(&problem),
+            vec![TestRoute {
+                vehicle_id: 0,
+                service_ids: vec![0, 1, 2, 3, 4, 5, 6, 7, 8],
+            }],
+        );
+
+        let ruin_string = RuinString::default();
+        ruin_string.remove_split_string(
+            &mut solution,
+            RuinSplitStringParams {
+                route_id: 0,
+                start: 1,
+                start_of_preserved_string: 2,
+                string_length: 5,
+                preserved_string_length: 2,
+            },
+        );
+
+        assert_eq!(
+            solution.route(0).activity_ids().to_vec(),
+            vec![
+                ActivityId::Service(0),
+                ActivityId::Service(3),
+                ActivityId::Service(4),
+                ActivityId::Service(8)
+            ]
+        )
     }
 }

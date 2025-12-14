@@ -1,4 +1,4 @@
-use super::{best_insertion::BestInsertionSortMethod, recreate_strategy::RecreateStrategy};
+use super::{best_insertion::BestInsertionSortStrategy, recreate_strategy::RecreateStrategy};
 
 #[derive(Clone, Debug)]
 pub struct RecreateParams {
@@ -9,14 +9,14 @@ pub struct RecreateParams {
 impl Default for RecreateParams {
     fn default() -> Self {
         RecreateParams {
-            insert_on_failure: true,
+            insert_on_failure: false,
             recreate_strategies: vec![
                 RecreateStrategy::RegretInsertion,
-                RecreateStrategy::BestInsertion(BestInsertionSortMethod::Random),
-                RecreateStrategy::BestInsertion(BestInsertionSortMethod::Demand),
-                RecreateStrategy::BestInsertion(BestInsertionSortMethod::Far),
-                RecreateStrategy::BestInsertion(BestInsertionSortMethod::Close),
-                RecreateStrategy::BestInsertion(BestInsertionSortMethod::TimeWindow),
+                RecreateStrategy::BestInsertion(BestInsertionSortStrategy::Random),
+                RecreateStrategy::BestInsertion(BestInsertionSortStrategy::Demand),
+                RecreateStrategy::BestInsertion(BestInsertionSortStrategy::Far),
+                RecreateStrategy::BestInsertion(BestInsertionSortStrategy::Close),
+                RecreateStrategy::BestInsertion(BestInsertionSortStrategy::TimeWindow),
                 // RecreateStrategy::CompleteBestInsertion,
             ],
         }

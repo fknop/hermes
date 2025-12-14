@@ -2,10 +2,13 @@ use std::fmt::Display;
 
 use serde::Serialize;
 
-use crate::solver::solution::working_solution::WorkingSolution;
+use crate::solver::{
+    recreate::best_insertion::BestInsertionSortStrategy,
+    solution::working_solution::WorkingSolution,
+};
 
 use super::{
-    best_insertion::{BestInsertion, BestInsertionParams, BestInsertionSortMethod},
+    best_insertion::{BestInsertion, BestInsertionParams},
     construction_best_insertion::ConstructionBestInsertion,
     recreate_context::RecreateContext,
     recreate_solution::RecreateSolution,
@@ -15,7 +18,7 @@ use super::{
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize)]
 pub enum RecreateStrategy {
     CompleteBestInsertion,
-    BestInsertion(BestInsertionSortMethod),
+    BestInsertion(BestInsertionSortStrategy),
     RegretInsertion,
 }
 
@@ -38,8 +41,8 @@ impl RecreateSolution for RecreateStrategy {
             }
             RecreateStrategy::BestInsertion(sort_method) => {
                 let strategy = BestInsertion::new(BestInsertionParams {
-                    sort_method: *sort_method,
-                    blink_rate: 0.0,
+                    sort_strategy: *sort_method,
+                    blink_rate: 0.01,
                 });
                 strategy.recreate_solution(solution, context);
             }

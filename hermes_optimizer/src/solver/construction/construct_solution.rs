@@ -225,145 +225,73 @@ pub fn construct_solution(
 
     create_initial_routes(problem, &mut solution);
 
-    let unassigned_services = solution
-        .unassigned_jobs()
-        .iter()
-        .cloned()
-        .collect::<Vec<_>>();
-
-    let depot_id = problem
-        .vehicles()
-        .iter()
-        .find_map(|v| v.depot_location_id())
-        .unwrap();
-
-    // unassigned_services.sort_by(|&a, &b| {
-    //     let service_a = problem.service(a);
-    //     let service_b = problem.service(b);
-
-    //     let urgency_a = service_a
-    //         .time_windows()
-    //         .iter()
-    //         .filter_map(|time_window| time_window.end())
-    //         .max()
-    //         .map(|end| end - problem.travel_time(depot_id, service_a.location_id()))
-    //         .unwrap_or(Timestamp::MAX); // If no time window end -> no urgency
-
-    //     let urgency_b = service_b
-    //         .time_windows()
-    //         .iter()
-    //         .filter_map(|time_window| time_window.end())
-    //         .max()
-    //         .map(|end| end - problem.travel_time(depot_id, service_b.location_id()))
-    //         .unwrap_or(Timestamp::MAX); // If no time window end -> no urgency
-
-    //     urgency_a.cmp(&urgency_b)
-    // });
-
-    // let mut services: Vec<_> = (0..problem.services().len()).collect();
-
-    // let vehicles = problem.vehicles();
-    // let depot_location = vehicles
-    //     .iter()
-    //     .filter_map(|vehicle| vehicle.depot_location_id())
-    //     .map(|location_id| problem.location(location_id))
-    //     .next();
-
-    // let first_service_location = problem.location(problem.service_location(0).id());
-    // if let Some(depot_location) = depot_location {
-    //     services.sort_by(|&first, &second| {
-    //         let first = problem.service_location(first);
-    //         let second = problem.service_location(second);
-
-    //         first_service_location
-    //             .bearing(first)
-    //             .partial_cmp(&first_service_location.bearing(second))
-    //             .unwrap()
-    //     });
-    // }
-
-    // let regret = RegretInsertion::new(3);
-    // regret.insert_services(
+    // ConstructionBestInsertion::insert_services(
     //     &mut solution,
     //     RecreateContext {
     //         rng,
+    //         // constraints,
     //         constraints: &vec![
     //             Constraint::Global(GlobalConstraintType::TransportCost(TransportCostConstraint)),
     //             Constraint::Route(RouteConstraintType::VehicleCost(VehicleCostConstraint)),
+    //             Constraint::Route(RouteConstraintType::Capacity(CapacityConstraint::new(
+    //                 ScoreLevel::Soft,
+    //             ))),
+    //             Constraint::Activity(ActivityConstraintType::TimeWindow(
+    //                 TimeWindowConstraint::new(ScoreLevel::Soft),
+    //             )),
+    //             Constraint::Route(RouteConstraintType::WaitingDuration(
+    //                 WaitingDurationConstraint,
+    //             )),
     //         ],
     //         noise_generator: None,
     //         problem,
     //         thread_pool,
+    //         insert_on_failure: true,
     //     },
     // );
 
-    ConstructionBestInsertion::insert_services(
-        &mut solution,
-        RecreateContext {
-            rng,
-            // constraints,
-            constraints: &vec![
-                Constraint::Global(GlobalConstraintType::TransportCost(TransportCostConstraint)),
-                Constraint::Route(RouteConstraintType::VehicleCost(VehicleCostConstraint)),
-                Constraint::Route(RouteConstraintType::Capacity(CapacityConstraint::new(
-                    ScoreLevel::Soft,
-                ))),
-                Constraint::Activity(ActivityConstraintType::TimeWindow(
-                    TimeWindowConstraint::new(ScoreLevel::Soft),
-                )),
-                Constraint::Route(RouteConstraintType::WaitingDuration(
-                    WaitingDurationConstraint,
-                )),
-            ],
-            noise_generator: None,
-            problem,
-            thread_pool,
-            insert_on_failure: true,
-        },
-    );
+    // let mut satisfied = false;
 
-    let mut satisfied = false;
+    // while !satisfied {
+    //     let mut job_to_remove = None;
+    //     for route in solution.routes() {
+    //         for (i, _) in route.activity_ids().iter().enumerate() {
+    //             let activity = route.activity(i);
+    //             let time_window_score = TimeWindowConstraint::compute_time_window_score(
+    //                 ScoreLevel::Hard,
+    //                 activity.job_task(problem).time_windows(),
+    //                 activity.arrival_time(),
+    //             );
 
-    while !satisfied {
-        let mut service_to_remove = None;
-        for route in solution.routes() {
-            for (i, _) in route.activity_ids().iter().enumerate() {
-                let activity = route.activity(i);
-                let time_window_score = TimeWindowConstraint::compute_time_window_score(
-                    ScoreLevel::Hard,
-                    activity.job_task(problem).time_windows(),
-                    activity.arrival_time(),
-                );
+    //             if time_window_score.hard_score > 0.0 {
+    //                 job_to_remove = Some(activity.job_id());
+    //                 break;
+    //             }
 
-                if time_window_score.hard_score > 0.0 {
-                    service_to_remove = Some(activity.job_id().index());
-                    break;
-                }
+    //             let vehicle = route.vehicle(problem);
 
-                let vehicle = route.vehicle(problem);
+    //             let load = route.load_at(i);
 
-                let load = route.load_at(i);
+    //             if !is_capacity_satisfied(vehicle.capacity(), load) {
+    //                 job_to_remove = Some(activity.job_id());
+    //                 break;
+    //             }
+    //         }
 
-                if !is_capacity_satisfied(vehicle.capacity(), load) {
-                    service_to_remove = Some(activity.job_id().index());
-                    break;
-                }
-            }
+    //         if job_to_remove.is_some() {
+    //             break;
+    //         }
+    //     }
 
-            if service_to_remove.is_some() {
-                break;
-            }
-        }
+    //     if let Some(service_id) = job_to_remove {
+    //         solution.remove_job(service_id);
+    //         solution.resync();
+    //     } else {
+    //         satisfied = true
+    //     }
+    // }
 
-        if let Some(service_id) = service_to_remove {
-            solution.remove_service(service_id);
-            solution.resync();
-        } else {
-            satisfied = true
-        }
-    }
-
-    solution.resync();
+    // solution.resync();
 
     ConstructionBestInsertion::insert_services(
         &mut solution,
@@ -373,7 +301,7 @@ pub fn construct_solution(
             noise_generator: None,
             problem,
             thread_pool,
-            insert_on_failure: true,
+            insert_on_failure: false,
         },
     );
 

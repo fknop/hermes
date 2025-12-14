@@ -1,3 +1,5 @@
+use std::default;
+
 use fxhash::FxHashSet;
 use jiff::SignedDuration;
 use serde::{Deserialize, Serialize};
@@ -24,6 +26,8 @@ pub struct Service {
     location_id: LocationId,
     time_windows: TimeWindows,
     demand: Capacity,
+
+    #[serde(default)]
     skills: FxHashSet<Skill>,
     service_duration: SignedDuration,
 

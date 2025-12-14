@@ -25,17 +25,21 @@ impl WorkingSolution {
             .enumerate()
             .map(|(vehicle_id, _)| WorkingSolutionRoute::empty(&problem, vehicle_id))
             .collect();
-        let unassigned_services = (0..problem.jobs().len()).collect();
+        let unassigned_jobs = (0..problem.jobs().len()).collect();
 
         WorkingSolution {
             problem,
             routes,
-            unassigned_jobs: unassigned_services,
+            unassigned_jobs,
         }
     }
 
     pub fn is_empty(&self) -> bool {
         self.unassigned_jobs.len() == self.problem.jobs().len()
+    }
+
+    pub fn has_unassigned(&self) -> bool {
+        !self.unassigned_jobs.is_empty()
     }
 
     pub fn is_unassigned(&self, service_id: ServiceId) -> bool {
