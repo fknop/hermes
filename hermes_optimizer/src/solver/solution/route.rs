@@ -69,6 +69,12 @@ pub struct WorkingSolutionRoute {
     // step 0 is the start depot
     pub(super) current_load: Vec<Capacity>,
 
+    /// Total available capacity for the route
+    pub(super) delivery_load_slack: Capacity,
+
+    /// Total pickup capacity available for the route
+    pub(super) pickup_load_slack: Capacity,
+
     // time_slacks[i] stores the maximum time delay that can be absorbed at activity i
     // before violating time windows of subsequent activities
     // computed backward from end to start
@@ -100,6 +106,8 @@ impl WorkingSolutionRoute {
             fwd_load_pickups: Vec::new(),
             fwd_load_shipments: Vec::new(),
             time_slacks: Vec::new(),
+            delivery_load_slack: problem.vehicle(vehicle_id).capacity().clone(),
+            pickup_load_slack: problem.vehicle(vehicle_id).capacity().clone(),
         };
 
         route.resize_data(problem);
@@ -140,6 +148,14 @@ impl WorkingSolutionRoute {
 
     pub fn fwd_load_peak(&self, i: usize) -> &Capacity {
         &self.fwd_load_peaks[i]
+    }
+
+    pub fn delivery_load_slack(&self) -> &Capacity {
+        &self.delivery_load_slack
+    }
+
+    pub fn pickup_load_slack(&self) -> &Capacity {
+        &self.pickup_load_slack
     }
 
     pub fn contains_job(&self, job_id: ActivityId) -> bool {
@@ -661,14 +677,18 @@ impl WorkingSolutionRoute {
         self.resize_data(problem);
 
         if self.is_empty() {
+            self.delivery_load_slack
+                .update(self.vehicle(problem).capacity());
+            self.pickup_load_slack
+                .update(self.vehicle(problem).capacity());
             return;
         }
 
         let len = self.len();
 
-        let mut current_load_pickups = Capacity::empty();
-        let mut current_load_deliveries = Capacity::empty();
-        let mut current_load_shipments = Capacity::empty();
+        let mut current_load_pickups = Capacity::with_dimensions(problem.capacity_dimensions());
+        let mut current_load_deliveries = Capacity::with_dimensions(problem.capacity_dimensions());
+        let mut current_load_shipments = Capacity::with_dimensions(problem.capacity_dimensions());
 
         for i in 0..len {
             let job_id = self.activity_ids[i];
@@ -770,6 +790,13 @@ impl WorkingSolutionRoute {
             peak.update_max(&self.current_load[i]);
             self.bwd_load_peaks[i].update(&peak);
         }
+
+        let vehicle_capacity = self.vehicle(problem).capacity();
+
+        self.delivery_load_slack
+            .update_expr(vehicle_capacity - &self.current_load[0]);
+        self.pickup_load_slack
+            .update_expr(vehicle_capacity - &self.current_load[self.len()]);
 
         if problem.has_time_windows() {
             let mut next_activity_time_slack = SignedDuration::MAX;
@@ -1009,6 +1036,32 @@ impl WorkingSolutionRoute {
         if !is_capacity_satisfied(
             vehicle.capacity(),
             &(load_at_end + &self.bwd_load_peaks[end]),
+        ) {
+            return false;
+        }
+
+        true
+    }
+
+    pub fn can_route_capacity_fit_in(&self, problem: &VehicleRoutingProblem, other: &Self) -> bool {
+        if self.vehicle_id == other.vehicle_id {
+            return false;
+        }
+
+        let other_vehicle_capacity = other.vehicle(problem).capacity();
+        let self_delivery_peak = &self.current_load[0];
+        let self_pickup_peak = &self.current_load[self.len()];
+
+        if !is_capacity_satisfied(
+            other_vehicle_capacity,
+            &(other.delivery_load_slack() + self_delivery_peak),
+        ) {
+            return false;
+        }
+
+        if !is_capacity_satisfied(
+            other_vehicle_capacity,
+            &(other.pickup_load_slack() + self_pickup_peak),
         ) {
             return false;
         }

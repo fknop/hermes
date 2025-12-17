@@ -499,4 +499,10 @@ mod tests {
         assert_eq!(a.len(), 3);
         assert_eq!(a, Amount::from_vec(vec![9.0, 12.0, 11.0]));
     }
+
+    #[test]
+    fn test_with_dimensions() {
+        let demand = Amount::with_dimensions(1);
+        assert_eq!(demand.len(), 1);
+    }
 }
