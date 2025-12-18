@@ -230,7 +230,7 @@ fn main() {
                         costs: dataset.optimal_cost + 0.5,
                     },
                     // Termination::IterationsWithoutImprovement(10000),
-                    Termination::Duration(SignedDuration::from_secs(60)),
+                    Termination::Duration(SignedDuration::from_secs(10)),
                 ],
                 insertion_threads: Threads::Multi(4),
                 search_threads: Threads::Single,

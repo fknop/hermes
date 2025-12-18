@@ -123,11 +123,12 @@ impl WorkingSolutionRoute {
         self.activity_ids.is_empty()
     }
 
-    pub fn reset(&mut self) {
+    pub fn reset(&mut self, problem: &VehicleRoutingProblem) {
         self.jobs.clear();
         self.activity_ids.clear();
-
         self.bbox = BBox::default();
+
+        self.update_activity_data(problem);
     }
 
     pub fn bbox_intersects(&self, other: &WorkingSolutionRoute) -> bool {
@@ -1297,6 +1298,9 @@ mod tests {
         assert_eq!(route.current_load[2], Capacity::from_vec(vec![30.0])); // After service 3, pickup 10
         assert_eq!(route.current_load[3], Capacity::from_vec(vec![10.0])); // After service 2, drop 20
         assert_eq!(route.current_load[4], Capacity::from_vec(vec![10.0])); // End depot
+
+        assert_eq!(route.delivery_load_slack, Capacity::from_vec(vec![10.0]));
+        assert_eq!(route.pickup_load_slack, Capacity::from_vec(vec![30.0]));
 
         // Check arrival times
         assert_eq!(

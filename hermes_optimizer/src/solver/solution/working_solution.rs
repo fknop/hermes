@@ -221,13 +221,14 @@ impl WorkingSolution {
     }
 
     pub fn remove_route(&mut self, route_id: usize) -> usize {
-        let removed = self.routes[route_id].activity_ids.len();
+        let removed = self.routes[route_id].len();
         for job_id in self.routes[route_id].activity_ids.iter() {
             self.unassigned_jobs.insert(job_id.index());
         }
 
+        self.routes[route_id].reset(&self.problem);
         // TODO: reset to avoid reallocations
-        self.routes[route_id] = WorkingSolutionRoute::empty(&self.problem, route_id);
+        // self.routes[route_id] = WorkingSolutionRoute::empty(&self.problem, route_id);
 
         removed
     }
