@@ -1120,7 +1120,7 @@ mod tests {
             job::ActivityId,
             service::{ServiceBuilder, ServiceType},
             time_window::TimeWindow,
-            travel_cost_matrix::TravelCostMatrix,
+            travel_cost_matrix::TravelMatrices,
             vehicle::VehicleBuilder,
             vehicle_routing_problem::{VehicleRoutingProblem, VehicleRoutingProblemBuilder},
         },
@@ -1178,7 +1178,7 @@ mod tests {
         let services = vec![service_1, service_2, service_3];
 
         let mut builder = VehicleRoutingProblemBuilder::default();
-        builder.set_travel_costs(TravelCostMatrix::from_constant(
+        builder.set_travel_costs(TravelMatrices::from_constant(
             &locations,
             SignedDuration::from_mins(30).as_secs_f64(),
             100.0,
@@ -1220,7 +1220,7 @@ mod tests {
             .collect::<Vec<_>>();
 
         let mut builder = VehicleRoutingProblemBuilder::default();
-        builder.set_travel_costs(TravelCostMatrix::from_constant(
+        builder.set_travel_costs(TravelMatrices::from_constant(
             &locations,
             SignedDuration::from_mins(30).as_secs_f64(),
             100.0,
@@ -1602,7 +1602,7 @@ mod tests {
 
         let mut builder = VehicleRoutingProblemBuilder::default();
         // Travel time of 30 mins between consecutive locations
-        builder.set_travel_costs(TravelCostMatrix::from_constant(
+        builder.set_travel_costs(TravelMatrices::from_constant(
             &locations,
             SignedDuration::from_mins(30).as_secs_f64(),
             100.0,

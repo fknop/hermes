@@ -1,0 +1,20 @@
+use serde::Deserialize;
+
+use crate::{graphhopper::GraphHopperProfile, travel_matrices::TravelMatrices};
+
+#[derive(Deserialize)]
+pub enum TravelMatrixProvider {
+    /// https://docs.graphhopper.com/openapi/map-data-and-routing-profiles/openstreetmap/standard-routing-profiles
+    GraphHopper {
+        gh_profile: GraphHopperProfile,
+    },
+    // OSRM { profile: String },
+    // Valhalla { profile: String },
+    AsTheCrowFlies {
+        speed_kmh: f64,
+    },
+
+    Custom {
+        matrices: TravelMatrices,
+    },
+}

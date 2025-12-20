@@ -1,3 +1,5 @@
+use std::{rc::Rc, sync::Arc};
+
 use jiff::SignedDuration;
 use serde::Deserialize;
 
@@ -11,36 +13,36 @@ pub type Cost = f64;
 /// To find the index for a pair of locations, use the formula:
 /// `index = from * num_locations + to`, where `num_locations` is the total
 #[derive(Deserialize)]
-pub struct TravelCostMatrix {
-    distances: Vec<Distance>,
-    times: Vec<Time>,
-    costs: Vec<Cost>,
+pub struct TravelMatrices {
+    distances: Arc<Vec<Distance>>,
+    times: Arc<Vec<Time>>,
+    costs: Arc<Vec<Cost>>,
     num_locations: usize,
     is_symmetric: bool,
 }
 
-impl TravelCostMatrix {
-    pub fn new(
-        distances: Vec<Vec<Distance>>,
-        times: Vec<Vec<Time>>,
-        costs: Vec<Vec<Cost>>,
-    ) -> Self {
-        let num_locations = distances.len();
+impl TravelMatrices {
+    // pub fn new(
+    //     distances: Vec<Vec<Distance>>,
+    //     times: Vec<Vec<Time>>,
+    //     costs: Vec<Vec<Cost>>,
+    // ) -> Self {
+    //     let num_locations = distances.len();
 
-        let is_symmetric = distances.iter().enumerate().all(|(i, row)| {
-            row.iter()
-                .enumerate()
-                .all(|(j, &value)| distances[j][i] == value)
-        });
+    //     let is_symmetric = distances.iter().enumerate().all(|(i, row)| {
+    //         row.iter()
+    //             .enumerate()
+    //             .all(|(j, &value)| distances[j][i] == value)
+    //     });
 
-        TravelCostMatrix {
-            distances: distances.into_iter().flatten().collect(),
-            times: times.into_iter().flatten().collect(),
-            costs: costs.into_iter().flatten().collect(),
-            num_locations,
-            is_symmetric,
-        }
-    }
+    //     TravelMatrices {
+    //         distances: distances.into_iter().flatten().collect(),
+    //         times: times.into_iter().flatten().collect(),
+    //         costs: costs.into_iter().flatten().collect(),
+    //         num_locations,
+    //         is_symmetric,
+    //     }
+    // }
 
     #[inline(always)]
     fn get_index(&self, from: usize, to: usize) -> usize {
@@ -51,7 +53,7 @@ impl TravelCostMatrix {
         let num_locations = locations.len();
         let mut distances: Vec<Distance> = vec![0.0; num_locations * num_locations];
         let mut times: Vec<Time> = vec![0.0; num_locations * num_locations];
-        let mut costs: Vec<Cost> = vec![0.0; num_locations * num_locations];
+        // let mut costs: Vec<Cost> = vec![0.0; num_locations * num_locations];
 
         for (i, from) in locations.iter().enumerate() {
             for (j, to) in locations.iter().enumerate() {
@@ -59,11 +61,15 @@ impl TravelCostMatrix {
                 // Assume average speed of 50km/h
                 let speed = 50.0 / 3.6;
                 times[i * num_locations + j] = (distances[i * num_locations + j]) / speed;
-                costs[i * num_locations + j] = distances[i * num_locations + j]
+                // costs[i * num_locations + j] = distances[i * num_locations + j]
             }
         }
 
-        TravelCostMatrix {
+        let distances = Arc::new(distances);
+        let costs = Arc::clone(&distances);
+        let times = Arc::new(times);
+
+        TravelMatrices {
             distances,
             times,
             costs,
@@ -75,18 +81,18 @@ impl TravelCostMatrix {
     pub fn from_euclidian(locations: &[Location]) -> Self {
         let num_locations = locations.len();
         let mut distances: Vec<Distance> = vec![0.0; num_locations * num_locations];
-        let mut times: Vec<Time> = vec![0.0; num_locations * num_locations];
-        let mut costs: Vec<Cost> = vec![0.0; num_locations * num_locations];
 
         for (i, from) in locations.iter().enumerate() {
             for (j, to) in locations.iter().enumerate() {
                 distances[i * num_locations + j] = from.euclidian_distance(to);
-                times[i * num_locations + j] = distances[i * num_locations + j];
-                costs[i * num_locations + j] = distances[i * num_locations + j]
             }
         }
 
-        TravelCostMatrix {
+        let distances = Arc::new(distances);
+        let costs = Arc::clone(&distances);
+        let times = Arc::clone(&distances);
+
+        TravelMatrices {
             distances,
             times,
             costs,
@@ -98,10 +104,13 @@ impl TravelCostMatrix {
     #[cfg(test)]
     pub fn from_constant(locations: &[Location], time: f64, distance: f64, cost: f64) -> Self {
         let num_locations = locations.len();
-        TravelCostMatrix {
-            distances: vec![distance; num_locations * num_locations],
-            times: vec![time; num_locations * num_locations],
-            costs: vec![cost; num_locations * num_locations],
+        let distances = Arc::new(vec![distance; num_locations * num_locations]);
+        let times = Arc::clone(&distances);
+        let costs = Arc::clone(&distances);
+        TravelMatrices {
+            distances,
+            times,
+            costs,
             num_locations,
             is_symmetric: true,
         }

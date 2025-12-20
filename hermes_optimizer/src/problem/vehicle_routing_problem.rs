@@ -16,7 +16,7 @@ use super::{
     distance_method::DistanceMethod,
     location::{Location, LocationId},
     service_location_index::ServiceLocationIndex,
-    travel_cost_matrix::{Cost, Distance, TravelCostMatrix},
+    travel_cost_matrix::{Cost, Distance, TravelMatrices},
     vehicle::{Vehicle, VehicleId},
 };
 
@@ -27,7 +27,7 @@ pub struct VehicleRoutingProblem {
     locations: Vec<Location>,
     vehicles: Vec<Vehicle>,
     jobs: Vec<Job>,
-    travel_costs: TravelCostMatrix,
+    travel_costs: TravelMatrices,
     service_location_index: ServiceLocationIndex,
 
     has_time_windows: bool,
@@ -46,7 +46,7 @@ struct VehicleRoutingProblemParams {
     locations: Vec<Location>,
     vehicles: Vec<Vehicle>,
     jobs: Vec<Job>,
-    travel_costs: TravelCostMatrix,
+    travel_costs: TravelMatrices,
     distance_method: DistanceMethod,
 }
 
@@ -303,7 +303,7 @@ impl VehicleRoutingProblem {
         compatibilities
     }
 
-    fn precompute_waiting_duration_weight(travel_cost_matrix: &TravelCostMatrix) -> f64 {
+    fn precompute_waiting_duration_weight(travel_cost_matrix: &TravelMatrices) -> f64 {
         let sum = travel_cost_matrix
             .times()
             .iter()
@@ -351,7 +351,7 @@ impl VehicleRoutingProblem {
     fn precompute_average_cost_from_depot(
         locations: &[Location],
         vehicles: &[Vehicle],
-        matrix: &TravelCostMatrix,
+        matrix: &TravelMatrices,
     ) -> PrecomputedAverageCostFromDepot {
         let mut precomputed_average_cost_from_depot = Vec::with_capacity(locations.len());
 
@@ -370,7 +370,7 @@ impl VehicleRoutingProblem {
 
 #[derive(Default)]
 pub struct VehicleRoutingProblemBuilder {
-    travel_costs: Option<TravelCostMatrix>,
+    travel_costs: Option<TravelMatrices>,
     services: Option<Vec<Service>>,
     locations: Option<Vec<Location>>,
     vehicles: Option<Vec<Vehicle>>,
@@ -380,7 +380,7 @@ pub struct VehicleRoutingProblemBuilder {
 impl VehicleRoutingProblemBuilder {
     pub fn set_travel_costs(
         &mut self,
-        travel_costs: TravelCostMatrix,
+        travel_costs: TravelMatrices,
     ) -> &mut VehicleRoutingProblemBuilder {
         self.travel_costs = Some(travel_costs);
         self

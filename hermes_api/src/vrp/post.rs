@@ -9,7 +9,7 @@ use axum::{
 use hermes_optimizer::problem::{
     location::Location,
     service::Service,
-    travel_cost_matrix::{Time, TravelCostMatrix},
+    travel_cost_matrix::{Time, TravelMatrices},
     vehicle::Vehicle,
     vehicle_routing_problem::VehicleRoutingProblemBuilder,
 };
@@ -26,8 +26,8 @@ pub struct PostRequestTravelCosts {
 }
 
 impl PostRequestTravelCosts {
-    pub fn flatten(self) -> TravelCostMatrix {
-        TravelCostMatrix::new(self.distances, self.times, self.costs)
+    pub fn flatten(self) -> TravelMatrices {
+        TravelMatrices::new(self.distances, self.times, self.costs)
     }
 }
 

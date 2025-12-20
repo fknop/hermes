@@ -8,7 +8,7 @@ use crate::problem::{
     location::Location,
     service::{Service, ServiceBuilder},
     time_window::TimeWindow,
-    travel_cost_matrix::TravelCostMatrix,
+    travel_cost_matrix::TravelMatrices,
     vehicle::{Vehicle, VehicleBuilder, VehicleShiftBuilder},
     vehicle_routing_problem::{VehicleRoutingProblem, VehicleRoutingProblemBuilder},
 };
@@ -127,7 +127,7 @@ impl SolomonParser {
             }
         }
 
-        let travel_costs_matrix = TravelCostMatrix::from_euclidian(&locations);
+        let travel_costs_matrix = TravelMatrices::from_euclidian(&locations);
         builder
             .set_vehicles(vehicles)
             .set_locations(locations)
