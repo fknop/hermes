@@ -18,7 +18,8 @@ thiserror = "2.0.17"
 anyhow = "1.0.100"
 
 [profile.release]
-debug = true
+debug = false
+opt-level = 3
 
 [build]
 rustflags = ["-Csymbol-mangling-version=v0"]
