@@ -81,6 +81,7 @@ pub struct ServiceBuilder {
     location_id: Option<LocationId>,
     time_windows: Option<Vec<TimeWindow>>,
     demand: Option<Capacity>,
+    skills: Option<Vec<Skill>>,
     service_duration: Option<SignedDuration>,
     service_type: Option<ServiceType>,
 }
@@ -121,6 +122,11 @@ impl ServiceBuilder {
         self
     }
 
+    pub fn set_skills(&mut self, skills: Vec<String>) -> &mut ServiceBuilder {
+        self.skills = Some(skills.into_iter().map(|skill| Skill::new(skill)).collect());
+        self
+    }
+
     pub fn set_service_duration(&mut self, service_time: SignedDuration) -> &mut ServiceBuilder {
         self.service_duration = Some(service_time);
         self
@@ -134,7 +140,9 @@ impl ServiceBuilder {
             service_duration: self.service_duration.unwrap_or(SignedDuration::ZERO),
             time_windows: SmallVec::from_vec(self.time_windows.unwrap_or_default()),
             service_type: self.service_type.unwrap_or(ServiceType::Delivery),
-            skills: FxHashSet::default(),
+
+            // TODO: better way here probably
+            skills: FxHashSet::from_iter(self.skills.unwrap_or_default().iter().cloned()),
         }
     }
 }

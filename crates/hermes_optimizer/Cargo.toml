@@ -1,5 +1,6 @@
 [features]
 statistics = []
+json = []
 
 [package]
 name = "hermes_optimizer"
@@ -7,6 +8,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+hermes_matrix_providers = { path = "../hermes_matrix_providers" }
 fxhash = { workspace = true }
 geo = { version ="0.30.0", features=["use-serde"] }
 jiff = { version = "0.2.15", features = ["serde"] }

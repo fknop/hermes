@@ -29,7 +29,7 @@ impl TravelMatrixClient {
         for<'a> &'a P: Into<geo_types::Point>,
     {
         match provider {
-            TravelMatrixProvider::GraphHopper {
+            TravelMatrixProvider::GraphHopperApi {
                 gh_profile: profile,
             } => self.graphhopper_client.fetch_matrix(points, profile).await,
             TravelMatrixProvider::AsTheCrowFlies { speed_kmh } => {

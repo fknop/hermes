@@ -154,6 +154,7 @@ pub struct VehicleBuilder {
     should_return_to_depot: Option<bool>,
     depot_duration: Option<SignedDuration>,
     end_depot_duration: Option<SignedDuration>,
+    skills: Vec<Skill>,
 }
 
 impl VehicleBuilder {
@@ -185,6 +186,16 @@ impl VehicleBuilder {
 
     pub fn set_depot_duration(&mut self, duration: SignedDuration) -> &mut VehicleBuilder {
         self.depot_duration = Some(duration);
+        self
+    }
+
+    pub fn set_end_depot_duration(&mut self, duration: SignedDuration) -> &mut VehicleBuilder {
+        self.end_depot_duration = Some(duration);
+        self
+    }
+
+    pub fn set_skills(&mut self, skills: Vec<String>) -> &mut VehicleBuilder {
+        self.skills = skills.into_iter().map(|skill| Skill::new(skill)).collect();
         self
     }
 

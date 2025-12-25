@@ -1011,6 +1011,7 @@ dependencies = [
  "criterion 0.7.0",
  "fxhash",
  "geo",
+ "hermes_matrix_providers",
  "jiff",
  "parking_lot",
  "rand",

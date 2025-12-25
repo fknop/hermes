@@ -404,6 +404,16 @@ impl VehicleRoutingProblemBuilder {
         self
     }
 
+    pub fn add_location(&mut self, location: Location) -> &mut VehicleRoutingProblemBuilder {
+        if let Some(locations) = &mut self.locations {
+            locations.push(location);
+        } else {
+            self.locations = Some(vec![location]);
+        }
+
+        self
+    }
+
     pub fn set_vehicles(&mut self, vehicles: Vec<Vehicle>) -> &mut VehicleRoutingProblemBuilder {
         self.vehicles = Some(vehicles);
         self

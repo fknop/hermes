@@ -2,7 +2,6 @@ use serde::Deserialize;
 
 /// TravelMatrices holds the travel distance, time, and cost matrices.
 /// Stored as flat vectors
-/// Stored as Rc to allow sharing the vectors without cloning.
 #[derive(Deserialize)]
 pub struct TravelMatrices {
     pub distances: Vec<f64>,
