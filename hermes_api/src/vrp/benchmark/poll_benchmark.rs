@@ -4,7 +4,7 @@ use axum::{
     extract::{Path, State},
     response::IntoResponse,
 };
-use hermes_optimizer_core::solver::{
+use hermes_optimizer::solver::{
     accepted_solution::AcceptedSolution, solver::SolverStatus, statistics::SearchStatistics,
 };
 use serde::Serialize;

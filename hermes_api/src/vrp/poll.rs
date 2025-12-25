@@ -8,14 +8,14 @@ use axum::{
 };
 use geo::{Coord, Simplify};
 use geojson::{Feature, Geometry};
-use hermes_optimizer_core::{
+use hermes_optimizer::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
         accepted_solution::AcceptedSolution, solution::route::WorkingSolutionRoute,
         solver::SolverStatus,
     },
 };
-use hermes_routing_core::{
+use hermes_routing::{
     geopoint::GeoPoint,
     hermes::Hermes,
     routing::routing_request::{RoutingAlgorithm, RoutingRequest, RoutingRequestOptions},

@@ -1,5 +1,5 @@
-use hermes_optimizer_core::solver::solver_manager::SolverManager;
-use hermes_routing_core::hermes::Hermes;
+use hermes_optimizer::solver::solver_manager::SolverManager;
+use hermes_routing::hermes::Hermes;
 
 pub struct AppState {
     pub hermes: Hermes,

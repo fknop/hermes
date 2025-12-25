@@ -1,5 +1,5 @@
 [package]
-name = "hermes_optimizer_matrix_providers"
+name = "hermes_matrix_providers"
 version = "0.1.0"
 edition = "2024"
 

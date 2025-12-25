@@ -961,8 +961,8 @@ version = "0.1.0"
 dependencies = [
  "geo",
  "geojson",
- "hermes_optimizer_core",
- "hermes_routing_core",
+ "hermes_optimizer",
+ "hermes_routing",
  "jiff",
  "mimalloc",
  "tracing",
@@ -976,8 +976,8 @@ dependencies = [
  "axum",
  "geo",
  "geojson",
- "hermes_optimizer_core",
- "hermes_routing_core",
+ "hermes_optimizer",
+ "hermes_routing",
  "jiff",
  "mimalloc",
  "parking_lot",
@@ -992,7 +992,20 @@ dependencies = [
 ]
 
 [[package]]
-name = "hermes_optimizer_core"
+name = "hermes_matrix_providers"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "geo-types",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.17",
+ "tokio",
+]
+
+[[package]]
+name = "hermes_optimizer"
 version = "0.1.0"
 dependencies = [
  "criterion 0.7.0",
@@ -1013,20 +1026,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "hermes_optimizer_matrix_providers"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "geo-types",
- "reqwest",
- "serde",
- "serde_json",
- "thiserror 2.0.17",
- "tokio",
-]
-
-[[package]]
-name = "hermes_routing_core"
+name = "hermes_routing"
 version = "0.1.0"
 dependencies = [
  "bincode",

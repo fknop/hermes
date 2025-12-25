@@ -7,8 +7,8 @@ use axum::response::{IntoResponse, Response};
 use geojson::Value::{LineString, MultiPoint};
 use geojson::feature::Id;
 use geojson::{Feature, FeatureCollection, GeoJson, Geometry, JsonValue};
-use hermes_routing_core::geopoint::GeoPoint;
-use hermes_routing_core::routing::routing_request::{
+use hermes_routing::geopoint::GeoPoint;
+use hermes_routing::routing::routing_request::{
     RoutingAlgorithm, RoutingRequest, RoutingRequestOptions,
 };
 use serde::{Deserialize, Serialize};

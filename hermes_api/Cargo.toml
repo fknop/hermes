@@ -7,16 +7,14 @@ edition = "2024"
 axum = { version = "0.8.1", features = ["ws", "macros"] }
 serde = { version = "1.0.219", features = ["derive"] }
 tokio = { version = "1.44.1", features = ["full"] }
-hermes_routing_core = { version = "0.1.0", path = "../hermes_routing/core" }
+hermes_routing = { version = "0.1.0", path = "../crates/hermes_routing" }
+hermes_optimizer = { version = "0.1.0", path = "../crates/hermes_optimizer", features = ["statistics"] }
 tower = { version = "0.5.2" }
 serde_json = "1.0.140"
 geojson = { version = "0.24.2", features = ["geo-types"] }
 tower-http = { version = "0.6.2", features = ["cors"] }
 tracing-subscriber = "0.3.19"
 tracing = "0.1.41"
-hermes_optimizer_core = { version = "0.1.0", path = "../hermes_optimizer/core", features = [
-    "statistics",
-] }
 uuid = { version = "1.17.0", features = ["serde"] }
 parking_lot = { version = "0.12.4", features = ["serde"] }
 jiff = "0.2.15"

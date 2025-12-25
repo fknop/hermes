@@ -2,7 +2,7 @@
 statistics = []
 
 [package]
-name = "hermes_optimizer_core"
+name = "hermes_optimizer"
 version = "0.1.0"
 edition = "2024"
 

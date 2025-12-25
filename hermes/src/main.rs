@@ -1,11 +1,11 @@
-use hermes_optimizer_core::{
+use hermes_optimizer::{
     solomon::solomon_parser::SolomonParser,
     solver::{
         solver::Solver,
         solver_params::{SolverParams, SolverParamsDebugOptions, Termination, Threads},
     },
 };
-use hermes_routing_core::geopoint::GeoPoint;
+use hermes_routing::geopoint::GeoPoint;
 use jiff::SignedDuration;
 use mimalloc::MiMalloc;
 use tracing::{Level, info, warn};

@@ -6,8 +6,8 @@ edition = "2024"
 [dependencies]
 geo = "0.30.0"
 geojson = "0.24.2"
-hermes_routing_core = { version = "0.1.0", path = "../hermes_routing/core" }
-hermes_optimizer_core = { version = "0.1.0", path = "../hermes_optimizer/core" }
+hermes_routing = { version = "0.1.0", path = "../crates/hermes_routing" }
+hermes_optimizer = { version = "0.1.0", path = "../crates/hermes_optimizer" }
 jiff = "0.2.15"
 mimalloc = "0.1.47"
 tracing = "0.1.41"
