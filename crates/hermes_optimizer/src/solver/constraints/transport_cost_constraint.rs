@@ -25,12 +25,14 @@ impl GlobalConstraint for TransportCostConstraint {
 
             if let Some(depot_location_id) = vehicle.depot_location_id() {
                 cost += problem.travel_cost(
+                    vehicle,
                     depot_location_id,
                     route.first().job_task(problem).location_id(),
                 );
 
                 if vehicle.should_return_to_depot() {
                     cost += problem.travel_cost(
+                        vehicle,
                         route.last().job_task(problem).location_id(),
                         depot_location_id,
                     )
@@ -45,6 +47,7 @@ impl GlobalConstraint for TransportCostConstraint {
 
                 let previous_activity_job_id = route.activity_ids()[index - 1];
                 cost += problem.travel_cost(
+                    vehicle,
                     problem.job_task(previous_activity_job_id).location_id(),
                     problem.job_task(job_id).location_id(),
                 )
@@ -74,12 +77,24 @@ impl GlobalConstraint for TransportCostConstraint {
             Insertion::Shipment(_) => unimplemented!(),
         };
 
-        let old_cost = problem.travel_cost_or_zero(previous_location_id, next_location_id);
+        let old_cost = problem.travel_cost_or_zero(
+            route.vehicle(problem),
+            previous_location_id,
+            next_location_id,
+        );
 
         let mut new_cost = 0.0;
 
-        new_cost += problem.travel_cost_or_zero(previous_location_id, Some(location_id));
-        new_cost += problem.travel_cost_or_zero(Some(location_id), next_location_id);
+        new_cost += problem.travel_cost_or_zero(
+            route.vehicle(problem),
+            previous_location_id,
+            Some(location_id),
+        );
+        new_cost += problem.travel_cost_or_zero(
+            route.vehicle(problem),
+            Some(location_id),
+            next_location_id,
+        );
 
         let travel_cost_delta = new_cost - old_cost;
 

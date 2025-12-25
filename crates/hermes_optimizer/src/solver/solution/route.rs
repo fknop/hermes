@@ -236,6 +236,7 @@ impl WorkingSolutionRoute {
         if let Some(depot_location_id) = vehicle.depot_location_id() {
             if self.has_start(problem) {
                 transport_duration += problem.travel_time(
+                    vehicle,
                     depot_location_id,
                     self.first().job_task(problem).location_id(),
                 );
@@ -243,6 +244,7 @@ impl WorkingSolutionRoute {
 
             if self.has_end(problem) {
                 transport_duration += problem.travel_time(
+                    vehicle,
                     self.last().job_task(problem).location_id(),
                     depot_location_id,
                 );
@@ -256,6 +258,7 @@ impl WorkingSolutionRoute {
             }
 
             transport_duration += problem.travel_time(
+                vehicle,
                 problem.job_task(self.activity_ids[index - 1]).location_id(),
                 problem.job_task(job_id).location_id(),
             );
@@ -271,6 +274,7 @@ impl WorkingSolutionRoute {
         if let Some(depot_location_id) = vehicle.depot_location_id() {
             if self.has_start(problem) {
                 costs += problem.travel_cost(
+                    vehicle,
                     depot_location_id,
                     self.first().job_task(problem).location_id(),
                 );
@@ -278,6 +282,7 @@ impl WorkingSolutionRoute {
 
             if self.has_end(problem) {
                 costs += problem.travel_cost(
+                    vehicle,
                     self.last().job_task(problem).location_id(),
                     depot_location_id,
                 );
@@ -291,6 +296,7 @@ impl WorkingSolutionRoute {
             }
 
             costs += problem.travel_cost(
+                vehicle,
                 problem.job_task(self.activity_ids[index - 1]).location_id(),
                 problem.job_task(activity).location_id(),
             );
@@ -306,6 +312,7 @@ impl WorkingSolutionRoute {
         if let Some(depot_location_id) = vehicle.depot_location_id() {
             if self.has_start(problem) {
                 distance += problem.travel_distance(
+                    vehicle,
                     depot_location_id,
                     self.first().job_task(problem).location_id(),
                 );
@@ -313,6 +320,7 @@ impl WorkingSolutionRoute {
 
             if self.has_end(problem) {
                 distance += problem.travel_distance(
+                    vehicle,
                     self.last().job_task(problem).location_id(),
                     depot_location_id,
                 );
@@ -326,6 +334,7 @@ impl WorkingSolutionRoute {
             }
 
             distance += problem.travel_distance(
+                vehicle,
                 problem.job_task(self.activity_ids[index - 1]).location_id(),
                 problem.job_task(job_id).location_id(),
             );
@@ -725,6 +734,7 @@ impl WorkingSolutionRoute {
             } else {
                 compute_activity_arrival_time(
                     problem,
+                    self.vehicle_id,
                     self.activity_ids[i - 1],
                     self.departure_times[i - 1],
                     job_id,
@@ -901,6 +911,7 @@ impl WorkingSolutionRoute {
             {
                 compute_activity_arrival_time(
                     problem,
+                    self.vehicle_id,
                     previous_job_id,
                     previous_departure_time,
                     job_id,

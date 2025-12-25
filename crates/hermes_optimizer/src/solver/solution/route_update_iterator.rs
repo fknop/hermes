@@ -89,6 +89,7 @@ where
             {
                 compute_activity_arrival_time(
                     self.problem,
+                    self.route.vehicle_id,
                     previous_job_id,
                     previous_departure_time,
                     job_id,

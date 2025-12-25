@@ -36,13 +36,13 @@ fn compute_savings(
     let location_id = activity.job_task(problem).location_id();
 
     let travel_cost_previous = if let Some(previous_location_id) = previous_location_id {
-        problem.travel_cost(previous_location_id, location_id)
+        problem.travel_cost(vehicle, previous_location_id, location_id)
     } else {
         0.0
     };
 
     let travel_cost_next = if let Some(next_location_id) = next_location_id {
-        problem.travel_cost(location_id, next_location_id)
+        problem.travel_cost(vehicle, location_id, next_location_id)
     } else {
         0.0
     };
@@ -50,7 +50,7 @@ fn compute_savings(
     let new_travel_cost = if let Some(next_location_id) = next_location_id
         && let Some(previous_location_id) = previous_location_id
     {
-        problem.travel_cost(previous_location_id, next_location_id)
+        problem.travel_cost(vehicle, previous_location_id, next_location_id)
     } else {
         0.0
     };

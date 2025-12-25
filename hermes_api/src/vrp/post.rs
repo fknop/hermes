@@ -11,6 +11,7 @@ use hermes_optimizer::problem::{
     service::Service,
     travel_cost_matrix::{Time, TravelMatrices},
     vehicle::Vehicle,
+    vehicle_profile::VehicleProfile,
     vehicle_routing_problem::VehicleRoutingProblemBuilder,
 };
 use serde::{Deserialize, Serialize};
@@ -64,7 +65,10 @@ pub async fn post_handler(
         .set_services(body.services)
         .set_vehicles(body.vehicles)
         .set_locations(body.locations)
-        .set_travel_costs(body.travel_costs.flatten());
+        .set_vehicle_profiles(vec![VehicleProfile::new(
+            "profile".to_owned(),
+            body.travel_costs.flatten(),
+        )]);
 
     let vrp = builder.build();
 

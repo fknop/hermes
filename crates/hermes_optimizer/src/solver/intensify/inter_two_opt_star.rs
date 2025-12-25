@@ -107,12 +107,12 @@ impl IntensifyOp for InterTwoOptStarOperator {
         let mut delta = 0.0;
 
         // Remove edges: (first_from -> first_from_next), (second_from -> second_from_next)
-        delta -= problem.travel_cost_or_zero(first_from, first_from_next);
-        delta -= problem.travel_cost_or_zero(second_from, second_from_next);
+        delta -= problem.travel_cost_or_zero(r1.vehicle(problem), first_from, first_from_next);
+        delta -= problem.travel_cost_or_zero(r2.vehicle(problem), second_from, second_from_next);
 
         // Add edges: (first_from -> second_from_next), (second_from -> first_from_next)
-        delta += problem.travel_cost_or_zero(first_from, second_from_next);
-        delta += problem.travel_cost_or_zero(second_from, first_from_next);
+        delta += problem.travel_cost_or_zero(r1.vehicle(problem), first_from, second_from_next);
+        delta += problem.travel_cost_or_zero(r2.vehicle(problem), second_from, first_from_next);
 
         delta
     }

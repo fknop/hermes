@@ -56,13 +56,13 @@ impl IntensifyOp for RelocateOperator {
         let prev_to = route.previous_location_id(problem, self.params.to);
         let next_to = route.location_id(problem, self.params.to);
 
-        let current_cost = problem.travel_cost_or_zero(prev_from, from)
-            + problem.travel_cost_or_zero(from, next_from)
-            + problem.travel_cost_or_zero(prev_to, next_to);
+        let current_cost = problem.travel_cost_or_zero(route.vehicle(problem), prev_from, from)
+            + problem.travel_cost_or_zero(route.vehicle(problem), from, next_from)
+            + problem.travel_cost_or_zero(route.vehicle(problem), prev_to, next_to);
 
-        let new_cost = problem.travel_cost_or_zero(prev_from, next_from)
-            + problem.travel_cost_or_zero(prev_to, from)
-            + problem.travel_cost_or_zero(from, next_to);
+        let new_cost = problem.travel_cost_or_zero(route.vehicle(problem), prev_from, next_from)
+            + problem.travel_cost_or_zero(route.vehicle(problem), prev_to, from)
+            + problem.travel_cost_or_zero(route.vehicle(problem), from, next_to);
 
         new_cost - current_cost
     }

@@ -89,16 +89,20 @@ impl IntensifyOp for CrossExchangeOperator {
         let mut delta = 0.0;
 
         // Route 1 cost change
-        delta -= problem.travel_cost_or_zero(previous_first_start, first_start);
-        delta -= problem.travel_cost_or_zero(first_end, next_first_end);
-        delta += problem.travel_cost_or_zero(previous_first_start, second_start);
-        delta += problem.travel_cost_or_zero(second_end, next_first_end);
+        delta -=
+            problem.travel_cost_or_zero(r1.vehicle(problem), previous_first_start, first_start);
+        delta -= problem.travel_cost_or_zero(r1.vehicle(problem), first_end, next_first_end);
+        delta +=
+            problem.travel_cost_or_zero(r1.vehicle(problem), previous_first_start, second_start);
+        delta += problem.travel_cost_or_zero(r1.vehicle(problem), second_end, next_first_end);
 
         // Route 2 cost change
-        delta -= problem.travel_cost_or_zero(previous_second_start, second_start);
-        delta -= problem.travel_cost_or_zero(second_end, next_second_end);
-        delta += problem.travel_cost_or_zero(previous_second_start, first_start);
-        delta += problem.travel_cost_or_zero(first_end, next_second_end);
+        delta -=
+            problem.travel_cost_or_zero(r2.vehicle(problem), previous_second_start, second_start);
+        delta -= problem.travel_cost_or_zero(r2.vehicle(problem), second_end, next_second_end);
+        delta +=
+            problem.travel_cost_or_zero(r2.vehicle(problem), previous_second_start, first_start);
+        delta += problem.travel_cost_or_zero(r2.vehicle(problem), first_end, next_second_end);
 
         delta
     }

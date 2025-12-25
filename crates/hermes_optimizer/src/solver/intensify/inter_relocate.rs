@@ -59,13 +59,13 @@ impl IntensifyOp for InterRelocateOperator {
 
         let mut delta = 0.0;
 
-        delta -= problem.travel_cost_or_zero(a, from);
-        delta -= problem.travel_cost_or_zero(from, b);
-        delta += problem.travel_cost_or_zero(a, b);
+        delta -= problem.travel_cost_or_zero(r1.vehicle(problem), a, from);
+        delta -= problem.travel_cost_or_zero(r1.vehicle(problem), from, b);
+        delta += problem.travel_cost_or_zero(r1.vehicle(problem), a, b);
 
-        delta -= problem.travel_cost_or_zero(x, y);
-        delta += problem.travel_cost_or_zero(x, from);
-        delta += problem.travel_cost_or_zero(from, y);
+        delta += problem.travel_cost_or_zero(r2.vehicle(problem), x, from);
+        delta += problem.travel_cost_or_zero(r2.vehicle(problem), from, y);
+        delta -= problem.travel_cost_or_zero(r2.vehicle(problem), x, y);
 
         delta
     }

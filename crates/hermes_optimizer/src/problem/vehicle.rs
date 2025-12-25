@@ -11,6 +11,7 @@ pub type VehicleId = usize;
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Vehicle {
     external_id: String,
+    vehicle_profile_id: usize,
     shift: Option<VehicleShift>,
     capacity: Capacity,
     depot_location_id: Option<usize>,
@@ -21,6 +22,10 @@ pub struct Vehicle {
 }
 
 impl Vehicle {
+    pub fn profile_id(&self) -> usize {
+        self.vehicle_profile_id
+    }
+
     pub fn capacity(&self) -> &Capacity {
         &self.capacity
     }
@@ -148,16 +153,22 @@ impl VehicleShiftBuilder {
 #[derive(Default)]
 pub struct VehicleBuilder {
     external_id: Option<String>,
+    vehicle_profile_id: Option<usize>,
     shift: Option<VehicleShift>,
     capacity: Option<Capacity>,
     depot_location_id: Option<usize>,
     should_return_to_depot: Option<bool>,
     depot_duration: Option<SignedDuration>,
     end_depot_duration: Option<SignedDuration>,
-    skills: Vec<Skill>,
+    skills: Option<Vec<Skill>>,
 }
 
 impl VehicleBuilder {
+    pub fn set_profile_id(&mut self, vehicle_profile_id: usize) -> &mut VehicleBuilder {
+        self.vehicle_profile_id = Some(vehicle_profile_id);
+        self
+    }
+
     pub fn set_vehicle_id(&mut self, external_id: String) -> &mut VehicleBuilder {
         self.external_id = Some(external_id);
         self
@@ -195,20 +206,23 @@ impl VehicleBuilder {
     }
 
     pub fn set_skills(&mut self, skills: Vec<String>) -> &mut VehicleBuilder {
-        self.skills = skills.into_iter().map(|skill| Skill::new(skill)).collect();
+        self.skills = Some(skills.into_iter().map(Skill::new).collect());
         self
     }
 
     pub fn build(self) -> Vehicle {
         Vehicle {
             external_id: self.external_id.expect("External ID is required"),
+            vehicle_profile_id: self
+                .vehicle_profile_id
+                .expect("Vehicle profofile ID is required"),
             shift: self.shift,
             capacity: self.capacity.unwrap_or(Capacity::EMPTY),
             depot_location_id: self.depot_location_id,
             should_return_to_depot: self.should_return_to_depot.unwrap_or(false),
             depot_duration: self.depot_duration,
             end_depot_duration: self.end_depot_duration,
-            skills: FxHashSet::default(),
+            skills: FxHashSet::from_iter(self.skills.unwrap_or_default()),
         }
     }
 }

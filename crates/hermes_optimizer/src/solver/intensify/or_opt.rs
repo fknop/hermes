@@ -94,13 +94,13 @@ impl IntensifyOp for OrOptOperator {
 
         let mut delta = 0.0;
 
-        delta -= problem.travel_cost_or_zero(A, from);
-        delta -= problem.travel_cost_or_zero(end, B);
-        delta -= problem.travel_cost_or_zero(X, Y);
+        delta -= problem.travel_cost_or_zero(route.vehicle(problem), A, from);
+        delta -= problem.travel_cost_or_zero(route.vehicle(problem), end, B);
+        delta -= problem.travel_cost_or_zero(route.vehicle(problem), X, Y);
 
-        delta += problem.travel_cost_or_zero(A, B);
-        delta += problem.travel_cost_or_zero(X, from);
-        delta += problem.travel_cost_or_zero(end, Y);
+        delta += problem.travel_cost_or_zero(route.vehicle(problem), A, B);
+        delta += problem.travel_cost_or_zero(route.vehicle(problem), X, from);
+        delta += problem.travel_cost_or_zero(route.vehicle(problem), end, Y);
 
         delta
     }

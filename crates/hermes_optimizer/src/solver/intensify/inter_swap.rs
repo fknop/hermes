@@ -61,16 +61,16 @@ impl IntensifyOp for InterSwapOperator {
         let mut delta = 0.0;
 
         // Route 1 cost change
-        delta -= problem.travel_cost_or_zero(a, first);
-        delta -= problem.travel_cost_or_zero(first, b);
-        delta += problem.travel_cost_or_zero(a, second);
-        delta += problem.travel_cost_or_zero(second, b);
+        delta -= problem.travel_cost_or_zero(r1.vehicle(problem), a, first);
+        delta -= problem.travel_cost_or_zero(r1.vehicle(problem), first, b);
+        delta += problem.travel_cost_or_zero(r1.vehicle(problem), a, second);
+        delta += problem.travel_cost_or_zero(r1.vehicle(problem), second, b);
 
         // Route 2 cost change
-        delta -= problem.travel_cost_or_zero(x, second);
-        delta -= problem.travel_cost_or_zero(second, y);
-        delta += problem.travel_cost_or_zero(x, first);
-        delta += problem.travel_cost_or_zero(first, y);
+        delta -= problem.travel_cost_or_zero(r2.vehicle(problem), x, second);
+        delta -= problem.travel_cost_or_zero(r2.vehicle(problem), second, y);
+        delta += problem.travel_cost_or_zero(r2.vehicle(problem), x, first);
+        delta += problem.travel_cost_or_zero(r2.vehicle(problem), first, y);
 
         delta
     }

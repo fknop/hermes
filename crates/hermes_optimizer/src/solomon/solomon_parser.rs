@@ -10,6 +10,7 @@ use crate::problem::{
     time_window::TimeWindow,
     travel_cost_matrix::TravelMatrices,
     vehicle::{Vehicle, VehicleBuilder, VehicleShiftBuilder},
+    vehicle_profile::VehicleProfile,
     vehicle_routing_problem::{VehicleRoutingProblem, VehicleRoutingProblemBuilder},
 };
 
@@ -54,6 +55,7 @@ impl SolomonParser {
                 builder
                     .set_vehicle_id(index.to_string())
                     .set_capacity(Capacity::from_vec(vec![vehicle_capacity]))
+                    .set_profile_id(0)
                     .set_return(true);
                 let vehicle = builder.build();
                 vehicles.push(vehicle);
@@ -129,11 +131,14 @@ impl SolomonParser {
 
         let travel_costs_matrix = TravelMatrices::from_euclidian(&locations);
         builder
+            .set_vehicle_profiles(vec![VehicleProfile::new(
+                "vehicle".to_owned(),
+                travel_costs_matrix,
+            )])
             .set_vehicles(vehicles)
             .set_locations(locations)
             .set_services(services)
-            .set_distance_method(DistanceMethod::Euclidean)
-            .set_travel_costs(travel_costs_matrix);
+            .set_distance_method(DistanceMethod::Euclidean);
 
         Ok(builder.build())
     }

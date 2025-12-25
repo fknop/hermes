@@ -7,6 +7,7 @@ use crate::{
         job::{ActivityId, Job, JobTask},
         service::{Service, ServiceId},
         shipment::Shipment,
+        vehicle_profile::VehicleProfile,
     },
     solver::constraints::transport_cost_constraint::TRANSPORT_COST_WEIGHT,
     utils::zip_longest::zip_longest,
@@ -26,8 +27,9 @@ type PrecomputedNormalizedDemands = Vec<Capacity>;
 pub struct VehicleRoutingProblem {
     locations: Vec<Location>,
     vehicles: Vec<Vehicle>,
+    vehicle_profiles: Vec<VehicleProfile>,
     jobs: Vec<Job>,
-    travel_costs: TravelMatrices,
+    // travel_costs: TravelMatrices,
     service_location_index: ServiceLocationIndex,
 
     has_time_windows: bool,
@@ -45,13 +47,20 @@ pub struct VehicleRoutingProblem {
 struct VehicleRoutingProblemParams {
     locations: Vec<Location>,
     vehicles: Vec<Vehicle>,
+    vehicle_profiles: Vec<VehicleProfile>,
     jobs: Vec<Job>,
-    travel_costs: TravelMatrices,
+    // travel_costs: TravelMatrices,
     distance_method: DistanceMethod,
 }
 
 impl VehicleRoutingProblem {
     fn new(params: VehicleRoutingProblemParams) -> Self {
+        for vehicle in &params.vehicles {
+            if vehicle.profile_id() >= params.vehicle_profiles.len() {
+                panic!("Vehicle profile ID out of bounds")
+            }
+        }
+
         let service_location_index =
             ServiceLocationIndex::new(&params.locations, &params.jobs, params.distance_method);
 
@@ -59,7 +68,7 @@ impl VehicleRoutingProblem {
             VehicleRoutingProblem::precompute_average_cost_from_depot(
                 &params.locations,
                 &params.vehicles,
-                &params.travel_costs,
+                &params.vehicle_profiles,
             );
 
         let precomputed_normalized_demands =
@@ -75,7 +84,7 @@ impl VehicleRoutingProblem {
             .unwrap_or(0);
 
         let waiting_duration_weight =
-            VehicleRoutingProblem::precompute_waiting_duration_weight(&params.travel_costs);
+            VehicleRoutingProblem::precompute_waiting_duration_weight(&params.vehicle_profiles);
 
         let precomputed_vehicle_compatibilities =
             VehicleRoutingProblem::precompute_vehicle_compatibilities(
@@ -88,8 +97,9 @@ impl VehicleRoutingProblem {
             has_capacity: params.jobs.iter().any(|job| !job.demand().is_empty()),
             locations: params.locations,
             vehicles: params.vehicles,
+            vehicle_profiles: params.vehicle_profiles,
             jobs: params.jobs,
-            travel_costs: params.travel_costs,
+            // travel_costs: params.travel_costs,
             service_location_index,
             precomputed_average_cost_from_depot,
             precomputed_normalized_demands,
@@ -200,25 +210,41 @@ impl VehicleRoutingProblem {
             .map(|location_id| &self.locations[location_id])
     }
 
-    pub fn travel_distance(&self, from: LocationId, to: LocationId) -> Distance {
-        self.travel_costs.travel_distance(from, to)
+    pub fn travel_distance(&self, vehicle: &Vehicle, from: LocationId, to: LocationId) -> Distance {
+        let profile_id = vehicle.profile_id();
+        self.vehicle_profiles[profile_id].travel_distance(from, to)
     }
 
     pub fn max_cost(&self) -> Cost {
-        self.travel_costs.max_cost() * TRANSPORT_COST_WEIGHT
+        self.vehicle_profiles
+            .iter()
+            .map(|profile| profile.travel_costs().max_cost() * TRANSPORT_COST_WEIGHT)
+            .fold(0.0_f64, |a, b| a.max(b))
     }
 
-    pub fn travel_time(&self, from: LocationId, to: LocationId) -> jiff::SignedDuration {
-        self.travel_costs.travel_time(from, to)
+    pub fn travel_time(
+        &self,
+        vehicle: &Vehicle,
+        from: LocationId,
+        to: LocationId,
+    ) -> jiff::SignedDuration {
+        let profile_id = vehicle.profile_id();
+        self.vehicle_profiles[profile_id].travel_time(from, to)
     }
 
-    pub fn travel_cost(&self, from: LocationId, to: LocationId) -> Cost {
-        self.travel_costs.travel_cost(from, to)
+    pub fn travel_cost(&self, vehicle: &Vehicle, from: LocationId, to: LocationId) -> Cost {
+        let profile_id = vehicle.profile_id();
+        self.vehicle_profiles[profile_id].travel_cost(from, to)
     }
 
-    pub fn travel_cost_or_zero(&self, from: Option<LocationId>, to: Option<LocationId>) -> Cost {
+    pub fn travel_cost_or_zero(
+        &self,
+        vehicle: &Vehicle,
+        from: Option<LocationId>,
+        to: Option<LocationId>,
+    ) -> Cost {
         if let (Some(from), Some(to)) = (from, to) {
-            self.travel_cost(from, to)
+            self.travel_cost(vehicle, from, to)
         } else {
             0.0
         }
@@ -255,7 +281,9 @@ impl VehicleRoutingProblem {
     }
 
     pub fn is_symmetric(&self) -> bool {
-        self.travel_costs.is_symmetric()
+        self.vehicle_profiles
+            .iter()
+            .all(|profile| profile.travel_costs().is_symmetric())
     }
 
     pub fn has_time_windows(&self) -> bool {
@@ -303,22 +331,31 @@ impl VehicleRoutingProblem {
         compatibilities
     }
 
-    fn precompute_waiting_duration_weight(travel_cost_matrix: &TravelMatrices) -> f64 {
-        let sum = travel_cost_matrix
-            .times()
+    fn precompute_waiting_duration_weight(vehicle_profiles: &[VehicleProfile]) -> f64 {
+        let sum = vehicle_profiles
             .iter()
-            .zip(travel_cost_matrix.costs().iter())
-            .filter_map(|(&time, &cost)| {
-                if time > 0.0 && cost > 0.0 {
-                    Some(cost / time)
-                } else {
-                    None
-                }
+            .map(|profile| {
+                let profile_sum = profile
+                    .travel_costs()
+                    .times()
+                    .iter()
+                    .zip(profile.travel_costs().costs().iter())
+                    .filter_map(|(&time, &cost)| {
+                        if time > 0.0 && cost > 0.0 {
+                            Some(cost / time)
+                        } else {
+                            None
+                        }
+                    })
+                    .sum::<f64>();
+
+                profile_sum
+                    / (profile.travel_costs().num_locations().pow(2)
+                        - profile.travel_costs().num_locations()) as f64
             })
             .sum::<f64>();
 
-        sum / (travel_cost_matrix.num_locations().pow(2) - travel_cost_matrix.num_locations())
-            as f64
+        sum / vehicle_profiles.len() as f64
     }
 
     fn precompute_normalized_demands(jobs: &[Job]) -> PrecomputedNormalizedDemands {
@@ -351,15 +388,23 @@ impl VehicleRoutingProblem {
     fn precompute_average_cost_from_depot(
         locations: &[Location],
         vehicles: &[Vehicle],
-        matrix: &TravelMatrices,
+        profiles: &[VehicleProfile],
     ) -> PrecomputedAverageCostFromDepot {
         let mut precomputed_average_cost_from_depot = Vec::with_capacity(locations.len());
 
         precomputed_average_cost_from_depot.extend(locations.iter().map(|location_id| {
             vehicles
                 .iter()
-                .filter_map(|vehicle| vehicle.depot_location_id())
-                .map(|depot_location_id| matrix.travel_cost(depot_location_id, location_id.id()))
+                .filter_map(|vehicle| {
+                    if let Some(depot_location_id) = vehicle.depot_location_id() {
+                        Some(
+                            profiles[vehicle.profile_id()]
+                                .travel_cost(depot_location_id, location_id.id()),
+                        )
+                    } else {
+                        None
+                    }
+                })
                 .sum::<Distance>()
                 / vehicles.len() as Distance
         }));
@@ -370,22 +415,14 @@ impl VehicleRoutingProblem {
 
 #[derive(Default)]
 pub struct VehicleRoutingProblemBuilder {
-    travel_costs: Option<TravelMatrices>,
     services: Option<Vec<Service>>,
     locations: Option<Vec<Location>>,
     vehicles: Option<Vec<Vehicle>>,
+    vehicle_profiles: Option<Vec<VehicleProfile>>,
     distance_method: Option<DistanceMethod>,
 }
 
 impl VehicleRoutingProblemBuilder {
-    pub fn set_travel_costs(
-        &mut self,
-        travel_costs: TravelMatrices,
-    ) -> &mut VehicleRoutingProblemBuilder {
-        self.travel_costs = Some(travel_costs);
-        self
-    }
-
     pub fn set_distance_method(
         &mut self,
         distance_method: DistanceMethod,
@@ -414,6 +451,27 @@ impl VehicleRoutingProblemBuilder {
         self
     }
 
+    pub fn add_vehicle_profile(
+        &mut self,
+        profile: VehicleProfile,
+    ) -> &mut VehicleRoutingProblemBuilder {
+        if let Some(vehicle_profiles) = &mut self.vehicle_profiles {
+            vehicle_profiles.push(profile);
+        } else {
+            self.vehicle_profiles = Some(vec![profile]);
+        }
+
+        self
+    }
+
+    pub fn set_vehicle_profiles(
+        &mut self,
+        profiles: Vec<VehicleProfile>,
+    ) -> &mut VehicleRoutingProblemBuilder {
+        self.vehicle_profiles = Some(profiles);
+        self
+    }
+
     pub fn set_vehicles(&mut self, vehicles: Vec<Vehicle>) -> &mut VehicleRoutingProblemBuilder {
         self.vehicles = Some(vehicles);
         self
@@ -435,19 +493,20 @@ impl VehicleRoutingProblemBuilder {
             }
         }
 
-        let travel_costs = self.travel_costs.expect("Expected travel costs matrix");
-
         let jobs = services.into_iter().map(Job::Service).collect::<Vec<Job>>();
 
         let distance_method = self.distance_method.unwrap_or(DistanceMethod::Haversine);
 
         let vehicles = self.vehicles.expect("Expected list of vehicles");
+        let vehicle_profiles = self
+            .vehicle_profiles
+            .expect("Expected list of vehicle profiles");
 
         VehicleRoutingProblem::new(VehicleRoutingProblemParams {
             locations,
             vehicles,
+            vehicle_profiles,
             jobs,
-            travel_costs,
             distance_method,
         })
     }

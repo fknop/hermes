@@ -53,11 +53,11 @@ impl TwoOptOperator {
         let to = route.location_id(problem, self.params.to);
         let next_to = route.next_location_id(problem, self.params.to);
 
-        let current_cost =
-            problem.travel_cost_or_zero(prev_from, from) + problem.travel_cost_or_zero(to, next_to);
+        let current_cost = problem.travel_cost_or_zero(route.vehicle(problem), prev_from, from)
+            + problem.travel_cost_or_zero(route.vehicle(problem), to, next_to);
 
-        let new_cost =
-            problem.travel_cost_or_zero(prev_from, to) + problem.travel_cost_or_zero(from, next_to);
+        let new_cost = problem.travel_cost_or_zero(route.vehicle(problem), prev_from, to)
+            + problem.travel_cost_or_zero(route.vehicle(problem), from, next_to);
 
         new_cost - current_cost
     }
@@ -78,9 +78,9 @@ impl TwoOptOperator {
             let v = route.location_id(problem, i + 1);
 
             // Subtract cost of U -> V
-            delta -= problem.travel_cost_or_zero(u, v);
+            delta -= problem.travel_cost_or_zero(route.vehicle(problem), u, v);
             // Add cost of V -> U
-            delta += problem.travel_cost_or_zero(v, u);
+            delta += problem.travel_cost_or_zero(route.vehicle(problem), v, u);
         }
 
         delta

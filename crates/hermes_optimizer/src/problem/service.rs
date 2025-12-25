@@ -140,9 +140,7 @@ impl ServiceBuilder {
             service_duration: self.service_duration.unwrap_or(SignedDuration::ZERO),
             time_windows: SmallVec::from_vec(self.time_windows.unwrap_or_default()),
             service_type: self.service_type.unwrap_or(ServiceType::Delivery),
-
-            // TODO: better way here probably
-            skills: FxHashSet::from_iter(self.skills.unwrap_or_default().iter().cloned()),
+            skills: FxHashSet::from_iter(self.skills.unwrap_or_default()),
         }
     }
 }

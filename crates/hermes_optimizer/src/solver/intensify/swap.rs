@@ -77,26 +77,38 @@ impl IntensifyOp for SwapOperator {
         let next_second_loc = route.next_location_id(problem, second);
 
         if second == first + 1 {
-            let current_cost = problem.travel_cost_or_zero(prev_first_loc, first_loc)
-                + problem.travel_cost_or_zero(first_loc, second_loc)
-                + problem.travel_cost_or_zero(second_loc, next_second_loc);
+            let current_cost =
+                problem.travel_cost_or_zero(route.vehicle(problem), prev_first_loc, first_loc)
+                    + problem.travel_cost_or_zero(route.vehicle(problem), first_loc, second_loc)
+                    + problem.travel_cost_or_zero(
+                        route.vehicle(problem),
+                        second_loc,
+                        next_second_loc,
+                    );
 
-            let new_cost = problem.travel_cost_or_zero(prev_first_loc, second_loc)
-                + problem.travel_cost_or_zero(second_loc, first_loc)
-                + problem.travel_cost_or_zero(first_loc, next_second_loc);
+            let new_cost =
+                problem.travel_cost_or_zero(route.vehicle(problem), prev_first_loc, second_loc)
+                    + problem.travel_cost_or_zero(route.vehicle(problem), second_loc, first_loc)
+                    + problem.travel_cost_or_zero(
+                        route.vehicle(problem),
+                        first_loc,
+                        next_second_loc,
+                    );
 
             return new_cost - current_cost;
         }
 
-        let current_cost = problem.travel_cost_or_zero(prev_first_loc, first_loc)
-            + problem.travel_cost_or_zero(first_loc, next_first_loc)
-            + problem.travel_cost_or_zero(prev_second_loc, second_loc)
-            + problem.travel_cost_or_zero(second_loc, next_second_loc);
+        let current_cost =
+            problem.travel_cost_or_zero(route.vehicle(problem), prev_first_loc, first_loc)
+                + problem.travel_cost_or_zero(route.vehicle(problem), first_loc, next_first_loc)
+                + problem.travel_cost_or_zero(route.vehicle(problem), prev_second_loc, second_loc)
+                + problem.travel_cost_or_zero(route.vehicle(problem), second_loc, next_second_loc);
 
-        let new_cost = problem.travel_cost_or_zero(prev_first_loc, second_loc)
-            + problem.travel_cost_or_zero(second_loc, next_first_loc)
-            + problem.travel_cost_or_zero(prev_second_loc, first_loc)
-            + problem.travel_cost_or_zero(first_loc, next_second_loc);
+        let new_cost =
+            problem.travel_cost_or_zero(route.vehicle(problem), prev_first_loc, second_loc)
+                + problem.travel_cost_or_zero(route.vehicle(problem), second_loc, next_first_loc)
+                + problem.travel_cost_or_zero(route.vehicle(problem), prev_second_loc, first_loc)
+                + problem.travel_cost_or_zero(route.vehicle(problem), first_loc, next_second_loc);
 
         new_cost - current_cost
     }

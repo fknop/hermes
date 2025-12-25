@@ -86,6 +86,7 @@ impl RuinSolution for RuinTimeRelated {
                     )
                     .abs();
                 let distance = context.problem.travel_distance(
+                    route.vehicle(context.problem),
                     target_activity.job_task(context.problem).location_id(),
                     activity.job_task(context.problem).location_id(),
                 );
