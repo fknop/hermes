@@ -1013,19 +1013,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "hermes_matrix"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "geo-types",
- "reqwest",
- "serde",
- "serde_json",
- "thiserror 2.0.17",
- "tokio",
-]
-
-[[package]]
 name = "hermes_optimizer_core"
 version = "0.1.0"
 dependencies = [
@@ -1044,6 +1031,19 @@ dependencies = [
  "tokio",
  "tracing",
  "uuid",
+]
+
+[[package]]
+name = "hermes_optimizer_matrix_providers"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "geo-types",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.17",
+ "tokio",
 ]
 
 [[package]]
