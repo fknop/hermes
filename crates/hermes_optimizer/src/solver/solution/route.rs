@@ -1133,6 +1133,7 @@ mod tests {
             time_window::TimeWindow,
             travel_cost_matrix::TravelMatrices,
             vehicle::VehicleBuilder,
+            vehicle_profile::VehicleProfile,
             vehicle_routing_problem::{VehicleRoutingProblem, VehicleRoutingProblemBuilder},
         },
         solver::solution::{
@@ -1149,6 +1150,7 @@ mod tests {
         vehicle_builder.set_depot_location_id(0);
         vehicle_builder.set_capacity(Capacity::from_vec(vec![40.0]));
         vehicle_builder.set_vehicle_id(String::from("vehicle"));
+        vehicle_builder.set_profile_id(0);
         let vehicle = vehicle_builder.build();
         let vehicles = vec![vehicle];
 
@@ -1189,12 +1191,17 @@ mod tests {
         let services = vec![service_1, service_2, service_3];
 
         let mut builder = VehicleRoutingProblemBuilder::default();
-        builder.set_travel_costs(TravelMatrices::from_constant(
-            &locations,
-            SignedDuration::from_mins(30).as_secs_f64(),
-            100.0,
-            SignedDuration::from_mins(30).as_secs_f64(),
-        ));
+
+        builder.set_vehicle_profiles(vec![VehicleProfile::new(
+            "test_profile".to_owned(),
+            TravelMatrices::from_constant(
+                &locations,
+                SignedDuration::from_mins(30).as_secs_f64(),
+                100.0,
+                SignedDuration::from_mins(30).as_secs_f64(),
+            ),
+        )]);
+
         builder.set_locations(locations);
         builder.set_vehicles(vehicles);
         builder.set_services(services);
@@ -1213,6 +1220,7 @@ mod tests {
         vehicle_builder.set_depot_location_id(0);
         vehicle_builder.set_capacity(vehicle_capacity);
         vehicle_builder.set_vehicle_id(String::from("vehicle"));
+        vehicle_builder.set_profile_id(0);
         let vehicle = vehicle_builder.build();
         let vehicles = vec![vehicle];
 
@@ -1231,12 +1239,15 @@ mod tests {
             .collect::<Vec<_>>();
 
         let mut builder = VehicleRoutingProblemBuilder::default();
-        builder.set_travel_costs(TravelMatrices::from_constant(
-            &locations,
-            SignedDuration::from_mins(30).as_secs_f64(),
-            100.0,
-            SignedDuration::from_mins(30).as_secs_f64(),
-        ));
+        builder.set_vehicle_profiles(vec![VehicleProfile::new(
+            "test_profile".to_owned(),
+            TravelMatrices::from_constant(
+                &locations,
+                SignedDuration::from_mins(30).as_secs_f64(),
+                100.0,
+                SignedDuration::from_mins(30).as_secs_f64(),
+            ),
+        )]);
         builder.set_locations(locations);
         builder.set_vehicles(vehicles);
         builder.set_services(services);
@@ -1594,6 +1605,7 @@ mod tests {
         vehicle_builder.set_depot_location_id(0);
         vehicle_builder.set_capacity(Capacity::from_vec(vec![100.0]));
         vehicle_builder.set_vehicle_id(String::from("vehicle"));
+        vehicle_builder.set_profile_id(0);
         let vehicle = vehicle_builder.build();
         let vehicles = vec![vehicle];
 
@@ -1613,12 +1625,16 @@ mod tests {
 
         let mut builder = VehicleRoutingProblemBuilder::default();
         // Travel time of 30 mins between consecutive locations
-        builder.set_travel_costs(TravelMatrices::from_constant(
-            &locations,
-            SignedDuration::from_mins(30).as_secs_f64(),
-            100.0,
-            SignedDuration::from_mins(30).as_secs_f64(),
-        ));
+
+        builder.set_vehicle_profiles(vec![VehicleProfile::new(
+            "test_profile".to_owned(),
+            TravelMatrices::from_constant(
+                &locations,
+                SignedDuration::from_mins(30).as_secs_f64(),
+                100.0,
+                SignedDuration::from_mins(30).as_secs_f64(),
+            ),
+        )]);
         builder.set_locations(locations);
         builder.set_vehicles(vehicles);
         builder.set_services(services);

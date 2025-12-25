@@ -133,7 +133,7 @@ mod tests {
     fn test_kruskal_cluster() {
         let current_dir = env::current_dir().unwrap();
         let root_directory = current_dir.parent().unwrap();
-        let path = root_directory.join("./data/solomon/c1/c101.txt");
+        let path = root_directory.join("../data/solomon/c1/c101.txt");
 
         let problem = SolomonParser::from_file(path.to_str().unwrap()).unwrap();
 

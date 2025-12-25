@@ -6,7 +6,7 @@ use hermes_optimizer::problem::{
     amount::{Amount, AmountExpression, AmountSum},
     capacity::Capacity,
 };
-use rand::{Rng, random_range, rng};
+use rand::{Rng, SeedableRng, random_range, rng, rngs::SmallRng};
 
 #[inline]
 fn capacity_add<'a>(a: &'a Capacity, b: &'a Capacity) -> AmountSum<&'a Amount, &'a Amount> {
@@ -145,8 +145,62 @@ fn sort_benchmark(c: &mut Criterion) -> () {
     });
 }
 
+fn bench_direct_access(c: &mut Criterion) {
+    const NUM_VECS: usize = 4;
+    const VEC_LEN: usize = 10_000;
+    const TOTAL_LEN: usize = NUM_VECS * VEC_LEN;
+
+    // Nested: 4 vecs of 10,000 elements
+    let nested: Vec<Vec<u64>> = (0..NUM_VECS)
+        .map(|i| ((i * VEC_LEN) as u64..(i * VEC_LEN + VEC_LEN) as u64).collect())
+        .collect();
+
+    // Flat: 40,000 elements
+    let flat: Vec<u64> = (0..TOTAL_LEN as u64).collect();
+
+    // Pre-generate random indices
+    let mut rng = SmallRng::seed_from_u64(42);
+    let accesses: Vec<(usize, usize)> = (0..10_000)
+        .map(|_| {
+            let outer = rng.random_range(0..NUM_VECS);
+            let inner = rng.random_range(0..VEC_LEN);
+            (outer, inner)
+        })
+        .collect();
+
+    let flat_indices: Vec<usize> = accesses
+        .iter()
+        .map(|(outer, inner)| outer * VEC_LEN + inner)
+        .collect();
+
+    let mut group = c.benchmark_group("direct_access");
+
+    group.bench_function("nested_4x10000", |b| {
+        b.iter(|| {
+            let mut sum = 0u64;
+            for &(outer, inner) in &accesses {
+                sum += nested[outer][inner];
+            }
+            black_box(sum)
+        })
+    });
+
+    group.bench_function("flat_40000", |b| {
+        b.iter(|| {
+            let mut sum = 0u64;
+            for &idx in &flat_indices {
+                sum += flat[idx];
+            }
+            black_box(sum)
+        })
+    });
+
+    group.finish();
+}
+
 criterion_group!(
     benches,
+    bench_direct_access,
     capacity_benchmark,
     satisfies_demand_benchmark,
     over_capacity_demand_benchmark,

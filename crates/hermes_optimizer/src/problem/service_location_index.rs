@@ -147,7 +147,7 @@ mod tests {
     }
 
     fn build_locations_and_services() -> (Vec<Location>, Vec<Service>) {
-        let file = "../data/optimizer/data.json";
+        let file = "../../data/optimizer/data.json";
         let reader = BufReader::new(File::open(file).unwrap());
 
         let data: FileData = serde_json::from_reader(reader).unwrap();

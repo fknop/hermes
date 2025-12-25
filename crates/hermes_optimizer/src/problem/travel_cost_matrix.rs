@@ -105,8 +105,8 @@ impl TravelMatrices {
     pub fn from_constant(locations: &[Location], time: f64, distance: f64, cost: f64) -> Self {
         let num_locations = locations.len();
         let distances = Arc::new(vec![distance; num_locations * num_locations]);
-        let times = Arc::clone(&distances);
-        let costs = Arc::clone(&distances);
+        let times = Arc::new(vec![time; num_locations * num_locations]);
+        let costs = Arc::new(vec![cost; num_locations * num_locations]);
         TravelMatrices {
             distances,
             times,

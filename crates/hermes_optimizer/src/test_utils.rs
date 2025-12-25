@@ -9,6 +9,7 @@ use crate::{
         service::{Service, ServiceBuilder, ServiceId},
         travel_cost_matrix::TravelMatrices,
         vehicle::{Vehicle, VehicleBuilder},
+        vehicle_profile::VehicleProfile,
         vehicle_routing_problem::{VehicleRoutingProblem, VehicleRoutingProblemBuilder},
     },
     solver::{
@@ -60,6 +61,7 @@ pub fn create_basic_vehicles(location_ids: Vec<LocationId>) -> Vec<Vehicle> {
             let mut builder = VehicleBuilder::default();
             builder.set_depot_location_id(location_id);
             builder.set_vehicle_id(index.to_string());
+            builder.set_profile_id(0);
             builder.build()
         })
         .collect()
@@ -73,7 +75,10 @@ pub fn create_test_problem(
     let mut builder = VehicleRoutingProblemBuilder::default();
 
     builder.set_distance_method(DistanceMethod::Euclidean);
-    builder.set_travel_costs(TravelMatrices::from_euclidian(&locations));
+    builder.set_vehicle_profiles(vec![VehicleProfile::new(
+        "test_profile".to_owned(),
+        TravelMatrices::from_euclidian(&locations),
+    )]);
     builder.set_services(services);
     builder.set_locations(locations);
     builder.set_vehicles(vehicles);

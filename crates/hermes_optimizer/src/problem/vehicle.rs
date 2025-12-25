@@ -215,7 +215,7 @@ impl VehicleBuilder {
             external_id: self.external_id.expect("External ID is required"),
             vehicle_profile_id: self
                 .vehicle_profile_id
-                .expect("Vehicle profofile ID is required"),
+                .expect("Vehicle profile ID is required"),
             shift: self.shift,
             capacity: self.capacity.unwrap_or(Capacity::EMPTY),
             depot_location_id: self.depot_location_id,
