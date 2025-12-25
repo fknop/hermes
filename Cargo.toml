@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["hermes", "hermes_api", "hermes_core", "hermes_optimizer/matrix_providers", "hermes_optimizer/core"]
+members = ["hermes", "hermes_api", "hermes_routing/core", "hermes_optimizer/matrix_providers", "hermes_optimizer/core"]
 
 
 [workspace.dependencies]

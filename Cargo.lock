@@ -961,8 +961,8 @@ version = "0.1.0"
 dependencies = [
  "geo",
  "geojson",
- "hermes_core",
  "hermes_optimizer_core",
+ "hermes_routing_core",
  "jiff",
  "mimalloc",
  "tracing",
@@ -976,8 +976,8 @@ dependencies = [
  "axum",
  "geo",
  "geojson",
- "hermes_core",
  "hermes_optimizer_core",
+ "hermes_routing_core",
  "jiff",
  "mimalloc",
  "parking_lot",
@@ -989,27 +989,6 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "uuid",
-]
-
-[[package]]
-name = "hermes_core"
-version = "0.1.0"
-dependencies = [
- "bincode",
- "criterion 0.5.1",
- "fxhash",
- "geo",
- "geo-types",
- "geojson",
- "osmpbfreader",
- "paste",
- "rand",
- "rayon",
- "rkyv",
- "rstar 0.12.2",
- "serde",
- "thiserror 2.0.17",
- "tracing",
 ]
 
 [[package]]
@@ -1044,6 +1023,27 @@ dependencies = [
  "serde_json",
  "thiserror 2.0.17",
  "tokio",
+]
+
+[[package]]
+name = "hermes_routing_core"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "criterion 0.5.1",
+ "fxhash",
+ "geo",
+ "geo-types",
+ "geojson",
+ "osmpbfreader",
+ "paste",
+ "rand",
+ "rayon",
+ "rkyv",
+ "rstar 0.12.2",
+ "serde",
+ "thiserror 2.0.17",
+ "tracing",
 ]
 
 [[package]]

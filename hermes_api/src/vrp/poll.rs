@@ -8,17 +8,17 @@ use axum::{
 };
 use geo::{Coord, Simplify};
 use geojson::{Feature, Geometry};
-use hermes_core::{
-    geopoint::GeoPoint,
-    hermes::Hermes,
-    routing::routing_request::{RoutingAlgorithm, RoutingRequest, RoutingRequestOptions},
-};
 use hermes_optimizer_core::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
         accepted_solution::AcceptedSolution, solution::route::WorkingSolutionRoute,
         solver::SolverStatus,
     },
+};
+use hermes_routing_core::{
+    geopoint::GeoPoint,
+    hermes::Hermes,
+    routing::routing_request::{RoutingAlgorithm, RoutingRequest, RoutingRequestOptions},
 };
 use jiff::SignedDuration;
 use serde::Serialize;
