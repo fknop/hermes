@@ -2,7 +2,7 @@ use std::hint::black_box;
 
 use criterion::{Criterion, criterion_group, criterion_main};
 use fxhash::FxHashSet;
-use hermes_optimizer::problem::{
+use hermes_optimizer_core::problem::{
     amount::{Amount, AmountExpression, AmountSum},
     capacity::Capacity,
 };

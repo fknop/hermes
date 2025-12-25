@@ -1,5 +1,5 @@
 use hermes_core::geopoint::GeoPoint;
-use hermes_optimizer::{
+use hermes_optimizer_core::{
     solomon::solomon_parser::SolomonParser,
     solver::{
         solver::Solver,

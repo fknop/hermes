@@ -11,7 +11,7 @@ use axum::http::Method;
 use axum::routing::{any, get, post};
 use axum::{Router, serve};
 use hermes_core::hermes::Hermes;
-use hermes_optimizer::solver::solver_manager::SolverManager;
+use hermes_optimizer_core::solver::solver_manager::SolverManager;
 use landmarks::get_landmarks;
 use std::sync::Arc;
 use tower::ServiceBuilder;

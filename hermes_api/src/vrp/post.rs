@@ -6,7 +6,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use hermes_optimizer::problem::{
+use hermes_optimizer_core::problem::{
     location::Location,
     service::Service,
     travel_cost_matrix::{Time, TravelMatrices},

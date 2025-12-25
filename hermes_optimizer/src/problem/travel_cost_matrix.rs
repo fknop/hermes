@@ -22,27 +22,27 @@ pub struct TravelMatrices {
 }
 
 impl TravelMatrices {
-    // pub fn new(
-    //     distances: Vec<Vec<Distance>>,
-    //     times: Vec<Vec<Time>>,
-    //     costs: Vec<Vec<Cost>>,
-    // ) -> Self {
-    //     let num_locations = distances.len();
+    pub fn new(
+        distances: Vec<Vec<Distance>>,
+        times: Vec<Vec<Time>>,
+        costs: Vec<Vec<Cost>>,
+    ) -> Self {
+        let num_locations = distances.len();
 
-    //     let is_symmetric = distances.iter().enumerate().all(|(i, row)| {
-    //         row.iter()
-    //             .enumerate()
-    //             .all(|(j, &value)| distances[j][i] == value)
-    //     });
+        let is_symmetric = distances.iter().enumerate().all(|(i, row)| {
+            row.iter()
+                .enumerate()
+                .all(|(j, &value)| distances[j][i] == value)
+        });
 
-    //     TravelMatrices {
-    //         distances: distances.into_iter().flatten().collect(),
-    //         times: times.into_iter().flatten().collect(),
-    //         costs: costs.into_iter().flatten().collect(),
-    //         num_locations,
-    //         is_symmetric,
-    //     }
-    // }
+        TravelMatrices {
+            distances: Arc::new(distances.into_iter().flatten().collect()),
+            times: Arc::new(times.into_iter().flatten().collect()),
+            costs: Arc::new(costs.into_iter().flatten().collect()),
+            num_locations,
+            is_symmetric,
+        }
+    }
 
     #[inline(always)]
     fn get_index(&self, from: usize, to: usize) -> usize {

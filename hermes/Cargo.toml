@@ -7,7 +7,7 @@ edition = "2024"
 geo = "0.30.0"
 geojson = "0.24.2"
 hermes_core = { version = "0.1.0", path = "../hermes_core" }
-hermes_optimizer = { version = "0.1.0", path = "../hermes_optimizer" }
+hermes_optimizer_core = { version = "0.1.0", path = "../hermes_optimizer" }
 jiff = "0.2.15"
 mimalloc = "0.1.47"
 tracing = "0.1.41"

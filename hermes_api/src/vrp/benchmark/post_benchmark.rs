@@ -6,7 +6,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use hermes_optimizer::solomon::solomon_parser::SolomonParser;
+use hermes_optimizer_core::solomon::solomon_parser::SolomonParser;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 

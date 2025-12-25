@@ -1,4 +1,4 @@
-use hermes_optimizer::{
+use hermes_optimizer_core::{
     problem::{capacity::Capacity, service::ServiceId, vehicle::VehicleId},
     solver::score::{Score, ScoreAnalysis},
 };

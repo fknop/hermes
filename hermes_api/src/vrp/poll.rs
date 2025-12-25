@@ -13,7 +13,7 @@ use hermes_core::{
     hermes::Hermes,
     routing::routing_request::{RoutingAlgorithm, RoutingRequest, RoutingRequestOptions},
 };
-use hermes_optimizer::{
+use hermes_optimizer_core::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
         accepted_solution::AcceptedSolution, solution::route::WorkingSolutionRoute,

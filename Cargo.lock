@@ -962,7 +962,7 @@ dependencies = [
  "geo",
  "geojson",
  "hermes_core",
- "hermes_optimizer",
+ "hermes_optimizer_core",
  "jiff",
  "mimalloc",
  "tracing",
@@ -977,7 +977,7 @@ dependencies = [
  "geo",
  "geojson",
  "hermes_core",
- "hermes_optimizer",
+ "hermes_optimizer_core",
  "jiff",
  "mimalloc",
  "parking_lot",
@@ -1026,7 +1026,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "hermes_optimizer"
+name = "hermes_optimizer_core"
 version = "0.1.0"
 dependencies = [
  "criterion 0.7.0",

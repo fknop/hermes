@@ -1,9 +1,5 @@
-
-use axum::{
-    extract::Path,
-    response::IntoResponse,
-};
-use hermes_optimizer::{
+use axum::{extract::Path, response::IntoResponse};
+use hermes_optimizer_core::{
     problem::{service::Service, vehicle::Vehicle},
     solomon::solomon_parser::SolomonParser,
 };
