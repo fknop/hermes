@@ -1,3 +1,8 @@
+use dotenvy::dotenv;
+use hermes_matrix_providers::{
+    graphhopper_api::GraphHopperProfile, travel_matrix_client::TravelMatrixClient,
+    travel_matrix_provider::TravelMatrixProvider,
+};
 use hermes_optimizer::{
     solomon::solomon_parser::SolomonParser,
     solver::{
@@ -212,57 +217,59 @@ fn create_solomon_dataset() -> Vec<SolomonDataset> {
     ]
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
+    dotenvy::from_filename("./.env.local").ok();
     tracing_subscriber::fmt().with_max_level(Level::INFO).init();
 
-    let datasets = create_solomon_dataset();
+    // let datasets = create_solomon_dataset();
 
-    for dataset in datasets {
-        let vrp = SolomonParser::from_file(dataset.file).unwrap();
+    // for dataset in datasets {
+    //     let vrp = SolomonParser::from_file(dataset.file).unwrap();
 
-        let solver = Solver::new(
-            vrp,
-            SolverParams {
-                terminations: vec![
-                    // Termination::Iterations(20000),
-                    Termination::VehiclesAndCosts {
-                        vehicles: dataset.vehicles,
-                        costs: dataset.optimal_cost + 0.5,
-                    },
-                    // Termination::IterationsWithoutImprovement(10000),
-                    Termination::Duration(SignedDuration::from_secs(10)),
-                ],
-                insertion_threads: Threads::Multi(4),
-                search_threads: Threads::Single,
-                debug_options: SolverParamsDebugOptions {
-                    enable_local_search: true,
-                },
-                ..SolverParams::default()
-            },
-        );
+    //     let solver = Solver::new(
+    //         vrp,
+    //         SolverParams {
+    //             terminations: vec![
+    //                 // Termination::Iterations(20000),
+    //                 Termination::VehiclesAndCosts {
+    //                     vehicles: dataset.vehicles,
+    //                     costs: dataset.optimal_cost + 0.5,
+    //                 },
+    //                 // Termination::IterationsWithoutImprovement(10000),
+    //                 Termination::Duration(SignedDuration::from_secs(10)),
+    //             ],
+    //             insertion_threads: Threads::Multi(4),
+    //             search_threads: Threads::Single,
+    //             debug_options: SolverParamsDebugOptions {
+    //                 enable_local_search: true,
+    //             },
+    //             ..SolverParams::default()
+    //         },
+    //     );
 
-        solver.solve();
+    //     solver.solve();
 
-        let best_solution = solver.current_best_solution().unwrap();
-        if best_solution.solution.total_transport_costs() <= dataset.optimal_cost + 0.5
-            && best_solution.solution.non_empty_routes_count() <= dataset.vehicles
-            && best_solution.score.hard_score == 0.0
-        {
-            info!(
-                "Found optimal solution for {} - Costs = {}, Vehicles = {}",
-                dataset.file,
-                best_solution.solution.total_transport_costs(),
-                best_solution.solution.non_empty_routes_count()
-            );
-        } else {
-            warn!(
-                "Could not find optimal solution for {} - Costs = {:?}, Vehicles = {}",
-                dataset.file,
-                best_solution.solution.total_transport_costs(),
-                best_solution.solution.non_empty_routes_count()
-            );
-        }
-    }
+    //     let best_solution = solver.current_best_solution().unwrap();
+    //     if best_solution.solution.total_transport_costs() <= dataset.optimal_cost + 0.5
+    //         && best_solution.solution.non_empty_routes_count() <= dataset.vehicles
+    //         && best_solution.score.hard_score == 0.0
+    //     {
+    //         info!(
+    //             "Found optimal solution for {} - Costs = {}, Vehicles = {}",
+    //             dataset.file,
+    //             best_solution.solution.total_transport_costs(),
+    //             best_solution.solution.non_empty_routes_count()
+    //         );
+    //     } else {
+    //         warn!(
+    //             "Could not find optimal solution for {} - Costs = {:?}, Vehicles = {}",
+    //             dataset.file,
+    //             best_solution.solution.total_transport_costs(),
+    //             best_solution.solution.non_empty_routes_count()
+    //         );
+    //     }
+    // }
 
     /*
     * Route #1: 20 22 24 27 30 29 6 32 33 31 35 37 38 39 36 34 28 26 23 18 19 16 14 12 15 17 13 25 9 11 10 8 21

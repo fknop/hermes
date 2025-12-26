@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use crate::{graphhopper::GraphHopperProfile, travel_matrices::TravelMatrices};
+use crate::{graphhopper_api::GraphHopperProfile, travel_matrices::TravelMatrices};
 
 #[derive(Deserialize)]
 pub enum TravelMatrixProvider {

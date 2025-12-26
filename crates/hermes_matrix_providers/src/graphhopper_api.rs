@@ -2,6 +2,7 @@ use std::{fmt::Display, time::Duration};
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use tracing::debug;
 
 use crate::travel_matrices::TravelMatrices;
 
@@ -212,6 +213,8 @@ impl GraphHopperMatrixClient {
             return Err(GraphHopperError::Api { status, message });
         }
 
+        debug!("GraphHopperApi: Posted matrix request",);
+
         let job_response: AsyncMatrixJobResponse = post_response.json().await?;
 
         self.poll_until_completed(&job_response.job_id).await
@@ -242,7 +245,11 @@ impl GraphHopperMatrixClient {
     }
 
     async fn poll_until_completed(&self, job_id: &str) -> Result<MatrixSolution, GraphHopperError> {
-        for _ in 0..self.params.max_poll_attempts {
+        for attempt in 1..=self.params.max_poll_attempts {
+            debug!(
+                "GraphHopperApi: Polling for job completion {}/{}",
+                attempt, self.params.max_poll_attempts
+            );
             if let Some(solution) = self.get_solution(job_id).await? {
                 return Ok(solution);
             }

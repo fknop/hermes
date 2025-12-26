@@ -16,6 +16,7 @@ fxhash = "0.2.1"
 geo-types = "0.7.18"
 thiserror = "2.0.17"
 anyhow = "1.0.100"
+dotenvy = "0.15.7"
 
 [profile.release]
 debug = false

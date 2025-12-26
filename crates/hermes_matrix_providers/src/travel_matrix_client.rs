@@ -1,6 +1,6 @@
 use crate::{
     as_the_crow_flies::as_the_crow_flies_matrices,
-    graphhopper::{GraphHopperMatrixClient, GraphhopperMatrixClientParams},
+    graphhopper_api::{GraphHopperMatrixClient, GraphhopperMatrixClientParams},
     travel_matrices::TravelMatrices,
     travel_matrix_provider::TravelMatrixProvider,
 };
@@ -11,13 +11,7 @@ pub struct TravelMatrixClient {
 
 impl TravelMatrixClient {
     pub fn new() -> Self {
-        Self {
-            graphhopper_client: GraphHopperMatrixClient::new(GraphhopperMatrixClientParams {
-                api_key: std::env::var("GRAPHHOPPER_API_KEY").unwrap(),
-                max_poll_attempts: 40, // max 20s, already really long time
-                poll_interval: std::time::Duration::from_millis(500),
-            }),
-        }
+        Self::default()
     }
 
     pub async fn fetch_matrix<P>(
@@ -36,6 +30,19 @@ impl TravelMatrixClient {
                 Ok(as_the_crow_flies_matrices(points, speed_kmh))
             }
             TravelMatrixProvider::Custom { matrices } => Ok(matrices),
+        }
+    }
+}
+
+impl Default for TravelMatrixClient {
+    fn default() -> Self {
+        Self {
+            graphhopper_client: GraphHopperMatrixClient::new(GraphhopperMatrixClientParams {
+                api_key: std::env::var("GRAPHHOPPER_API_KEY")
+                    .expect("GRAPHHOPPER_API_KEY must be set"),
+                max_poll_attempts: 40, // max 20s, already really long time
+                poll_interval: std::time::Duration::from_millis(500),
+            }),
         }
     }
 }

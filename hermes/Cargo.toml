@@ -8,10 +8,13 @@ geo = "0.30.0"
 geojson = "0.24.2"
 hermes_routing = { version = "0.1.0", path = "../crates/hermes_routing" }
 hermes_optimizer = { version = "0.1.0", path = "../crates/hermes_optimizer" }
+hermes_matrix_providers = { version = "0.1.0", path = "../crates/hermes_matrix_providers" }
 jiff = "0.2.15"
 mimalloc = "0.1.47"
 tracing = "0.1.41"
 tracing-subscriber = "0.3.19"
+dotenvy = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
 
 
 [profile.release]
