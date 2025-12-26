@@ -396,7 +396,7 @@ impl Search {
         self.params.terminations.iter().any(|termination| {
             if self.check_termination(state, termination) {
                 if !matches!(termination, Termination::Iterations(_)) {
-                    info!(
+                    debug!(
                         thread = thread::current().name().unwrap_or("main"),
                         "Thread {}: Termination condition met: {:?} at iteration {}",
                         thread::current().name().unwrap_or("main"),

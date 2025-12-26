@@ -1,4 +1,7 @@
-use std::error::Error;
+use std::{
+    error::Error,
+    path::{Path, PathBuf},
+};
 
 use jiff::{SignedDuration, Timestamp};
 
@@ -17,7 +20,7 @@ use crate::problem::{
 pub struct SolomonParser;
 
 impl SolomonParser {
-    pub fn from_file(file: &str) -> Result<VehicleRoutingProblem, Box<dyn Error>> {
+    pub fn from_file<P: AsRef<Path>>(file: P) -> Result<VehicleRoutingProblem, Box<dyn Error>> {
         let file_content = std::fs::read_to_string(file)?;
         Self::from_solomon(&file_content)
     }
@@ -159,7 +162,7 @@ mod tests {
 
         let path = root_directory.join("../data/solomon/c1/c101.txt");
 
-        let vrp = SolomonParser::from_file(path.to_str().unwrap()).unwrap();
+        let vrp = SolomonParser::from_file(&path).unwrap();
 
         assert_eq!(vrp.vehicles().len(), 25);
 

@@ -3,7 +3,10 @@ use std::path::PathBuf;
 use clap::{Parser, Subcommand};
 use tracing::info;
 
+use crate::optimize_dataset::OptimizeDatasetArgs;
+
 mod file_utils;
+mod optimize_dataset;
 mod parsers;
 
 #[derive(Parser)]
@@ -30,22 +33,13 @@ enum Commands {
         duration: jiff::SignedDuration,
     },
     OptimizeDataset {
-        /// The file to optimize
-        #[arg(short, long, group = "input")]
-        file: PathBuf,
-
-        /// The folder to optimize
-        #[arg(short, long, group = "input")]
-        folder: PathBuf,
-
-        /// Output folder into .solution files
-        #[arg(short, long)]
-        output: Option<PathBuf>,
+        #[command(flatten)]
+        args: OptimizeDatasetArgs,
     },
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), anyhow::Error> {
     let cli = Cli::parse();
     tracing_subscriber::fmt()
         .with_max_level(if cli.debug {
@@ -59,15 +53,11 @@ async fn main() {
         Some(Commands::Optimize { duration, .. }) => {
             info!("{}", duration)
         }
-        Some(Commands::OptimizeDataset {
-            file,
-            folder,
-            output,
-        }) => {
-            info!("{file:?}, {folder:?}, {output:?}");
-        }
+        Some(Commands::OptimizeDataset { args }) => optimize_dataset::run(args)?,
         None => {
             // Handle no command provided
         }
     }
+
+    Ok(())
 }
