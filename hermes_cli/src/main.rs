@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use clap::{Parser, Subcommand};
 use tracing::info;
 
+mod file_utils;
 mod parsers;
 
 #[derive(Parser)]
@@ -28,6 +29,19 @@ enum Commands {
         #[arg(short, long, value_parser = parsers::parse_duration)]
         duration: jiff::SignedDuration,
     },
+    OptimizeDataset {
+        /// The file to optimize
+        #[arg(short, long, group = "input")]
+        file: PathBuf,
+
+        /// The folder to optimize
+        #[arg(short, long, group = "input")]
+        folder: PathBuf,
+
+        /// Output folder into .solution files
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+    },
 }
 
 #[tokio::main]
@@ -44,6 +58,13 @@ async fn main() {
     match cli.command {
         Some(Commands::Optimize { duration, .. }) => {
             info!("{}", duration)
+        }
+        Some(Commands::OptimizeDataset {
+            file,
+            folder,
+            output,
+        }) => {
+            info!("{file:?}, {folder:?}, {output:?}");
         }
         None => {
             // Handle no command provided
