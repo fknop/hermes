@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["hermes", "hermes_api", "crates/*"]
+members = ["hermes", "hermes_api", "crates/*", "hermes_cli"]
 
 
 [workspace.dependencies]
