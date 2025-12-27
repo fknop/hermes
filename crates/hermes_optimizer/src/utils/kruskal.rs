@@ -127,7 +127,7 @@ mod tests {
     use std::env;
 
     use super::*;
-    use crate::solomon::solomon_parser::SolomonParser;
+    use crate::parsers::{parser::DatasetParser, solomon::SolomonParser};
 
     #[test]
     fn test_kruskal_cluster() {
@@ -135,7 +135,8 @@ mod tests {
         let root_directory = current_dir.parent().unwrap();
         let path = root_directory.join("../data/solomon/c1/c101.txt");
 
-        let problem = SolomonParser::from_file(path.to_str().unwrap()).unwrap();
+        let parser = SolomonParser;
+        let problem = parser.parse(path.to_str().unwrap()).unwrap();
 
         let location_ids = vec![1, 2, 3, 4, 5, 6, 7, 8, 9];
 

@@ -23,6 +23,7 @@ smallvec = { version = "1.15.1", features = ["serde", "const_new"] }
 tokio = { workspace = true, features = ["sync", "rt"] }
 tracing = { workspace = true }
 uuid = { features = ["v4"], version = "1.17.0" }
+anyhow = { workspace = true }
 
 [dev-dependencies]
 criterion = "0.7.0"
