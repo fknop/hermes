@@ -1,5 +1,5 @@
 use hermes_optimizer::{
-    problem::{capacity::Capacity, service::ServiceId, vehicle::VehicleId},
+    problem::{capacity::Capacity, service::ServiceId, vehicle::VehicleIdx},
     solver::score::{Score, ScoreAnalysis},
 };
 use jiff::SignedDuration;
@@ -21,7 +21,7 @@ pub struct BenchmarkSolutionRoute {
     pub activities: Vec<BenchmarkSolutionActivity>,
     pub distance: f64,
     pub total_demand: Capacity,
-    pub vehicle_id: VehicleId,
+    pub vehicle_id: VehicleIdx,
     pub waiting_duration: SignedDuration,
     pub vehicle_max_load: f64,
 }

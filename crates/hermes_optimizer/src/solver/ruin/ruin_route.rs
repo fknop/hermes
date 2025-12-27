@@ -1,6 +1,6 @@
 use rand::seq::IndexedRandom;
 
-use crate::solver::solution::{route_id::RouteId, working_solution::WorkingSolution};
+use crate::solver::solution::{route_id::RouteIdx, working_solution::WorkingSolution};
 
 use super::{ruin_context::RuinContext, ruin_solution::RuinSolution};
 
@@ -24,7 +24,7 @@ impl RuinSolution for RuinRoute {
                         .non_empty_routes_iter()
                         .any(|r2| r1.can_route_capacity_fit_in(context.problem, r2));
 
-                    (RouteId::new(index), r1, fit_in_other_route)
+                    (RouteIdx::new(index), r1, fit_in_other_route)
                 })
                 .collect::<Vec<_>>();
 

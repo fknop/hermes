@@ -1,12 +1,12 @@
 use jiff::{SignedDuration, Timestamp};
 
 use crate::problem::{
-    job::ActivityId, vehicle::VehicleId, vehicle_routing_problem::VehicleRoutingProblem,
+    job::ActivityId, vehicle::VehicleIdx, vehicle_routing_problem::VehicleRoutingProblem,
 };
 
 pub(crate) fn compute_first_activity_arrival_time(
     problem: &VehicleRoutingProblem,
-    vehicle_id: VehicleId,
+    vehicle_id: VehicleIdx,
     job_id: ActivityId,
 ) -> Timestamp {
     let task = problem.job_task(job_id);
@@ -42,7 +42,7 @@ pub(crate) fn compute_first_activity_arrival_time(
 
 pub(crate) fn compute_vehicle_start(
     problem: &VehicleRoutingProblem,
-    vehicle_id: VehicleId,
+    vehicle_id: VehicleIdx,
     job_id: ActivityId,
     first_arrival_time: Timestamp,
 ) -> Timestamp {
@@ -60,7 +60,7 @@ pub(crate) fn compute_vehicle_start(
 
 pub(crate) fn compute_vehicle_end(
     problem: &VehicleRoutingProblem,
-    vehicle_id: VehicleId,
+    vehicle_id: VehicleIdx,
     job_id: ActivityId,
     last_departure_time: Timestamp,
 ) -> Timestamp {
@@ -79,7 +79,7 @@ pub(crate) fn compute_vehicle_end(
 
 pub(crate) fn compute_activity_arrival_time(
     problem: &VehicleRoutingProblem,
-    vehicle_id: VehicleId,
+    vehicle_id: VehicleIdx,
     previous_job_id: ActivityId,
     previous_activity_departure_time: Timestamp,
     id: ActivityId,

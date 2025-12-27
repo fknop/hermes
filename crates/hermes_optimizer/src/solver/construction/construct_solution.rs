@@ -16,7 +16,7 @@ use crate::{
             construction_best_insertion::ConstructionBestInsertion,
             recreate_context::RecreateContext,
         },
-        solution::{route_id::RouteId, working_solution::WorkingSolution},
+        solution::{route_id::RouteIdx, working_solution::WorkingSolution},
     },
 };
 
@@ -220,7 +220,7 @@ fn create_initial_routes(problem: &VehicleRoutingProblem, solution: &mut Working
     for &customer in &seed_customers {
         let vehicle_id = solution.available_vehicles_for_insertion().next().unwrap();
         solution.insert(&Insertion::Service(ServiceInsertion {
-            route_id: RouteId::new(vehicle_id.get()), // TODO: won't work
+            route_id: RouteIdx::new(vehicle_id.get()), // TODO: won't work
             job_index: customer,
             position: 0,
         }));

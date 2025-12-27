@@ -19,7 +19,7 @@ use super::{
     location::{Location, LocationId},
     service_location_index::ServiceLocationIndex,
     travel_cost_matrix::{Cost, Distance},
-    vehicle::{Vehicle, VehicleId},
+    vehicle::{Vehicle, VehicleIdx},
 };
 
 type PrecomputedAverageCostFromDepot = Vec<Cost>;
@@ -170,7 +170,7 @@ impl VehicleRoutingProblem {
         &self.fleet
     }
 
-    pub fn vehicle(&self, vehicle_id: VehicleId) -> &Vehicle {
+    pub fn vehicle(&self, vehicle_id: VehicleIdx) -> &Vehicle {
         self.fleet.vehicle(vehicle_id)
     }
 
@@ -214,7 +214,7 @@ impl VehicleRoutingProblem {
         }
     }
 
-    pub fn vehicle_depot_location(&self, vehicle_id: VehicleId) -> Option<&Location> {
+    pub fn vehicle_depot_location(&self, vehicle_id: VehicleIdx) -> Option<&Location> {
         let vehicle = &self.fleet.vehicle(vehicle_id);
         vehicle
             .depot_location_id()

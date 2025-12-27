@@ -9,7 +9,7 @@ use crate::{
 
 use super::{capacity::Capacity, location::LocationId};
 
-define_index_newtype!(VehicleId, Vehicle);
+define_index_newtype!(VehicleIdx, Vehicle);
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Vehicle {

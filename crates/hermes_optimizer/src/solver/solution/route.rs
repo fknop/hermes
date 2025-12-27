@@ -7,7 +7,7 @@ use crate::{
         capacity::{Capacity, is_capacity_satisfied},
         job::{ActivityId, Job, JobTask},
         service::{Service, ServiceId, ServiceType},
-        vehicle::{Vehicle, VehicleId},
+        vehicle::{Vehicle, VehicleIdx},
         vehicle_routing_problem::VehicleRoutingProblem,
     },
     solver::{
@@ -26,7 +26,7 @@ use crate::{
 
 #[derive(Clone)]
 pub struct WorkingSolutionRoute {
-    pub(super) vehicle_id: VehicleId,
+    pub(super) vehicle_id: VehicleIdx,
     // Map of JobId to index in activities vector
     pub(super) jobs: FxHashMap<ActivityId, usize>,
 
@@ -86,7 +86,7 @@ pub struct WorkingSolutionRoute {
 }
 
 impl WorkingSolutionRoute {
-    pub fn empty(problem: &VehicleRoutingProblem, vehicle_id: VehicleId) -> Self {
+    pub fn empty(problem: &VehicleRoutingProblem, vehicle_id: VehicleIdx) -> Self {
         let mut route = WorkingSolutionRoute {
             vehicle_id,
             jobs: FxHashMap::default(),
@@ -412,7 +412,7 @@ impl WorkingSolutionRoute {
         self.waiting_durations.iter().sum()
     }
 
-    pub fn vehicle_id(&self) -> VehicleId {
+    pub fn vehicle_id(&self) -> VehicleIdx {
         self.vehicle_id
     }
 
@@ -1131,7 +1131,7 @@ mod tests {
             service::{ServiceBuilder, ServiceType},
             time_window::TimeWindow,
             travel_cost_matrix::TravelMatrices,
-            vehicle::{VehicleBuilder, VehicleId},
+            vehicle::{VehicleBuilder, VehicleIdx},
             vehicle_profile::VehicleProfile,
             vehicle_routing_problem::{VehicleRoutingProblem, VehicleRoutingProblemBuilder},
         },
@@ -1258,7 +1258,7 @@ mod tests {
     fn test_route_data_correctness() {
         let problem = create_problem();
 
-        let mut route = WorkingSolutionRoute::empty(&problem, VehicleId::new(0));
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
 
         route.insert_service(&problem, 0, 0);
         route.insert_service(&problem, 1, 2);
@@ -1366,7 +1366,7 @@ mod tests {
     fn test_jobs_iter() {
         let problem = create_problem();
 
-        let mut route = WorkingSolutionRoute::empty(&problem, VehicleId::new(0));
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
 
         route.insert_service(&problem, 0, 0);
         route.insert_service(&problem, 1, 2);
@@ -1392,7 +1392,7 @@ mod tests {
     fn test_route_update_iter() {
         let problem = create_problem();
 
-        let mut route = WorkingSolutionRoute::empty(&problem, VehicleId::new(0));
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
 
         route.insert_service(&problem, 0, 0);
         route.insert_service(&problem, 1, 2);
@@ -1430,7 +1430,7 @@ mod tests {
     fn test_replace_activities() {
         let problem = create_problem();
 
-        let mut route = WorkingSolutionRoute::empty(&problem, VehicleId::new(0));
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
 
         route.insert_service(&problem, 0, 0);
         route.insert_service(&problem, 1, 2);
@@ -1478,7 +1478,7 @@ mod tests {
     fn test_replace_activities_remove() {
         let problem = create_problem();
 
-        let mut route = WorkingSolutionRoute::empty(&problem, VehicleId::new(0));
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
 
         route.insert_service(&problem, 0, 0);
         route.insert_service(&problem, 1, 2);
@@ -1525,7 +1525,7 @@ mod tests {
             ],
         );
 
-        let mut route = WorkingSolutionRoute::empty(&problem, VehicleId::new(0));
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
         route.insert_service(&problem, 0, 0);
         route.insert_service(&problem, 1, 1);
         route.insert_service(&problem, 2, 2);
@@ -1675,7 +1675,7 @@ mod tests {
             ), // 5: TW ends at 14:00 (relaxed)
         ]);
 
-        let mut route = WorkingSolutionRoute::empty(&problem, VehicleId::new(0));
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
         // Route: 0 -> 1 -> 2 (arrival times: 08:30, 09:10, 09:50)
         route.insert_service(&problem, 0, 0);
         route.insert_service(&problem, 1, 1);

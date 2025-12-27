@@ -6,7 +6,7 @@ use rand::seq::IndexedRandom;
 
 use crate::{
     problem::job::ActivityId,
-    solver::solution::{route_id::RouteId, working_solution::WorkingSolution},
+    solver::solution::{route_id::RouteIdx, working_solution::WorkingSolution},
 };
 
 use super::{ruin_context::RuinContext, ruin_solution::RuinSolution};
@@ -76,7 +76,7 @@ impl RuinString {
         preserved_length
     }
 
-    fn ruin_string<R>(&self, solution: &mut WorkingSolution, rng: &mut R, route_id: RouteId)
+    fn ruin_string<R>(&self, solution: &mut WorkingSolution, rng: &mut R, route_id: RouteIdx)
     where
         R: rand::Rng,
     {
@@ -99,7 +99,7 @@ impl RuinString {
         }
     }
 
-    fn ruin_split_string<R>(&self, solution: &mut WorkingSolution, rng: &mut R, route_id: RouteId)
+    fn ruin_split_string<R>(&self, solution: &mut WorkingSolution, rng: &mut R, route_id: RouteIdx)
     where
         R: rand::Rng,
     {
@@ -170,7 +170,7 @@ impl RuinString {
 }
 
 struct RuinSplitStringParams {
-    route_id: RouteId,
+    route_id: RouteIdx,
     start: usize,
     start_of_preserved_string: usize,
     string_length: usize,
@@ -187,7 +187,7 @@ impl RuinSolution for RuinString {
             .random_range(self.k_min..=self.k_max)
             .min(solution.non_empty_routes_count());
 
-        let mut ruined_routes = FxHashSet::<RouteId>::default();
+        let mut ruined_routes = FxHashSet::<RouteIdx>::default();
 
         let mut seed_job = context.problem.random_job(context.rng);
 
@@ -238,10 +238,7 @@ impl RuinSolution for RuinString {
 mod tests {
     use std::sync::Arc;
 
-    use crate::{
-        solver::solution::route_id::RouteId,
-        test_utils::{self, TestRoute},
-    };
+    use crate::test_utils::{self, TestRoute};
 
     use super::*;
 
@@ -277,7 +274,7 @@ mod tests {
         ruin_string.remove_split_string(
             &mut solution,
             RuinSplitStringParams {
-                route_id: RouteId::new(0),
+                route_id: RouteIdx::new(0),
                 start: 1,
                 start_of_preserved_string: 2,
                 string_length: 3,
@@ -286,7 +283,7 @@ mod tests {
         );
 
         assert_eq!(
-            solution.route(RouteId::new(0)).activity_ids().to_vec(),
+            solution.route(RouteIdx::new(0)).activity_ids().to_vec(),
             vec![
                 ActivityId::Service(0),
                 ActivityId::Service(3),
@@ -320,7 +317,7 @@ mod tests {
         ruin_string.remove_split_string(
             &mut solution,
             RuinSplitStringParams {
-                route_id: RouteId::new(0),
+                route_id: RouteIdx::new(0),
                 start: 1,
                 start_of_preserved_string: 2,
                 string_length: 5,
@@ -329,7 +326,7 @@ mod tests {
         );
 
         assert_eq!(
-            solution.route(RouteId::new(0)).activity_ids().to_vec(),
+            solution.route(RouteIdx::new(0)).activity_ids().to_vec(),
             vec![
                 ActivityId::Service(0),
                 ActivityId::Service(3),

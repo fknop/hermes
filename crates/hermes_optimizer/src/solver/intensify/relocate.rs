@@ -2,7 +2,7 @@ use crate::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
         intensify::intensify_operator::IntensifyOp,
-        solution::{route_id::RouteId, working_solution::WorkingSolution},
+        solution::{route_id::RouteIdx, working_solution::WorkingSolution},
     },
 };
 
@@ -30,7 +30,7 @@ pub struct RelocateOperator {
 
 #[derive(Debug)]
 pub struct RelocateOperatorParams {
-    pub route_id: RouteId,
+    pub route_id: RouteIdx,
     pub from: usize,
     pub to: usize,
 }
@@ -133,7 +133,7 @@ impl IntensifyOp for RelocateOperator {
         // route.move_activity(problem, self.params.from, self.params.to);
     }
 
-    fn updated_routes(&self) -> Vec<RouteId> {
+    fn updated_routes(&self) -> Vec<RouteIdx> {
         vec![self.params.route_id]
     }
 }
@@ -148,7 +148,7 @@ mod tests {
                 intensify_operator::IntensifyOp,
                 relocate::{RelocateOperator, RelocateOperatorParams},
             },
-            solution::route_id::RouteId,
+            solution::route_id::RouteIdx,
         },
         test_utils::{self, TestRoute},
     };
@@ -178,22 +178,22 @@ mod tests {
         );
 
         let operator = RelocateOperator::new(RelocateOperatorParams {
-            route_id: RouteId::new(0),
+            route_id: RouteIdx::new(0),
             from: 1,
             to: 4,
         });
 
-        let distance = solution.route(RouteId::new(0)).distance(&problem);
+        let distance = solution.route(RouteIdx::new(0)).distance(&problem);
         let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
         assert_eq!(
-            solution.route(RouteId::new(0)).distance(&problem),
+            solution.route(RouteIdx::new(0)).distance(&problem),
             distance + delta
         );
 
         assert_eq!(
             solution
-                .route(RouteId::new(0))
+                .route(RouteIdx::new(0))
                 .activity_ids()
                 .iter()
                 .map(|activity| activity.index())
@@ -227,22 +227,22 @@ mod tests {
         );
 
         let operator = RelocateOperator::new(RelocateOperatorParams {
-            route_id: RouteId::new(0),
+            route_id: RouteIdx::new(0),
             from: 0,
             to: 3,
         });
 
-        let distance = solution.route(RouteId::new(0)).distance(&problem);
+        let distance = solution.route(RouteIdx::new(0)).distance(&problem);
         let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
         assert_eq!(
-            solution.route(RouteId::new(0)).distance(&problem),
+            solution.route(RouteIdx::new(0)).distance(&problem),
             distance + delta
         );
 
         assert_eq!(
             solution
-                .route(RouteId::new(0))
+                .route(RouteIdx::new(0))
                 .activity_ids()
                 .iter()
                 .map(|activity| activity.index())
@@ -276,22 +276,22 @@ mod tests {
         );
 
         let operator = RelocateOperator::new(RelocateOperatorParams {
-            route_id: RouteId::new(0),
+            route_id: RouteIdx::new(0),
             from: 1,
             to: 6,
         });
 
-        let distance = solution.route(RouteId::new(0)).distance(&problem);
+        let distance = solution.route(RouteIdx::new(0)).distance(&problem);
         let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
         assert_eq!(
-            solution.route(RouteId::new(0)).distance(&problem),
+            solution.route(RouteIdx::new(0)).distance(&problem),
             distance + delta
         );
 
         assert_eq!(
             solution
-                .route(RouteId::new(0))
+                .route(RouteIdx::new(0))
                 .activity_ids()
                 .iter()
                 .map(|activity| activity.index())
@@ -325,22 +325,22 @@ mod tests {
         );
 
         let operator = RelocateOperator::new(RelocateOperatorParams {
-            route_id: RouteId::new(0),
+            route_id: RouteIdx::new(0),
             from: 1,
             to: 0,
         });
 
-        let distance = solution.route(RouteId::new(0)).distance(&problem);
+        let distance = solution.route(RouteIdx::new(0)).distance(&problem);
         let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
         assert_eq!(
-            solution.route(RouteId::new(0)).distance(&problem),
+            solution.route(RouteIdx::new(0)).distance(&problem),
             distance + delta
         );
 
         assert_eq!(
             solution
-                .route(RouteId::new(0))
+                .route(RouteIdx::new(0))
                 .activity_ids()
                 .iter()
                 .map(|activity| activity.index())
@@ -374,22 +374,22 @@ mod tests {
         );
 
         let operator = RelocateOperator::new(RelocateOperatorParams {
-            route_id: RouteId::new(0),
+            route_id: RouteIdx::new(0),
             from: 1,
             to: 5,
         });
 
-        let distance = solution.route(RouteId::new(0)).distance(&problem);
+        let distance = solution.route(RouteIdx::new(0)).distance(&problem);
         let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
         assert_eq!(
-            solution.route(RouteId::new(0)).distance(&problem),
+            solution.route(RouteIdx::new(0)).distance(&problem),
             distance + delta
         );
 
         assert_eq!(
             solution
-                .route(RouteId::new(0))
+                .route(RouteIdx::new(0))
                 .activity_ids()
                 .iter()
                 .map(|activity| activity.index())

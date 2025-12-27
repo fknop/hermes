@@ -7,7 +7,7 @@ use crate::{
             or_opt::OrOptOperator, relocate::RelocateOperator, swap::SwapOperator,
             two_opt::TwoOptOperator,
         },
-        solution::{route_id::RouteId, working_solution::WorkingSolution},
+        solution::{route_id::RouteIdx, working_solution::WorkingSolution},
     },
 };
 
@@ -19,7 +19,7 @@ pub trait IntensifyOp {
 
     fn is_valid(&self, solution: &WorkingSolution) -> bool;
     fn apply(&self, problem: &VehicleRoutingProblem, solution: &mut WorkingSolution);
-    fn updated_routes(&self) -> Vec<RouteId>;
+    fn updated_routes(&self) -> Vec<RouteIdx>;
 
     fn delta(&self, solution: &WorkingSolution) -> f64 {
         self.transport_cost_delta(solution) + self.fixed_route_cost_delta(solution)
@@ -96,7 +96,7 @@ impl IntensifyOperator {
         }
     }
 
-    pub fn updated_routes(&self) -> Vec<RouteId> {
+    pub fn updated_routes(&self) -> Vec<RouteIdx> {
         match self {
             IntensifyOperator::TwoOpt(op) => op.updated_routes(),
             IntensifyOperator::Relocate(op) => op.updated_routes(),

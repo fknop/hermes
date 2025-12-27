@@ -3,7 +3,7 @@ use crate::{
     solver::{
         insertion::{Insertion, ServiceInsertion},
         intensify::intensify_operator::IntensifyOp,
-        solution::{route_id::RouteId, working_solution::WorkingSolution},
+        solution::{route_id::RouteIdx, working_solution::WorkingSolution},
     },
 };
 
@@ -28,8 +28,8 @@ pub struct InterRelocateOperator {
 
 #[derive(Debug)]
 pub struct InterRelocateParams {
-    pub from_route_id: RouteId,
-    pub to_route_id: RouteId,
+    pub from_route_id: RouteIdx,
+    pub to_route_id: RouteIdx,
     pub from: usize,
     pub to: usize,
 }
@@ -129,7 +129,7 @@ impl IntensifyOp for InterRelocateOperator {
         }
     }
 
-    fn updated_routes(&self) -> Vec<RouteId> {
+    fn updated_routes(&self) -> Vec<RouteIdx> {
         vec![self.params.from_route_id, self.params.to_route_id]
     }
 }

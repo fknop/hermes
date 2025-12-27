@@ -5,12 +5,12 @@ use rand::seq::IteratorRandom;
 
 use crate::{
     problem::{
-        job::ActivityId, service::ServiceId, vehicle::VehicleId,
+        job::ActivityId, service::ServiceId, vehicle::VehicleIdx,
         vehicle_routing_problem::VehicleRoutingProblem,
     },
     solver::{
         insertion::Insertion,
-        solution::{route::WorkingSolutionRoute, route_id::RouteId},
+        solution::{route::WorkingSolutionRoute, route_id::RouteIdx},
     },
 };
 
@@ -28,7 +28,7 @@ impl WorkingSolution {
             .iter()
             .enumerate()
             .map(|(vehicle_id, _)| {
-                WorkingSolutionRoute::empty(&problem, VehicleId::new(vehicle_id))
+                WorkingSolutionRoute::empty(&problem, VehicleIdx::new(vehicle_id))
             })
             .collect();
         let unassigned_jobs = (0..problem.jobs().len()).collect();
@@ -100,7 +100,7 @@ impl WorkingSolution {
         }
     }
 
-    pub fn available_vehicles_for_insertion(&self) -> impl std::iter::Iterator<Item = VehicleId> {
+    pub fn available_vehicles_for_insertion(&self) -> impl std::iter::Iterator<Item = VehicleIdx> {
         let fleet = self.problem.fleet();
         let is_infinite = fleet.is_infinite();
         // Find the first vehicle that has no routes assigned
@@ -108,7 +108,7 @@ impl WorkingSolution {
             .vehicles()
             .iter()
             .enumerate()
-            .map(|(vehicle_id, _)| VehicleId::new(vehicle_id))
+            .map(|(vehicle_id, _)| VehicleIdx::new(vehicle_id))
             .filter(move |&vehicle_id| {
                 if is_infinite {
                     return true;
@@ -140,15 +140,15 @@ impl WorkingSolution {
         &self.routes
     }
 
-    pub fn route(&self, route_id: RouteId) -> &WorkingSolutionRoute {
+    pub fn route(&self, route_id: RouteIdx) -> &WorkingSolutionRoute {
         &self.routes[route_id]
     }
 
-    pub fn route_mut(&mut self, route_id: RouteId) -> &mut WorkingSolutionRoute {
+    pub fn route_mut(&mut self, route_id: RouteIdx) -> &mut WorkingSolutionRoute {
         &mut self.routes[route_id]
     }
 
-    pub fn random_non_empty_route<R>(&self, rng: &mut R) -> Option<RouteId>
+    pub fn random_non_empty_route<R>(&self, rng: &mut R) -> Option<RouteIdx>
     where
         R: rand::Rng,
     {
@@ -157,23 +157,23 @@ impl WorkingSolution {
             .enumerate()
             .filter(|(_, route)| !route.is_empty())
             .choose(rng)
-            .map(|(index, _)| RouteId::new(index))
+            .map(|(index, _)| RouteIdx::new(index))
     }
 
-    pub fn route_of_service(&self, service_id: ServiceId) -> Option<RouteId> {
+    pub fn route_of_service(&self, service_id: ServiceId) -> Option<RouteIdx> {
         self.routes
             .iter()
             .enumerate()
             .find(|(_, route)| route.contains_job(ActivityId::Service(service_id)))
-            .map(|(index, _)| RouteId::new(index))
+            .map(|(index, _)| RouteIdx::new(index))
     }
 
-    pub fn route_of_job(&self, activity_id: ActivityId) -> Option<RouteId> {
+    pub fn route_of_job(&self, activity_id: ActivityId) -> Option<RouteIdx> {
         self.routes
             .iter()
             .enumerate()
             .find(|(_, route)| route.contains_job(activity_id))
-            .map(|(index, _)| RouteId::new(index))
+            .map(|(index, _)| RouteIdx::new(index))
     }
 
     pub fn insert(&mut self, insertion: &Insertion) {
@@ -189,7 +189,7 @@ impl WorkingSolution {
         }
     }
 
-    pub fn remove_activity(&mut self, route_id: RouteId, activity_id: usize) {
+    pub fn remove_activity(&mut self, route_id: RouteIdx, activity_id: usize) {
         if route_id.get() >= self.routes.len() {
             return; // Invalid route ID
         }
@@ -238,7 +238,7 @@ impl WorkingSolution {
         }
     }
 
-    pub fn remove_route(&mut self, route_id: RouteId) -> usize {
+    pub fn remove_route(&mut self, route_id: RouteIdx) -> usize {
         let mut removed = 0;
         removed += self.routes[route_id].len();
         for job_id in self.routes[route_id].activity_ids.iter() {

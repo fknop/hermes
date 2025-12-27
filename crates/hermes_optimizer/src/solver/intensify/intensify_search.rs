@@ -4,7 +4,7 @@ use tracing::debug;
 
 use crate::{
     problem::{
-        job::ActivityId, vehicle::VehicleId, vehicle_routing_problem::VehicleRoutingProblem,
+        job::ActivityId, vehicle::VehicleIdx, vehicle_routing_problem::VehicleRoutingProblem,
     },
     solver::{
         intensify::{
@@ -25,16 +25,16 @@ use crate::{
 macro_rules! temporary_vehicle_id_index {
     ($t:ty, $output:ty) => {
         // Temporary VehicleId Index
-        impl std::ops::Index<VehicleId> for $t {
+        impl std::ops::Index<VehicleIdx> for $t {
             type Output = $output;
-            fn index(&self, index: VehicleId) -> &Self::Output {
+            fn index(&self, index: VehicleIdx) -> &Self::Output {
                 &self[index.get()]
             }
         }
 
         // Temporary VehicleId IndexMut
-        impl std::ops::IndexMut<VehicleId> for $t {
-            fn index_mut(&mut self, index: VehicleId) -> &mut Self::Output {
+        impl std::ops::IndexMut<VehicleIdx> for $t {
+            fn index_mut(&mut self, index: VehicleIdx) -> &mut Self::Output {
                 &mut self[index.get()]
             }
         }
@@ -49,7 +49,7 @@ temporary_vehicle_id_index!(
     Vec<Option<IntensifyOperator>>
 );
 
-type VehiclePair = (VehicleId, VehicleId);
+type VehiclePair = (VehicleIdx, VehicleIdx);
 
 pub struct IntensifySearch {
     pairs: Vec<VehiclePair>,
@@ -438,10 +438,10 @@ impl IntensifySearch {
                     self.best_ops[i][updated_route.get()] = None;
 
                     self.pairs
-                        .push((VehicleId::new(i), VehicleId::new(updated_route.get())));
+                        .push((VehicleIdx::new(i), VehicleIdx::new(updated_route.get())));
                     if i != updated_route.get() {
                         self.pairs
-                            .push((VehicleId::new(updated_route.get()), VehicleId::new(i)));
+                            .push((VehicleIdx::new(updated_route.get()), VehicleIdx::new(i)));
                     }
                 }
             }

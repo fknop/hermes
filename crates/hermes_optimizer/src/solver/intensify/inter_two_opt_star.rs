@@ -2,7 +2,7 @@ use crate::{
     problem::{job::ActivityId, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{
         intensify::intensify_operator::IntensifyOp,
-        solution::{route_id::RouteId, working_solution::WorkingSolution},
+        solution::{route_id::RouteIdx, working_solution::WorkingSolution},
     },
 };
 
@@ -46,8 +46,8 @@ pub struct InterTwoOptStarOperator {
 
 #[derive(Debug)]
 pub struct InterTwoOptStarOperatorParams {
-    pub first_route_id: RouteId,
-    pub second_route_id: RouteId,
+    pub first_route_id: RouteIdx,
+    pub second_route_id: RouteIdx,
     pub first_from: usize,
     pub second_from: usize,
 }
@@ -150,7 +150,7 @@ impl IntensifyOp for InterTwoOptStarOperator {
         r2.replace_activities(problem, &new_r2_jobs, 0, r2.len());
     }
 
-    fn updated_routes(&self) -> Vec<RouteId> {
+    fn updated_routes(&self) -> Vec<RouteIdx> {
         vec![self.params.first_route_id, self.params.second_route_id]
     }
 }

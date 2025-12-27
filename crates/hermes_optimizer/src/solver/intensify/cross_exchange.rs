@@ -2,7 +2,7 @@ use crate::{
     problem::{job::ActivityId, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{
         intensify::intensify_operator::IntensifyOp,
-        solution::{route_id::RouteId, working_solution::WorkingSolution},
+        solution::{route_id::RouteIdx, working_solution::WorkingSolution},
     },
 };
 
@@ -26,8 +26,8 @@ pub struct CrossExchangeOperator {
 
 #[derive(Debug)]
 pub struct CrossExchangeOperatorParams {
-    pub first_route_id: RouteId,
-    pub second_route_id: RouteId,
+    pub first_route_id: RouteIdx,
+    pub second_route_id: RouteIdx,
     pub first_start: usize,
     pub first_end: usize,
     pub second_start: usize,
@@ -148,7 +148,7 @@ impl IntensifyOp for CrossExchangeOperator {
         );
     }
 
-    fn updated_routes(&self) -> Vec<RouteId> {
+    fn updated_routes(&self) -> Vec<RouteIdx> {
         vec![self.params.first_route_id, self.params.second_route_id]
     }
 }

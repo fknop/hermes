@@ -1,4 +1,4 @@
-use crate::problem::vehicle::{Vehicle, VehicleId};
+use crate::problem::vehicle::{Vehicle, VehicleIdx};
 
 pub enum Fleet {
     Finite(Vec<Vehicle>),
@@ -19,7 +19,7 @@ impl Fleet {
     }
 
     #[inline]
-    pub fn vehicle(&self, vehicle_id: VehicleId) -> &Vehicle {
+    pub fn vehicle(&self, vehicle_id: VehicleIdx) -> &Vehicle {
         match self {
             Fleet::Finite(vehicles) => &vehicles[vehicle_id],
             Fleet::Infinite(vehicles) => &vehicles[vehicle_id],

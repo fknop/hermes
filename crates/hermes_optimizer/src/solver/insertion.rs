@@ -1,20 +1,20 @@
 use crate::{
     problem::job::Job,
     solver::solution::{
-        route::WorkingSolutionRoute, route_id::RouteId, working_solution::WorkingSolution,
+        route::WorkingSolutionRoute, route_id::RouteIdx, working_solution::WorkingSolution,
     },
 };
 
 #[derive(Clone)]
 pub struct ServiceInsertion {
-    pub route_id: RouteId,
+    pub route_id: RouteIdx,
     pub job_index: usize,
     pub position: usize,
 }
 
 #[derive(Clone)]
 pub struct ShipmentInsertion {
-    pub route_id: RouteId,
+    pub route_id: RouteIdx,
     pub job_index: usize,
 
     /// Position of the pickup
@@ -67,7 +67,7 @@ fn for_each_service_insertion(
     for (route_id, route) in solution.routes().iter().enumerate() {
         for position in 0..=route.len() {
             f(Insertion::Service(ServiceInsertion {
-                route_id: RouteId::new(route_id),
+                route_id: RouteIdx::new(route_id),
                 job_index,
                 position,
             }));
@@ -84,7 +84,7 @@ fn for_each_shipment_insertion(
         for pickup_position in 0..=route.len() {
             for delivery_position in pickup_position + 1..=route.len().max(pickup_position + 1) {
                 f(Insertion::Shipment(ShipmentInsertion {
-                    route_id: RouteId::new(route_id),
+                    route_id: RouteIdx::new(route_id),
                     job_index,
                     pickup_position,
                     delivery_position,

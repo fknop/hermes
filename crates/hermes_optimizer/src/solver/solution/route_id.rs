@@ -1,14 +1,14 @@
 use crate::{
-    define_index_newtype, problem::vehicle::VehicleId,
+    define_index_newtype, problem::vehicle::VehicleIdx,
     solver::solution::route::WorkingSolutionRoute,
 };
 
-define_index_newtype!(RouteId, WorkingSolutionRoute);
+define_index_newtype!(RouteIdx, WorkingSolutionRoute);
 
 // Temporary conversion from VehicleId to RouteId
 //
-impl From<VehicleId> for RouteId {
-    fn from(vehicle_id: VehicleId) -> Self {
-        RouteId(vehicle_id.get())
+impl From<VehicleIdx> for RouteIdx {
+    fn from(vehicle_id: VehicleIdx) -> Self {
+        RouteIdx(vehicle_id.get())
     }
 }

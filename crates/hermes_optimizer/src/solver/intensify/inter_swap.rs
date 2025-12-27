@@ -3,7 +3,7 @@ use crate::{
     solver::{
         insertion::{Insertion, ServiceInsertion},
         intensify::intensify_operator::IntensifyOp,
-        solution::{route_id::RouteId, working_solution::WorkingSolution},
+        solution::{route_id::RouteIdx, working_solution::WorkingSolution},
     },
 };
 
@@ -27,8 +27,8 @@ pub struct InterSwapOperator {
 
 #[derive(Debug)]
 pub struct InterSwapOperatorParams {
-    pub first_route_id: RouteId,
-    pub second_route_id: RouteId,
+    pub first_route_id: RouteIdx,
+    pub second_route_id: RouteIdx,
     pub first: usize,
     pub second: usize,
 }
@@ -123,7 +123,7 @@ impl IntensifyOp for InterSwapOperator {
         }
     }
 
-    fn updated_routes(&self) -> Vec<RouteId> {
+    fn updated_routes(&self) -> Vec<RouteIdx> {
         vec![self.params.first_route_id, self.params.second_route_id]
     }
 }
