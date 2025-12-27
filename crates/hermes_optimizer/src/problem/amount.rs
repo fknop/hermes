@@ -182,6 +182,8 @@ where
     }
 }
 
+impl Eq for Amount {}
+
 #[derive(Debug, Clone)]
 pub struct AmountSum<LHS, RHS> {
     pub lhs: LHS,
@@ -504,5 +506,15 @@ mod tests {
     fn test_with_dimensions() {
         let demand = Amount::with_dimensions(1);
         assert_eq!(demand.len(), 1);
+    }
+
+    #[test]
+    fn test_eq() {
+        let a = Amount::from_vec(vec![1.0, 2.0, 3.0]);
+        let b = Amount::from_vec(vec![1.0, 2.0, 3.0]);
+        let c = Amount::from_vec(vec![1.0, 2.0, 4.0]);
+
+        assert_eq!(a, b);
+        assert_ne!(a, c);
     }
 }

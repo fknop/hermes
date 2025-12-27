@@ -70,9 +70,13 @@ impl<'a> InsertionContext<'a> {
                     let job_id = ActivityId::Service(job_index);
                     compute_vehicle_start(
                         self.problem,
-                        route_id,
+                        route.vehicle_id(),
                         job_id,
-                        compute_first_activity_arrival_time(self.problem, route_id, job_id),
+                        compute_first_activity_arrival_time(
+                            self.problem,
+                            route.vehicle_id(),
+                            job_id,
+                        ),
                     )
                 } else {
                     route.start(self.problem)
@@ -88,9 +92,13 @@ impl<'a> InsertionContext<'a> {
                     let job_id = ActivityId::ShipmentPickup(job_index);
                     compute_vehicle_start(
                         self.problem,
-                        route_id,
+                        route.vehicle_id(),
                         job_id,
-                        compute_first_activity_arrival_time(self.problem, route_id, job_id),
+                        compute_first_activity_arrival_time(
+                            self.problem,
+                            route.vehicle_id(),
+                            job_id,
+                        ),
                     )
                 } else {
                     route.start(self.problem)

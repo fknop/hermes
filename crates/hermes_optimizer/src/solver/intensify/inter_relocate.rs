@@ -3,7 +3,7 @@ use crate::{
     solver::{
         insertion::{Insertion, ServiceInsertion},
         intensify::intensify_operator::IntensifyOp,
-        solution::working_solution::WorkingSolution,
+        solution::{route_id::RouteId, working_solution::WorkingSolution},
     },
 };
 
@@ -28,8 +28,8 @@ pub struct InterRelocateOperator {
 
 #[derive(Debug)]
 pub struct InterRelocateParams {
-    pub from_route_id: usize,
-    pub to_route_id: usize,
+    pub from_route_id: RouteId,
+    pub to_route_id: RouteId,
     pub from: usize,
     pub to: usize,
 }
@@ -129,7 +129,7 @@ impl IntensifyOp for InterRelocateOperator {
         }
     }
 
-    fn updated_routes(&self) -> Vec<usize> {
+    fn updated_routes(&self) -> Vec<RouteId> {
         vec![self.params.from_route_id, self.params.to_route_id]
     }
 }
@@ -171,23 +171,25 @@ mod tests {
         );
 
         let operator = InterRelocateOperator::new(InterRelocateParams {
-            from_route_id: 0,
-            to_route_id: 1,
+            from_route_id: 0.into(),
+            to_route_id: 1.into(),
             from: 1,
             to: 4,
         });
 
-        let distances = solution.route(0).distance(&problem) + solution.route(1).distance(&problem);
+        let distances = solution.route(0.into()).distance(&problem)
+            + solution.route(1.into()).distance(&problem);
         let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
         assert_eq!(
-            solution.route(0).distance(&problem) + solution.route(1).distance(&problem),
+            solution.route(0.into()).distance(&problem)
+                + solution.route(1.into()).distance(&problem),
             distances + delta,
         );
 
         assert_eq!(
             solution
-                .route(0)
+                .route(0.into())
                 .activity_ids()
                 .iter()
                 .map(|activity| activity.index())
@@ -197,7 +199,7 @@ mod tests {
 
         assert_eq!(
             solution
-                .route(1)
+                .route(1.into())
                 .activity_ids()
                 .iter()
                 .map(|activity| activity.index())
@@ -231,17 +233,18 @@ mod tests {
         );
 
         let operator = InterRelocateOperator::new(InterRelocateParams {
-            from_route_id: 0,
-            to_route_id: 1,
+            from_route_id: 0.into(),
+            to_route_id: 1.into(),
             from: 0,
             to: 0,
         });
 
-        let distances = solution.route(0).distance(&problem) + solution.route(1).distance(&problem);
+        let distances = solution.route(0.into()).distance(&problem)
+            + solution.route(1.into()).distance(&problem);
         let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
-        let new_distances =
-            solution.route(0).distance(&problem) + solution.route(1).distance(&problem);
+        let new_distances = solution.route(0.into()).distance(&problem)
+            + solution.route(1.into()).distance(&problem);
         let expected = distances + delta;
         assert!(
             (new_distances - expected).abs() < 1e-9,
@@ -253,7 +256,7 @@ mod tests {
 
         assert_eq!(
             solution
-                .route(0)
+                .route(0.into())
                 .activity_ids()
                 .iter()
                 .map(|job_id| job_id.index())
@@ -263,7 +266,7 @@ mod tests {
 
         assert_eq!(
             solution
-                .route(1)
+                .route(1.into())
                 .activity_ids()
                 .iter()
                 .map(|job_id| job_id.index())

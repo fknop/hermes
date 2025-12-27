@@ -38,9 +38,12 @@ mod tests {
 
     use crate::{
         problem::job::ActivityId,
-        solver::ruin::{
-            ruin_context::RuinContext, ruin_params::RuinParams, ruin_radial::RuinRadial,
-            ruin_solution::RuinSolution,
+        solver::{
+            ruin::{
+                ruin_context::RuinContext, ruin_params::RuinParams, ruin_radial::RuinRadial,
+                ruin_solution::RuinSolution,
+            },
+            solution::route_id::RouteId,
         },
         test_utils::{self, TestRoute},
     };
@@ -92,7 +95,7 @@ mod tests {
         );
 
         assert_eq!(
-            solution.route(0).activity_ids().to_vec(),
+            solution.route(RouteId::new(0)).activity_ids().to_vec(),
             vec![ActivityId::Service(1), ActivityId::Service(3)]
         );
     }

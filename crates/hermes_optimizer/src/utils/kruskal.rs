@@ -2,7 +2,7 @@ use std::collections::BinaryHeap;
 
 use fxhash::FxHashMap;
 
-use crate::problem::vehicle_routing_problem::VehicleRoutingProblem;
+use crate::problem::{vehicle::VehicleId, vehicle_routing_problem::VehicleRoutingProblem};
 
 struct KruskalEdge {
     from: usize,
@@ -88,11 +88,11 @@ pub fn kruskal_cluster(
             let from = service_ids[i];
             let to = service_ids[j];
             let weight = (problem.travel_cost(
-                problem.vehicle(0),
+                problem.vehicle(VehicleId::new(0)),
                 problem.service_location(from).id(),
                 problem.service_location(to).id(),
             ) + problem.travel_cost(
-                problem.vehicle(0),
+                problem.vehicle(VehicleId::new(0)),
                 problem.service_location(to).id(),
                 problem.service_location(from).id(),
             )) / 2.0;

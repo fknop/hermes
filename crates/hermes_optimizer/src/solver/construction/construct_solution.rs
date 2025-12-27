@@ -16,7 +16,7 @@ use crate::{
             construction_best_insertion::ConstructionBestInsertion,
             recreate_context::RecreateContext,
         },
-        solution::working_solution::WorkingSolution,
+        solution::{route_id::RouteId, working_solution::WorkingSolution},
     },
 };
 
@@ -108,7 +108,11 @@ fn create_initial_routes(problem: &VehicleRoutingProblem, solution: &mut Working
             .filter_map(|time_window| time_window.end())
             .max()
             .map(|end| {
-                end - problem.travel_time(problem.vehicle(0), depot_id, service_a.location_id())
+                end - problem.travel_time(
+                    problem.vehicle(0.into()),
+                    depot_id,
+                    service_a.location_id(),
+                )
             })
             .unwrap_or(Timestamp::MAX); // If no time window end -> no urgency
 
@@ -118,7 +122,11 @@ fn create_initial_routes(problem: &VehicleRoutingProblem, solution: &mut Working
             .filter_map(|time_window| time_window.end())
             .max()
             .map(|end| {
-                end - problem.travel_time(problem.vehicle(0), depot_id, service_b.location_id())
+                end - problem.travel_time(
+                    problem.vehicle(0.into()),
+                    depot_id,
+                    service_b.location_id(),
+                )
             })
             .unwrap_or(Timestamp::MAX); // If no time window end -> no urgency
 
@@ -132,12 +140,12 @@ fn create_initial_routes(problem: &VehicleRoutingProblem, solution: &mut Working
         .max_by(|&first, &second| {
             problem
                 .travel_cost(
-                    problem.vehicle(0),
+                    problem.vehicle(0.into()),
                     depot_id,
                     problem.service_location(first).id(),
                 )
                 .partial_cmp(&problem.travel_cost(
-                    problem.vehicle(0),
+                    problem.vehicle(0.into()),
                     depot_id,
                     problem.service_location(second).id(),
                 ))
@@ -153,11 +161,11 @@ fn create_initial_routes(problem: &VehicleRoutingProblem, solution: &mut Working
             let location_id_b = problem.service_location(b).id();
             let sum_dist_a = seed_customers
                 .iter()
-                .map(|&seed| problem.travel_cost(problem.vehicle(0), location_id_a, seed))
+                .map(|&seed| problem.travel_cost(problem.vehicle(0.into()), location_id_a, seed))
                 .sum::<f64>();
             let sum_dist_b = seed_customers
                 .iter()
-                .map(|&seed| problem.travel_cost(problem.vehicle(0), location_id_b, seed))
+                .map(|&seed| problem.travel_cost(problem.vehicle(0.into()), location_id_b, seed))
                 .sum::<f64>();
 
             sum_dist_a.partial_cmp(&sum_dist_b).unwrap()
@@ -170,7 +178,7 @@ fn create_initial_routes(problem: &VehicleRoutingProblem, solution: &mut Working
                 .iter()
                 .map(|&seed| {
                     problem.travel_cost(
-                        problem.vehicle(0),
+                        problem.vehicle(0.into()),
                         problem.service_location(j).id(),
                         problem.service_location(seed).id(),
                     )
@@ -183,7 +191,7 @@ fn create_initial_routes(problem: &VehicleRoutingProblem, solution: &mut Working
                 .iter()
                 .map(|&seed| {
                     problem.travel_cost(
-                        problem.vehicle(0),
+                        problem.vehicle(0.into()),
                         problem.service_location(i).id(),
                         problem.service_location(seed).id(),
                     )
@@ -212,7 +220,7 @@ fn create_initial_routes(problem: &VehicleRoutingProblem, solution: &mut Working
     for &customer in &seed_customers {
         let vehicle_id = solution.available_vehicles_for_insertion().next().unwrap();
         solution.insert(&Insertion::Service(ServiceInsertion {
-            route_id: vehicle_id,
+            route_id: RouteId::new(vehicle_id.get()), // TODO: won't work
             job_index: customer,
             position: 0,
         }));

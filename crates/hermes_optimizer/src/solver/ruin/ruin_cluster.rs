@@ -2,7 +2,8 @@ use fxhash::FxHashSet;
 use rand::seq::IndexedRandom;
 
 use crate::{
-    problem::job::ActivityId, solver::solution::working_solution::WorkingSolution,
+    problem::job::ActivityId,
+    solver::solution::{route_id::RouteId, working_solution::WorkingSolution},
     utils::kruskal::kruskal_cluster,
 };
 
@@ -24,7 +25,7 @@ impl RuinSolution for RuinCluster {
     ) where
         R: rand::Rng,
     {
-        let mut ruined_routes: FxHashSet<usize> = FxHashSet::default();
+        let mut ruined_routes: FxHashSet<RouteId> = FxHashSet::default();
 
         let mut target_service_id = problem.random_job(rng);
         let mut remaining_to_remove = num_jobs_to_remove;

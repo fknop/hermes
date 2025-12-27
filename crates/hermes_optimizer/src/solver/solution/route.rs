@@ -547,7 +547,6 @@ impl WorkingSolutionRoute {
                 self.insert_service(problem, *position, *job_index);
             }
             Insertion::Shipment(ShipmentInsertion {
-                route_id,
                 job_index,
                 delivery_position,
                 ..
@@ -1132,7 +1131,7 @@ mod tests {
             service::{ServiceBuilder, ServiceType},
             time_window::TimeWindow,
             travel_cost_matrix::TravelMatrices,
-            vehicle::VehicleBuilder,
+            vehicle::{VehicleBuilder, VehicleId},
             vehicle_profile::VehicleProfile,
             vehicle_routing_problem::{VehicleRoutingProblem, VehicleRoutingProblemBuilder},
         },
@@ -1259,7 +1258,7 @@ mod tests {
     fn test_route_data_correctness() {
         let problem = create_problem();
 
-        let mut route = WorkingSolutionRoute::empty(&problem, 0);
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleId::new(0));
 
         route.insert_service(&problem, 0, 0);
         route.insert_service(&problem, 1, 2);
@@ -1367,7 +1366,7 @@ mod tests {
     fn test_jobs_iter() {
         let problem = create_problem();
 
-        let mut route = WorkingSolutionRoute::empty(&problem, 0);
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleId::new(0));
 
         route.insert_service(&problem, 0, 0);
         route.insert_service(&problem, 1, 2);
@@ -1393,7 +1392,7 @@ mod tests {
     fn test_route_update_iter() {
         let problem = create_problem();
 
-        let mut route = WorkingSolutionRoute::empty(&problem, 0);
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleId::new(0));
 
         route.insert_service(&problem, 0, 0);
         route.insert_service(&problem, 1, 2);
@@ -1431,7 +1430,7 @@ mod tests {
     fn test_replace_activities() {
         let problem = create_problem();
 
-        let mut route = WorkingSolutionRoute::empty(&problem, 0);
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleId::new(0));
 
         route.insert_service(&problem, 0, 0);
         route.insert_service(&problem, 1, 2);
@@ -1479,7 +1478,7 @@ mod tests {
     fn test_replace_activities_remove() {
         let problem = create_problem();
 
-        let mut route = WorkingSolutionRoute::empty(&problem, 0);
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleId::new(0));
 
         route.insert_service(&problem, 0, 0);
         route.insert_service(&problem, 1, 2);
@@ -1526,7 +1525,7 @@ mod tests {
             ],
         );
 
-        let mut route = WorkingSolutionRoute::empty(&problem, 0);
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleId::new(0));
         route.insert_service(&problem, 0, 0);
         route.insert_service(&problem, 1, 1);
         route.insert_service(&problem, 2, 2);
@@ -1676,7 +1675,7 @@ mod tests {
             ), // 5: TW ends at 14:00 (relaxed)
         ]);
 
-        let mut route = WorkingSolutionRoute::empty(&problem, 0);
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleId::new(0));
         // Route: 0 -> 1 -> 2 (arrival times: 08:30, 09:10, 09:50)
         route.insert_service(&problem, 0, 0);
         route.insert_service(&problem, 1, 1);

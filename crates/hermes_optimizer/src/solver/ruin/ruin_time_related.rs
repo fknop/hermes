@@ -2,7 +2,7 @@ use jiff::SignedDuration;
 
 use crate::{
     problem::{amount::AmountExpression, travel_cost_matrix::Distance},
-    solver::solution::working_solution::WorkingSolution,
+    solver::solution::{route_id::RouteId, working_solution::WorkingSolution},
 };
 
 use super::{ruin_context::RuinContext, ruin_solution::RuinSolution};
@@ -71,7 +71,9 @@ impl RuinSolution for RuinTimeRelated {
         let mut related_activities: Vec<RelatednessToTargetActivity> = Vec::new();
         for (route_index, route) in routes.iter().enumerate() {
             for (activity_index, _) in route.activity_ids().iter().enumerate() {
-                if target_activity_id == activity_index && target_route_id == route_index {
+                if target_activity_id == activity_index
+                    && target_route_id == RouteId::new(route_index)
+                {
                     continue; // Skip the target activity itself
                 }
 

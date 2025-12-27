@@ -3,7 +3,7 @@ use crate::{
     solver::{
         insertion::{Insertion, ServiceInsertion},
         intensify::intensify_operator::IntensifyOp,
-        solution::working_solution::WorkingSolution,
+        solution::{route_id::RouteId, working_solution::WorkingSolution},
     },
 };
 
@@ -27,8 +27,8 @@ pub struct InterSwapOperator {
 
 #[derive(Debug)]
 pub struct InterSwapOperatorParams {
-    pub first_route_id: usize,
-    pub second_route_id: usize,
+    pub first_route_id: RouteId,
+    pub second_route_id: RouteId,
     pub first: usize,
     pub second: usize,
 }
@@ -123,7 +123,7 @@ impl IntensifyOp for InterSwapOperator {
         }
     }
 
-    fn updated_routes(&self) -> Vec<usize> {
+    fn updated_routes(&self) -> Vec<RouteId> {
         vec![self.params.first_route_id, self.params.second_route_id]
     }
 }
@@ -165,23 +165,25 @@ mod tests {
         );
 
         let operator = InterSwapOperator::new(InterSwapOperatorParams {
-            first_route_id: 0,
-            second_route_id: 1,
+            first_route_id: 0.into(),
+            second_route_id: 1.into(),
             first: 1,
             second: 3,
         });
 
-        let distances = solution.route(0).distance(&problem) + solution.route(1).distance(&problem);
+        let distances = solution.route(0.into()).distance(&problem)
+            + solution.route(1.into()).distance(&problem);
         let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
         assert_eq!(
-            solution.route(0).distance(&problem) + solution.route(1).distance(&problem),
+            solution.route(0.into()).distance(&problem)
+                + solution.route(1.into()).distance(&problem),
             distances + delta,
         );
 
         assert_eq!(
             solution
-                .route(0)
+                .route(0.into())
                 .activity_ids()
                 .iter()
                 .map(|activity| activity.index())
@@ -191,7 +193,7 @@ mod tests {
 
         assert_eq!(
             solution
-                .route(1)
+                .route(1.into())
                 .activity_ids()
                 .iter()
                 .map(|activity| activity.index())

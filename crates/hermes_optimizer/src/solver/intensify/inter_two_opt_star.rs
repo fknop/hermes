@@ -1,7 +1,8 @@
 use crate::{
     problem::{job::ActivityId, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{
-        intensify::intensify_operator::IntensifyOp, solution::working_solution::WorkingSolution,
+        intensify::intensify_operator::IntensifyOp,
+        solution::{route_id::RouteId, working_solution::WorkingSolution},
     },
 };
 
@@ -45,8 +46,8 @@ pub struct InterTwoOptStarOperator {
 
 #[derive(Debug)]
 pub struct InterTwoOptStarOperatorParams {
-    pub first_route_id: usize,
-    pub second_route_id: usize,
+    pub first_route_id: RouteId,
+    pub second_route_id: RouteId,
     pub first_from: usize,
     pub second_from: usize,
 }
@@ -149,7 +150,7 @@ impl IntensifyOp for InterTwoOptStarOperator {
         r2.replace_activities(problem, &new_r2_jobs, 0, r2.len());
     }
 
-    fn updated_routes(&self) -> Vec<usize> {
+    fn updated_routes(&self) -> Vec<RouteId> {
         vec![self.params.first_route_id, self.params.second_route_id]
     }
 }
@@ -191,24 +192,26 @@ mod tests {
         );
 
         let operator = InterTwoOptStarOperator::new(InterTwoOptStarOperatorParams {
-            first_route_id: 0,
-            second_route_id: 1,
+            first_route_id: 0.into(),
+            second_route_id: 1.into(),
 
             first_from: 2,
             second_from: 2,
         });
 
-        let distances = solution.route(0).distance(&problem) + solution.route(1).distance(&problem);
+        let distances = solution.route(0.into()).distance(&problem)
+            + solution.route(1.into()).distance(&problem);
         let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
         assert_eq!(
-            solution.route(0).distance(&problem) + solution.route(1).distance(&problem),
+            solution.route(0.into()).distance(&problem)
+                + solution.route(1.into()).distance(&problem),
             distances + delta,
         );
 
         assert_eq!(
             solution
-                .route(0)
+                .route(0.into())
                 .activity_ids()
                 .iter()
                 .map(|activity| activity.index())
@@ -218,7 +221,7 @@ mod tests {
 
         assert_eq!(
             solution
-                .route(1)
+                .route(1.into())
                 .activity_ids()
                 .iter()
                 .map(|activity| activity.index())
@@ -252,24 +255,26 @@ mod tests {
         );
 
         let operator = InterTwoOptStarOperator::new(InterTwoOptStarOperatorParams {
-            first_route_id: 0,
-            second_route_id: 1,
+            first_route_id: 0.into(),
+            second_route_id: 1.into(),
 
             first_from: 4,
             second_from: 3,
         });
 
-        let distances = solution.route(0).distance(&problem) + solution.route(1).distance(&problem);
+        let distances = solution.route(0.into()).distance(&problem)
+            + solution.route(1.into()).distance(&problem);
         let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
         assert_eq!(
-            solution.route(0).distance(&problem) + solution.route(1).distance(&problem),
+            solution.route(0.into()).distance(&problem)
+                + solution.route(1.into()).distance(&problem),
             distances + delta,
         );
 
         assert_eq!(
             solution
-                .route(0)
+                .route(0.into())
                 .activity_ids()
                 .iter()
                 .map(|activity| activity.index())
@@ -279,7 +284,7 @@ mod tests {
 
         assert_eq!(
             solution
-                .route(1)
+                .route(1.into())
                 .activity_ids()
                 .iter()
                 .map(|activity| activity.index())
@@ -313,8 +318,8 @@ mod tests {
         );
 
         let operator = InterTwoOptStarOperator::new(InterTwoOptStarOperatorParams {
-            first_route_id: 0,
-            second_route_id: 1,
+            first_route_id: 0.into(),
+            second_route_id: 1.into(),
 
             first_from: 5,
             second_from: 4,

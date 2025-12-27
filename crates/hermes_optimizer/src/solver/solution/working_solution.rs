@@ -5,9 +5,13 @@ use rand::seq::IteratorRandom;
 
 use crate::{
     problem::{
-        job::ActivityId, service::ServiceId, vehicle_routing_problem::VehicleRoutingProblem,
+        job::ActivityId, service::ServiceId, vehicle::VehicleId,
+        vehicle_routing_problem::VehicleRoutingProblem,
     },
-    solver::{insertion::Insertion, solution::route::WorkingSolutionRoute},
+    solver::{
+        insertion::Insertion,
+        solution::{route::WorkingSolutionRoute, route_id::RouteId},
+    },
 };
 
 #[derive(Clone)]
@@ -23,7 +27,9 @@ impl WorkingSolution {
             .vehicles()
             .iter()
             .enumerate()
-            .map(|(vehicle_id, _)| WorkingSolutionRoute::empty(&problem, vehicle_id))
+            .map(|(vehicle_id, _)| {
+                WorkingSolutionRoute::empty(&problem, VehicleId::new(vehicle_id))
+            })
             .collect();
         let unassigned_jobs = (0..problem.jobs().len()).collect();
 
@@ -94,7 +100,7 @@ impl WorkingSolution {
         }
     }
 
-    pub fn available_vehicles_for_insertion(&self) -> impl std::iter::Iterator<Item = usize> {
+    pub fn available_vehicles_for_insertion(&self) -> impl std::iter::Iterator<Item = VehicleId> {
         let fleet = self.problem.fleet();
         let is_infinite = fleet.is_infinite();
         // Find the first vehicle that has no routes assigned
@@ -102,7 +108,7 @@ impl WorkingSolution {
             .vehicles()
             .iter()
             .enumerate()
-            .map(|(vehicle_id, _)| vehicle_id)
+            .map(|(vehicle_id, _)| VehicleId::new(vehicle_id))
             .filter(move |&vehicle_id| {
                 if is_infinite {
                     return true;
@@ -134,15 +140,15 @@ impl WorkingSolution {
         &self.routes
     }
 
-    pub fn route(&self, route_id: usize) -> &WorkingSolutionRoute {
+    pub fn route(&self, route_id: RouteId) -> &WorkingSolutionRoute {
         &self.routes[route_id]
     }
 
-    pub fn route_mut(&mut self, route_id: usize) -> &mut WorkingSolutionRoute {
+    pub fn route_mut(&mut self, route_id: RouteId) -> &mut WorkingSolutionRoute {
         &mut self.routes[route_id]
     }
 
-    pub fn random_non_empty_route<R>(&self, rng: &mut R) -> Option<usize>
+    pub fn random_non_empty_route<R>(&self, rng: &mut R) -> Option<RouteId>
     where
         R: rand::Rng,
     {
@@ -151,23 +157,23 @@ impl WorkingSolution {
             .enumerate()
             .filter(|(_, route)| !route.is_empty())
             .choose(rng)
-            .map(|(index, _)| index)
+            .map(|(index, _)| RouteId::new(index))
     }
 
-    pub fn route_of_service(&self, service_id: ServiceId) -> Option<usize> {
+    pub fn route_of_service(&self, service_id: ServiceId) -> Option<RouteId> {
         self.routes
             .iter()
             .enumerate()
             .find(|(_, route)| route.contains_job(ActivityId::Service(service_id)))
-            .map(|(index, _)| index)
+            .map(|(index, _)| RouteId::new(index))
     }
 
-    pub fn route_of_job(&self, activity_id: ActivityId) -> Option<usize> {
+    pub fn route_of_job(&self, activity_id: ActivityId) -> Option<RouteId> {
         self.routes
             .iter()
             .enumerate()
             .find(|(_, route)| route.contains_job(activity_id))
-            .map(|(index, _)| index)
+            .map(|(index, _)| RouteId::new(index))
     }
 
     pub fn insert(&mut self, insertion: &Insertion) {
@@ -183,8 +189,8 @@ impl WorkingSolution {
         }
     }
 
-    pub fn remove_activity(&mut self, route_id: usize, activity_id: usize) {
-        if route_id >= self.routes.len() {
+    pub fn remove_activity(&mut self, route_id: RouteId, activity_id: usize) {
+        if route_id.get() >= self.routes.len() {
             return; // Invalid route ID
         }
 
@@ -232,13 +238,15 @@ impl WorkingSolution {
         }
     }
 
-    pub fn remove_route(&mut self, route_id: usize) -> usize {
-        let removed = self.routes[route_id].len();
+    pub fn remove_route(&mut self, route_id: RouteId) -> usize {
+        let mut removed = 0;
+        removed += self.routes[route_id].len();
         for job_id in self.routes[route_id].activity_ids.iter() {
             self.unassigned_jobs.insert(job_id.index());
         }
 
         self.routes[route_id].reset(&self.problem);
+
         // TODO: reset to avoid reallocations
         // self.routes[route_id] = WorkingSolutionRoute::empty(&self.problem, route_id);
 

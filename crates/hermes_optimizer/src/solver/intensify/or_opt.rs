@@ -2,7 +2,9 @@ use crate::{
     problem::{job::ActivityId, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{
         intensify::intensify_operator::IntensifyOp,
-        solution::{route::WorkingSolutionRoute, working_solution::WorkingSolution},
+        solution::{
+            route::WorkingSolutionRoute, route_id::RouteId, working_solution::WorkingSolution,
+        },
     },
 };
 
@@ -29,7 +31,7 @@ pub struct OrOptOperator {
 
 #[derive(Debug)]
 pub struct OrOptOperatorParams {
-    pub route_id: usize,
+    pub route_id: RouteId,
     pub from: usize,
     pub to: usize,
     pub count: usize,
@@ -152,7 +154,7 @@ impl IntensifyOp for OrOptOperator {
         }
     }
 
-    fn updated_routes(&self) -> Vec<usize> {
+    fn updated_routes(&self) -> Vec<RouteId> {
         vec![self.params.route_id]
     }
 }
@@ -162,9 +164,12 @@ mod tests {
     use std::sync::Arc;
 
     use crate::{
-        solver::intensify::{
-            intensify_operator::IntensifyOp,
-            or_opt::{OrOptOperator, OrOptOperatorParams},
+        solver::{
+            intensify::{
+                intensify_operator::IntensifyOp,
+                or_opt::{OrOptOperator, OrOptOperatorParams},
+            },
+            solution::route_id::RouteId,
         },
         test_utils::{self, TestRoute},
     };
@@ -195,20 +200,23 @@ mod tests {
 
         // Move [1, 2, 3] to position after 4
         let operator = OrOptOperator::new(OrOptOperatorParams {
-            route_id: 0,
+            route_id: RouteId::new(0),
             from: 1,
             count: 3,
             to: 5,
         });
 
-        let distance = solution.route(0).distance(&problem);
+        let distance = solution.route(RouteId::new(0)).distance(&problem);
         let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
-        assert_eq!(solution.route(0).distance(&problem), distance + delta);
+        assert_eq!(
+            solution.route(RouteId::new(0)).distance(&problem),
+            distance + delta
+        );
 
         assert_eq!(
             solution
-                .route(0)
+                .route(RouteId::new(0))
                 .activity_ids()
                 .iter()
                 .map(|activity| activity.index())
@@ -218,20 +226,23 @@ mod tests {
 
         // Move [3, 5] to position after 4
         let operator = OrOptOperator::new(OrOptOperatorParams {
-            route_id: 0,
+            route_id: RouteId::new(0),
             from: 4,
             count: 2,
             to: 2,
         });
 
-        let distance = solution.route(0).distance(&problem);
+        let distance = solution.route(RouteId::new(0)).distance(&problem);
         let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
-        assert_eq!(solution.route(0).distance(&problem), distance + delta);
+        assert_eq!(
+            solution.route(RouteId::new(0)).distance(&problem),
+            distance + delta
+        );
 
         assert_eq!(
             solution
-                .route(0)
+                .route(RouteId::new(0))
                 .activity_ids()
                 .iter()
                 .map(|activity| activity.index())
@@ -266,20 +277,23 @@ mod tests {
 
         // Move [1, 2, 3] to position after 4
         let operator = OrOptOperator::new(OrOptOperatorParams {
-            route_id: 0,
+            route_id: RouteId::new(0),
             from: 1,
             count: 3,
             to: 8,
         });
 
-        let distance = solution.route(0).distance(&problem);
+        let distance = solution.route(RouteId::new(0)).distance(&problem);
         let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
-        assert_eq!(solution.route(0).distance(&problem), distance + delta);
+        assert_eq!(
+            solution.route(RouteId::new(0)).distance(&problem),
+            distance + delta
+        );
 
         assert_eq!(
             solution
-                .route(0)
+                .route(RouteId::new(0))
                 .activity_ids()
                 .iter()
                 .map(|activity| activity.index())
@@ -308,25 +322,28 @@ mod tests {
 
         // Move [0..8] to position after 9
         let operator = OrOptOperator::new(OrOptOperatorParams {
-            route_id: 0,
+            route_id: RouteId::new(0),
             from: 0,
             count: 9,
             to: 10,
         });
 
-        let distance = solution.route(0).distance(&problem);
+        let distance = solution.route(RouteId::new(0)).distance(&problem);
         assert_eq!(distance, 11.0);
 
         let delta = operator.transport_cost_delta(&solution);
 
         operator.apply(&problem, &mut solution);
 
-        assert_eq!(solution.route(0).distance(&problem), distance + delta);
+        assert_eq!(
+            solution.route(RouteId::new(0)).distance(&problem),
+            distance + delta
+        );
         assert_eq!(delta, 18.0);
 
         assert_eq!(
             solution
-                .route(0)
+                .route(RouteId::new(0))
                 .activity_ids()
                 .iter()
                 .map(|activity| activity.index())
@@ -339,7 +356,7 @@ mod tests {
     #[should_panic(expected = "OrOptOperator: Overlapping segments are not allowed.")]
     fn test_or_opt_consecutive() {
         OrOptOperator::new(OrOptOperatorParams {
-            route_id: 0,
+            route_id: RouteId::new(0),
             from: 1,
             count: 3,
             to: 4,

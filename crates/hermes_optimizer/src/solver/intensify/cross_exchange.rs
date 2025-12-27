@@ -1,7 +1,8 @@
 use crate::{
     problem::{job::ActivityId, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{
-        intensify::intensify_operator::IntensifyOp, solution::working_solution::WorkingSolution,
+        intensify::intensify_operator::IntensifyOp,
+        solution::{route_id::RouteId, working_solution::WorkingSolution},
     },
 };
 
@@ -25,8 +26,8 @@ pub struct CrossExchangeOperator {
 
 #[derive(Debug)]
 pub struct CrossExchangeOperatorParams {
-    pub first_route_id: usize,
-    pub second_route_id: usize,
+    pub first_route_id: RouteId,
+    pub second_route_id: RouteId,
     pub first_start: usize,
     pub first_end: usize,
     pub second_start: usize,
@@ -147,7 +148,7 @@ impl IntensifyOp for CrossExchangeOperator {
         );
     }
 
-    fn updated_routes(&self) -> Vec<usize> {
+    fn updated_routes(&self) -> Vec<RouteId> {
         vec![self.params.first_route_id, self.params.second_route_id]
     }
 }
@@ -189,25 +190,27 @@ mod tests {
         );
 
         let operator = CrossExchangeOperator::new(CrossExchangeOperatorParams {
-            first_route_id: 0,
+            first_route_id: 0.into(),
             first_start: 1,
             first_end: 3,
 
-            second_route_id: 1,
+            second_route_id: 1.into(),
             second_start: 1,
             second_end: 2,
         });
 
-        let distances = solution.route(0).distance(&problem) + solution.route(1).distance(&problem);
+        let distances = solution.route(0.into()).distance(&problem)
+            + solution.route(1.into()).distance(&problem);
         let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
         assert_eq!(
-            solution.route(0).distance(&problem) + solution.route(1).distance(&problem),
+            solution.route(0.into()).distance(&problem)
+                + solution.route(1.into()).distance(&problem),
             distances + delta,
         );
         assert_eq!(
             solution
-                .route(0)
+                .route(0.into())
                 .activity_ids()
                 .iter()
                 .map(|job_id| job_id.index())
@@ -217,7 +220,7 @@ mod tests {
 
         assert_eq!(
             solution
-                .route(1)
+                .route(1.into())
                 .activity_ids()
                 .iter()
                 .map(|job_id| job_id.index())

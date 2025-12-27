@@ -79,7 +79,7 @@ pub(crate) fn compute_vehicle_end(
 
 pub(crate) fn compute_activity_arrival_time(
     problem: &VehicleRoutingProblem,
-    vehicle_id: usize,
+    vehicle_id: VehicleId,
     previous_job_id: ActivityId,
     previous_activity_departure_time: Timestamp,
     id: ActivityId,

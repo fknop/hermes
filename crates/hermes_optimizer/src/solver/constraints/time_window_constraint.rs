@@ -75,7 +75,7 @@ impl ActivityConstraint for TimeWindowConstraint {
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
         let problem = context.problem();
 
-        let route = context.insertion.route(context.solution);
+        // let route = context.insertion.route(context.solution);
         // if route.is_valid_tw_change(
         //     problem,
         //     std::iter::once(ActivityId::Service(context.insertion.service_id())),

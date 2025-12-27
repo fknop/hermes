@@ -2,11 +2,14 @@ use fxhash::FxHashSet;
 use jiff::{SignedDuration, Timestamp};
 use serde::{Deserialize, Serialize};
 
-use crate::problem::{job::Job, skill::Skill};
+use crate::{
+    define_index_newtype,
+    problem::{job::Job, skill::Skill},
+};
 
 use super::{capacity::Capacity, location::LocationId};
 
-pub type VehicleId = usize;
+define_index_newtype!(VehicleId, Vehicle);
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Vehicle {
@@ -79,7 +82,7 @@ impl Vehicle {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
 pub struct VehicleShift {
     earliest_start: Option<Timestamp>,
     latest_end: Option<Timestamp>,

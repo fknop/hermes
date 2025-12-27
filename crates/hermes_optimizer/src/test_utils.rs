@@ -14,7 +14,7 @@ use crate::{
     },
     solver::{
         insertion::{Insertion, ServiceInsertion},
-        solution::working_solution::WorkingSolution,
+        solution::{route_id::RouteId, working_solution::WorkingSolution},
     },
 };
 
@@ -100,7 +100,7 @@ pub fn create_test_working_solution(
     for (route_id, route) in routes.iter().enumerate() {
         for (index, &service_id) in route.service_ids.iter().enumerate() {
             solution.insert(&Insertion::Service(ServiceInsertion {
-                route_id,
+                route_id: RouteId::new(route_id),
                 job_index: service_id,
                 position: index,
             }));

@@ -2,7 +2,9 @@ use crate::{
     problem::{job::ActivityId, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{
         intensify::intensify_operator::IntensifyOp,
-        solution::{route::WorkingSolutionRoute, working_solution::WorkingSolution},
+        solution::{
+            route::WorkingSolutionRoute, route_id::RouteId, working_solution::WorkingSolution,
+        },
     },
 };
 
@@ -26,7 +28,7 @@ pub struct SwapOperator {
 
 #[derive(Debug)]
 pub struct SwapOperatorParams {
-    pub route_id: usize,
+    pub route_id: RouteId,
     pub first: usize,
     pub second: usize,
 }
@@ -137,7 +139,7 @@ impl IntensifyOp for SwapOperator {
         );
     }
 
-    fn updated_routes(&self) -> Vec<usize> {
+    fn updated_routes(&self) -> Vec<RouteId> {
         vec![self.params.route_id]
     }
 }
@@ -147,9 +149,12 @@ mod tests {
     use std::sync::Arc;
 
     use crate::{
-        solver::intensify::{
-            intensify_operator::IntensifyOp,
-            swap::{SwapOperator, SwapOperatorParams},
+        solver::{
+            intensify::{
+                intensify_operator::IntensifyOp,
+                swap::{SwapOperator, SwapOperatorParams},
+            },
+            solution::route_id::RouteId,
         },
         test_utils::{self, TestRoute},
     };
@@ -179,19 +184,22 @@ mod tests {
         );
 
         let operator = SwapOperator::new(SwapOperatorParams {
-            route_id: 0,
+            route_id: RouteId::new(0),
             first: 1,
             second: 5,
         });
 
-        let distance = solution.route(0).distance(&problem);
+        let distance = solution.route(RouteId::new(0)).distance(&problem);
         let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
-        assert_eq!(solution.route(0).distance(&problem), distance + delta);
+        assert_eq!(
+            solution.route(RouteId::new(0)).distance(&problem),
+            distance + delta
+        );
 
         assert_eq!(
             solution
-                .route(0)
+                .route(RouteId::new(0))
                 .activity_ids()
                 .iter()
                 .map(|activity| activity.index())
@@ -219,15 +227,18 @@ mod tests {
         );
 
         let operator = SwapOperator::new(SwapOperatorParams {
-            route_id: 0,
+            route_id: RouteId::new(0),
             first: 1,
             second: 2,
         });
 
-        let distance = solution.route(0).distance(&problem);
+        let distance = solution.route(RouteId::new(0)).distance(&problem);
         let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
-        assert_eq!(solution.route(0).distance(&problem), distance + delta);
+        assert_eq!(
+            solution.route(RouteId::new(0)).distance(&problem),
+            distance + delta
+        );
 
         assert_eq!(delta, 2.0);
     }

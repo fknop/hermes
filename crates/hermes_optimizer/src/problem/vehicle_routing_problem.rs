@@ -170,8 +170,8 @@ impl VehicleRoutingProblem {
         &self.fleet
     }
 
-    pub fn vehicle(&self, index: usize) -> &Vehicle {
-        self.fleet.vehicle(index)
+    pub fn vehicle(&self, vehicle_id: VehicleId) -> &Vehicle {
+        self.fleet.vehicle(vehicle_id)
     }
 
     pub fn vehicles(&self) -> &[Vehicle] {

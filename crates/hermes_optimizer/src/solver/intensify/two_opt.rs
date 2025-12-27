@@ -1,7 +1,8 @@
 use crate::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
-        intensify::intensify_operator::IntensifyOp, solution::working_solution::WorkingSolution,
+        intensify::intensify_operator::IntensifyOp,
+        solution::{route_id::RouteId, working_solution::WorkingSolution},
     },
 };
 
@@ -31,7 +32,7 @@ pub struct TwoOptOperator {
 
 #[derive(Debug)]
 pub struct TwoOptParams {
-    pub route_id: usize,
+    pub route_id: RouteId,
     pub from: usize,
     pub to: usize,
 }
@@ -126,7 +127,7 @@ impl IntensifyOp for TwoOptOperator {
         route.replace_activities(problem, &job_ids, self.params.from, self.params.to + 1);
     }
 
-    fn updated_routes(&self) -> Vec<usize> {
+    fn updated_routes(&self) -> Vec<RouteId> {
         vec![self.params.route_id]
     }
 }
@@ -136,9 +137,12 @@ mod tests {
     use std::sync::Arc;
 
     use crate::{
-        solver::intensify::{
-            intensify_operator::IntensifyOp,
-            two_opt::{TwoOptOperator, TwoOptParams},
+        solver::{
+            intensify::{
+                intensify_operator::IntensifyOp,
+                two_opt::{TwoOptOperator, TwoOptParams},
+            },
+            solution::route_id::RouteId,
         },
         test_utils::{self, TestRoute},
     };
@@ -168,7 +172,7 @@ mod tests {
         );
 
         let operator = TwoOptOperator::new(TwoOptParams {
-            route_id: 0,
+            route_id: RouteId::new(0),
             from: 1,
             to: 4,
         });
@@ -177,14 +181,17 @@ mod tests {
 
         assert_eq!(delta, 6.0);
 
-        let distance = solution.route(0).distance(&problem);
+        let distance = solution.route(RouteId::new(0)).distance(&problem);
         let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
-        assert_eq!(solution.route(0).distance(&problem), distance + delta);
+        assert_eq!(
+            solution.route(RouteId::new(0)).distance(&problem),
+            distance + delta
+        );
 
         assert_eq!(
             solution
-                .route(0)
+                .route(RouteId::new(0))
                 .activity_ids()
                 .iter()
                 .map(|activity| activity.index())
@@ -218,19 +225,22 @@ mod tests {
         );
 
         let operator = TwoOptOperator::new(TwoOptParams {
-            route_id: 0,
+            route_id: RouteId::new(0),
             from: 1,
             to: 5,
         });
 
-        let distance = solution.route(0).distance(&problem);
+        let distance = solution.route(RouteId::new(0)).distance(&problem);
         let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
-        assert_eq!(solution.route(0).distance(&problem), distance + delta);
+        assert_eq!(
+            solution.route(RouteId::new(0)).distance(&problem),
+            distance + delta
+        );
 
         assert_eq!(
             solution
-                .route(0)
+                .route(RouteId::new(0))
                 .activity_ids()
                 .iter()
                 .map(|activity| activity.index())

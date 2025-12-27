@@ -22,6 +22,33 @@ use crate::{
     },
 };
 
+macro_rules! temporary_vehicle_id_index {
+    ($t:ty, $output:ty) => {
+        // Temporary VehicleId Index
+        impl std::ops::Index<VehicleId> for $t {
+            type Output = $output;
+            fn index(&self, index: VehicleId) -> &Self::Output {
+                &self[index.get()]
+            }
+        }
+
+        // Temporary VehicleId IndexMut
+        impl std::ops::IndexMut<VehicleId> for $t {
+            fn index_mut(&mut self, index: VehicleId) -> &mut Self::Output {
+                &mut self[index.get()]
+            }
+        }
+    };
+}
+
+temporary_vehicle_id_index!(Vec<f64>, f64);
+temporary_vehicle_id_index!(Vec<Vec<f64>>, Vec<f64>);
+temporary_vehicle_id_index!(Vec<Option<IntensifyOperator>>, Option<IntensifyOperator>);
+temporary_vehicle_id_index!(
+    Vec<Vec<Option<IntensifyOperator>>>,
+    Vec<Option<IntensifyOperator>>
+);
+
 type VehiclePair = (VehicleId, VehicleId);
 
 pub struct IntensifySearch {
@@ -49,7 +76,7 @@ impl IntensifySearch {
         let mut pairs = Vec::with_capacity(vehicle_count * vehicle_count);
         for i in 0..vehicle_count {
             for j in 0..vehicle_count {
-                pairs.push((i, j))
+                pairs.push((i.into(), j.into()))
             }
         }
 
@@ -86,7 +113,7 @@ impl IntensifySearch {
                 continue;
             }
 
-            let route = solution.route(v1);
+            let route = solution.route(v1.into());
 
             if route.len() < 4 {
                 continue; // need at least 4 activities to perform 2-opt
@@ -95,7 +122,7 @@ impl IntensifySearch {
             for from in 0..route.activity_ids().len() - 2 {
                 for to in (from + 2)..route.activity_ids().len() {
                     let op = TwoOptOperator::new(TwoOptParams {
-                        route_id: v1,
+                        route_id: v1.into(),
                         from,
                         to,
                     });
@@ -115,7 +142,7 @@ impl IntensifySearch {
                 continue;
             }
 
-            let route = solution.route(v1);
+            let route = solution.route(v1.into());
 
             for from_pos in 0..route.activity_ids().len() {
                 let from_id = route.job_id(from_pos);
@@ -154,7 +181,7 @@ impl IntensifySearch {
                     }
 
                     let op = RelocateOperator::new(RelocateOperatorParams {
-                        route_id: v1,
+                        route_id: v1.into(),
                         from: from_pos,
                         to: to_pos,
                     });
@@ -174,12 +201,12 @@ impl IntensifySearch {
                 continue;
             }
 
-            let route = solution.route(v1);
+            let route = solution.route(v1.into());
 
             for from_pos in 0..route.activity_ids().len() {
                 for to_pos in from_pos + 1..route.activity_ids().len() {
                     let op = SwapOperator::new(SwapOperatorParams {
-                        route_id: v1,
+                        route_id: v1.into(),
                         first: from_pos,
                         second: to_pos,
                     });
@@ -199,14 +226,14 @@ impl IntensifySearch {
                 continue;
             }
 
-            let from_route = solution.route(v1);
-            let to_route = solution.route(v2);
+            let from_route = solution.route(v1.into());
+            let to_route = solution.route(v2.into());
 
             for from_pos in 0..from_route.activity_ids().len() {
                 for to_pos in 0..to_route.activity_ids().len() {
                     let op = InterSwapOperator::new(InterSwapOperatorParams {
-                        first_route_id: v1,
-                        second_route_id: v2,
+                        first_route_id: v1.into(),
+                        second_route_id: v2.into(),
                         first: from_pos,
                         second: to_pos,
                     });
@@ -226,8 +253,8 @@ impl IntensifySearch {
                 continue;
             }
 
-            let from_route = solution.route(v1);
-            let to_route = solution.route(v2);
+            let from_route = solution.route(v1.into());
+            let to_route = solution.route(v2.into());
 
             for from_pos in 0..from_route.activity_ids().len() {
                 let from_job_id = from_route.job_id(from_pos);
@@ -238,8 +265,8 @@ impl IntensifySearch {
 
                 for to_pos in 0..=to_route.activity_ids().len() {
                     let op = InterRelocateOperator::new(InterRelocateParams {
-                        from_route_id: v1,
-                        to_route_id: v2,
+                        from_route_id: v1.into(),
+                        to_route_id: v2.into(),
                         from: from_pos,
                         to: to_pos,
                     });
@@ -260,7 +287,7 @@ impl IntensifySearch {
                 continue;
             }
 
-            let route = solution.route(v1);
+            let route = solution.route(v1.into());
             let route_length = route.activity_ids().len();
 
             for from_pos in 0..route_length {
@@ -270,7 +297,7 @@ impl IntensifySearch {
                     // A chain is at least length 2
                     for chain_length in 2..=max_length {
                         let op = OrOptOperator::new(OrOptOperatorParams {
-                            route_id: v1,
+                            route_id: v1.into(),
                             from: from_pos,
                             to: to_pos,
                             count: chain_length,
@@ -292,8 +319,8 @@ impl IntensifySearch {
                 continue;
             }
 
-            let from_route = solution.route(v1);
-            let to_route = solution.route(v2);
+            let from_route = solution.route(v1.into());
+            let to_route = solution.route(v2.into());
 
             // If the bbox don't intersects, no need to try exchanges
             if !from_route.bbox_intersects(to_route) {
@@ -312,8 +339,8 @@ impl IntensifySearch {
                     for from_length in 2..=max_from_chain {
                         for to_length in 2..=max_to_chain {
                             let op = CrossExchangeOperator::new(CrossExchangeOperatorParams {
-                                first_route_id: v1,
-                                second_route_id: v2,
+                                first_route_id: v1.into(),
+                                second_route_id: v2.into(),
 
                                 first_start: from_pos,
                                 second_start: to_pos,
@@ -337,8 +364,8 @@ impl IntensifySearch {
                 continue;
             }
 
-            let from_route = solution.route(v1);
-            let to_route = solution.route(v2);
+            let from_route = solution.route(v1.into());
+            let to_route = solution.route(v2.into());
 
             // If the bbox don't intersects, no need to try exchanges
             if !from_route.bbox_intersects(to_route) {
@@ -351,8 +378,8 @@ impl IntensifySearch {
             for from_pos in 0..from_route_length - 1 {
                 for to_pos in 0..to_route_length - 1 {
                     let op = InterTwoOptStarOperator::new(InterTwoOptStarOperatorParams {
-                        first_route_id: v1,
-                        second_route_id: v2,
+                        first_route_id: v1.into(),
+                        second_route_id: v2.into(),
 
                         first_from: from_pos,
                         second_from: to_pos,
@@ -389,8 +416,8 @@ impl IntensifySearch {
                 best_delta,
                 v1,
                 v2,
-                solution.route(v1).activity_ids().len(),
-                solution.route(v2).activity_ids().len(),
+                solution.route(v1.into()).activity_ids().len(),
+                solution.route(v2.into()).activity_ids().len(),
                 op
             );
 
@@ -400,19 +427,21 @@ impl IntensifySearch {
 
             let updated_routes = op.updated_routes();
             for &updated_route in &updated_routes {
-                self.deltas[updated_route].fill(MAX_DELTA);
+                self.deltas[updated_route.get()].fill(MAX_DELTA);
 
-                self.best_ops[updated_route].fill_with(|| None);
+                self.best_ops[updated_route.get()].fill_with(|| None);
             }
 
             for i in 0..solution.routes().len() {
                 for &updated_route in &updated_routes {
-                    self.deltas[i][updated_route] = MAX_DELTA;
-                    self.best_ops[i][updated_route] = None;
+                    self.deltas[i][updated_route.get()] = MAX_DELTA;
+                    self.best_ops[i][updated_route.get()] = None;
 
-                    self.pairs.push((i, updated_route));
-                    if i != updated_route {
-                        self.pairs.push((updated_route, i));
+                    self.pairs
+                        .push((VehicleId::new(i), VehicleId::new(updated_route.get())));
+                    if i != updated_route.get() {
+                        self.pairs
+                            .push((VehicleId::new(updated_route.get()), VehicleId::new(i)));
                     }
                 }
             }
