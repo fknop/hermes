@@ -1,7 +1,7 @@
 use axum::{extract::Path, response::IntoResponse};
 use hermes_optimizer::{
+    parsers::{parser::DatasetParser, solomon::SolomonParser},
     problem::{service::Service, vehicle::Vehicle},
-    solomon::solomon_parser::SolomonParser,
 };
 use serde::{Deserialize, Serialize};
 
@@ -40,7 +40,8 @@ pub async fn get_benchmark_handler(
 ) -> Result<GetBenchmarkResponse, ApiError> {
     let file = format!("./data/solomon/{category}/{name}.txt");
 
-    if let Ok(vrp) = SolomonParser::from_file(&file) {
+    let parser = SolomonParser;
+    if let Ok(vrp) = parser.parse(&file) {
         Ok(GetBenchmarkResponse {
             locations: vrp
                 .locations()

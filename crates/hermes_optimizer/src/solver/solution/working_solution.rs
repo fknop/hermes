@@ -84,18 +84,30 @@ impl WorkingSolution {
     //     self.problem.vehicles().len() - self.routes.len()
     // }
 
-    // pub fn has_available_vehicle(&self) -> bool {
-    //     self.problem.vehicles().len() > self.routes.len()
-    // }
+    pub fn has_available_vehicle(&self) -> bool {
+        let fleet = self.problem.fleet();
+        let is_infinite = fleet.is_infinite();
+        if is_infinite {
+            true
+        } else {
+            self.routes.len() < fleet.vehicles().len()
+        }
+    }
 
-    pub fn available_vehicles_iter(&self) -> impl std::iter::Iterator<Item = usize> {
+    pub fn available_vehicles_for_insertion(&self) -> impl std::iter::Iterator<Item = usize> {
+        let fleet = self.problem.fleet();
+        let is_infinite = fleet.is_infinite();
         // Find the first vehicle that has no routes assigned
-        self.problem
+        fleet
             .vehicles()
             .iter()
             .enumerate()
             .map(|(vehicle_id, _)| vehicle_id)
-            .filter(|&vehicle_id| {
+            .filter(move |&vehicle_id| {
+                if is_infinite {
+                    return true;
+                }
+
                 self.routes
                     .iter()
                     .any(|route| route.is_empty() && route.vehicle_id == vehicle_id)

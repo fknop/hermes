@@ -1,10 +1,5 @@
-use dotenvy::dotenv;
-use hermes_matrix_providers::{
-    graphhopper_api::GraphHopperProfile, travel_matrix_client::TravelMatrixClient,
-    travel_matrix_provider::TravelMatrixProvider,
-};
 use hermes_optimizer::{
-    solomon::solomon_parser::SolomonParser,
+    parsers::{parser::DatasetParser, solomon::SolomonParser},
     solver::{
         solver::Solver,
         solver_params::{SolverParams, SolverParamsDebugOptions, Termination, Threads},
@@ -225,7 +220,8 @@ async fn main() {
     let datasets = create_solomon_dataset();
 
     for dataset in datasets {
-        let vrp = SolomonParser::from_file(dataset.file).unwrap();
+        let parser = SolomonParser;
+        let vrp = parser.parse(dataset.file).unwrap();
 
         let solver = Solver::new(
             vrp,

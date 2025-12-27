@@ -1,8 +1,8 @@
-use std::{path::PathBuf, sync::Arc, thread, time::Duration};
+use std::{path::PathBuf, time::Duration};
 
 use clap::Args;
 use hermes_optimizer::{
-    solomon::solomon_parser::SolomonParser,
+    parsers::{parser::DatasetParser, solomon::SolomonParser},
     solver::{
         solver::Solver,
         solver_params::{SolverParams, Termination, Threads},
@@ -54,7 +54,8 @@ pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
         .collect();
 
     for (i, path) in paths.iter().enumerate() {
-        let vrp = SolomonParser::from_file(path).unwrap();
+        let parser = SolomonParser;
+        let vrp = parser.parse(path).unwrap();
 
         let solver = Solver::new(
             vrp,

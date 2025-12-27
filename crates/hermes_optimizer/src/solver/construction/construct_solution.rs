@@ -210,7 +210,7 @@ fn create_initial_routes(problem: &VehicleRoutingProblem, solution: &mut Working
     }
 
     for &customer in &seed_customers {
-        let vehicle_id = solution.available_vehicles_iter().next().unwrap();
+        let vehicle_id = solution.available_vehicles_for_insertion().next().unwrap();
         solution.insert(&Insertion::Service(ServiceInsertion {
             route_id: vehicle_id,
             job_index: customer,

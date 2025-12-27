@@ -1,10 +1,10 @@
 use jiff::SignedDuration;
 
 use crate::{
-    parsers::parser::DatasetParser,
     problem::{
         amount::AmountExpression,
         capacity::Capacity,
+        fleet::Fleet,
         job::{ActivityId, Job, JobTask},
         service::{Service, ServiceId},
         shipment::Shipment,
@@ -18,7 +18,7 @@ use super::{
     distance_method::DistanceMethod,
     location::{Location, LocationId},
     service_location_index::ServiceLocationIndex,
-    travel_cost_matrix::{Cost, Distance, TravelMatrices},
+    travel_cost_matrix::{Cost, Distance},
     vehicle::{Vehicle, VehicleId},
 };
 
@@ -27,7 +27,7 @@ type PrecomputedNormalizedDemands = Vec<Capacity>;
 
 pub struct VehicleRoutingProblem {
     locations: Vec<Location>,
-    vehicles: Vec<Vehicle>,
+    fleet: Fleet,
     vehicle_profiles: Vec<VehicleProfile>,
     jobs: Vec<Job>,
     // travel_costs: TravelMatrices,
@@ -47,7 +47,7 @@ pub struct VehicleRoutingProblem {
 
 struct VehicleRoutingProblemParams {
     locations: Vec<Location>,
-    vehicles: Vec<Vehicle>,
+    fleet: Fleet,
     vehicle_profiles: Vec<VehicleProfile>,
     jobs: Vec<Job>,
     // travel_costs: TravelMatrices,
@@ -56,7 +56,7 @@ struct VehicleRoutingProblemParams {
 
 impl VehicleRoutingProblem {
     fn new(params: VehicleRoutingProblemParams) -> Self {
-        for vehicle in &params.vehicles {
+        for vehicle in params.fleet.vehicles() {
             if vehicle.profile_id() >= params.vehicle_profiles.len() {
                 panic!("Vehicle profile ID out of bounds")
             }
@@ -68,7 +68,7 @@ impl VehicleRoutingProblem {
         let precomputed_average_cost_from_depot =
             VehicleRoutingProblem::precompute_average_cost_from_depot(
                 &params.locations,
-                &params.vehicles,
+                &params.fleet.vehicles(),
                 &params.vehicle_profiles,
             );
 
@@ -79,7 +79,13 @@ impl VehicleRoutingProblem {
             .jobs
             .iter()
             .map(|job| job.demand())
-            .chain(params.vehicles.iter().map(|vehicle| vehicle.capacity()))
+            .chain(
+                params
+                    .fleet
+                    .vehicles()
+                    .iter()
+                    .map(|vehicle| vehicle.capacity()),
+            )
             .map(|capacity| capacity.len())
             .max()
             .unwrap_or(0);
@@ -89,7 +95,7 @@ impl VehicleRoutingProblem {
 
         let precomputed_vehicle_compatibilities =
             VehicleRoutingProblem::precompute_vehicle_compatibilities(
-                &params.vehicles,
+                &params.fleet.vehicles(),
                 &params.jobs,
             );
 
@@ -97,7 +103,7 @@ impl VehicleRoutingProblem {
             has_time_windows: params.jobs.iter().any(|job| job.has_time_windows()),
             has_capacity: params.jobs.iter().any(|job| !job.demand().is_empty()),
             locations: params.locations,
-            vehicles: params.vehicles,
+            fleet: params.fleet,
             vehicle_profiles: params.vehicle_profiles,
             jobs: params.jobs,
             // travel_costs: params.travel_costs,
@@ -160,12 +166,16 @@ impl VehicleRoutingProblem {
         rng.random_range(0..self.jobs.len())
     }
 
+    pub fn fleet(&self) -> &Fleet {
+        &self.fleet
+    }
+
     pub fn vehicle(&self, index: usize) -> &Vehicle {
-        &self.vehicles[index]
+        self.fleet.vehicle(index)
     }
 
     pub fn vehicles(&self) -> &[Vehicle] {
-        &self.vehicles
+        self.fleet.vehicles()
     }
 
     pub fn locations(&self) -> &[Location] {
@@ -205,7 +215,7 @@ impl VehicleRoutingProblem {
     }
 
     pub fn vehicle_depot_location(&self, vehicle_id: VehicleId) -> Option<&Location> {
-        let vehicle = &self.vehicles[vehicle_id];
+        let vehicle = &self.fleet.vehicle(vehicle_id);
         vehicle
             .depot_location_id()
             .map(|location_id| &self.locations[location_id])
@@ -312,7 +322,7 @@ impl VehicleRoutingProblem {
         vehicle_index: usize,
         job_index: usize,
     ) -> bool {
-        let index = (vehicle_index * self.vehicles.len()) + job_index;
+        let index = (vehicle_index * self.fleet.vehicles().len()) + job_index;
         self.precomputed_vehicle_compatibilities[index]
     }
 
@@ -505,7 +515,7 @@ impl VehicleRoutingProblemBuilder {
 
         VehicleRoutingProblem::new(VehicleRoutingProblemParams {
             locations,
-            vehicles,
+            fleet: Fleet::Finite(vehicles),
             vehicle_profiles,
             jobs,
             distance_method,

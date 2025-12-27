@@ -6,7 +6,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use hermes_optimizer::solomon::solomon_parser::SolomonParser;
+use hermes_optimizer::parsers::{parser::DatasetParser, solomon::SolomonParser};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -39,7 +39,8 @@ pub async fn post_benchmark_handler(
 
     let file = format!("./data/solomon/{}/{}.txt", body.category, body.name);
 
-    let vrp = SolomonParser::from_file(&file).ok().unwrap();
+    let parser = SolomonParser;
+    let vrp = parser.parse(&file).ok().unwrap();
     solver_manager.solve(job_id.clone(), vrp).await;
     Ok(PostBenchmarkResponse { job_id })
 }
