@@ -1,7 +1,9 @@
 use crate::{
     problem::job::Job,
     solver::solution::{
-        route::WorkingSolutionRoute, route_id::RouteIdx, working_solution::WorkingSolution,
+        route::WorkingSolutionRoute,
+        route_id::{EnumerateIdx, RouteIdx},
+        working_solution::WorkingSolution,
     },
 };
 
@@ -80,11 +82,11 @@ fn for_each_shipment_insertion(
     job_index: usize,
     mut f: impl FnMut(Insertion),
 ) {
-    for (route_id, route) in solution.routes().iter().enumerate() {
+    for (route_id, route) in solution.routes().iter().enumerate_idx() {
         for pickup_position in 0..=route.len() {
             for delivery_position in pickup_position + 1..=route.len().max(pickup_position + 1) {
                 f(Insertion::Shipment(ShipmentInsertion {
-                    route_id: RouteIdx::new(route_id),
+                    route_id,
                     job_index,
                     pickup_position,
                     delivery_position,
