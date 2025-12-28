@@ -79,8 +79,9 @@ fn compute_convex_hull(problem: &VehicleRoutingProblem) -> (Vec<JobIdx>, Vec<Job
             problem
                 .locations()
                 .iter()
-                .find(|location| location.x() == point.x() && location.y() == point.y())
-                .map(|location| location.id())
+                .enumerate_idx()
+                .find(|(idx, location)| location.x() == point.x() && location.y() == point.y())
+                .map(|(idx, _)| idx)
         })
         .flat_map(|location_id| {
             problem
@@ -163,13 +164,13 @@ fn create_initial_routes(problem: &VehicleRoutingProblem, solution: &mut Working
                     problem.vehicle(0.into()),
                     depot_id,
                     // TODO: support shipment
-                    problem.service_location(first.get()).id(),
+                    problem.service(first).location_id(),
                 )
                 .partial_cmp(&problem.travel_cost(
                     problem.vehicle(0.into()),
                     depot_id,
                     // TODO: support shipment
-                    problem.service_location(second.get()).id(),
+                    problem.service(second).location_id(),
                 ))
                 .unwrap()
         })
@@ -179,8 +180,8 @@ fn create_initial_routes(problem: &VehicleRoutingProblem, solution: &mut Working
 
     while seed_customers.len() < k_min && (!exterior.is_empty() || !interior.is_empty()) {
         let candidate_j = exterior.iter().cloned().max_by(|&a, &b| {
-            let location_id_a = problem.service_location(a.get()).id();
-            let location_id_b = problem.service_location(b.get()).id();
+            let location_id_a = problem.service(a).location_id();
+            let location_id_b = problem.service(b).location_id();
             let sum_dist_a = seed_customers
                 .iter()
                 .map(|&seed| {

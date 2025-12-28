@@ -28,8 +28,7 @@ impl DatasetParser for CVRPLibParser {
             .coords
             .iter()
             .enumerate()
-            .filter(|(id, _)| !instance.depots.contains(id))
-            .map(|(id, coord)| Location::from_cartesian(id, coord.x, coord.y))
+            .map(|(_, coord)| Location::from_cartesian(coord.x, coord.y))
             .collect::<Vec<_>>();
 
         let services = instance

@@ -1,4 +1,4 @@
-use std::{rc::Rc, sync::Arc};
+use std::sync::Arc;
 
 use jiff::SignedDuration;
 use serde::Deserialize;
@@ -86,7 +86,7 @@ impl TravelMatrices {
 
         for (i, from) in locations.iter().enumerate() {
             for (j, to) in locations.iter().enumerate() {
-                distances[i * num_locations + j] = from.euclidian_distance(to);
+                distances[i * num_locations + j] = from.euclidean_distance(to);
             }
         }
 

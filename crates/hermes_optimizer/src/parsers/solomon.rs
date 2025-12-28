@@ -99,7 +99,7 @@ impl DatasetParser for SolomonParser {
             let service_time = parts[6].parse::<i64>()?;
 
             let location_id = locations.len();
-            let location = Location::from_cartesian(location_id, x, y);
+            let location = Location::from_cartesian(x, y);
             locations.push(location);
 
             let customer_index = line_index - 1;

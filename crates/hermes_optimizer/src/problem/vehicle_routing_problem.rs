@@ -409,22 +409,24 @@ impl VehicleRoutingProblem {
     ) -> PrecomputedAverageCostFromDepot {
         let mut precomputed_average_cost_from_depot = Vec::with_capacity(locations.len());
 
-        precomputed_average_cost_from_depot.extend(locations.iter().map(|location_id| {
-            vehicles
-                .iter()
-                .filter_map(|vehicle| {
-                    if let Some(depot_location_id) = vehicle.depot_location_id() {
-                        Some(
-                            profiles[vehicle.profile_id()]
-                                .travel_cost(depot_location_id, location_id.id()),
-                        )
-                    } else {
-                        None
-                    }
-                })
-                .sum::<Distance>()
-                / vehicles.len() as Distance
-        }));
+        precomputed_average_cost_from_depot.extend(locations.iter().enumerate_idx().map(
+            |(location_id, location)| {
+                vehicles
+                    .iter()
+                    .filter_map(|vehicle| {
+                        if let Some(depot_location_id) = vehicle.depot_location_id() {
+                            Some(
+                                profiles[vehicle.profile_id()]
+                                    .travel_cost(depot_location_id, location_id),
+                            )
+                        } else {
+                            None
+                        }
+                    })
+                    .sum::<Distance>()
+                    / vehicles.len() as Distance
+            },
+        ));
 
         precomputed_average_cost_from_depot
     }
@@ -498,11 +500,11 @@ impl VehicleRoutingProblemBuilder {
         let locations = self.locations.expect("Expected list of locations");
         let services = self.services.expect("Expected list of services");
 
-        for (index, location) in locations.iter().enumerate_idx() {
-            if location.id() != index {
-                panic!("Location IDs must be sequential starting from 0");
-            }
-        }
+        // for (index, location) in locations.iter().enumerate_idx() {
+        //     if location.id() != index {
+        //         panic!("Location IDs must be sequential starting from 0");
+        //     }
+        // }
 
         for service in services.iter() {
             if service.location_id().get() >= locations.len() {

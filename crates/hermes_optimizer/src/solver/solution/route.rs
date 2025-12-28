@@ -177,10 +177,11 @@ impl WorkingSolutionRoute {
     pub fn compute_location_ids(&self, problem: &VehicleRoutingProblem) -> Vec<LocationIdx> {
         let mut location_ids = vec![];
 
+        let vehicle = self.vehicle(problem);
         if self.has_start(problem)
-            && let Some(depot_location) = problem.vehicle_depot_location(self.vehicle_id)
+            && let Some(depot_location_id) = vehicle.depot_location_id()
         {
-            location_ids.push(depot_location.id());
+            location_ids.push(depot_location_id);
         }
 
         for &job_id in &self.activity_ids {
@@ -188,9 +189,9 @@ impl WorkingSolutionRoute {
         }
 
         if self.has_end(problem)
-            && let Some(depot_location) = problem.vehicle_depot_location(self.vehicle_id)
+            && let Some(depot_location_id) = vehicle.depot_location_id()
         {
-            location_ids.push(depot_location.id());
+            location_ids.push(depot_location_id);
         }
 
         location_ids

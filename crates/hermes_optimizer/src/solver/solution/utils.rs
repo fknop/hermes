@@ -10,17 +10,16 @@ pub(crate) fn compute_first_activity_arrival_time(
     job_id: ActivityId,
 ) -> Timestamp {
     let task = problem.job_task(job_id);
-
-    let vehicle_depot_location = problem.vehicle_depot_location(vehicle_id);
-
     let vehicle = problem.vehicle(vehicle_id);
+    let vehicle_depot_location_id = vehicle.depot_location_id();
+
     let earliest_start_time = vehicle
         .earliest_start_time()
         .unwrap_or_else(|| Timestamp::from_second(0).unwrap());
 
-    let travel_time = match vehicle_depot_location {
-        Some(depot_location) => {
-            problem.travel_time(vehicle, depot_location.id(), task.location_id())
+    let travel_time = match vehicle_depot_location_id {
+        Some(depot_location_id) => {
+            problem.travel_time(vehicle, depot_location_id, task.location_id())
         }
         None => SignedDuration::ZERO,
     };
@@ -49,8 +48,8 @@ pub(crate) fn compute_vehicle_start(
     let vehicle = problem.vehicle(vehicle_id);
     let job_task = problem.job_task(job_id);
 
-    if let Some(depot_location) = problem.vehicle_depot_location(vehicle_id) {
-        let travel_time = problem.travel_time(vehicle, depot_location.id(), job_task.location_id());
+    if let Some(depot_location_id) = vehicle.depot_location_id() {
+        let travel_time = problem.travel_time(vehicle, depot_location_id, job_task.location_id());
 
         first_arrival_time - travel_time - vehicle.depot_duration()
     } else {

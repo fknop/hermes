@@ -89,12 +89,12 @@ pub fn kruskal_cluster(
             let to = service_ids[j];
             let weight = (problem.travel_cost(
                 problem.vehicle(VehicleIdx::new(0)),
-                problem.service_location(from).id(),
-                problem.service_location(to).id(),
+                problem.service(from.into()).location_id(),
+                problem.service(to.into()).location_id(),
             ) + problem.travel_cost(
                 problem.vehicle(VehicleIdx::new(0)),
-                problem.service_location(to).id(),
-                problem.service_location(from).id(),
+                problem.service(to.into()).location_id(),
+                problem.service(from.into()).location_id(),
             )) / 2.0;
             edges.push(KruskalEdge { from, to, weight });
         }

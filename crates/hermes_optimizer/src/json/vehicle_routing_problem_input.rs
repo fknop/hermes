@@ -63,9 +63,8 @@ impl VehicleRoutingProblemInput {
     pub fn create_problem(self) -> VehicleRoutingProblem {
         let mut builder = VehicleRoutingProblemBuilder::default();
 
-        for (id, location) in self.locations.iter().enumerate() {
+        for location in self.locations.iter() {
             builder.add_location(Location::from_lat_lon(
-                id,
                 location.coordinates[1],
                 location.coordinates[0],
             ));
