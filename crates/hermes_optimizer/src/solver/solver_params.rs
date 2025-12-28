@@ -40,6 +40,7 @@ pub struct SolverParams {
     pub tabu_size: usize,
     pub tabu_iterations: usize,
 
+    pub run_intensify_search: bool,
     pub debug_options: SolverParamsDebugOptions,
 }
 
@@ -112,6 +113,7 @@ impl Default for SolverParams {
             alns_improvement_factor: 9.0,
             alns_accepted_worst_factor: 13.0,
 
+            run_intensify_search: false,
             debug_options: SolverParamsDebugOptions {
                 enable_local_search: true,
             },
