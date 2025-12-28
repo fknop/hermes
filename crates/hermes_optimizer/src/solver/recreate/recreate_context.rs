@@ -31,7 +31,7 @@ impl<'a> RecreateContext<'a> {
         let context = InsertionContext::new(self.problem, solution, insertion);
         compute_insertion_score(self.constraints, &context, best_score)
             + self.noise_generator.map_or(Score::ZERO, |noise_generator| {
-                Score::soft(noise_generator.create_noise(context.insertion.job_index()))
+                Score::soft(noise_generator.create_noise(context.insertion.job_idx()))
             })
     }
 

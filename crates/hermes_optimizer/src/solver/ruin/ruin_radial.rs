@@ -96,7 +96,7 @@ mod tests {
 
         assert_eq!(
             solution.route(RouteIdx::new(0)).activity_ids().to_vec(),
-            vec![ActivityId::Service(1), ActivityId::Service(3)]
+            vec![ActivityId::service(1), ActivityId::service(3)]
         );
     }
 }

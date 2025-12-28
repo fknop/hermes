@@ -5,7 +5,8 @@ use rand::seq::IteratorRandom;
 
 use crate::{
     problem::{
-        job::ActivityId, service::ServiceId, vehicle::VehicleIdx,
+        job::{ActivityId, JobIdx},
+        vehicle::VehicleIdx,
         vehicle_routing_problem::VehicleRoutingProblem,
     },
     solver::{
@@ -18,7 +19,7 @@ use crate::{
 pub struct WorkingSolution {
     problem: Arc<VehicleRoutingProblem>,
     routes: Vec<WorkingSolutionRoute>,
-    unassigned_jobs: FxHashSet<ServiceId>,
+    unassigned_jobs: FxHashSet<JobIdx>,
 }
 
 impl WorkingSolution {
@@ -31,7 +32,7 @@ impl WorkingSolution {
                 WorkingSolutionRoute::empty(&problem, VehicleIdx::new(vehicle_id))
             })
             .collect();
-        let unassigned_jobs = (0..problem.jobs().len()).collect();
+        let unassigned_jobs = (0..problem.jobs().len()).map(|i| JobIdx::new(i)).collect();
 
         WorkingSolution {
             problem,
@@ -48,7 +49,7 @@ impl WorkingSolution {
         !self.unassigned_jobs.is_empty()
     }
 
-    pub fn is_unassigned(&self, service_id: ServiceId) -> bool {
+    pub fn is_unassigned(&self, service_id: JobIdx) -> bool {
         self.unassigned_jobs.contains(&service_id)
     }
 
@@ -120,7 +121,7 @@ impl WorkingSolution {
             })
     }
 
-    pub fn unassigned_jobs(&self) -> &FxHashSet<ServiceId> {
+    pub fn unassigned_jobs(&self) -> &FxHashSet<JobIdx> {
         &self.unassigned_jobs
     }
 
@@ -160,7 +161,8 @@ impl WorkingSolution {
             .map(|(index, _)| RouteIdx::new(index))
     }
 
-    pub fn route_of_service(&self, service_id: ServiceId) -> Option<RouteIdx> {
+    #[deprecated(note = "use route_of_job instead")]
+    pub fn route_of_service(&self, service_id: JobIdx) -> Option<RouteIdx> {
         self.routes
             .iter()
             .enumerate()
@@ -196,7 +198,7 @@ impl WorkingSolution {
 
         let route = &mut self.routes[route_id];
         if let Some(job_id) = route.remove_activity(&self.problem, activity_id) {
-            self.unassigned_jobs.insert(job_id.index());
+            self.unassigned_jobs.insert(job_id.job_id());
         }
     }
 
@@ -206,7 +208,7 @@ impl WorkingSolution {
             removed = route.remove_job(&self.problem, job_id);
 
             if removed {
-                self.unassigned_jobs.insert(job_id.index());
+                self.unassigned_jobs.insert(job_id.job_id());
                 break;
             }
         }
@@ -214,11 +216,11 @@ impl WorkingSolution {
         removed
     }
 
-    pub fn remove_service(&mut self, service_id: ServiceId) -> bool {
+    pub fn remove_service(&mut self, service_id: JobIdx) -> bool {
         self.remove_job(ActivityId::Service(service_id))
     }
 
-    pub fn remove_service_from_route(&mut self, route_id: usize, service_id: ServiceId) -> bool {
+    pub fn remove_service_from_route(&mut self, route_id: usize, service_id: JobIdx) -> bool {
         let mut removed = false;
         let route = &mut self.routes[route_id];
         if route.contains_job(ActivityId::Service(service_id)) {
@@ -236,13 +238,25 @@ impl WorkingSolution {
         for route in &mut self.routes {
             route.resync(&self.problem);
         }
+
+        if !self.problem().fleet().is_infinite() {
+            // Assert that all vehicle_id are different when not using an infinite fleet
+            assert_eq!(
+                self.routes
+                    .iter()
+                    .map(|route| route.vehicle_id())
+                    .collect::<FxHashSet<_>>()
+                    .len(),
+                self.routes.len()
+            );
+        }
     }
 
     pub fn remove_route(&mut self, route_id: RouteIdx) -> usize {
         let mut removed = 0;
         removed += self.routes[route_id].len();
         for job_id in self.routes[route_id].activity_ids.iter() {
-            self.unassigned_jobs.insert(job_id.index());
+            self.unassigned_jobs.insert(job_id.job_id());
         }
 
         self.routes[route_id].reset(&self.problem);

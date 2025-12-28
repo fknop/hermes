@@ -2,7 +2,7 @@ use geo::{Distance, Haversine};
 use rstar::primitives::GeomWithData;
 use rstar::{AABB, Envelope, PointDistance, RTree, RTreeObject};
 
-use crate::problem::job::{ActivityId, Job};
+use crate::problem::job::{ActivityId, EnumerateIdx, Job};
 
 use super::distance_method::DistanceMethod;
 use super::location::Location;
@@ -73,7 +73,7 @@ impl ServiceLocationIndex {
     ) -> ServiceLocationIndex {
         let mut location_ids = vec![];
 
-        for (job_id, job) in jobs.iter().enumerate() {
+        for (job_id, job) in jobs.iter().enumerate_idx() {
             match job {
                 Job::Service(service) => {
                     location_ids.push((ActivityId::Service(job_id), service.location_id()));
@@ -136,7 +136,7 @@ mod tests {
     use serde::Deserialize;
     use serde_json;
 
-    use crate::problem::service::{Service, ServiceId};
+    use crate::problem::{job::JobIdx, service::Service};
 
     use super::*;
 
@@ -172,9 +172,9 @@ mod tests {
             .nearest_neighbor_iter(geo::Point::new(locations[0].x(), locations[0].y()))
             .collect();
 
-        let mut service_ids: Vec<ServiceId> = (0..services.len()).collect();
+        let mut service_ids: Vec<JobIdx> = (0..services.len()).map(|i| i.into()).collect();
         service_ids.sort_by_key(|&s| {
-            let location_id = services[s].location_id();
+            let location_id = services[s.get()].location_id();
             locations[location_id]
                 .haversine_distance(&locations[0])
                 .round() as i64

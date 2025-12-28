@@ -2,7 +2,7 @@ use std::{path::PathBuf, time::Duration};
 
 use clap::Args;
 use hermes_optimizer::{
-    parsers::{parser::DatasetParser, solomon::SolomonParser},
+    parsers::{cvrplib::CVRPLibParser, parser::DatasetParser, solomon::SolomonParser},
     solver::{
         solver::Solver,
         solver_params::{SolverParams, Termination, Threads},
@@ -54,8 +54,13 @@ pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
         .collect();
 
     for (i, path) in paths.iter().enumerate() {
-        let parser = SolomonParser;
-        let vrp = parser.parse(path).unwrap();
+        let vrp = if path.ends_with(".txt") {
+            let parser = SolomonParser;
+            parser.parse(path)?
+        } else {
+            let parser = CVRPLibParser;
+            parser.parse(path)?
+        };
 
         let solver = Solver::new(
             vrp,

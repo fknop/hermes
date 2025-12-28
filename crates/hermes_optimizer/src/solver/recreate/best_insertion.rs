@@ -6,7 +6,8 @@ use serde::Serialize;
 
 use crate::{
     problem::{
-        amount::AmountExpression, job::Job, service::ServiceId,
+        amount::AmountExpression,
+        job::{Job, JobIdx},
         vehicle_routing_problem::VehicleRoutingProblem,
     },
     solver::{
@@ -67,7 +68,7 @@ impl BestInsertion {
     pub fn sort_unassigned_jobs(
         &self,
         problem: &VehicleRoutingProblem,
-        unassigned_jobs: &mut [ServiceId],
+        unassigned_jobs: &mut [JobIdx],
         rng: &mut SmallRng,
     ) {
         match self.sort_method {
@@ -138,7 +139,7 @@ impl BestInsertion {
 
     pub fn insert_jobs(
         &self,
-        unassigned_jobs: &Vec<ServiceId>,
+        unassigned_jobs: &Vec<JobIdx>,
         solution: &mut WorkingSolution,
         context: RecreateContext,
     ) {

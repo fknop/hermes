@@ -62,7 +62,7 @@ impl RouteConstraint for CapacityConstraint {
 
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
         let problem = context.problem();
-        let job = problem.job(context.insertion.job_index());
+        let job = problem.job(context.insertion.job_idx());
 
         if job.demand().is_empty() {
             return Score::zero();

@@ -64,7 +64,7 @@ where
             index: start,
             jobs_iter,
             succeeding_iter: succeeding_activities.iter(),
-            previous_job_id: previous_activity.map(|activity| activity.job_id),
+            previous_job_id: previous_activity.map(|activity| activity.activity_id),
             previous_departure_time: previous_activity.map(|activity| activity.departure_time),
         }
     }

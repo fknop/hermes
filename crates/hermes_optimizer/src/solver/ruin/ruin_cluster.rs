@@ -2,7 +2,7 @@ use fxhash::FxHashSet;
 use rand::seq::IndexedRandom;
 
 use crate::{
-    problem::job::ActivityId,
+    problem::job::{ActivityId, JobIdx},
     solver::solution::{route_id::RouteIdx, working_solution::WorkingSolution},
     utils::kruskal::kruskal_cluster,
 };
@@ -37,18 +37,18 @@ impl RuinSolution for RuinCluster {
                 .route(route_id)
                 .activity_ids()
                 .iter()
-                .map(|job_id| job_id.index())
+                .map(|job_id| job_id.job_id().get()) // TODO: support shipments
                 .collect::<Vec<_>>();
 
-            let mut removed_service_ids = vec![];
+            let mut removed_service_ids: Vec<JobIdx> = vec![];
             if let Some(clusters) = kruskal_cluster(problem, &service_ids)
                 && !clusters.is_empty()
             {
                 let cluster = clusters.choose(rng).unwrap();
                 for &service_id in cluster {
-                    let removed = solution.remove_service(service_id);
+                    let removed = solution.remove_service(service_id.into());
                     if removed {
-                        removed_service_ids.push(service_id);
+                        removed_service_ids.push(JobIdx::new(service_id));
                         remaining_to_remove -= 1;
                         if remaining_to_remove == 0 {
                             break;
@@ -68,7 +68,7 @@ impl RuinSolution for RuinCluster {
                         removed_service_ids.choose(rng).cloned().unwrap(),
                     ))
                     .find(|&service_id| {
-                        let route_id = solution.route_of_service(service_id.index());
+                        let route_id = solution.route_of_service(service_id.job_id());
                         if let Some(route_id) = route_id {
                             !ruined_routes.contains(&route_id)
                         } else {
@@ -76,7 +76,7 @@ impl RuinSolution for RuinCluster {
                         }
                     })
                 {
-                    target_service_id = new_service_id.index();
+                    target_service_id = new_service_id.job_id();
                 } else {
                     // No more services to ruin, exit the loop
                     break;

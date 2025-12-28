@@ -9,8 +9,6 @@ use crate::problem::skill::Skill;
 
 use super::{capacity::Capacity, location::LocationId, time_window::TimeWindow};
 
-pub type ServiceId = usize;
-
 #[derive(Deserialize, Serialize, Debug, Copy, Clone, Default, PartialEq, Eq)]
 pub enum ServiceType {
     Pickup,

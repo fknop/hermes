@@ -1,5 +1,5 @@
 use crate::{
-    problem::job::Job,
+    problem::job::{Job, JobIdx},
     solver::solution::{
         route::WorkingSolutionRoute,
         route_id::{EnumerateIdx, RouteIdx},
@@ -10,14 +10,14 @@ use crate::{
 #[derive(Clone)]
 pub struct ServiceInsertion {
     pub route_id: RouteIdx,
-    pub job_index: usize,
+    pub job_index: JobIdx,
     pub position: usize,
 }
 
 #[derive(Clone)]
 pub struct ShipmentInsertion {
     pub route_id: RouteIdx,
-    pub job_index: usize,
+    pub job_index: JobIdx,
 
     /// Position of the pickup
     pub pickup_position: usize,
@@ -33,7 +33,7 @@ pub enum Insertion {
 }
 
 impl Insertion {
-    pub fn job_index(&self) -> usize {
+    pub fn job_idx(&self) -> JobIdx {
         match self {
             Insertion::Service(ctx) => ctx.job_index,
             Insertion::Shipment(ctx) => ctx.job_index,
@@ -50,7 +50,7 @@ impl Insertion {
 
 pub fn for_each_insertion(
     solution: &WorkingSolution,
-    job_index: usize,
+    job_index: JobIdx,
     mut f: impl FnMut(Insertion),
 ) {
     let job = solution.problem().job(job_index);
@@ -63,7 +63,7 @@ pub fn for_each_insertion(
 
 fn for_each_service_insertion(
     solution: &WorkingSolution,
-    job_index: usize,
+    job_index: JobIdx,
     mut f: impl FnMut(Insertion),
 ) {
     for (route_id, route) in solution.routes().iter().enumerate() {
@@ -79,7 +79,7 @@ fn for_each_service_insertion(
 
 fn for_each_shipment_insertion(
     solution: &WorkingSolution,
-    job_index: usize,
+    job_index: JobIdx,
     mut f: impl FnMut(Insertion),
 ) {
     for (route_id, route) in solution.routes().iter().enumerate_idx() {

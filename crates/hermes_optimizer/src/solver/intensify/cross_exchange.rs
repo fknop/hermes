@@ -213,8 +213,8 @@ mod tests {
                 .route(0.into())
                 .activity_ids()
                 .iter()
-                .map(|job_id| job_id.index())
-                .collect::<Vec<_>>(),
+                .map(|activity_id| activity_id.job_id().get())
+                .collect::<Vec<usize>>(),
             vec![0, 7, 8, 4, 5],
         );
 
@@ -223,7 +223,7 @@ mod tests {
                 .route(1.into())
                 .activity_ids()
                 .iter()
-                .map(|job_id| job_id.index())
+                .map(|job_id| job_id.job_id().get())
                 .collect::<Vec<_>>(),
             vec![6, 1, 2, 3, 9, 10],
         );

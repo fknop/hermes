@@ -6,7 +6,7 @@ use rand::rngs::SmallRng;
 
 use crate::{
     problem::{
-        amount::AmountExpression, capacity::Capacity, service::ServiceType,
+        amount::AmountExpression, capacity::Capacity, job::JobIdx, service::ServiceType,
         vehicle_routing_problem::VehicleRoutingProblem,
     },
     solver::{
@@ -55,7 +55,7 @@ fn find_minimum_vehicles(problem: &VehicleRoutingProblem) -> usize {
     minimum_vehicles
 }
 
-fn compute_convex_hull(problem: &VehicleRoutingProblem) -> (Vec<usize>, Vec<usize>) {
+fn compute_convex_hull(problem: &VehicleRoutingProblem) -> (Vec<usize>, Vec<JobIdx>) {
     let points = geo::MultiPoint::from(
         problem
             .services_iter()
@@ -79,8 +79,9 @@ fn compute_convex_hull(problem: &VehicleRoutingProblem) -> (Vec<usize>, Vec<usiz
         })
         .collect();
 
-    let interior: Vec<usize> = (0..problem.jobs().len())
-        .filter(|i| !exterior.contains(&problem.service_location(*i).id()))
+    let interior: Vec<JobIdx> = (0..problem.jobs().len())
+        .map(|i| JobIdx::new(i))
+        .filter(|i| !exterior.contains(&problem.service_location(i.get()).id()))
         .collect();
 
     (exterior, interior)
@@ -192,7 +193,7 @@ fn create_initial_routes(problem: &VehicleRoutingProblem, solution: &mut Working
                 .map(|&seed| {
                     problem.travel_cost(
                         problem.vehicle(0.into()),
-                        problem.service_location(i).id(),
+                        problem.service_location(i.get()).id(),
                         problem.service_location(seed).id(),
                     )
                 })
@@ -212,7 +213,7 @@ fn create_initial_routes(problem: &VehicleRoutingProblem, solution: &mut Working
             exterior.retain(|&e| e != j);
         } else {
             let i = candidate_i.unwrap();
-            seed_customers.push(i);
+            seed_customers.push(i.get());
             interior.remove(0);
         }
     }
@@ -221,7 +222,7 @@ fn create_initial_routes(problem: &VehicleRoutingProblem, solution: &mut Working
         let vehicle_id = solution.available_vehicles_for_insertion().next().unwrap();
         solution.insert(&Insertion::Service(ServiceInsertion {
             route_id: RouteIdx::new(vehicle_id.get()), // TODO: won't work
-            job_index: customer,
+            job_index: JobIdx::new(customer),
             position: 0,
         }));
     }

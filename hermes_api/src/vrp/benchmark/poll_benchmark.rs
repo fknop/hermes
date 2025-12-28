@@ -46,7 +46,7 @@ fn transform_solution(accepted_solution: &AcceptedSolution) -> BenchmarkSolution
 
             activities.extend(route.activity_ids().iter().map(|activity| {
                 BenchmarkSolutionActivity::Service(BenchmarkServiceActivity {
-                    service_id: activity.index(),
+                    service_id: activity.job_id(),
                 })
             }));
 

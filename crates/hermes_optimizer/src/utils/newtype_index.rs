@@ -6,6 +6,12 @@ macro_rules! define_index_newtype {
         )]
         pub struct $name(usize);
 
+        impl std::fmt::Display for $name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", self.0)
+            }
+        }
+
         impl $name {
             pub const fn new(index: usize) -> Self {
                 Self(index)

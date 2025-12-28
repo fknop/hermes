@@ -5,8 +5,8 @@ use crate::{
     problem::{
         amount::AmountExpression,
         capacity::{Capacity, is_capacity_satisfied},
-        job::{ActivityId, Job, JobTask},
-        service::{Service, ServiceId, ServiceType},
+        job::{ActivityId, Job, JobIdx, JobTask},
+        service::{Service, ServiceType},
         vehicle::{Vehicle, VehicleIdx},
         vehicle_routing_problem::VehicleRoutingProblem,
     },
@@ -200,7 +200,7 @@ impl WorkingSolutionRoute {
         compute_vehicle_start(
             problem,
             self.vehicle_id,
-            first.job_id(),
+            first.activity_id(),
             self.arrival_times[0],
         )
     }
@@ -210,7 +210,7 @@ impl WorkingSolutionRoute {
         compute_vehicle_end(
             problem,
             self.vehicle_id,
-            last.job_id(),
+            last.activity_id(),
             self.departure_times[self.len() - 1],
         )
     }
@@ -381,7 +381,7 @@ impl WorkingSolutionRoute {
         );
 
         RouteActivityInfo {
-            job_id: self.activity_ids[index],
+            activity_id: self.activity_ids[index],
             arrival_time: self.arrival_times[index],
             departure_time: self.departure_times[index],
             waiting_duration: self.waiting_durations[index],
@@ -560,7 +560,7 @@ impl WorkingSolutionRoute {
         &mut self,
         problem: &VehicleRoutingProblem,
         position: usize,
-        service_id: ServiceId,
+        service_id: JobIdx,
     ) {
         if self.jobs.contains_key(&ActivityId::Service(service_id)) {
             return;
@@ -700,10 +700,10 @@ impl WorkingSolutionRoute {
         let mut current_load_shipments = Capacity::with_dimensions(problem.capacity_dimensions());
 
         for i in 0..len {
-            let job_id = self.activity_ids[i];
-            let job = problem.job(job_id);
+            let activity_id = self.activity_ids[i];
+            let job = problem.job(activity_id.job_id());
 
-            match job_id {
+            match activity_id {
                 ActivityId::Service(_) => {
                     if let Job::Service(service) = job {
                         match service.service_type() {
@@ -729,24 +729,24 @@ impl WorkingSolutionRoute {
             self.fwd_load_shipments[i].update(&current_load_shipments);
 
             self.arrival_times[i] = if i == 0 {
-                compute_first_activity_arrival_time(problem, self.vehicle_id, job_id)
+                compute_first_activity_arrival_time(problem, self.vehicle_id, activity_id)
             } else {
                 compute_activity_arrival_time(
                     problem,
                     self.vehicle_id,
                     self.activity_ids[i - 1],
                     self.departure_times[i - 1],
-                    job_id,
+                    activity_id,
                 )
             };
 
             self.waiting_durations[i] =
-                compute_waiting_duration(problem, job_id, self.arrival_times[i]);
+                compute_waiting_duration(problem, activity_id, self.arrival_times[i]);
             self.departure_times[i] = compute_departure_time(
                 problem,
                 self.arrival_times[i],
                 self.waiting_durations[i],
-                job_id,
+                activity_id,
             );
         }
 
@@ -758,8 +758,8 @@ impl WorkingSolutionRoute {
         current_load_pickups.reset();
 
         for i in (0..len).rev() {
-            let job_id = self.activity_ids[i];
-            let job = problem.job(job_id);
+            let activity_id = self.activity_ids[i];
+            let job = problem.job(activity_id.job_id());
 
             self.bwd_load_deliveries[i].update(&current_load_deliveries);
             self.bwd_load_pickups[i].update(&current_load_pickups);
@@ -961,7 +961,7 @@ impl WorkingSolutionRoute {
     pub fn is_valid_capacity_change(
         &self,
         problem: &VehicleRoutingProblem,
-        job_ids: impl Iterator<Item = ActivityId>,
+        activity_ids: impl Iterator<Item = ActivityId>,
         start: usize,
         end: usize,
     ) -> bool {
@@ -972,10 +972,10 @@ impl WorkingSolutionRoute {
         let mut pickup_load_delta = Capacity::with_dimensions(problem.capacity_dimensions());
         let mut shipment_load_delta = Capacity::with_dimensions(problem.capacity_dimensions());
 
-        for job_id in job_ids {
-            let job = problem.job(job_id);
+        for activity_id in activity_ids {
+            let job = problem.job(activity_id.job_id());
 
-            match job_id {
+            match activity_id {
                 ActivityId::Service(_) => {
                     if let Job::Service(service) = job {
                         match service.service_type() {
@@ -1082,7 +1082,7 @@ impl WorkingSolutionRoute {
 }
 
 pub struct RouteActivityInfo {
-    pub(super) job_id: ActivityId,
+    pub(super) activity_id: ActivityId,
     pub(super) arrival_time: Timestamp,
     pub(super) departure_time: Timestamp,
     pub(super) waiting_duration: SignedDuration,
@@ -1101,21 +1101,21 @@ impl RouteActivityInfo {
         self.waiting_duration
     }
 
-    pub fn job_id(&self) -> ActivityId {
-        self.job_id
+    pub fn activity_id(&self) -> ActivityId {
+        self.activity_id
     }
 
     #[deprecated]
     pub fn service<'a>(&self, problem: &'a VehicleRoutingProblem) -> &'a Service {
-        problem.service(self.job_id.into())
+        problem.service(self.activity_id.job_id())
     }
 
     pub fn job<'a>(&self, problem: &'a VehicleRoutingProblem) -> &'a Job {
-        problem.job(self.job_id.index())
+        problem.job(self.activity_id.job_id())
     }
 
     pub fn job_task<'a>(&self, problem: &'a VehicleRoutingProblem) -> JobTask<'a> {
-        problem.job_task(self.job_id)
+        problem.job_task(self.activity_id)
     }
 }
 
@@ -1127,7 +1127,7 @@ mod tests {
     use crate::{
         problem::{
             capacity::Capacity,
-            job::ActivityId,
+            job::{ActivityId, JobIdx},
             service::{ServiceBuilder, ServiceType},
             time_window::TimeWindow,
             travel_cost_matrix::TravelMatrices,
@@ -1260,9 +1260,9 @@ mod tests {
 
         let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
 
-        route.insert_service(&problem, 0, 0);
-        route.insert_service(&problem, 1, 2);
-        route.insert_service(&problem, 2, 1);
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        route.insert_service(&problem, 1, JobIdx::new(2));
+        route.insert_service(&problem, 2, JobIdx::new(1));
 
         assert_eq!(route.len(), 3);
         assert_eq!(route.current_load.len(), 5);
@@ -1368,18 +1368,18 @@ mod tests {
 
         let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
 
-        route.insert_service(&problem, 0, 0);
-        route.insert_service(&problem, 1, 2);
-        route.insert_service(&problem, 2, 1);
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        route.insert_service(&problem, 1, JobIdx::new(2));
+        route.insert_service(&problem, 2, JobIdx::new(1));
 
         let job_ids: Vec<ActivityId> = route.job_ids_iter(0, 3).collect();
 
         assert_eq!(
             job_ids,
             vec![
-                ActivityId::Service(0),
-                ActivityId::Service(2),
-                ActivityId::Service(1)
+                ActivityId::Service(0.into()),
+                ActivityId::Service(2.into()),
+                ActivityId::Service(1.into())
             ]
         );
 
@@ -1394,9 +1394,9 @@ mod tests {
 
         let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
 
-        route.insert_service(&problem, 0, 0);
-        route.insert_service(&problem, 1, 2);
-        route.insert_service(&problem, 2, 1);
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        route.insert_service(&problem, 1, JobIdx::new(2));
+        route.insert_service(&problem, 2, JobIdx::new(1));
 
         let mut iterator =
             route.updated_activities_iter(&problem, route.job_ids_iter(1, 3).rev(), 1, 3);
@@ -1407,7 +1407,7 @@ mod tests {
                 arrival_time: "2025-11-30T10:40:00+02:00".parse().unwrap(),
                 waiting_duration: SignedDuration::ZERO,
                 departure_time: "2025-11-30T10:50:00+02:00".parse().unwrap(),
-                job_id: ActivityId::Service(1),
+                job_id: ActivityId::service(1),
                 current_position: Some(2)
             })
         );
@@ -1418,7 +1418,7 @@ mod tests {
                 arrival_time: "2025-11-30T11:20:00+02:00".parse().unwrap(),
                 waiting_duration: SignedDuration::ZERO,
                 departure_time: "2025-11-30T11:30:00+02:00".parse().unwrap(),
-                job_id: ActivityId::Service(2),
+                job_id: ActivityId::service(2),
                 current_position: Some(1)
             })
         );
@@ -1432,16 +1432,16 @@ mod tests {
 
         let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
 
-        route.insert_service(&problem, 0, 0);
-        route.insert_service(&problem, 1, 2);
-        route.insert_service(&problem, 2, 1);
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        route.insert_service(&problem, 1, JobIdx::new(2));
+        route.insert_service(&problem, 2, JobIdx::new(1));
 
         route.replace_activities(
             &problem,
             &[
-                ActivityId::Service(1),
-                ActivityId::Service(2),
-                ActivityId::Service(0),
+                ActivityId::Service(1.into()),
+                ActivityId::Service(2.into()),
+                ActivityId::Service(0.into()),
             ],
             0,
             3,
@@ -1451,15 +1451,15 @@ mod tests {
         assert_eq!(
             route.activity_ids.iter().copied().collect::<Vec<_>>(),
             vec![
-                ActivityId::Service(1),
-                ActivityId::Service(2),
-                ActivityId::Service(0)
+                ActivityId::service(1),
+                ActivityId::service(2),
+                ActivityId::service(0),
             ]
         );
 
         route.replace_activities(
             &problem,
-            &[ActivityId::Service(0), ActivityId::Service(2)],
+            &[ActivityId::Service(0.into()), ActivityId::Service(2.into())],
             1,
             3,
         );
@@ -1467,9 +1467,9 @@ mod tests {
         assert_eq!(
             route.activity_ids.iter().copied().collect::<Vec<_>>(),
             vec![
-                ActivityId::Service(1),
-                ActivityId::Service(0),
-                ActivityId::Service(2)
+                ActivityId::Service(1.into()),
+                ActivityId::Service(0.into()),
+                ActivityId::Service(2.into())
             ]
         );
     }
@@ -1480,21 +1480,21 @@ mod tests {
 
         let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
 
-        route.insert_service(&problem, 0, 0);
-        route.insert_service(&problem, 1, 2);
-        route.insert_service(&problem, 2, 1);
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        route.insert_service(&problem, 1, JobIdx::new(2));
+        route.insert_service(&problem, 2, JobIdx::new(1));
 
         route.replace_activities(&problem, &[], 1, 2);
 
         assert_eq!(route.len(), 2);
         assert_eq!(
             route.activity_ids.iter().copied().collect::<Vec<_>>(),
-            vec![ActivityId::Service(0), ActivityId::Service(1)]
+            vec![ActivityId::service(0), ActivityId::service(1)]
         );
 
         route.replace_activities(
             &problem,
-            &[ActivityId::Service(2), ActivityId::Service(1)],
+            &[ActivityId::service(2), ActivityId::service(1)],
             1,
             2,
         );
@@ -1503,9 +1503,9 @@ mod tests {
         assert_eq!(
             route.activity_ids.iter().copied().collect::<Vec<_>>(),
             vec![
-                ActivityId::Service(0),
-                ActivityId::Service(2),
-                ActivityId::Service(1)
+                ActivityId::service(0),
+                ActivityId::service(2),
+                ActivityId::service(1)
             ]
         );
     }
@@ -1526,21 +1526,21 @@ mod tests {
         );
 
         let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
-        route.insert_service(&problem, 0, 0);
-        route.insert_service(&problem, 1, 1);
-        route.insert_service(&problem, 2, 2);
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        route.insert_service(&problem, 1, JobIdx::new(1));
+        route.insert_service(&problem, 2, JobIdx::new(2));
 
         let is_valid =
-            route.is_valid_capacity_change(&problem, std::iter::once(ActivityId::Service(4)), 1, 2);
+            route.is_valid_capacity_change(&problem, std::iter::once(ActivityId::service(4)), 1, 2);
         assert!(is_valid);
 
         let is_valid =
-            route.is_valid_capacity_change(&problem, std::iter::once(ActivityId::Service(3)), 1, 2);
+            route.is_valid_capacity_change(&problem, std::iter::once(ActivityId::service(3)), 1, 2);
         assert!(is_valid);
 
         let is_valid = route.is_valid_capacity_change(
             &problem,
-            [ActivityId::Service(1), ActivityId::Service(3)].into_iter(),
+            [ActivityId::service(1), ActivityId::service(3)].into_iter(),
             1,
             3,
         );
@@ -1554,7 +1554,7 @@ mod tests {
         // Replace 1 and 2 by 5 and 6
         let is_valid = route.is_valid_capacity_change(
             &problem,
-            [ActivityId::Service(5), ActivityId::Service(6)].into_iter(),
+            [ActivityId::service(5), ActivityId::service(6)].into_iter(),
             1,
             3,
         );
@@ -1563,26 +1563,26 @@ mod tests {
 
         // Replace 0 by 4
         let is_valid =
-            route.is_valid_capacity_change(&problem, [ActivityId::Service(4)].into_iter(), 0, 1);
+            route.is_valid_capacity_change(&problem, [ActivityId::service(4)].into_iter(), 0, 1);
 
         assert!(!is_valid);
 
         // Add 4 before 0
         let is_valid =
-            route.is_valid_capacity_change(&problem, [ActivityId::Service(4)].into_iter(), 0, 0);
+            route.is_valid_capacity_change(&problem, [ActivityId::service(4)].into_iter(), 0, 0);
 
         assert!(!is_valid);
 
         // Add 4 after 0
         let is_valid =
-            route.is_valid_capacity_change(&problem, [ActivityId::Service(4)].into_iter(), 1, 1);
+            route.is_valid_capacity_change(&problem, [ActivityId::service(4)].into_iter(), 1, 1);
 
         assert!(!is_valid);
 
         // Replace 1 and 2 by 5 and 4
         let is_valid = route.is_valid_capacity_change(
             &problem,
-            [ActivityId::Service(5), ActivityId::Service(4)].into_iter(),
+            [ActivityId::service(5), ActivityId::service(4)].into_iter(),
             1,
             3,
         );
@@ -1591,7 +1591,7 @@ mod tests {
 
         // Add 6 at end
         let is_valid =
-            route.is_valid_capacity_change(&problem, [ActivityId::Service(6)].into_iter(), 3, 3);
+            route.is_valid_capacity_change(&problem, [ActivityId::service(6)].into_iter(), 3, 3);
 
         assert!(!is_valid);
     }
@@ -1677,46 +1677,46 @@ mod tests {
 
         let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
         // Route: 0 -> 1 -> 2 (arrival times: 08:30, 09:10, 09:50)
-        route.insert_service(&problem, 0, 0);
-        route.insert_service(&problem, 1, 1);
-        route.insert_service(&problem, 2, 2);
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        route.insert_service(&problem, 1, JobIdx::new(1));
+        route.insert_service(&problem, 2, JobIdx::new(2));
 
         // Test 1: Replace service 1 with service 3 (same position, later TW)
         // This should be valid since service 3 has a later end time
         let is_valid =
-            route.is_valid_tw_change(&problem, std::iter::once(ActivityId::Service(3)), 1, 2);
+            route.is_valid_tw_change(&problem, std::iter::once(ActivityId::service(3)), 1, 2);
         assert!(is_valid);
 
         // Test 2: Replace service 1 with service 5 (relaxed TW)
         let is_valid =
-            route.is_valid_tw_change(&problem, std::iter::once(ActivityId::Service(5)), 1, 2);
+            route.is_valid_tw_change(&problem, std::iter::once(ActivityId::service(5)), 1, 2);
         assert!(is_valid);
 
         // Test 3: Insert service 4 (tight TW ending at 08:35) before service 0
         // Service 0 arrives at 08:30, so inserting 4 before would push 0 later
         // Service 4 arrives at 08:30 which is before its TW end of 08:35 - valid
         let is_valid =
-            route.is_valid_tw_change(&problem, std::iter::once(ActivityId::Service(4)), 0, 0);
+            route.is_valid_tw_change(&problem, std::iter::once(ActivityId::service(4)), 0, 0);
         assert!(is_valid);
 
         // Test 4: Insert service 4 (tight TW) after service 0
         // After serving 0 (depart 08:40), arrive at 4's location at 09:10
         // But service 4's TW ends at 08:35, so this should be invalid
         let is_valid =
-            route.is_valid_tw_change(&problem, std::iter::once(ActivityId::Service(4)), 1, 1);
+            route.is_valid_tw_change(&problem, std::iter::once(ActivityId::service(4)), 1, 1);
         assert!(!is_valid);
 
         // Test 5: Replace service 0 with service 4
         // Service 4 would arrive at 08:30 (within TW ending 08:35) - valid
         let is_valid =
-            route.is_valid_tw_change(&problem, std::iter::once(ActivityId::Service(4)), 0, 1);
+            route.is_valid_tw_change(&problem, std::iter::once(ActivityId::service(4)), 0, 1);
         assert!(is_valid);
 
         // Test 6: Insert service 5 at end
         // After route 0->1->2, departing at 10:00, arrive at 5 at 10:30
         // Service 5's TW ends at 14:00, so this is valid
         let is_valid =
-            route.is_valid_tw_change(&problem, std::iter::once(ActivityId::Service(5)), 3, 3);
+            route.is_valid_tw_change(&problem, std::iter::once(ActivityId::service(5)), 3, 3);
         assert!(is_valid);
 
         // Test 7: Remove service 0 (replace with nothing)
@@ -1732,7 +1732,7 @@ mod tests {
         // Test 9: Insert 3 and 5, replace 1 by 3
         let is_valid = route.is_valid_tw_change(
             &problem,
-            [ActivityId::Service(3), ActivityId::Service(5)].into_iter(),
+            [ActivityId::service(3), ActivityId::service(5)].into_iter(),
             1,
             2,
         );
@@ -1741,7 +1741,7 @@ mod tests {
         // Test 9: Insert 4 and 5, replace 1 by 4
         let is_valid = route.is_valid_tw_change(
             &problem,
-            [ActivityId::Service(4), ActivityId::Service(5)].into_iter(),
+            [ActivityId::service(4), ActivityId::service(5)].into_iter(),
             1,
             2,
         );

@@ -225,7 +225,7 @@ impl RuinSolution for RuinString {
                 });
 
             if let Some(service_id) = nearest_service_of_different_route {
-                seed_job = service_id.index();
+                seed_job = service_id.job_id();
             } else {
                 // No more services to ruin, break the loop
                 break;
@@ -285,12 +285,12 @@ mod tests {
         assert_eq!(
             solution.route(RouteIdx::new(0)).activity_ids().to_vec(),
             vec![
-                ActivityId::Service(0),
-                ActivityId::Service(3),
-                ActivityId::Service(4),
-                ActivityId::Service(6),
-                ActivityId::Service(7),
-                ActivityId::Service(8)
+                ActivityId::service(0),
+                ActivityId::service(3),
+                ActivityId::service(4),
+                ActivityId::service(6),
+                ActivityId::service(7),
+                ActivityId::service(8)
             ]
         )
     }
@@ -328,10 +328,10 @@ mod tests {
         assert_eq!(
             solution.route(RouteIdx::new(0)).activity_ids().to_vec(),
             vec![
-                ActivityId::Service(0),
-                ActivityId::Service(3),
-                ActivityId::Service(4),
-                ActivityId::Service(8)
+                ActivityId::service(0),
+                ActivityId::service(3),
+                ActivityId::service(4),
+                ActivityId::service(8)
             ]
         )
     }

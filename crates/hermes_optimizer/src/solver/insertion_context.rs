@@ -2,7 +2,8 @@ use jiff::Timestamp;
 
 use crate::{
     problem::{
-        job::ActivityId, service::ServiceId, vehicle_routing_problem::VehicleRoutingProblem,
+        job::{ActivityId, JobIdx},
+        vehicle_routing_problem::VehicleRoutingProblem,
     },
     solver::{
         insertion::{ServiceInsertion, ShipmentInsertion},
@@ -17,18 +18,6 @@ use crate::{
 };
 
 use super::{insertion::Insertion, solution::working_solution::WorkingSolution};
-
-pub struct ActivityInsertionContext {
-    pub service_id: ServiceId,
-    pub arrival_time: Timestamp,
-    pub departure_time: Timestamp,
-}
-
-impl ActivityInsertionContext {
-    pub fn departure_time(&self) -> Timestamp {
-        self.departure_time
-    }
-}
 
 pub struct InsertionContext<'a> {
     pub problem: &'a VehicleRoutingProblem,

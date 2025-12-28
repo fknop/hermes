@@ -123,7 +123,7 @@ impl IntensifyOp for InterRelocateOperator {
                 &Insertion::Service(ServiceInsertion {
                     route_id: self.params.to_route_id,
                     position: self.params.to,
-                    job_index: job_id.index(),
+                    job_index: job_id.job_id(),
                 }),
             );
         }
@@ -192,7 +192,7 @@ mod tests {
                 .route(0.into())
                 .activity_ids()
                 .iter()
-                .map(|activity| activity.index())
+                .map(|activity| activity.job_id().get())
                 .collect::<Vec<_>>(),
             vec![0, 2, 3, 4, 5],
         );
@@ -202,7 +202,7 @@ mod tests {
                 .route(1.into())
                 .activity_ids()
                 .iter()
-                .map(|activity| activity.index())
+                .map(|activity| activity.job_id().get())
                 .collect::<Vec<_>>(),
             vec![6, 7, 8, 9, 1, 10],
         );
@@ -259,7 +259,7 @@ mod tests {
                 .route(0.into())
                 .activity_ids()
                 .iter()
-                .map(|job_id| job_id.index())
+                .map(|job_id| job_id.job_id().get())
                 .collect::<Vec<_>>(),
             vec![1, 2, 3, 4, 5],
         );
@@ -269,7 +269,7 @@ mod tests {
                 .route(1.into())
                 .activity_ids()
                 .iter()
-                .map(|job_id| job_id.index())
+                .map(|job_id| job_id.job_id().get())
                 .collect::<Vec<_>>(),
             vec![10, 6, 7, 8, 9],
         );

@@ -5,8 +5,8 @@ use crate::{
         amount::AmountExpression,
         capacity::Capacity,
         fleet::Fleet,
-        job::{ActivityId, Job, JobTask},
-        service::{Service, ServiceId},
+        job::{ActivityId, Job, JobIdx, JobTask},
+        service::Service,
         shipment::Shipment,
         vehicle_profile::VehicleProfile,
     },
@@ -127,14 +127,11 @@ impl VehicleRoutingProblem {
         })
     }
 
-    pub fn job<Index>(&self, index: Index) -> &Job
-    where
-        Index: Into<usize>,
-    {
-        &self.jobs[index.into()]
+    pub fn job(&self, job_id: JobIdx) -> &Job {
+        &self.jobs[job_id]
     }
 
-    pub fn service(&self, index: usize) -> &Service {
+    pub fn service(&self, index: JobIdx) -> &Service {
         let job = &self.jobs[index];
 
         match job {
@@ -159,11 +156,11 @@ impl VehicleRoutingProblem {
         rng.random_range(0..self.locations.len())
     }
 
-    pub fn random_job<R>(&self, rng: &mut R) -> usize
+    pub fn random_job<R>(&self, rng: &mut R) -> JobIdx
     where
         R: rand::Rng,
     {
-        rng.random_range(0..self.jobs.len())
+        rng.random_range(0..self.jobs.len()).into()
     }
 
     pub fn fleet(&self) -> &Fleet {
@@ -205,7 +202,8 @@ impl VehicleRoutingProblem {
         }
     }
 
-    pub fn service_location(&self, service_id: ServiceId) -> &Location {
+    #[deprecated(note = "use job location instead")]
+    pub fn service_location(&self, service_id: usize) -> &Location {
         if let Job::Service(service) = &self.jobs[service_id] {
             let location_id = service.location_id();
             &self.locations[location_id]
@@ -309,8 +307,8 @@ impl VehicleRoutingProblem {
         self.precomputed_average_cost_from_depot[location_id]
     }
 
-    pub fn normalized_demand(&self, index: usize) -> &Capacity {
-        &self.precomputed_normalized_demands[index]
+    pub fn normalized_demand(&self, index: JobIdx) -> &Capacity {
+        &self.precomputed_normalized_demands[index.get()]
     }
 
     pub fn capacity_dimensions(&self) -> usize {

@@ -1,7 +1,7 @@
 use parking_lot::Mutex;
 use rand::{Rng, SeedableRng, rngs::SmallRng};
 
-use crate::problem::service::ServiceId;
+use crate::problem::job::JobIdx;
 
 pub struct NoiseGenerator {
     rngs: Vec<Mutex<SmallRng>>,
@@ -28,8 +28,8 @@ impl NoiseGenerator {
         }
     }
 
-    pub fn create_noise(&self, index: ServiceId) -> f64 {
-        let mut rng = self.rngs[index].lock();
+    pub fn create_noise(&self, index: JobIdx) -> f64 {
+        let mut rng = self.rngs[index.get()].lock();
 
         if rng.random_bool(self.noise_probability) {
             self.noise_level * self.max_cost * rng.random_range(0.0..=1.0)

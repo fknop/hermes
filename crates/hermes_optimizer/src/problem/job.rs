@@ -3,18 +3,36 @@ use std::fmt::Display;
 use fxhash::FxHashSet;
 use jiff::SignedDuration;
 
-use crate::problem::{
-    capacity::Capacity, service::Service, shipment::Shipment, skill::Skill, time_window::TimeWindow,
+use crate::{
+    define_index_newtype,
+    problem::{
+        capacity::Capacity, service::Service, shipment::Shipment, skill::Skill,
+        time_window::TimeWindow,
+    },
 };
+
+define_index_newtype!(JobIdx, Job);
 
 #[derive(Hash, Debug, Clone, Copy, Eq, PartialEq)]
 pub enum ActivityId {
-    Service(usize),
-    ShipmentPickup(usize),
-    ShipmentDelivery(usize),
+    Service(JobIdx),
+    ShipmentPickup(JobIdx),
+    ShipmentDelivery(JobIdx),
 }
 
 impl ActivityId {
+    pub fn service(idx: impl Into<JobIdx>) -> Self {
+        ActivityId::Service(idx.into())
+    }
+
+    pub fn shipment_pickup(idx: impl Into<JobIdx>) -> Self {
+        ActivityId::ShipmentPickup(idx.into())
+    }
+
+    pub fn shipment_delivery(idx: impl Into<JobIdx>) -> Self {
+        ActivityId::ShipmentDelivery(idx.into())
+    }
+
     pub fn is_shipment(&self) -> bool {
         matches!(
             self,
@@ -22,7 +40,7 @@ impl ActivityId {
         )
     }
 
-    pub fn index(&self) -> usize {
+    pub fn job_id(&self) -> JobIdx {
         match self {
             ActivityId::Service(id) => *id,
             ActivityId::ShipmentPickup(id) => *id,
@@ -41,13 +59,9 @@ impl Display for ActivityId {
     }
 }
 
-impl From<ActivityId> for usize {
-    fn from(job_id: ActivityId) -> Self {
-        match job_id {
-            ActivityId::Service(id) => id,
-            ActivityId::ShipmentPickup(id) => id,
-            ActivityId::ShipmentDelivery(id) => id,
-        }
+impl From<ActivityId> for JobIdx {
+    fn from(activity_id: ActivityId) -> Self {
+        activity_id.job_id()
     }
 }
 

@@ -148,7 +148,7 @@ impl DatasetParser for SolomonParser {
 mod tests {
     use std::env;
 
-    use crate::problem::job::Job;
+    use crate::problem::job::{Job, JobIdx};
 
     use super::*;
 
@@ -180,7 +180,7 @@ mod tests {
 
         // Check one location
         let time_window = vrp
-            .service(9)
+            .service(JobIdx::new(9))
             .time_windows()
             .iter()
             .min_by_key(|tw| tw.start())

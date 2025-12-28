@@ -196,7 +196,7 @@ mod tests {
                 .route(RouteIdx::new(0))
                 .activity_ids()
                 .iter()
-                .map(|activity| activity.index())
+                .map(|activity| activity.job_id().get())
                 .collect::<Vec<_>>(),
             vec![0, 2, 3, 1, 4, 5]
         );
@@ -245,7 +245,7 @@ mod tests {
                 .route(RouteIdx::new(0))
                 .activity_ids()
                 .iter()
-                .map(|activity| activity.index())
+                .map(|activity| activity.job_id().get())
                 .collect::<Vec<_>>(),
             vec![1, 2, 0, 3, 4, 5]
         );
@@ -294,7 +294,7 @@ mod tests {
                 .route(RouteIdx::new(0))
                 .activity_ids()
                 .iter()
-                .map(|activity| activity.index())
+                .map(|activity| activity.job_id().get())
                 .collect::<Vec<_>>(),
             vec![0, 2, 3, 4, 5, 1]
         );
@@ -343,7 +343,7 @@ mod tests {
                 .route(RouteIdx::new(0))
                 .activity_ids()
                 .iter()
-                .map(|activity| activity.index())
+                .map(|activity| activity.job_id().get())
                 .collect::<Vec<_>>(),
             vec![1, 0, 2, 3, 4, 5]
         );
@@ -392,7 +392,7 @@ mod tests {
                 .route(RouteIdx::new(0))
                 .activity_ids()
                 .iter()
-                .map(|activity| activity.index())
+                .map(|activity| activity.job_id().get())
                 .collect::<Vec<_>>(),
             vec![0, 2, 3, 4, 1, 5]
         );

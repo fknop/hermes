@@ -1,7 +1,7 @@
 use jiff::SignedDuration;
 
 use crate::{
-    problem::{amount::AmountExpression, travel_cost_matrix::Distance},
+    problem::{amount::AmountExpression, job::JobIdx, travel_cost_matrix::Distance},
     solver::solution::{route_id::RouteIdx, working_solution::WorkingSolution},
 };
 
@@ -93,17 +93,19 @@ impl RuinSolution for RuinTimeRelated {
                     activity.job_task(context.problem).location_id(),
                 );
 
-                let demand_difference = (solution.problem().normalized_demand(target_activity_id)
+                let demand_difference = (solution
+                    .problem()
+                    .normalized_demand(target_activity.activity_id().job_id())
                     - solution
                         .problem()
-                        .normalized_demand(activity.job_id().index()))
+                        .normalized_demand(activity.activity_id().job_id()))
                 .iter()
                 .map(|value| value.abs())
                 .sum::<f64>()
                     / solution.problem().capacity_dimensions() as f64;
 
                 related_activities.push(RelatednessToTargetActivity {
-                    service_id: activity.job_id().index(),
+                    job_idx: activity.activity_id().job_id(),
                     time: time_difference,
                     distance,
                     normalized_demand: demand_difference,
@@ -129,7 +131,7 @@ impl RuinSolution for RuinTimeRelated {
                 break;
             }
 
-            if solution.remove_service(related_activity.service_id) {
+            if solution.remove_service(related_activity.job_idx) {
                 remaining_to_remove -= 1;
             }
             // solution
@@ -139,7 +141,7 @@ impl RuinSolution for RuinTimeRelated {
 }
 
 struct RelatednessToTargetActivity {
-    service_id: usize,
+    job_idx: JobIdx,
     time: SignedDuration,
     distance: Distance,
     normalized_demand: f64,

@@ -6,7 +6,7 @@ use crate::{
     problem::{
         distance_method::DistanceMethod,
         location::{Location, LocationId},
-        service::{Service, ServiceBuilder, ServiceId},
+        service::{Service, ServiceBuilder},
         travel_cost_matrix::TravelMatrices,
         vehicle::{Vehicle, VehicleBuilder},
         vehicle_profile::VehicleProfile,
@@ -88,7 +88,7 @@ pub fn create_test_problem(
 
 pub struct TestRoute {
     pub vehicle_id: usize,
-    pub service_ids: Vec<ServiceId>,
+    pub service_ids: Vec<usize>,
 }
 
 pub fn create_test_working_solution(
@@ -101,7 +101,7 @@ pub fn create_test_working_solution(
         for (index, &service_id) in route.service_ids.iter().enumerate() {
             solution.insert(&Insertion::Service(ServiceInsertion {
                 route_id: RouteIdx::new(route_id),
-                job_index: service_id,
+                job_index: service_id.into(),
                 position: index,
             }));
         }

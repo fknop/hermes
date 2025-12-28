@@ -109,7 +109,7 @@ impl IntensifyOp for InterSwapOperator {
                 &Insertion::Service(ServiceInsertion {
                     route_id: self.params.first_route_id,
                     position: self.params.first,
-                    job_index: second_job_id.index(),
+                    job_index: second_job_id.job_id(),
                 }),
             );
             solution.route_mut(self.params.second_route_id).insert(
@@ -117,7 +117,7 @@ impl IntensifyOp for InterSwapOperator {
                 &Insertion::Service(ServiceInsertion {
                     route_id: self.params.second_route_id,
                     position: self.params.second,
-                    job_index: first_job_id.index(),
+                    job_index: first_job_id.job_id(),
                 }),
             );
         }
@@ -186,7 +186,7 @@ mod tests {
                 .route(0.into())
                 .activity_ids()
                 .iter()
-                .map(|activity| activity.index())
+                .map(|activity| activity.job_id().get())
                 .collect::<Vec<_>>(),
             vec![0, 9, 2, 3, 4, 5],
         );
@@ -196,7 +196,7 @@ mod tests {
                 .route(1.into())
                 .activity_ids()
                 .iter()
-                .map(|activity| activity.index())
+                .map(|activity| activity.job_id().get())
                 .collect::<Vec<_>>(),
             vec![6, 7, 8, 1, 10],
         );
