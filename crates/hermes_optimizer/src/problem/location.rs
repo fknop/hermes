@@ -1,4 +1,4 @@
-use geo::{Distance, Euclidean, EuclideanDistance};
+use geo::{Bearing, Distance, Euclidean, EuclideanDistance, Haversine, HaversineBearing};
 use serde::Deserialize;
 
 use crate::define_index_newtype;
@@ -6,7 +6,7 @@ use crate::define_index_newtype;
 define_index_newtype!(LocationIdx, Location);
 
 pub struct Location {
-    coord: geo::Coord,
+    point: geo::Point,
 }
 
 const EARTH_RADIUS_METERS: f64 = 6_371_000.0;
@@ -14,35 +14,35 @@ const EARTH_RADIUS_METERS: f64 = 6_371_000.0;
 impl Location {
     pub fn from_cartesian(x: f64, y: f64) -> Self {
         Self {
-            coord: geo::Coord { x, y },
+            point: geo::Point::new(x, y),
         }
     }
 
     pub fn from_lat_lon(lat: f64, lon: f64) -> Self {
         Self {
-            coord: geo::Coord { x: lon, y: lat },
+            point: geo::Point::new(lon, lat),
         }
     }
 
     pub fn x(&self) -> f64 {
-        self.coord.x
+        self.point.x()
     }
 
     pub fn y(&self) -> f64 {
-        self.coord.y
+        self.point.y()
     }
 
     pub fn lon(&self) -> f64 {
-        self.coord.x
+        self.point.x()
     }
 
     pub fn lat(&self) -> f64 {
-        self.coord.y
+        self.point.y()
     }
 
     pub fn euclidean_distance(&self, to: &Location) -> f64 {
         let euclidean = Euclidean;
-        euclidean.distance(self.coord, to.coord)
+        euclidean.distance(&self.point, &to.point)
 
         // let delta_x = self.x - to.x;
         // let delta_y = self.y - to.y;
@@ -50,43 +50,20 @@ impl Location {
     }
 
     pub fn haversine_distance(&self, to: &Location) -> f64 {
-        let lat1_rad = self.lat().to_radians();
-        let lon1_rad = self.lon().to_radians();
-        let lat2_rad = to.lat().to_radians();
-        let lon2_rad = to.lon().to_radians();
+        let haversine = Haversine;
 
-        let delta_lat = lat2_rad - lat1_rad;
-        let delta_lon = lon2_rad - lon1_rad;
-
-        let a = (delta_lat / 2.0).sin().powi(2)
-            + lat1_rad.cos() * lat2_rad.cos() * (delta_lon / 2.0).sin().powi(2);
-        let c = 2.0 * a.sqrt().atan2((1.0 - a).sqrt());
-
-        // Calculate distance
-        EARTH_RADIUS_METERS * c
+        haversine.distance(self.point, to.point)
     }
 
     pub fn bearing(&self, dest: &Self) -> f64 {
-        let lat1_rad = self.lat().to_radians();
-        let lon1_rad = self.lon().to_radians();
-        let lat2_rad = dest.lat().to_radians();
-        let lon2_rad = dest.lon().to_radians();
-
-        let delta_lon = lon2_rad - lon1_rad;
-
-        let y = delta_lon.sin() * lat2_rad.cos();
-        let x = lat1_rad.cos() * lat2_rad.sin() - lat1_rad.sin() * lat2_rad.cos() * delta_lon.cos();
-
-        let bearing_rad = y.atan2(x);
-        let bearing_deg = bearing_rad.to_degrees();
-
-        (bearing_deg + 360.0) % 360.0
+        let haversine = Haversine;
+        haversine.bearing(self.point, dest.point)
     }
 }
 
 impl From<&Location> for geo::Point<f64> {
     fn from(location: &Location) -> Self {
-        geo::Point::new(location.x(), location.y())
+        location.point
     }
 }
 
