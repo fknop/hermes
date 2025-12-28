@@ -7,17 +7,17 @@ use crate::{
     problem::{job::Job, skill::Skill},
 };
 
-use super::{capacity::Capacity, location::LocationId};
+use super::{capacity::Capacity, location::LocationIdx};
 
 define_index_newtype!(VehicleIdx, Vehicle);
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Serialize, Debug, Clone)]
 pub struct Vehicle {
     external_id: String,
     vehicle_profile_id: usize,
     shift: Option<VehicleShift>,
     capacity: Capacity,
-    depot_location_id: Option<usize>,
+    depot_location_id: Option<LocationIdx>,
     depot_duration: Option<SignedDuration>,
     end_depot_duration: Option<SignedDuration>,
     should_return_to_depot: bool,
@@ -33,7 +33,7 @@ impl Vehicle {
         &self.capacity
     }
 
-    pub fn depot_location_id(&self) -> Option<usize> {
+    pub fn depot_location_id(&self) -> Option<LocationIdx> {
         self.depot_location_id
     }
 
@@ -65,16 +65,16 @@ impl Vehicle {
         self.depot_duration.unwrap_or(SignedDuration::ZERO)
     }
 
-    pub fn end_depot_duration(&self) -> SignedDuration {
-        self.end_depot_duration.unwrap_or(SignedDuration::ZERO)
-    }
-
     pub fn set_shift(&mut self, shift: VehicleShift) {
         self.shift = Some(shift);
     }
 
-    pub fn set_depot_location(&mut self, location_id: LocationId) {
-        self.depot_location_id = Some(location_id);
+    pub fn set_depot_location(&mut self, depot_location_id: LocationIdx) {
+        self.depot_location_id = Some(depot_location_id);
+    }
+
+    pub fn end_depot_duration(&self) -> SignedDuration {
+        self.end_depot_duration.unwrap_or(SignedDuration::ZERO)
     }
 
     pub fn is_compatible_with(&self, job: &Job) -> bool {
@@ -221,7 +221,7 @@ impl VehicleBuilder {
                 .expect("Vehicle profile ID is required"),
             shift: self.shift,
             capacity: self.capacity.unwrap_or(Capacity::EMPTY),
-            depot_location_id: self.depot_location_id,
+            depot_location_id: self.depot_location_id.map(|id| id.into()),
             should_return_to_depot: self.should_return_to_depot.unwrap_or(false),
             depot_duration: self.depot_duration,
             end_depot_duration: self.end_depot_duration,

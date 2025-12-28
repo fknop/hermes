@@ -2,7 +2,8 @@ use geo::{Distance, Haversine};
 use rstar::primitives::GeomWithData;
 use rstar::{AABB, Envelope, PointDistance, RTree, RTreeObject};
 
-use crate::problem::job::{ActivityId, EnumerateIdx, Job};
+use crate::problem::job::{ActivityId, Job};
+use crate::utils::enumerate_idx::EnumerateIdx;
 
 use super::distance_method::DistanceMethod;
 use super::location::Location;
@@ -129,58 +130,4 @@ impl ServiceLocationIndex {
 }
 
 #[cfg(test)]
-mod tests {
-
-    use std::{fs::File, io::BufReader};
-
-    use serde::Deserialize;
-    use serde_json;
-
-    use crate::problem::{job::JobIdx, service::Service};
-
-    use super::*;
-
-    #[derive(Deserialize)]
-    struct FileData {
-        locations: Vec<Location>,
-        services: Vec<Service>,
-    }
-
-    fn build_locations_and_services() -> (Vec<Location>, Vec<Service>) {
-        let file = "../../data/optimizer/data.json";
-        let reader = BufReader::new(File::open(file).unwrap());
-
-        let data: FileData = serde_json::from_reader(reader).unwrap();
-
-        (data.locations, data.services)
-    }
-
-    #[test]
-    fn test_service_location_index() {
-        let (locations, services) = build_locations_and_services();
-        let index = ServiceLocationIndex::new(
-            &locations,
-            &services
-                .iter()
-                .cloned()
-                .map(Job::Service)
-                .collect::<Vec<_>>(),
-            DistanceMethod::Haversine,
-        );
-
-        let nearest: Vec<ActivityId> = index
-            .nearest_neighbor_iter(geo::Point::new(locations[0].x(), locations[0].y()))
-            .collect();
-
-        let mut service_ids: Vec<JobIdx> = (0..services.len()).map(|i| i.into()).collect();
-        service_ids.sort_by_key(|&s| {
-            let location_id = services[s.get()].location_id();
-            locations[location_id]
-                .haversine_distance(&locations[0])
-                .round() as i64
-        });
-
-        println!("{nearest:?}");
-        println!("{service_ids:?}");
-    }
-}
+mod tests {}

@@ -6,8 +6,8 @@ use jiff::SignedDuration;
 use crate::{
     define_index_newtype,
     problem::{
-        capacity::Capacity, service::Service, shipment::Shipment, skill::Skill,
-        time_window::TimeWindow,
+        capacity::Capacity, location::LocationIdx, service::Service, shipment::Shipment,
+        skill::Skill, time_window::TimeWindow,
     },
 };
 
@@ -80,7 +80,7 @@ impl JobTask<'_> {
         }
     }
 
-    pub fn location_id(&self) -> usize {
+    pub fn location_id(&self) -> LocationIdx {
         match self {
             JobTask::Service(service) => service.location_id(),
             JobTask::ShipmentPickup(shipment) => shipment.pickup().location_id(),

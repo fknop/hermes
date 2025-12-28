@@ -1,10 +1,9 @@
 use crate::{
     problem::job::{Job, JobIdx},
     solver::solution::{
-        route::WorkingSolutionRoute,
-        route_id::{EnumerateIdx, RouteIdx},
-        working_solution::WorkingSolution,
+        route::WorkingSolutionRoute, route_id::RouteIdx, working_solution::WorkingSolution,
     },
+    utils::enumerate_idx::EnumerateIdx,
 };
 
 #[derive(Clone)]

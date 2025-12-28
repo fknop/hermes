@@ -1,6 +1,9 @@
 use jiff::SignedDuration;
 
-use crate::problem::travel_cost_matrix::{Cost, Distance, TravelMatrices};
+use crate::problem::{
+    location::LocationIdx,
+    travel_cost_matrix::{Cost, Distance, TravelMatrices},
+};
 
 pub struct VehicleProfile {
     external_id: String,
@@ -16,17 +19,17 @@ impl VehicleProfile {
     }
 
     #[inline(always)]
-    pub fn travel_distance(&self, from: usize, to: usize) -> Distance {
+    pub fn travel_distance(&self, from: LocationIdx, to: LocationIdx) -> Distance {
         self.travel_costs.travel_distance(from, to)
     }
 
     #[inline(always)]
-    pub fn travel_time(&self, from: usize, to: usize) -> SignedDuration {
+    pub fn travel_time(&self, from: LocationIdx, to: LocationIdx) -> SignedDuration {
         self.travel_costs.travel_time(from, to)
     }
 
     #[inline(always)]
-    pub fn travel_cost(&self, from: usize, to: usize) -> Cost {
+    pub fn travel_cost(&self, from: LocationIdx, to: LocationIdx) -> Cost {
         self.travel_costs.travel_cost(from, to)
     }
 

@@ -7,7 +7,7 @@ use smallvec::SmallVec;
 
 use crate::problem::skill::Skill;
 
-use super::{capacity::Capacity, location::LocationId, time_window::TimeWindow};
+use super::{capacity::Capacity, location::LocationIdx, time_window::TimeWindow};
 
 #[derive(Deserialize, Serialize, Debug, Copy, Clone, Default, PartialEq, Eq)]
 pub enum ServiceType {
@@ -18,10 +18,10 @@ pub enum ServiceType {
 
 type TimeWindows = SmallVec<[TimeWindow; 1]>;
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Serialize, Debug, Clone)]
 pub struct Service {
     external_id: String,
-    location_id: LocationId,
+    location_id: LocationIdx,
     time_windows: TimeWindows,
     demand: Capacity,
 
@@ -42,7 +42,7 @@ impl Service {
         &self.external_id
     }
 
-    pub fn location_id(&self) -> LocationId {
+    pub fn location_id(&self) -> LocationIdx {
         self.location_id
     }
 
@@ -76,7 +76,7 @@ impl Service {
 #[derive(Default)]
 pub struct ServiceBuilder {
     external_id: Option<String>,
-    location_id: Option<LocationId>,
+    location_id: Option<usize>,
     time_windows: Option<Vec<TimeWindow>>,
     demand: Option<Capacity>,
     skills: Option<Vec<Skill>>,
@@ -95,7 +95,7 @@ impl ServiceBuilder {
         self
     }
 
-    pub fn set_location_id(&mut self, location_id: LocationId) -> &mut ServiceBuilder {
+    pub fn set_location_id(&mut self, location_id: usize) -> &mut ServiceBuilder {
         self.location_id = Some(location_id);
         self
     }
@@ -133,7 +133,7 @@ impl ServiceBuilder {
     pub fn build(self) -> Service {
         Service {
             external_id: self.external_id.expect("Expected service id"),
-            location_id: self.location_id.expect("Expected location id"),
+            location_id: self.location_id.expect("Expected location id").into(),
             demand: self.demand.unwrap_or_default(),
             service_duration: self.service_duration.unwrap_or(SignedDuration::ZERO),
             time_windows: SmallVec::from_vec(self.time_windows.unwrap_or_default()),
@@ -167,7 +167,7 @@ mod tests {
         let service = builder.build();
 
         assert_eq!(service.external_id, String::from("service_id"));
-        assert_eq!(service.location_id, 1);
+        assert_eq!(service.location_id, 1.into());
         assert_eq!(service.service_duration, SignedDuration::ZERO);
         assert_eq!(service.demand, Capacity::from_vec(vec![1.0, 2.0, 3.0]));
     }

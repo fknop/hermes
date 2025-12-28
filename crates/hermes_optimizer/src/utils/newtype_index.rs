@@ -47,33 +47,5 @@ macro_rules! define_index_newtype {
                 &self[index.0]
             }
         }
-
-        pub struct IndexedIter<I> {
-            inner: std::iter::Enumerate<I>,
-            _marker: std::marker::PhantomData<$name>,
-        }
-
-        pub trait EnumerateIdx: Iterator + Sized {
-            fn enumerate_idx(self) -> IndexedIter<Self> {
-                IndexedIter {
-                    inner: self.enumerate(),
-                    _marker: std::marker::PhantomData,
-                }
-            }
-        }
-
-        impl<I: Iterator> EnumerateIdx for I {}
-
-        impl<I: Iterator> Iterator for IndexedIter<I> {
-            type Item = ($name, I::Item);
-
-            fn next(&mut self) -> Option<Self::Item> {
-                self.inner.next().map(|(i, item)| ($name::from(i), item))
-            }
-
-            fn size_hint(&self) -> (usize, Option<usize>) {
-                self.inner.size_hint()
-            }
-        }
     };
 }

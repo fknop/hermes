@@ -3,6 +3,8 @@ use std::{rc::Rc, sync::Arc};
 use jiff::SignedDuration;
 use serde::Deserialize;
 
+use crate::problem::location::LocationIdx;
+
 use super::location::Location;
 
 pub type Distance = f64;
@@ -45,8 +47,8 @@ impl TravelMatrices {
     }
 
     #[inline(always)]
-    fn get_index(&self, from: usize, to: usize) -> usize {
-        from * self.num_locations + to
+    fn get_index(&self, from: LocationIdx, to: LocationIdx) -> usize {
+        from.get() * self.num_locations + to.get()
     }
 
     pub fn from_haversine(locations: &[Location]) -> Self {
@@ -117,7 +119,7 @@ impl TravelMatrices {
     }
 
     #[inline(always)]
-    pub fn travel_distance(&self, from: usize, to: usize) -> Distance {
+    pub fn travel_distance(&self, from: LocationIdx, to: LocationIdx) -> Distance {
         if from == to {
             return 0.0;
         }
@@ -126,7 +128,7 @@ impl TravelMatrices {
     }
 
     #[inline(always)]
-    pub fn travel_time(&self, from: usize, to: usize) -> SignedDuration {
+    pub fn travel_time(&self, from: LocationIdx, to: LocationIdx) -> SignedDuration {
         if from == to {
             return SignedDuration::ZERO;
         }
@@ -135,7 +137,7 @@ impl TravelMatrices {
     }
 
     #[inline(always)]
-    pub fn travel_cost(&self, from: usize, to: usize) -> Cost {
+    pub fn travel_cost(&self, from: LocationIdx, to: LocationIdx) -> Cost {
         if from == to {
             return 0.0;
         }

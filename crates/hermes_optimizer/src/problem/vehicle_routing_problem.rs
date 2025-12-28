@@ -11,12 +11,12 @@ use crate::{
         vehicle_profile::VehicleProfile,
     },
     solver::constraints::transport_cost_constraint::TRANSPORT_COST_WEIGHT,
-    utils::zip_longest::zip_longest,
+    utils::{enumerate_idx::EnumerateIdx, zip_longest::zip_longest},
 };
 
 use super::{
     distance_method::DistanceMethod,
-    location::{Location, LocationId},
+    location::{Location, LocationIdx},
     service_location_index::ServiceLocationIndex,
     travel_cost_matrix::{Cost, Distance},
     vehicle::{Vehicle, VehicleIdx},
@@ -149,11 +149,11 @@ impl VehicleRoutingProblem {
         }
     }
 
-    pub fn random_location<R>(&self, rng: &mut R) -> usize
+    pub fn random_location<R>(&self, rng: &mut R) -> LocationIdx
     where
         R: rand::Rng,
     {
-        rng.random_range(0..self.locations.len())
+        rng.random_range(0..self.locations.len()).into()
     }
 
     pub fn random_job<R>(&self, rng: &mut R) -> JobIdx
@@ -179,7 +179,7 @@ impl VehicleRoutingProblem {
         &self.locations
     }
 
-    pub fn location(&self, location_id: usize) -> &Location {
+    pub fn location(&self, location_id: LocationIdx) -> &Location {
         &self.locations[location_id]
     }
 
@@ -219,7 +219,12 @@ impl VehicleRoutingProblem {
             .map(|location_id| &self.locations[location_id])
     }
 
-    pub fn travel_distance(&self, vehicle: &Vehicle, from: LocationId, to: LocationId) -> Distance {
+    pub fn travel_distance(
+        &self,
+        vehicle: &Vehicle,
+        from: LocationIdx,
+        to: LocationIdx,
+    ) -> Distance {
         let profile_id = vehicle.profile_id();
         self.vehicle_profiles[profile_id].travel_distance(from, to)
     }
@@ -234,14 +239,14 @@ impl VehicleRoutingProblem {
     pub fn travel_time(
         &self,
         vehicle: &Vehicle,
-        from: LocationId,
-        to: LocationId,
+        from: LocationIdx,
+        to: LocationIdx,
     ) -> jiff::SignedDuration {
         let profile_id = vehicle.profile_id();
         self.vehicle_profiles[profile_id].travel_time(from, to)
     }
 
-    pub fn travel_cost(&self, vehicle: &Vehicle, from: LocationId, to: LocationId) -> Cost {
+    pub fn travel_cost(&self, vehicle: &Vehicle, from: LocationIdx, to: LocationIdx) -> Cost {
         let profile_id = vehicle.profile_id();
         self.vehicle_profiles[profile_id].travel_cost(from, to)
     }
@@ -249,8 +254,8 @@ impl VehicleRoutingProblem {
     pub fn travel_cost_or_zero(
         &self,
         vehicle: &Vehicle,
-        from: Option<LocationId>,
-        to: Option<LocationId>,
+        from: Option<LocationIdx>,
+        to: Option<LocationIdx>,
     ) -> Cost {
         if let (Some(from), Some(to)) = (from, to) {
             self.travel_cost(vehicle, from, to)
@@ -279,7 +284,10 @@ impl VehicleRoutingProblem {
         100000.0 //self.max_cost() // Placeholder for the static cost of a route
     }
 
-    pub fn nearest_jobs_of_location(&self, location_id: usize) -> impl Iterator<Item = ActivityId> {
+    pub fn nearest_jobs_of_location(
+        &self,
+        location_id: LocationIdx,
+    ) -> impl Iterator<Item = ActivityId> {
         let location = &self.locations[location_id];
         self.service_location_index.nearest_neighbor_iter(location)
     }
@@ -303,8 +311,8 @@ impl VehicleRoutingProblem {
         self.has_capacity
     }
 
-    pub fn average_cost_from_depot(&self, location_id: LocationId) -> Distance {
-        self.precomputed_average_cost_from_depot[location_id]
+    pub fn average_cost_from_depot(&self, location_id: LocationIdx) -> Distance {
+        self.precomputed_average_cost_from_depot[location_id.get()]
     }
 
     pub fn normalized_demand(&self, index: JobIdx) -> &Capacity {
@@ -490,14 +498,14 @@ impl VehicleRoutingProblemBuilder {
         let locations = self.locations.expect("Expected list of locations");
         let services = self.services.expect("Expected list of services");
 
-        for (index, location) in locations.iter().enumerate() {
+        for (index, location) in locations.iter().enumerate_idx() {
             if location.id() != index {
                 panic!("Location IDs must be sequential starting from 0");
             }
         }
 
         for service in services.iter() {
-            if service.location_id() >= locations.len() {
+            if service.location_id().get() >= locations.len() {
                 panic!("Service location_id must be within the range of locations");
             }
         }

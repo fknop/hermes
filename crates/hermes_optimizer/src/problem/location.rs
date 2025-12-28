@@ -1,29 +1,36 @@
 use serde::Deserialize;
 
-pub type LocationId = usize;
+use crate::define_index_newtype;
 
-#[derive(Deserialize)]
+define_index_newtype!(LocationIdx, Location);
+
 pub struct Location {
     /// id is the index of the location in the locations list
-    id: LocationId,
-    #[serde(alias = "lon")]
+    id: LocationIdx,
     x: f64,
-    #[serde(alias = "lat")]
     y: f64,
 }
 
 const EARTH_RADIUS_METERS: f64 = 6_371_000.0;
 
 impl Location {
-    pub fn from_cartesian(id: LocationId, x: f64, y: f64) -> Self {
-        Self { id, x, y }
+    pub fn from_cartesian<Id: Into<LocationIdx>>(id: Id, x: f64, y: f64) -> Self {
+        Self {
+            id: id.into(),
+            x,
+            y,
+        }
     }
 
-    pub fn from_lat_lon(id: LocationId, lat: f64, lon: f64) -> Self {
-        Self { id, x: lon, y: lat }
+    pub fn from_lat_lon<Id: Into<LocationIdx>>(id: Id, lat: f64, lon: f64) -> Self {
+        Self {
+            id: id.into(),
+            x: lon,
+            y: lat,
+        }
     }
 
-    pub fn id(&self) -> LocationId {
+    pub fn id(&self) -> LocationIdx {
         self.id
     }
 

@@ -110,7 +110,7 @@ impl DatasetParser for SolomonParser {
                         .set_earliest_start(Timestamp::from_second(ready_time)?)
                         .set_latest_end(Timestamp::from_second(due_time)?);
                     vehicle.set_shift(shift_builder.build());
-                    vehicle.set_depot_location(location_id);
+                    vehicle.set_depot_location(location_id.into());
                 }
             } else {
                 let mut service_builder = ServiceBuilder::default();
@@ -164,7 +164,7 @@ mod tests {
         assert_eq!(vrp.vehicles().len(), 25);
 
         for vehicle in vrp.vehicles() {
-            assert_eq!(vehicle.depot_location_id(), Some(0));
+            assert_eq!(vehicle.depot_location_id(), Some(0.into()));
             assert_eq!(*vehicle.capacity(), Capacity::from_vec(vec![200.0]));
         }
 

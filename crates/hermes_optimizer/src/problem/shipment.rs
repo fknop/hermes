@@ -1,18 +1,18 @@
 use fxhash::FxHashSet;
 use jiff::SignedDuration;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use smallvec::SmallVec;
 
 use crate::problem::{
-    capacity::Capacity, location::LocationId, skill::Skill, time_window::TimeWindow,
+    capacity::Capacity, location::LocationIdx, skill::Skill, time_window::TimeWindow,
 };
 
 type TimeWindows = SmallVec<[TimeWindow; 1]>;
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Serialize, Debug, Clone)]
 pub struct ShipmentLocation {
     duration: SignedDuration,
-    location_id: LocationId,
+    location_id: LocationIdx,
     time_windows: TimeWindows,
 }
 
@@ -21,7 +21,7 @@ impl ShipmentLocation {
         self.duration
     }
 
-    pub fn location_id(&self) -> LocationId {
+    pub fn location_id(&self) -> LocationIdx {
         self.location_id
     }
 
@@ -40,7 +40,7 @@ impl ShipmentLocation {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Serialize, Debug, Clone)]
 pub struct Shipment {
     external_id: String,
     demand: Capacity,

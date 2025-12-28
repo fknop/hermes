@@ -6,7 +6,11 @@ use rand::rngs::SmallRng;
 
 use crate::{
     problem::{
-        amount::AmountExpression, capacity::Capacity, job::JobIdx, service::ServiceType,
+        amount::AmountExpression,
+        capacity::Capacity,
+        job::{Job, JobIdx},
+        location::{Location, LocationIdx},
+        service::ServiceType,
         vehicle_routing_problem::VehicleRoutingProblem,
     },
     solver::{
@@ -18,6 +22,7 @@ use crate::{
         },
         solution::{route_id::RouteIdx, working_solution::WorkingSolution},
     },
+    utils::enumerate_idx::EnumerateIdx,
 };
 
 /// Kmin = Q / D where Q = total demand and D = vehicle capacity
@@ -55,7 +60,7 @@ fn find_minimum_vehicles(problem: &VehicleRoutingProblem) -> usize {
     minimum_vehicles
 }
 
-fn compute_convex_hull(problem: &VehicleRoutingProblem) -> (Vec<usize>, Vec<JobIdx>) {
+fn compute_convex_hull(problem: &VehicleRoutingProblem) -> (Vec<JobIdx>, Vec<JobIdx>) {
     let points = geo::MultiPoint::from(
         problem
             .services_iter()
@@ -67,7 +72,7 @@ fn compute_convex_hull(problem: &VehicleRoutingProblem) -> (Vec<usize>, Vec<JobI
     );
     let convex_hull = points.convex_hull();
 
-    let exterior: Vec<usize> = convex_hull
+    let exterior: Vec<JobIdx> = convex_hull
         .exterior()
         .points()
         .filter_map(|point| {
@@ -77,11 +82,25 @@ fn compute_convex_hull(problem: &VehicleRoutingProblem) -> (Vec<usize>, Vec<JobI
                 .find(|location| location.x() == point.x() && location.y() == point.y())
                 .map(|location| location.id())
         })
+        .flat_map(|location_id| {
+            problem
+                .jobs()
+                .iter()
+                .enumerate_idx()
+                .filter(move |(_, job)| match job {
+                    Job::Service(service) => service.location_id() == location_id,
+                    Job::Shipment(shipment) => {
+                        shipment.pickup().location_id() == location_id
+                            || shipment.delivery().location_id() == location_id
+                    }
+                })
+                .map(|(idx, _)| idx)
+        })
         .collect();
 
     let interior: Vec<JobIdx> = (0..problem.jobs().len())
         .map(|i| JobIdx::new(i))
-        .filter(|i| !exterior.contains(&problem.service_location(i.get()).id()))
+        .filter(|i| !exterior.contains(i))
         .collect();
 
     (exterior, interior)
@@ -134,7 +153,7 @@ fn create_initial_routes(problem: &VehicleRoutingProblem, solution: &mut Working
         urgency_a.cmp(&urgency_b)
     });
 
-    let mut seed_customers: Vec<usize> = Vec::with_capacity(k_min);
+    let mut seed_customers: Vec<JobIdx> = Vec::with_capacity(k_min);
     let first_seed = exterior
         .iter()
         .cloned()
@@ -143,12 +162,14 @@ fn create_initial_routes(problem: &VehicleRoutingProblem, solution: &mut Working
                 .travel_cost(
                     problem.vehicle(0.into()),
                     depot_id,
-                    problem.service_location(first).id(),
+                    // TODO: support shipment
+                    problem.service_location(first.get()).id(),
                 )
                 .partial_cmp(&problem.travel_cost(
                     problem.vehicle(0.into()),
                     depot_id,
-                    problem.service_location(second).id(),
+                    // TODO: support shipment
+                    problem.service_location(second.get()).id(),
                 ))
                 .unwrap()
         })
@@ -158,15 +179,27 @@ fn create_initial_routes(problem: &VehicleRoutingProblem, solution: &mut Working
 
     while seed_customers.len() < k_min && (!exterior.is_empty() || !interior.is_empty()) {
         let candidate_j = exterior.iter().cloned().max_by(|&a, &b| {
-            let location_id_a = problem.service_location(a).id();
-            let location_id_b = problem.service_location(b).id();
+            let location_id_a = problem.service_location(a.get()).id();
+            let location_id_b = problem.service_location(b.get()).id();
             let sum_dist_a = seed_customers
                 .iter()
-                .map(|&seed| problem.travel_cost(problem.vehicle(0.into()), location_id_a, seed))
+                .map(|&seed| {
+                    problem.travel_cost(
+                        problem.vehicle(0.into()),
+                        location_id_a,
+                        problem.service(seed).location_id(),
+                    )
+                })
                 .sum::<f64>();
             let sum_dist_b = seed_customers
                 .iter()
-                .map(|&seed| problem.travel_cost(problem.vehicle(0.into()), location_id_b, seed))
+                .map(|&seed| {
+                    problem.travel_cost(
+                        problem.vehicle(0.into()),
+                        location_id_b,
+                        problem.service(seed).location_id(),
+                    )
+                })
                 .sum::<f64>();
 
             sum_dist_a.partial_cmp(&sum_dist_b).unwrap()
@@ -180,8 +213,8 @@ fn create_initial_routes(problem: &VehicleRoutingProblem, solution: &mut Working
                 .map(|&seed| {
                     problem.travel_cost(
                         problem.vehicle(0.into()),
-                        problem.service_location(j).id(),
-                        problem.service_location(seed).id(),
+                        problem.service(j).location_id(),
+                        problem.service(seed).location_id(),
                     )
                 })
                 .fold(f64::INFINITY, f64::min)
@@ -193,8 +226,8 @@ fn create_initial_routes(problem: &VehicleRoutingProblem, solution: &mut Working
                 .map(|&seed| {
                     problem.travel_cost(
                         problem.vehicle(0.into()),
-                        problem.service_location(i.get()).id(),
-                        problem.service_location(seed).id(),
+                        problem.service(i).location_id(),
+                        problem.service(seed).location_id(),
                     )
                 })
                 .fold(f64::INFINITY, f64::min)
@@ -213,7 +246,7 @@ fn create_initial_routes(problem: &VehicleRoutingProblem, solution: &mut Working
             exterior.retain(|&e| e != j);
         } else {
             let i = candidate_i.unwrap();
-            seed_customers.push(i.get());
+            seed_customers.push(i);
             interior.remove(0);
         }
     }
@@ -222,7 +255,7 @@ fn create_initial_routes(problem: &VehicleRoutingProblem, solution: &mut Working
         let vehicle_id = solution.available_vehicles_for_insertion().next().unwrap();
         solution.insert(&Insertion::Service(ServiceInsertion {
             route_id: RouteIdx::new(vehicle_id.get()), // TODO: won't work
-            job_index: JobIdx::new(customer),
+            job_index: customer,
             position: 0,
         }));
     }

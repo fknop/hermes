@@ -6,6 +6,7 @@ use crate::{
         amount::AmountExpression,
         capacity::{Capacity, is_capacity_satisfied},
         job::{ActivityId, Job, JobIdx, JobTask},
+        location::LocationIdx,
         service::{Service, ServiceType},
         vehicle::{Vehicle, VehicleIdx},
         vehicle_routing_problem::VehicleRoutingProblem,
@@ -173,7 +174,7 @@ impl WorkingSolutionRoute {
         vehicle.depot_location_id().is_some() && vehicle.should_return_to_depot()
     }
 
-    pub fn compute_location_ids(&self, problem: &VehicleRoutingProblem) -> Vec<usize> {
+    pub fn compute_location_ids(&self, problem: &VehicleRoutingProblem) -> Vec<LocationIdx> {
         let mut location_ids = vec![];
 
         if self.has_start(problem)
@@ -439,7 +440,11 @@ impl WorkingSolutionRoute {
         max_load
     }
 
-    pub fn location_id(&self, problem: &VehicleRoutingProblem, position: usize) -> Option<usize> {
+    pub fn location_id(
+        &self,
+        problem: &VehicleRoutingProblem,
+        position: usize,
+    ) -> Option<LocationIdx> {
         self.activity_ids
             .get(position)
             .map(|&job_id| problem.job_task(job_id).location_id())
@@ -449,7 +454,7 @@ impl WorkingSolutionRoute {
         &self,
         problem: &VehicleRoutingProblem,
         position: usize,
-    ) -> Option<usize> {
+    ) -> Option<LocationIdx> {
         if position == 0 {
             let vehicle = self.vehicle(problem);
             vehicle.depot_location_id()
@@ -468,7 +473,7 @@ impl WorkingSolutionRoute {
         &self,
         problem: &VehicleRoutingProblem,
         position: usize,
-    ) -> Option<usize> {
+    ) -> Option<LocationIdx> {
         let next_job_id = self.activity_ids.get(position + 1);
 
         match next_job_id {
