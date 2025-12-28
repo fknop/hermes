@@ -1,6 +1,6 @@
 use geojson::Feature;
 use hermes_optimizer::{
-    problem::{capacity::Capacity, service::ServiceId, vehicle::VehicleIdx},
+    problem::{capacity::Capacity, job::JobIdx, vehicle::VehicleIdx},
     solver::score::{Score, ScoreAnalysis},
 };
 use jiff::{SignedDuration, Timestamp};
@@ -8,7 +8,7 @@ use serde::Serialize;
 
 #[derive(Serialize)]
 pub struct ApiServiceActivity {
-    pub service_id: ServiceId,
+    pub service_id: JobIdx,
     pub arrival_time: Timestamp,
     pub departure_time: Timestamp,
     pub waiting_duration: SignedDuration,

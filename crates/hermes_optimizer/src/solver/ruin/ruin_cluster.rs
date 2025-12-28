@@ -27,11 +27,11 @@ impl RuinSolution for RuinCluster {
     {
         let mut ruined_routes: FxHashSet<RouteIdx> = FxHashSet::default();
 
-        let mut target_service_id = problem.random_job(rng);
+        let mut target_job_id = problem.random_job(rng);
         let mut remaining_to_remove = num_jobs_to_remove;
 
         while remaining_to_remove > 0 {
-            let route_id = solution.route_of_service(target_service_id).unwrap();
+            let route_id = solution.route_of_job(target_job_id).unwrap();
 
             let service_ids = solution
                 .route(route_id)
@@ -62,13 +62,13 @@ impl RuinSolution for RuinCluster {
             }
 
             if remaining_to_remove > 0 {
-                if let Some(new_service_id) = solution
+                if let Some(new_job_id) = solution
                     .problem()
                     .nearest_jobs(ActivityId::Service(
                         removed_service_ids.choose(rng).cloned().unwrap(),
                     ))
-                    .find(|&service_id| {
-                        let route_id = solution.route_of_service(service_id.job_id());
+                    .find(|&activity_id| {
+                        let route_id = solution.route_of_job(activity_id.job_id());
                         if let Some(route_id) = route_id {
                             !ruined_routes.contains(&route_id)
                         } else {
@@ -76,7 +76,7 @@ impl RuinSolution for RuinCluster {
                         }
                     })
                 {
-                    target_service_id = new_service_id.job_id();
+                    target_job_id = new_job_id.job_id();
                 } else {
                     // No more services to ruin, exit the loop
                     break;

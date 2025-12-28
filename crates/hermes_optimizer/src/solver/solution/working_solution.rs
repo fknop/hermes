@@ -13,6 +13,7 @@ use crate::{
         insertion::Insertion,
         solution::{route::WorkingSolutionRoute, route_id::RouteIdx},
     },
+    utils::enumerate_idx::EnumerateIdx,
 };
 
 #[derive(Clone)]
@@ -161,20 +162,23 @@ impl WorkingSolution {
             .map(|(index, _)| RouteIdx::new(index))
     }
 
-    #[deprecated(note = "use route_of_job instead")]
-    pub fn route_of_service(&self, service_id: JobIdx) -> Option<RouteIdx> {
+    pub fn route_of_job(&self, job_id: JobIdx) -> Option<RouteIdx> {
         self.routes
             .iter()
-            .enumerate()
-            .find(|(_, route)| route.contains_job(ActivityId::Service(service_id)))
-            .map(|(index, _)| RouteIdx::new(index))
+            .enumerate_idx()
+            .find(|(_, route)| {
+                route
+                    .activities_iter()
+                    .any(|activity| activity.activity_id().job_id() == job_id)
+            })
+            .map(|(index, _)| index)
     }
 
-    pub fn route_of_job(&self, activity_id: ActivityId) -> Option<RouteIdx> {
+    pub fn route_of_activity(&self, activity_id: ActivityId) -> Option<RouteIdx> {
         self.routes
             .iter()
             .enumerate()
-            .find(|(_, route)| route.contains_job(activity_id))
+            .find(|(_, route)| route.contains_activity(activity_id))
             .map(|(index, _)| RouteIdx::new(index))
     }
 
@@ -223,7 +227,7 @@ impl WorkingSolution {
     pub fn remove_service_from_route(&mut self, route_id: usize, service_id: JobIdx) -> bool {
         let mut removed = false;
         let route = &mut self.routes[route_id];
-        if route.contains_job(ActivityId::Service(service_id)) {
+        if route.contains_activity(ActivityId::Service(service_id)) {
             removed = route.remove_job(&self.problem, ActivityId::Service(service_id));
 
             if removed {

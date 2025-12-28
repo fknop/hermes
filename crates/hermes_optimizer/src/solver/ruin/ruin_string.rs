@@ -192,7 +192,7 @@ impl RuinSolution for RuinString {
         let mut seed_job = context.problem.random_job(context.rng);
 
         while ruined_routes.len() < k {
-            let route_to_ruin = solution.route_of_service(seed_job);
+            let route_to_ruin = solution.route_of_job(seed_job);
 
             if let Some(route_id) = route_to_ruin {
                 if context.rng.random_bool(0.5) {
@@ -209,7 +209,7 @@ impl RuinSolution for RuinString {
                 .problem
                 .nearest_jobs(ActivityId::Service(seed_job))
                 .find(|&job_id| {
-                    if let Some(route_id) = solution.route_of_job(job_id) {
+                    if let Some(route_id) = solution.route_of_activity(job_id) {
                         // TODO: tests intersection, it maybe be too restrictive
                         let intersects = match route_to_ruin {
                             Some(ruined_route) => solution

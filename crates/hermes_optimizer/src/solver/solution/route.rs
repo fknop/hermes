@@ -160,7 +160,7 @@ impl WorkingSolutionRoute {
         &self.pickup_load_slack
     }
 
-    pub fn contains_job(&self, job_id: ActivityId) -> bool {
+    pub fn contains_activity(&self, job_id: ActivityId) -> bool {
         self.jobs.contains_key(&job_id)
     }
 
@@ -520,7 +520,7 @@ impl WorkingSolutionRoute {
     }
 
     pub fn remove_job(&mut self, problem: &VehicleRoutingProblem, job_id: ActivityId) -> bool {
-        if !self.contains_job(job_id) {
+        if !self.contains_activity(job_id) {
             return false; // Service is not in the route
         }
 

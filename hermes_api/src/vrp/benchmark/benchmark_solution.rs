@@ -1,5 +1,5 @@
 use hermes_optimizer::{
-    problem::{capacity::Capacity, service::ServiceId, vehicle::VehicleIdx},
+    problem::{capacity::Capacity, job::JobIdx, vehicle::VehicleIdx},
     solver::score::{Score, ScoreAnalysis},
 };
 use jiff::SignedDuration;
@@ -7,7 +7,7 @@ use serde::Serialize;
 
 #[derive(Serialize)]
 pub struct BenchmarkServiceActivity {
-    pub service_id: ServiceId,
+    pub service_id: JobIdx,
 }
 
 #[derive(Serialize)]
