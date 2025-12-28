@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
-use fxhash::FxHashSet;
+use fxhash::{FxHashMap, FxHashSet};
 use rand::seq::IteratorRandom;
 
 use crate::{
     problem::{
         job::{ActivityId, JobIdx},
-        vehicle::VehicleIdx,
+        vehicle::{Vehicle, VehicleIdx},
         vehicle_routing_problem::VehicleRoutingProblem,
     },
     solver::{
@@ -20,6 +20,7 @@ use crate::{
 pub struct WorkingSolution {
     problem: Arc<VehicleRoutingProblem>,
     routes: Vec<WorkingSolutionRoute>,
+    vehicle_route_map: FxHashMap<VehicleIdx, FxHashSet<RouteIdx>>,
     unassigned_jobs: FxHashSet<JobIdx>,
 }
 
@@ -28,17 +29,48 @@ impl WorkingSolution {
         let routes = problem
             .vehicles()
             .iter()
-            .enumerate()
-            .map(|(vehicle_id, _)| {
-                WorkingSolutionRoute::empty(&problem, VehicleIdx::new(vehicle_id))
+            .enumerate_idx()
+            .map(|(vehicle_id, _)| WorkingSolutionRoute::empty(&problem, vehicle_id))
+            .collect::<Vec<_>>();
+        let unassigned_jobs = (0..problem.jobs().len()).map(JobIdx::new).collect();
+
+        let vehicle_route_map = problem
+            .vehicles()
+            .iter()
+            .enumerate_idx()
+            .map(|(vehicle_id, _): (VehicleIdx, &Vehicle)| {
+                let mut set = FxHashSet::default();
+                set.insert(RouteIdx::new(vehicle_id.get()));
+                (vehicle_id, set)
             })
-            .collect();
-        let unassigned_jobs = (0..problem.jobs().len()).map(|i| JobIdx::new(i)).collect();
+            .collect::<FxHashMap<VehicleIdx, FxHashSet<RouteIdx>>>();
 
         WorkingSolution {
             problem,
             routes,
             unassigned_jobs,
+            vehicle_route_map,
+        }
+    }
+
+    fn create_additional_route(&mut self, vehicle_id: VehicleIdx) {
+        // Don't create an additional route if the fleet is not infinite
+        if !self.problem.fleet().is_infinite() {
+            return;
+        }
+
+        let route = WorkingSolutionRoute::empty(&self.problem, vehicle_id);
+        let route_id = RouteIdx::new(route.len());
+        self.routes.push(route);
+
+        if let Some(route_ids) = self.vehicle_route_map.get_mut(&vehicle_id) {
+            let has_empty_route = route_ids
+                .iter()
+                .all(|&route_id| self.routes[route_id].is_empty());
+
+            if !has_empty_route {
+                route_ids.insert(route_id);
+            }
         }
     }
 
@@ -186,8 +218,15 @@ impl WorkingSolution {
         match insertion {
             Insertion::Service(context) => {
                 let route = &mut self.routes[context.route_id];
+                let is_currently_empty = route.is_empty();
+                let vehicle_id = route.vehicle_id;
+
                 route.insert(&self.problem, insertion);
                 self.unassigned_jobs.remove(&context.job_index);
+
+                if is_currently_empty {
+                    self.create_additional_route(vehicle_id);
+                }
             }
             Insertion::Shipment(context) => {
                 unimplemented!()

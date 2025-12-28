@@ -111,7 +111,7 @@ impl WorkingSolutionRoute {
             pickup_load_slack: problem.vehicle(vehicle_id).capacity().clone(),
         };
 
-        route.resize_data(problem);
+        route.update_activity_data(problem);
 
         route
     }

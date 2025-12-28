@@ -23,7 +23,7 @@ pub fn create_location_grid(rows: usize, cols: usize) -> Vec<Location> {
 
     for y in 0..rows {
         for x in 0..cols {
-            let location = Location::from_cartesian(locations.len(), x as f64, y as f64);
+            let location = Location::from_cartesian(x as f64, y as f64);
             locations.push(location);
         }
     }
@@ -34,8 +34,7 @@ pub fn create_location_grid(rows: usize, cols: usize) -> Vec<Location> {
 pub fn create_locations(locations: Vec<(f64, f64)>) -> Vec<Location> {
     locations
         .iter()
-        .enumerate()
-        .map(|(index, &(x, y))| Location::from_cartesian(index, x, y))
+        .map(|&(x, y)| Location::from_cartesian(x, y))
         .collect()
 }
 
