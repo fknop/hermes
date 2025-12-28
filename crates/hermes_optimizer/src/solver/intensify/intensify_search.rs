@@ -18,23 +18,23 @@ use crate::{
             swap::{SwapOperator, SwapOperatorParams},
             two_opt::{TwoOptOperator, TwoOptParams},
         },
-        solution::working_solution::WorkingSolution,
+        solution::{route_id::RouteIdx, working_solution::WorkingSolution},
     },
 };
 
 macro_rules! temporary_vehicle_id_index {
     ($t:ty, $output:ty) => {
         // Temporary VehicleId Index
-        impl std::ops::Index<VehicleIdx> for $t {
+        impl std::ops::Index<RouteIdx> for $t {
             type Output = $output;
-            fn index(&self, index: VehicleIdx) -> &Self::Output {
+            fn index(&self, index: RouteIdx) -> &Self::Output {
                 &self[index.get()]
             }
         }
 
         // Temporary VehicleId IndexMut
-        impl std::ops::IndexMut<VehicleIdx> for $t {
-            fn index_mut(&mut self, index: VehicleIdx) -> &mut Self::Output {
+        impl std::ops::IndexMut<RouteIdx> for $t {
+            fn index_mut(&mut self, index: RouteIdx) -> &mut Self::Output {
                 &mut self[index.get()]
             }
         }
@@ -49,10 +49,10 @@ temporary_vehicle_id_index!(
     Vec<Option<IntensifyOperator>>
 );
 
-type VehiclePair = (VehicleIdx, VehicleIdx);
+type RoutePair = (RouteIdx, RouteIdx);
 
 pub struct IntensifySearch {
-    pairs: Vec<VehiclePair>,
+    pairs: Vec<RoutePair>,
     deltas: Vec<Vec<f64>>,
     best_ops: Vec<Vec<Option<IntensifyOperator>>>,
 }
@@ -60,22 +60,22 @@ pub struct IntensifySearch {
 const MAX_DELTA: f64 = 0.0;
 
 impl IntensifySearch {
-    pub fn new(problem: &VehicleRoutingProblem) -> Self {
-        let vehicle_count = problem.vehicles().len();
-        let mut deltas = Vec::with_capacity(vehicle_count);
-        let mut best_ops: Vec<Vec<Option<IntensifyOperator>>> = Vec::with_capacity(vehicle_count);
+    pub fn new(solution: &WorkingSolution) -> Self {
+        let route_count = solution.routes().len();
+        let mut deltas = Vec::with_capacity(route_count);
+        let mut best_ops: Vec<Vec<Option<IntensifyOperator>>> = Vec::with_capacity(route_count);
 
-        for _ in 0..vehicle_count {
-            deltas.push(vec![MAX_DELTA; vehicle_count]);
+        for _ in 0..route_count {
+            deltas.push(vec![MAX_DELTA; route_count]);
 
-            let mut inner = Vec::with_capacity(vehicle_count);
-            inner.resize_with(vehicle_count, || None);
+            let mut inner = Vec::with_capacity(route_count);
+            inner.resize_with(route_count, || None);
             best_ops.push(inner);
         }
 
-        let mut pairs = Vec::with_capacity(vehicle_count * vehicle_count);
-        for i in 0..vehicle_count {
-            for j in 0..vehicle_count {
+        let mut pairs = Vec::with_capacity(route_count * route_count);
+        for i in 0..route_count {
+            for j in 0..route_count {
                 pairs.push((i.into(), j.into()))
             }
         }
@@ -108,12 +108,12 @@ impl IntensifySearch {
         solution: &mut WorkingSolution,
     ) -> bool {
         // TwoOptOperator
-        for &(v1, v2) in &self.pairs {
-            if v1 != v2 {
+        for &(r1, r2) in &self.pairs {
+            if r1 != r2 {
                 continue;
             }
 
-            let route = solution.route(v1.into());
+            let route = solution.route(r1.into());
 
             if route.len() < 4 {
                 continue; // need at least 4 activities to perform 2-opt
@@ -122,15 +122,15 @@ impl IntensifySearch {
             for from in 0..route.activity_ids().len() - 2 {
                 for to in (from + 2)..route.activity_ids().len() {
                     let op = TwoOptOperator::new(TwoOptParams {
-                        route_id: v1.into(),
+                        route_id: r1.into(),
                         from,
                         to,
                     });
 
                     let delta = op.delta(solution);
-                    if delta < self.deltas[v1][v2] && op.is_valid(solution) {
-                        self.deltas[v1][v2] = delta;
-                        self.best_ops[v1][v2] = Some(IntensifyOperator::TwoOpt(op));
+                    if delta < self.deltas[r1][r2] && op.is_valid(solution) {
+                        self.deltas[r1][r2] = delta;
+                        self.best_ops[r1][r2] = Some(IntensifyOperator::TwoOpt(op));
                     }
                 }
             }
@@ -438,10 +438,10 @@ impl IntensifySearch {
                     self.best_ops[i][updated_route.get()] = None;
 
                     self.pairs
-                        .push((VehicleIdx::new(i), VehicleIdx::new(updated_route.get())));
+                        .push((RouteIdx::new(i), RouteIdx::new(updated_route.get())));
                     if i != updated_route.get() {
                         self.pairs
-                            .push((VehicleIdx::new(updated_route.get()), VehicleIdx::new(i)));
+                            .push((RouteIdx::new(updated_route.get()), RouteIdx::new(i)));
                     }
                 }
             }

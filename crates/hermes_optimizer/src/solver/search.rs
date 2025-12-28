@@ -298,8 +298,6 @@ impl Search {
                             let should_intensify =  state.iterations_without_improvement > 500 && state.iteration - state.last_intensify_iteration.unwrap_or(0) > 1000;
 
                             if should_intensify {
-                                let mut intensify_search = IntensifySearch::new(&self.problem);
-
                                 let best_selector = SelectBestSelector;
                                 let (mut working_solution, current_score) = {
                                     let solutions_guard = state.best_solutions.read();
@@ -317,7 +315,7 @@ impl Search {
 
 
                                 let max_intensify_iterations = 1500.min(max_iterations.unwrap_or(usize::MAX) - state.iteration);
-
+                                let mut intensify_search = IntensifySearch::new(&working_solution);
                                 let iterations = intensify_search.intensify(&self.problem, &mut working_solution, max_intensify_iterations);
 
                                 state.iteration += iterations;
