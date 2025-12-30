@@ -8,7 +8,7 @@ use crate::travel_matrices::TravelMatrices;
 
 pub type GHPoint = [f64; 2];
 
-#[derive(Deserialize, Copy, Clone)]
+#[derive(Deserialize, Serialize, Copy, Clone, Hash)]
 #[serde(rename_all = "snake_case")]
 pub enum GraphHopperProfile {
     Car,

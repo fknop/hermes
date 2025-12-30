@@ -1,5 +1,6 @@
 use crate::{
     as_the_crow_flies::as_the_crow_flies_matrices,
+    cache::{cache_matrices, get_cached_matrices},
     graphhopper_api::{GraphHopperMatrixClient, GraphhopperMatrixClientParams},
     travel_matrices::TravelMatrices,
     travel_matrix_provider::TravelMatrixProvider,
@@ -22,10 +23,22 @@ impl TravelMatrixClient {
     where
         for<'a> &'a P: Into<geo_types::Point>,
     {
+        let cached_results = get_cached_matrices(points, &provider);
+
+        if let Ok(Some(results)) = cached_results {
+            return Ok(results);
+        }
+
         match provider {
             TravelMatrixProvider::GraphHopperApi {
                 gh_profile: profile,
-            } => self.graphhopper_client.fetch_matrix(points, profile).await,
+            } => self
+                .graphhopper_client
+                .fetch_matrix(points, profile)
+                .await
+                .inspect(|result| {
+                    cache_matrices(points, &provider, &result);
+                }),
             TravelMatrixProvider::AsTheCrowFlies { speed_kmh } => {
                 Ok(as_the_crow_flies_matrices(points, speed_kmh))
             }

@@ -1109,6 +1109,7 @@ name = "hermes_matrix_providers"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "fxhash",
  "geo-types",
  "reqwest",
  "serde",
