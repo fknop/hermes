@@ -63,7 +63,7 @@ pub async fn post_handler(
 
     builder
         .set_services(body.services)
-        .set_vehicles(body.vehicles)
+        .set_fleet(Fleet::Finite(vehicles))
         .set_locations(body.locations)
         .set_vehicle_profiles(vec![VehicleProfile::new(
             "profile".to_owned(),

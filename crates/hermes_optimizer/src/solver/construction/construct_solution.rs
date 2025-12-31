@@ -115,6 +115,7 @@ fn create_initial_routes(problem: &VehicleRoutingProblem, solution: &mut Working
     let depot_id = problem
         .vehicles()
         .iter()
+        // TODO: don't assume there's a depot
         .find_map(|v| v.depot_location_id())
         .unwrap();
 

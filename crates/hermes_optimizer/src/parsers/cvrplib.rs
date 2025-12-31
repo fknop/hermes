@@ -7,9 +7,11 @@ use crate::{
     problem::{
         capacity::Capacity,
         distance_method::DistanceMethod,
+        fleet::Fleet,
         location::Location,
         service::ServiceBuilder,
         travel_cost_matrix::TravelMatrices,
+        vehicle::VehicleBuilder,
         vehicle_profile::VehicleProfile,
         vehicle_routing_problem::{VehicleRoutingProblem, VehicleRoutingProblemBuilder},
     },
@@ -27,8 +29,7 @@ impl DatasetParser for CVRPLibParser {
         let locations = instance
             .coords
             .iter()
-            .enumerate()
-            .map(|(_, coord)| Location::from_cartesian(coord.x, coord.y))
+            .map(|coord| Location::from_cartesian(coord.x, coord.y))
             .collect::<Vec<_>>();
 
         let services = instance
@@ -47,10 +48,20 @@ impl DatasetParser for CVRPLibParser {
             })
             .collect::<Vec<_>>();
 
+        let mut vb = VehicleBuilder::default();
+        vb.set_capacity(Capacity::from_vec(vec![instance.capacity]));
+        vb.set_profile_id(0);
+        vb.set_vehicle_id(String::from("vehicle"));
+        vb.set_depot_location_id(instance.depots[0]);
+        vb.set_return(true);
+
+        let vehicle = vb.build();
+
         builder.set_vehicle_profiles(vec![VehicleProfile::new(
             String::from("profile"),
-            TravelMatrices::from_euclidian(&locations),
+            TravelMatrices::from_euclidean(&locations, true),
         )]);
+        builder.set_fleet(Fleet::Infinite(vec![vehicle]));
         builder.set_locations(locations);
         builder.set_services(services);
         builder.set_distance_method(DistanceMethod::Euclidean);
@@ -178,6 +189,20 @@ pub fn parse(text: &str) -> Result<CvrpInstance, anyhow::Error> {
         demands: demands.ok_or_else(|| anyhow::anyhow!("Missing DEMAND_SECTION"))?,
         depots: depots.unwrap_or_else(|| vec![0]),
     })
+}
+
+pub fn parse_solution_file<P: AsRef<Path>>(path: P) -> Option<f64> {
+    if !path.as_ref().exists() {
+        return None;
+    }
+
+    let content = std::fs::read_to_string(path).ok()?;
+
+    content
+        .lines()
+        .rev()
+        .find_map(|line| line.strip_prefix("Cost "))
+        .and_then(|cost| cost.trim().parse().ok())
 }
 
 #[cfg(test)]

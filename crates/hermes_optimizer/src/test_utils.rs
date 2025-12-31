@@ -5,6 +5,7 @@ use rand::RngCore;
 use crate::{
     problem::{
         distance_method::DistanceMethod,
+        fleet::Fleet,
         location::Location,
         service::{Service, ServiceBuilder},
         travel_cost_matrix::TravelMatrices,
@@ -76,11 +77,11 @@ pub fn create_test_problem(
     builder.set_distance_method(DistanceMethod::Euclidean);
     builder.set_vehicle_profiles(vec![VehicleProfile::new(
         "test_profile".to_owned(),
-        TravelMatrices::from_euclidian(&locations),
+        TravelMatrices::from_euclidean(&locations, false),
     )]);
     builder.set_services(services);
     builder.set_locations(locations);
-    builder.set_vehicles(vehicles);
+    builder.set_fleet(Fleet::Finite(vehicles));
 
     builder.build()
 }

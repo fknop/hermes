@@ -7,6 +7,7 @@ use crate::{
     problem::{
         capacity::Capacity,
         distance_method::DistanceMethod,
+        fleet::Fleet,
         location::Location,
         service::{Service, ServiceBuilder},
         time_window::TimeWindow,
@@ -129,13 +130,13 @@ impl DatasetParser for SolomonParser {
             }
         }
 
-        let travel_costs_matrix = TravelMatrices::from_euclidian(&locations);
+        let travel_costs_matrix = TravelMatrices::from_euclidean(&locations, false);
         builder
             .set_vehicle_profiles(vec![VehicleProfile::new(
                 "vehicle".to_owned(),
                 travel_costs_matrix,
             )])
-            .set_vehicles(vehicles)
+            .set_fleet(Fleet::Finite(vehicles))
             .set_locations(locations)
             .set_services(services)
             .set_distance_method(DistanceMethod::Euclidean);

@@ -43,10 +43,6 @@ impl Location {
     pub fn euclidean_distance(&self, to: &Location) -> f64 {
         let euclidean = Euclidean;
         euclidean.distance(&self.point, &to.point)
-
-        // let delta_x = self.x - to.x;
-        // let delta_y = self.y - to.y;
-        // (delta_x * delta_x + delta_y * delta_y).sqrt()
     }
 
     pub fn haversine_distance(&self, to: &Location) -> f64 {
@@ -73,5 +69,17 @@ impl From<&Location> for geo::Coord<f64> {
             x: val.x(),
             y: val.y(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn euclidean_distance() {
+        let loc1 = super::Location::from_cartesian(0.0, 0.0);
+        let loc2 = super::Location::from_cartesian(3.0, 4.0);
+
+        let dist = loc1.euclidean_distance(&loc2);
+        assert_eq!(dist, 5.0);
     }
 }

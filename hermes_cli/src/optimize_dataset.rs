@@ -2,8 +2,13 @@ use std::{path::PathBuf, time::Duration};
 
 use clap::Args;
 use hermes_optimizer::{
-    parsers::{cvrplib::CVRPLibParser, parser::DatasetParser, solomon::SolomonParser},
+    parsers::{
+        cvrplib::{CVRPLibParser, parse_solution_file},
+        parser::DatasetParser,
+        solomon::SolomonParser,
+    },
     solver::{
+        solution::working_solution::WorkingSolution,
         solver::Solver,
         solver_params::{SolverParams, Termination, Threads},
     },
@@ -35,7 +40,13 @@ pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
     let paths = if args.dataset.is_file() {
         vec![args.dataset]
     } else {
-        read_folder(&args.dataset)?
+        let mut files = read_folder(&args.dataset)?;
+        files.retain(|path| {
+            path.extension()
+                .map(|ext| ext == "txt" || ext == "vrp")
+                .unwrap_or(false)
+        });
+        files
     };
 
     let multi_bar = MultiProgress::new();
@@ -53,12 +64,22 @@ pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
         })
         .collect();
 
-    for (i, path) in paths.iter().enumerate() {
+    for (i, path) in paths.iter().enumerate().filter(|(_, p)| {
+        p.extension()
+            .map(|ext| ext == "txt" || ext == "vrp")
+            .unwrap_or(false)
+    }) {
+        let mut optimal_cost: Option<f64> = None;
         let vrp = if path.ends_with(".txt") {
             let parser = SolomonParser;
             parser.parse(path)?
         } else {
             let parser = CVRPLibParser;
+
+            let mut solution_path = path.clone();
+            solution_path.set_extension("sol");
+            optimal_cost = parse_solution_file(solution_path);
+
             parser.parse(path)?
         };
 
@@ -67,6 +88,7 @@ pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
             SolverParams {
                 terminations: vec![Termination::Duration(args.timeout)],
                 insertion_threads: Threads::Multi(args.threads as usize),
+                run_intensify_search: true,
                 ..SolverParams::default()
             },
         );
@@ -96,13 +118,57 @@ pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
             let n_routes = best_solution.solution.non_empty_routes_count();
             let total_transport_cost = best_solution.solution.total_transport_costs();
             bar.finish_with_message(format!(
-                "Finished - routes = {}, costs = {}",
-                n_routes, total_transport_cost
+                "Finished - routes = {}, costs = {}, unassigned = {}, gap = {}",
+                n_routes,
+                total_transport_cost,
+                best_solution.solution.unassigned_jobs().len(),
+                optimal_cost
+                    .map(|oc| format!("{:+.2}%", gap_percent(total_transport_cost, oc)))
+                    .unwrap_or_else(|| "n/a".to_string())
             ));
+
+            // println!("{}", create_sol_file_contents(&best_solution.solution));
         } else {
             bar.finish_with_message(format!("No solution"));
         }
     }
 
     Ok(())
+}
+
+fn create_sol_file_contents(solution: &WorkingSolution) -> String {
+    // Should create content like this:
+    /*
+    Route #1: 21 31 19 17 13 7 26
+    Route #2: 12 1 16 30
+    Route #3: 27 24
+    Route #4: 29 18 8 9 22 15 10 25 5 20
+    Route #5: 14 28 11 4 23 3 2 6
+    Cost 784
+    */
+
+    let mut contents = String::new();
+    let problem = solution.problem();
+
+    for (idx, route) in solution.non_empty_routes_iter().enumerate() {
+        let route_number = idx + 1;
+        contents.push_str(&format!("Route #{}:", route_number));
+
+        for activity_id in route.activity_ids() {
+            let job = problem.job(activity_id.job_id());
+            let external_id = job.external_id();
+            contents.push_str(&format!(" {}", external_id));
+        }
+
+        contents.push('\n');
+    }
+
+    let total_cost = solution.total_transport_costs();
+    contents.push_str(&format!("Cost {}", total_cost as i64));
+
+    contents
+}
+
+fn gap_percent(cost: f64, optimal_cost: f64) -> f64 {
+    (cost - optimal_cost) / optimal_cost * 100.0
 }

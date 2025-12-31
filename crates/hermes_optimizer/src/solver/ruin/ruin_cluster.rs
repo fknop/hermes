@@ -27,7 +27,20 @@ impl RuinSolution for RuinCluster {
     {
         let mut ruined_routes: FxHashSet<RouteIdx> = FxHashSet::default();
 
-        let mut target_job_id = problem.random_job(rng);
+        let random_target_route = solution.random_non_empty_route(rng);
+
+        if random_target_route.is_none() {
+            return;
+        }
+
+        let random_target_route = random_target_route.unwrap();
+
+        let random_target_activity = solution.route(random_target_route).random_activity(rng);
+
+        let mut target_job_id = solution
+            .route(random_target_route)
+            .activity_id(random_target_activity)
+            .job_id();
         let mut remaining_to_remove = num_jobs_to_remove;
 
         while remaining_to_remove > 0 {

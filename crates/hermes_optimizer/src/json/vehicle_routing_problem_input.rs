@@ -4,6 +4,7 @@ use serde::Deserialize;
 
 use crate::problem::{
     capacity::Capacity,
+    fleet::Fleet,
     location::Location,
     service::{ServiceBuilder, ServiceType},
     skill::Skill,
@@ -139,7 +140,7 @@ impl VehicleRoutingProblemInput {
             })
             .collect();
 
-        builder.set_vehicles(vehicles);
+        builder.set_fleet(Fleet::Finite(vehicles));
 
         // for profile in &self.vehicle_profiles {
         //     builder.add_vehicle_profile(profile.id.clone(), profile.cost_provider.clone());

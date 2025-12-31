@@ -436,7 +436,7 @@ impl VehicleRoutingProblem {
 pub struct VehicleRoutingProblemBuilder {
     services: Option<Vec<Service>>,
     locations: Option<Vec<Location>>,
-    vehicles: Option<Vec<Vehicle>>,
+    fleet: Option<Fleet>,
     vehicle_profiles: Option<Vec<VehicleProfile>>,
     distance_method: Option<DistanceMethod>,
 }
@@ -491,8 +491,8 @@ impl VehicleRoutingProblemBuilder {
         self
     }
 
-    pub fn set_vehicles(&mut self, vehicles: Vec<Vehicle>) -> &mut VehicleRoutingProblemBuilder {
-        self.vehicles = Some(vehicles);
+    pub fn set_fleet(&mut self, fleet: Fleet) -> &mut VehicleRoutingProblemBuilder {
+        self.fleet = Some(fleet);
         self
     }
 
@@ -516,14 +516,13 @@ impl VehicleRoutingProblemBuilder {
 
         let distance_method = self.distance_method.unwrap_or(DistanceMethod::Haversine);
 
-        let vehicles = self.vehicles.expect("Expected list of vehicles");
         let vehicle_profiles = self
             .vehicle_profiles
             .expect("Expected list of vehicle profiles");
 
         VehicleRoutingProblem::new(VehicleRoutingProblemParams {
             locations,
-            fleet: Fleet::Finite(vehicles),
+            fleet: self.fleet.expect("Expected fleet"),
             vehicle_profiles,
             jobs,
             distance_method,

@@ -80,13 +80,17 @@ impl TravelMatrices {
         }
     }
 
-    pub fn from_euclidian(locations: &[Location]) -> Self {
+    pub fn from_euclidean(locations: &[Location], round: bool) -> Self {
         let num_locations = locations.len();
         let mut distances: Vec<Distance> = vec![0.0; num_locations * num_locations];
 
         for (i, from) in locations.iter().enumerate() {
             for (j, to) in locations.iter().enumerate() {
-                distances[i * num_locations + j] = from.euclidean_distance(to);
+                distances[i * num_locations + j] = if round {
+                    from.euclidean_distance(to).round()
+                } else {
+                    from.euclidean_distance(to)
+                }
             }
         }
 

@@ -1133,6 +1133,7 @@ mod tests {
     use crate::{
         problem::{
             capacity::Capacity,
+            fleet::Fleet,
             job::{ActivityId, JobIdx},
             service::{ServiceBuilder, ServiceType},
             time_window::TimeWindow,
@@ -1208,7 +1209,7 @@ mod tests {
         )]);
 
         builder.set_locations(locations);
-        builder.set_vehicles(vehicles);
+        builder.set_fleet(Fleet::Finite(vehicles));
         builder.set_services(services);
 
         builder.build()
@@ -1254,7 +1255,7 @@ mod tests {
             ),
         )]);
         builder.set_locations(locations);
-        builder.set_vehicles(vehicles);
+        builder.set_fleet(Fleet::Finite(vehicles));
         builder.set_services(services);
 
         builder.build()
@@ -1641,7 +1642,7 @@ mod tests {
             ),
         )]);
         builder.set_locations(locations);
-        builder.set_vehicles(vehicles);
+        builder.set_fleet(Fleet::Finite(vehicles));
         builder.set_services(services);
 
         builder.build()
