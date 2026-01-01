@@ -5,7 +5,7 @@ use rand::seq::IteratorRandom;
 
 use crate::{
     problem::{
-        job::{ActivityId, JobIdx},
+        job::{ActivityId, Job, JobIdx},
         vehicle::{Vehicle, VehicleIdx},
         vehicle_routing_problem::VehicleRoutingProblem,
     },
@@ -182,6 +182,22 @@ impl WorkingSolution {
         &mut self.routes[route_id]
     }
 
+    pub fn random_assigned_job<R>(&self, rng: &mut R) -> Option<JobIdx>
+    where
+        R: rand::Rng,
+    {
+        if self.unassigned_jobs.len() == self.problem.jobs().len() {
+            return None;
+        }
+
+        loop {
+            let job_id = self.problem().random_job(rng);
+            if !self.unassigned_jobs.contains(&job_id) {
+                return Some(job_id);
+            }
+        }
+    }
+
     pub fn random_non_empty_route<R>(&self, rng: &mut R) -> Option<RouteIdx>
     where
         R: rand::Rng,
@@ -195,13 +211,16 @@ impl WorkingSolution {
     }
 
     pub fn route_of_job(&self, job_id: JobIdx) -> Option<RouteIdx> {
+        let job = self.problem().job(job_id);
         self.routes
             .iter()
             .enumerate_idx()
-            .find(|(_, route)| {
-                route
-                    .activities_iter()
-                    .any(|activity| activity.activity_id().job_id() == job_id)
+            .find(|(_, route)| match job {
+                Job::Service(_) => route.contains_activity(ActivityId::Service(job_id)),
+                Job::Shipment(_) => {
+                    route.contains_activity(ActivityId::ShipmentPickup(job_id))
+                        || route.contains_activity(ActivityId::ShipmentDelivery(job_id))
+                }
             })
             .map(|(index, _)| index)
     }
@@ -209,9 +228,9 @@ impl WorkingSolution {
     pub fn route_of_activity(&self, activity_id: ActivityId) -> Option<RouteIdx> {
         self.routes
             .iter()
-            .enumerate()
+            .enumerate_idx()
             .find(|(_, route)| route.contains_activity(activity_id))
-            .map(|(index, _)| RouteIdx::new(index))
+            .map(|(index, _)| index)
     }
 
     pub fn insert(&mut self, insertion: &Insertion) {

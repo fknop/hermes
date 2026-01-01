@@ -27,24 +27,14 @@ impl RuinSolution for RuinCluster {
     {
         let mut ruined_routes: FxHashSet<RouteIdx> = FxHashSet::default();
 
-        let random_target_route = solution.random_non_empty_route(rng);
+        let mut target_job_id = solution.random_assigned_job(rng);
 
-        if random_target_route.is_none() {
-            return;
-        }
-
-        let random_target_route = random_target_route.unwrap();
-
-        let random_target_activity = solution.route(random_target_route).random_activity(rng);
-
-        let mut target_job_id = solution
-            .route(random_target_route)
-            .activity_id(random_target_activity)
-            .job_id();
         let mut remaining_to_remove = num_jobs_to_remove;
 
-        while remaining_to_remove > 0 {
-            let route_id = solution.route_of_job(target_job_id).unwrap();
+        while remaining_to_remove > 0
+            && let Some(target) = target_job_id
+        {
+            let route_id = solution.route_of_job(target).unwrap();
 
             let service_ids = solution
                 .route(route_id)
@@ -53,7 +43,7 @@ impl RuinSolution for RuinCluster {
                 .map(|job_id| job_id.job_id().get()) // TODO: support shipments
                 .collect::<Vec<_>>();
 
-            let mut removed_service_ids: Vec<JobIdx> = vec![];
+            let mut removed_job_ids: Vec<JobIdx> = vec![];
             if let Some(clusters) = kruskal_cluster(problem, &service_ids)
                 && !clusters.is_empty()
             {
@@ -61,7 +51,7 @@ impl RuinSolution for RuinCluster {
                 for &service_id in cluster {
                     let removed = solution.remove_service(service_id.into());
                     if removed {
-                        removed_service_ids.push(JobIdx::new(service_id));
+                        removed_job_ids.push(JobIdx::new(service_id));
                         remaining_to_remove -= 1;
                         if remaining_to_remove == 0 {
                             break;
@@ -75,25 +65,20 @@ impl RuinSolution for RuinCluster {
             }
 
             if remaining_to_remove > 0 {
-                if let Some(new_job_id) = solution
+                target_job_id = solution
                     .problem()
                     .nearest_jobs(ActivityId::Service(
-                        removed_service_ids.choose(rng).cloned().unwrap(),
+                        removed_job_ids.choose(rng).cloned().unwrap(),
                     ))
                     .find(|&activity_id| {
-                        let route_id = solution.route_of_job(activity_id.job_id());
+                        let route_id = solution.route_of_activity(activity_id);
                         if let Some(route_id) = route_id {
                             !ruined_routes.contains(&route_id)
                         } else {
                             false
                         }
                     })
-                {
-                    target_job_id = new_job_id.job_id();
-                } else {
-                    // No more services to ruin, exit the loop
-                    break;
-                }
+                    .map(|activity_id| activity_id.job_id());
             }
         }
     }

@@ -3,9 +3,7 @@ use std::f64;
 use tracing::debug;
 
 use crate::{
-    problem::{
-        job::ActivityId, vehicle::VehicleIdx, vehicle_routing_problem::VehicleRoutingProblem,
-    },
+    problem::{job::ActivityId, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{
         intensify::{
             cross_exchange::{CrossExchangeOperator, CrossExchangeOperatorParams},
