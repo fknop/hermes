@@ -27,6 +27,7 @@ use crate::{
             route_constraint::RouteConstraintType, shift_constraint::ShiftConstraint,
             time_window_constraint::TimeWindowConstraint,
             transport_cost_constraint::TransportCostConstraint,
+            unassigned_job_constraint::UnassignedJobConstraint,
             vehicle_cost_constraint::VehicleCostConstraint,
             waiting_duration_constraint::WaitingDurationConstraint,
         },
@@ -166,6 +167,9 @@ impl Search {
     fn create_constraints() -> Vec<Constraint> {
         vec![
             // Hard constraints
+            Constraint::Global(GlobalConstraintType::UnassignedJobCost(
+                UnassignedJobConstraint,
+            )),
             Constraint::Route(RouteConstraintType::Capacity(CapacityConstraint::default())),
             Constraint::Activity(ActivityConstraintType::TimeWindow(
                 TimeWindowConstraint::default(),
