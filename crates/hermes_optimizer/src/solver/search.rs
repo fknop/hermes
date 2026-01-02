@@ -211,17 +211,12 @@ impl Search {
 
         let max_cost = self.problem.max_cost();
 
-        let now = std::time::Instant::now();
-
         let initial_solution = construct_solution(
             &self.problem,
             &mut rng,
             &self.constraints,
             &self.thread_pool,
         );
-
-        let elapsed = now.elapsed();
-        info!("Initial solution construction took {:.2?}", elapsed);
 
         let (score, score_analysis) = self.compute_solution_score(&initial_solution);
 
