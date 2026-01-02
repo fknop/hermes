@@ -39,6 +39,13 @@ impl Insertion {
         }
     }
 
+    pub fn route_id(&self) -> RouteIdx {
+        match self {
+            Insertion::Service(ctx) => ctx.route_id,
+            Insertion::Shipment(ctx) => ctx.route_id,
+        }
+    }
+
     pub fn route<'a>(&self, solution: &'a WorkingSolution) -> &'a WorkingSolutionRoute {
         match self {
             Insertion::Service(ctx) => solution.route(ctx.route_id),
@@ -60,6 +67,22 @@ pub fn for_each_insertion(
     }
 }
 
+pub fn for_each_route_insertion(
+    solution: &WorkingSolution,
+    route_index: RouteIdx,
+    job_index: JobIdx,
+    mut f: impl FnMut(Insertion),
+) {
+    let job = solution.problem().job(job_index);
+
+    match job {
+        Job::Service(_) => {
+            for_each_route_service_insertion(solution, route_index, job_index, &mut f)
+        }
+        Job::Shipment(_) => todo!(),
+    }
+}
+
 fn for_each_service_insertion(
     solution: &WorkingSolution,
     job_index: JobIdx,
@@ -73,6 +96,22 @@ fn for_each_service_insertion(
                 position,
             }));
         }
+    }
+}
+
+fn for_each_route_service_insertion(
+    solution: &WorkingSolution,
+    route_index: RouteIdx,
+    job_index: JobIdx,
+    mut f: impl FnMut(Insertion),
+) {
+    let route = solution.route(route_index);
+    for position in 0..=route.len() {
+        f(Insertion::Service(ServiceInsertion {
+            route_id: route_index,
+            job_index,
+            position,
+        }));
     }
 }
 

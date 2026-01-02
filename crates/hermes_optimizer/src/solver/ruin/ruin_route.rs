@@ -1,4 +1,5 @@
 use rand::seq::IndexedRandom;
+use tracing::warn;
 
 use crate::solver::solution::{route_id::RouteIdx, working_solution::WorkingSolution};
 
@@ -13,7 +14,7 @@ impl RuinSolution for RuinRoute {
     {
         let mut remaining: i64 = context.num_jobs_to_remove as i64;
 
-        while remaining > 0 {
+        while remaining > 0 && !solution.is_empty() {
             let routes = solution
                 .routes()
                 .iter()
@@ -52,6 +53,9 @@ impl RuinSolution for RuinRoute {
             {
                 let removed = solution.remove_route(*route_id);
                 remaining -= removed as i64;
+            } else {
+                warn!("RuinRoute: could not select a route to remove");
+                break;
             }
         }
     }

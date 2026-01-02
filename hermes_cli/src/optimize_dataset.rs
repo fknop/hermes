@@ -1,4 +1,7 @@
-use std::{path::PathBuf, time::Duration};
+use std::{
+    path::PathBuf,
+    time::{Duration, Instant},
+};
 
 use clap::Args;
 use hermes_optimizer::{
@@ -27,12 +30,12 @@ pub struct OptimizeDatasetArgs {
     #[arg(short, long, value_parser=parsers::parse_duration, default_value = "5s")]
     timeout: jiff::SignedDuration,
 
-    #[arg(short, long, default_value_t = 1)]
+    #[arg(long, default_value_t = 1)]
     threads: u8,
 
-    /// Output folder into .solution files
-    #[arg(short, long)]
-    output: Option<PathBuf>,
+    /// Output folder into .sol files
+    #[arg(long, short = 'o')]
+    out: Option<PathBuf>,
 }
 
 pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
@@ -70,10 +73,13 @@ pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
             .unwrap_or(false)
     }) {
         let mut optimal_cost: Option<f64> = None;
-        let vrp = if path.ends_with(".txt") {
+        let extension = path.extension().unwrap();
+        let now = Instant::now();
+
+        let vrp = if extension == "txt" {
             let parser = SolomonParser;
             parser.parse(path)?
-        } else {
+        } else if extension == "vrp" {
             let parser = CVRPLibParser;
 
             let mut solution_path = path.clone();
@@ -81,7 +87,13 @@ pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
             optimal_cost = parse_solution_file(solution_path);
 
             parser.parse(path)?
+        } else {
+            continue;
         };
+        let elapsed = now.elapsed();
+        println!("Time for problem creation {:.2?}", elapsed);
+
+        let now = Instant::now();
 
         let solver = Solver::new(
             vrp,
@@ -93,23 +105,15 @@ pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
             },
         );
 
+        let elapsed = now.elapsed();
+        println!("Time for solver creation {:.2?}", elapsed);
+
         let bar = &mut bars[i]; //Arc::new(ProgressBar::new(seconds as u64));
         bar.set_message("running...");
         bar.reset_elapsed();
         bar.enable_steady_tick(Duration::from_millis(100));
 
-        bar.set_style(
-            style.clone(), // ProgressStyle::default_bar()
-                           //     .template("({elapsed}/{len}s)")
-                           //     .unwrap(),
-        );
-        // let t_bar = Arc::clone(&bar);
-        // let ticker = thread::spawn(move || {
-        //     for i in 0..seconds {
-        //         t_bar.set_position(i as u64);
-        //         thread::sleep(Duration::from_secs(1));
-        //     }
-        // });
+        bar.set_style(style.clone());
 
         solver.solve();
         let best_solution = solver.current_best_solution();
@@ -126,6 +130,16 @@ pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
                     .map(|oc| format!("{:+.2}%", gap_percent(total_transport_cost, oc)))
                     .unwrap_or_else(|| "n/a".to_string())
             ));
+
+            if let Some(out) = &args.out {
+                let mut out_path = out.clone();
+                if out_path.is_dir() {
+                    let file_stem = path.file_stem().unwrap();
+                    out_path.push(file_stem);
+                    out_path.set_extension("sol");
+                }
+                std::fs::write(out_path, create_sol_file_contents(&best_solution.solution))?;
+            }
 
             // println!("{}", create_sol_file_contents(&best_solution.solution));
         } else {

@@ -105,6 +105,7 @@ impl Search {
                         search_threads: Threads::Single,
                         solver_selector: SolverSelectorStrategy::SelectBest,
                         tabu_enabled: false,
+                        run_intensify_search: false,
                         ..params.clone()
                     },
                     Arc::clone(&problem),
@@ -210,12 +211,17 @@ impl Search {
 
         let max_cost = self.problem.max_cost();
 
+        let now = std::time::Instant::now();
+
         let initial_solution = construct_solution(
             &self.problem,
             &mut rng,
             &self.constraints,
             &self.thread_pool,
         );
+
+        let elapsed = now.elapsed();
+        info!("Initial solution construction took {:.2?}", elapsed);
 
         let (score, score_analysis) = self.compute_solution_score(&initial_solution);
 
@@ -301,6 +307,8 @@ impl Search {
 
                             let should_intensify = self.params.run_intensify_search && state.iterations_without_improvement > 500 && state.iteration - state.last_intensify_iteration.unwrap_or(0) > 1000;
 
+
+
                             if should_intensify {
                                 let best_selector = SelectBestSelector;
                                 let (mut working_solution, current_score) = {
@@ -330,6 +338,7 @@ impl Search {
                                     recreate_strategy: None,
                                     current_score,
                                 };
+
 
                                 self.update_solutions(working_solution, &mut state, iteration_info);
                             }
