@@ -10,3 +10,4 @@ data/be
 flamegraph.svg
 .env.local
 results
+dhat-heap.json

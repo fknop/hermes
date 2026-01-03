@@ -1,10 +1,13 @@
 use rand::Rng;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
-use crate::solver::{
-    insertion::{Insertion, for_each_insertion},
-    score::{self, Score},
-    solution::working_solution::WorkingSolution,
+use crate::{
+    problem::job::JobIdx,
+    solver::{
+        insertion::{Insertion, for_each_insertion},
+        score::{self, Score},
+        solution::working_solution::WorkingSolution,
+    },
 };
 
 use super::{recreate_context::RecreateContext, recreate_solution::RecreateSolution};
@@ -50,15 +53,27 @@ impl RegretInsertion {
             .par_iter()
             .filter_map(|&job_id| {
                 let mut potential_insertions: Vec<(Score, Insertion)> = Vec::with_capacity(
-                    // One insertion after each activity
-                    (context.problem.jobs().len() - solution.unassigned_jobs().len())
-                    // One insertion at the start of every route
-                    + solution.routes().len(),
+                    self.k + 1, // // One insertion after each activity
+                                // (context.problem.jobs().len() - solution.unassigned_jobs().len())
+                                // // One insertion at the start of every route
+                                // + solution.routes().len(),
                 );
 
                 for_each_insertion(solution, job_id, |insertion| {
                     let score = context.compute_insertion_score(solution, &insertion, None);
+
+                    if let Some(last) = potential_insertions.last()
+                        && !potential_insertions.is_empty()
+                        && score < last.0
+                    {
+                        return;
+                    }
+
                     potential_insertions.push((score, insertion));
+                    potential_insertions.sort_unstable_by(|a, b| a.0.cmp(&b.0));
+                    if potential_insertions.len() > self.k + 1 {
+                        potential_insertions.pop();
+                    }
                 });
 
                 // If no valid insertion was found for this service, skip it
@@ -66,8 +81,8 @@ impl RegretInsertion {
                     return None;
                 }
 
-                // Sort insertions by score to find the best ones
-                potential_insertions.sort_unstable_by(|a, b| a.0.cmp(&b.0));
+                // // Sort insertions by score to find the best ones
+                // potential_insertions.sort_unstable_by(|a, b| a.0.cmp(&b.0));
 
                 // 2. Calculate the regret value for this service
                 let best_insertion = &potential_insertions[0];
