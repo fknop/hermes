@@ -53,7 +53,7 @@ impl RegretInsertion {
             .par_iter()
             .filter_map(|&job_id| {
                 let mut potential_insertions: Vec<(Score, Insertion)> = Vec::with_capacity(
-                    self.k + 1, // // One insertion after each activity
+                    self.k + 2, // // One insertion after each activity
                                 // (context.problem.jobs().len() - solution.unassigned_jobs().len())
                                 // // One insertion at the start of every route
                                 // + solution.routes().len(),

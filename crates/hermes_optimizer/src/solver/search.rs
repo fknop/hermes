@@ -3,7 +3,7 @@ use std::{collections::VecDeque, sync::Arc, thread};
 use jiff::Timestamp;
 use parking_lot::{MappedRwLockReadGuard, RwLock, RwLockReadGuard};
 use rand::{Rng, SeedableRng, rngs::SmallRng};
-use tracing::debug;
+use tracing::{debug, info};
 
 use crate::{
     acceptor::{
@@ -294,15 +294,14 @@ impl Search {
                             max_iterations,
                             global_statistics,
                             thread_statistics,
-                            noise_generator: thread_noise_generator
+                            noise_generator: thread_noise_generator,
                         };
 
-
                         loop {
-
-                            let should_intensify = self.params.run_intensify_search && state.iterations_without_improvement > 500 && state.iteration - state.last_intensify_iteration.unwrap_or(0) > 1000;
-
-
+                            let should_intensify = self.params.run_intensify_search
+                                && state.iterations_without_improvement > 500
+                                && state.iteration - state.last_intensify_iteration.unwrap_or(0)
+                                    > 1000;
 
                             if should_intensify {
                                 let best_selector = SelectBestSelector;
@@ -320,10 +319,14 @@ impl Search {
                                     }
                                 }; // Lock is released here
 
-
-                                let max_intensify_iterations = 1500.min(max_iterations.unwrap_or(usize::MAX) - state.iteration);
+                                let max_intensify_iterations = 1500
+                                    .min(max_iterations.unwrap_or(usize::MAX) - state.iteration);
                                 let mut intensify_search = IntensifySearch::new(&working_solution);
-                                let iterations = intensify_search.intensify(&self.problem, &mut working_solution, max_intensify_iterations);
+                                let iterations = intensify_search.intensify(
+                                    &self.problem,
+                                    &mut working_solution,
+                                    max_intensify_iterations,
+                                );
 
                                 state.iteration += iterations;
                                 state.last_intensify_iteration = Some(state.iteration);
@@ -334,29 +337,28 @@ impl Search {
                                     current_score,
                                 };
 
-
                                 self.update_solutions(working_solution, &mut state, iteration_info);
-                            }
-                            else {
+                            } else {
                                 state.iteration += 1;
 
                                 if (state.iteration).is_multiple_of(500) {
                                     debug!(
                                         thread = thread::current().name().unwrap_or("main"),
-                                        weights = ?self.alns_weights.read(),
-                                        "Thread {}: Iteration {}/{}",
+                                        "Thread {}: Iteration {}/{} - {}",
                                         thread_index,
                                         state.iteration,
-                                        max_iterations.map(|max| max.to_string()).unwrap_or(String::from("N/A"))
+                                        max_iterations
+                                            .map(|max| max.to_string())
+                                            .unwrap_or(String::from("N/A")),
+                                        self.alns_weights.read(),
                                     );
                                 }
 
                                 self.perform_iteration(&mut state, &mut thread_rng);
                             }
 
-
-
-                            let should_terminate = *is_stopped.read() || self.should_terminate(&state);
+                            let should_terminate =
+                                *is_stopped.read() || self.should_terminate(&state);
                             if should_terminate {
                                 break;
                             }
@@ -582,9 +584,10 @@ impl Search {
         }
 
         if state.iteration > 0 {
-            if state
-                .iterations_without_improvement
-                .is_multiple_of(self.params.alns_iterations_without_improvement_reset)
+            if state.iterations_without_improvement > 0
+                && state
+                    .iterations_without_improvement
+                    .is_multiple_of(self.params.alns_iterations_without_improvement_reset)
             {
                 self.alns_weights.write().reset();
                 state.alns_scores.reset();

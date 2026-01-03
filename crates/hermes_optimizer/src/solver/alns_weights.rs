@@ -1,7 +1,8 @@
-use std::hash::Hash;
+use std::{fmt::Display, hash::Hash};
 
 use fxhash::FxHashMap;
 use rand::seq::IndexedRandom;
+use tracing::info;
 
 use crate::solver::solver_params::SolverParams;
 
@@ -11,6 +12,22 @@ where
     S: Copy + Eq + Hash,
 {
     weights: Vec<Operator<S>>,
+}
+
+impl<S> std::fmt::Display for AlnsWeights<S>
+where
+    S: std::fmt::Debug,
+    S: Copy + Eq + Hash,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f)?;
+        writeln!(f, "{:<50} {:>8}", "Operator", "Weight")?;
+        writeln!(f, "{:-<60}", "")?;
+        for op in &self.weights {
+            writeln!(f, "{:<50} {:>8.4}", format!("{:?}", op.strategy), op.weight)?;
+        }
+        Ok(())
+    }
 }
 
 impl<S> AlnsWeights<S>
@@ -55,6 +72,7 @@ where
     }
 }
 
+#[derive(Debug)]
 struct ScoreEntry {
     pub score: f64,
     pub iterations: usize,
