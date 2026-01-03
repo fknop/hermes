@@ -5,9 +5,9 @@ use crate::problem::job::JobIdx;
 
 pub struct NoiseGenerator {
     rngs: Vec<Mutex<SmallRng>>,
-    noise_probability: f64,
-    noise_level: f64,
-    max_cost: f64,
+    pub noise_probability: f64,
+    pub noise_level: f64,
+    pub max_cost: f64,
 }
 
 impl NoiseGenerator {
@@ -18,7 +18,7 @@ impl NoiseGenerator {
         noise_level: f64,
         rng: &mut SmallRng,
     ) -> Self {
-        NoiseGenerator {
+        Self {
             rngs: (0..num_jobs)
                 .map(|_| Mutex::new(SmallRng::from_rng(rng)))
                 .collect(),

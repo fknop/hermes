@@ -48,7 +48,7 @@ impl RegretInsertion {
         let regret_values: Vec<(Score, Insertion, Score)> = solution
             .unassigned_jobs()
             .par_iter()
-            .filter_map(|&service_id| {
+            .filter_map(|&job_id| {
                 let mut potential_insertions: Vec<(Score, Insertion)> = Vec::with_capacity(
                     // One insertion after each activity
                     (context.problem.jobs().len() - solution.unassigned_jobs().len())
@@ -56,7 +56,7 @@ impl RegretInsertion {
                     + solution.routes().len(),
                 );
 
-                for_each_insertion(solution, service_id, |insertion| {
+                for_each_insertion(solution, job_id, |insertion| {
                     let score = context.compute_insertion_score(solution, &insertion, None);
                     potential_insertions.push((score, insertion));
                 });

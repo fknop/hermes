@@ -3,7 +3,7 @@ use std::{collections::VecDeque, sync::Arc, thread};
 use jiff::Timestamp;
 use parking_lot::{MappedRwLockReadGuard, RwLock, RwLockReadGuard};
 use rand::{Rng, SeedableRng, rngs::SmallRng};
-use tracing::{debug, info};
+use tracing::debug;
 
 use crate::{
     acceptor::{

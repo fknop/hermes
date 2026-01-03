@@ -54,6 +54,7 @@ impl Insertion {
     }
 }
 
+#[inline(always)]
 pub fn for_each_insertion(
     solution: &WorkingSolution,
     job_index: JobIdx,
@@ -83,20 +84,25 @@ pub fn for_each_route_insertion(
     }
 }
 
+#[inline(always)]
 fn for_each_service_insertion(
     solution: &WorkingSolution,
     job_index: JobIdx,
     mut f: impl FnMut(Insertion),
 ) {
-    for (route_id, route) in solution.routes().iter().enumerate() {
-        for position in 0..=route.len() {
-            f(Insertion::Service(ServiceInsertion {
-                route_id: RouteIdx::new(route_id),
-                job_index,
-                position,
-            }));
-        }
-    }
+    solution
+        .routes()
+        .iter()
+        .enumerate_idx()
+        .for_each(|(route_id, route)| {
+            (0..=route.len()).for_each(|position| {
+                f(Insertion::Service(ServiceInsertion {
+                    route_id,
+                    job_index,
+                    position,
+                }));
+            });
+        });
 }
 
 fn for_each_route_service_insertion(

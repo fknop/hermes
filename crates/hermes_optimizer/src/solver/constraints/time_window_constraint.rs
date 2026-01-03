@@ -1,7 +1,9 @@
 use jiff::Timestamp;
 
 use crate::{
-    problem::{time_window::TimeWindow, vehicle_routing_problem::VehicleRoutingProblem},
+    problem::{
+        job::ActivityId, time_window::TimeWindow, vehicle_routing_problem::VehicleRoutingProblem,
+    },
     solver::{
         insertion_context::InsertionContext,
         score::Score,
@@ -74,6 +76,9 @@ impl ActivityConstraint for TimeWindowConstraint {
 
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
         let problem = context.problem();
+        if !problem.has_time_windows() {
+            return Score::zero();
+        }
 
         // let route = context.insertion.route(context.solution);
         // if route.is_valid_tw_change(

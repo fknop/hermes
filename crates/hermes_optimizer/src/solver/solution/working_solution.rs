@@ -323,9 +323,6 @@ impl WorkingSolution {
 
         self.routes[route_id].reset(&self.problem);
 
-        // TODO: reset to avoid reallocations
-        // self.routes[route_id] = WorkingSolutionRoute::empty(&self.problem, route_id);
-
         removed
     }
 

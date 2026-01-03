@@ -1,6 +1,7 @@
-use std::path::PathBuf;
-
 use clap::{Parser, Subcommand};
+
+#[cfg(not(feature = "dhat-heap"))]
+use mimalloc::MiMalloc;
 use tracing::info;
 
 use crate::optimize_dataset::OptimizeDatasetArgs;
@@ -8,6 +9,14 @@ use crate::optimize_dataset::OptimizeDatasetArgs;
 mod file_utils;
 mod optimize_dataset;
 mod parsers;
+
+#[cfg(feature = "dhat-heap")]
+#[global_allocator]
+static ALLOC: dhat::Alloc = dhat::Alloc;
+
+#[cfg(not(feature = "dhat-heap"))]
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
@@ -40,6 +49,9 @@ enum Commands {
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
+    #[cfg(feature = "dhat-heap")]
+    let _profiler = dhat::Profiler::new_heap();
+
     let cli = Cli::parse();
     tracing_subscriber::fmt()
         .with_max_level(if cli.debug {

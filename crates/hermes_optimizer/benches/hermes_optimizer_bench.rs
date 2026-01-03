@@ -1,4 +1,4 @@
-use std::hint::black_box;
+use std::{cell::RefCell, hint::black_box};
 
 use criterion::{Criterion, criterion_group, criterion_main};
 use fxhash::FxHashSet;
@@ -7,6 +7,7 @@ use hermes_optimizer::problem::{
     capacity::Capacity,
 };
 use rand::{Rng, SeedableRng, random_range, rng, rngs::SmallRng};
+use thread_local::ThreadLocal;
 
 #[inline]
 fn capacity_add<'a>(a: &'a Capacity, b: &'a Capacity) -> AmountSum<&'a Amount, &'a Amount> {
@@ -198,13 +199,63 @@ fn bench_direct_access(c: &mut Criterion) {
     group.finish();
 }
 
+fn rng_bench(c: &mut Criterion) {
+    let mut master_rng = SmallRng::seed_from_u64(42);
+
+    let mut group = c.benchmark_group("rng_bench");
+
+    group.bench_function("gen range", |b| {
+        b.iter(|| {
+            let range = master_rng.random_range(0..=1);
+            black_box(range)
+        })
+    });
+
+    group.bench_function("gen range from child", |b| {
+        b.iter(|| {
+            let mut child_rng = SmallRng::from_rng(&mut master_rng);
+            let range = child_rng.random_range(0..=1);
+
+            black_box(range)
+        })
+    });
+
+    group.bench_function("gen range from clone", |b| {
+        b.iter(|| {
+            let mut child_rng = black_box(&master_rng).clone();
+            let range = child_rng.random_range(0..=1);
+            black_box(range)
+        })
+    });
+
+    group.bench_function("gen range from mutex", |b| {
+        let mutex = parking_lot::Mutex::new(master_rng.clone());
+        b.iter(|| {
+            let range = mutex.lock().random_range(0..=1);
+            black_box(range)
+        })
+    });
+
+    group.bench_function("gen range from thread_local", |b| {
+        let tl: ThreadLocal<RefCell<SmallRng>> = ThreadLocal::new();
+        b.iter(|| {
+            let rng = tl.get_or(|| RefCell::new(SmallRng::from_rng(&mut master_rng)));
+            let range = rng.borrow_mut().random_range(0..=1);
+            black_box(range)
+        })
+    });
+
+    group.finish();
+}
+
 criterion_group!(
     benches,
-    bench_direct_access,
-    capacity_benchmark,
-    satisfies_demand_benchmark,
-    over_capacity_demand_benchmark,
-    find_in_set_benchmark,
-    sort_benchmark
+    // bench_direct_access,
+    // capacity_benchmark,
+    // satisfies_demand_benchmark,
+    // over_capacity_demand_benchmark,
+    // find_in_set_benchmark,
+    // sort_benchmark,
+    rng_bench
 );
 criterion_main!(benches);

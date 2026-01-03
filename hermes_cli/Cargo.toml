@@ -7,6 +7,10 @@ edition = "2024"
 name = "hermes"
 path = "src/main.rs"
 
+
+[features]
+dhat-heap = []
+
 [dependencies]
 clap = { version = "4.5.53", features = ["derive"] }
 jiff = "0.2.17"
@@ -16,3 +20,5 @@ tracing-subscriber = "0.3.19"
 anyhow = {workspace=true}
 hermes_optimizer = { path = "../crates/hermes_optimizer" }
 indicatif = "0.18.3"
+mimalloc = "0.1.48"
+dhat = "0.3.3"
