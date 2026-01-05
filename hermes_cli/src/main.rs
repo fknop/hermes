@@ -2,12 +2,14 @@ use clap::{Parser, Subcommand};
 
 #[cfg(not(feature = "dhat-heap"))]
 use mimalloc::MiMalloc;
-use tracing::info;
 
-use crate::{generate::GenerateSubcommands, optimize_dataset::OptimizeDatasetArgs};
+use crate::{
+    generate::GenerateSubcommands, optimize::OptimizeArgs, optimize_dataset::OptimizeDatasetArgs,
+};
 
 mod file_utils;
 mod generate;
+mod optimize;
 mod optimize_dataset;
 mod parsers;
 
@@ -32,15 +34,8 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     Optimize {
-        // #[arg(short, long)]
-        // input: PathBuf,
-        /// The number of threads to use for optimization (default: 1)
-        #[arg(short, long, default_value_t = 1)]
-        threads: u8,
-
-        /// Timeout for the solver (e.g., "30s", "5m", "PT1H30M")
-        #[arg(short, long, value_parser = parsers::parse_duration)]
-        duration: jiff::SignedDuration,
+        #[command(flatten)]
+        args: OptimizeArgs,
     },
     OptimizeDataset {
         #[command(flatten)]
@@ -68,9 +63,7 @@ async fn main() -> Result<(), anyhow::Error> {
         .init();
 
     match cli.command {
-        Some(Commands::Optimize { duration, .. }) => {
-            info!("{}", duration)
-        }
+        Some(Commands::Optimize { args }) => optimize::run(args).await?,
         Some(Commands::OptimizeDataset { args }) => optimize_dataset::run(args)?,
         Some(Commands::Generate { commands }) => generate::run(commands)?,
         None => {

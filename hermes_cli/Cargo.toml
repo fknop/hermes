@@ -23,3 +23,4 @@ indicatif = "0.18.3"
 mimalloc = "0.1.48"
 dhat = "0.3.3"
 serde_json = {workspace = true}
+hermes_matrix_providers = { version = "0.1.0", path = "../crates/hermes_matrix_providers" }

@@ -6,7 +6,7 @@ use hermes_optimizer::problem::{
     amount::{Amount, AmountExpression, AmountSum},
     capacity::Capacity,
 };
-use rand::{Rng, SeedableRng, random_range, rng, rngs::SmallRng};
+use rand::{Rng, SeedableRng, rng, rngs::SmallRng};
 use thread_local::ThreadLocal;
 
 #[inline]

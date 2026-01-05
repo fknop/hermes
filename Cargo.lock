@@ -1200,6 +1200,7 @@ dependencies = [
  "anyhow",
  "clap",
  "dhat",
+ "hermes_matrix_providers",
  "hermes_optimizer",
  "indicatif",
  "jiff",

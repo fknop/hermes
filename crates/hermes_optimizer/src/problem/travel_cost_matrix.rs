@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use jiff::SignedDuration;
-use rayon::iter::ParallelIterator;
 use serde::Deserialize;
 
 use crate::problem::location::LocationIdx;

@@ -39,7 +39,6 @@ pub struct OptimizeDatasetArgs {
 }
 
 pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
-    info!("Optimizing dataset {:?}", args.dataset);
     let paths = if args.dataset.is_file() {
         vec![args.dataset]
     } else {
@@ -90,10 +89,6 @@ pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
         } else {
             continue;
         };
-        let elapsed = now.elapsed();
-        println!("Time for problem creation {:.2?}", elapsed);
-
-        let now = Instant::now();
 
         let solver = Solver::new(
             vrp,
@@ -104,9 +99,6 @@ pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
                 ..SolverParams::default()
             },
         );
-
-        let elapsed = now.elapsed();
-        println!("Time for solver creation {:.2?}", elapsed);
 
         let bar = &mut bars[i]; //Arc::new(ProgressBar::new(seconds as u64));
         bar.set_message("running...");
