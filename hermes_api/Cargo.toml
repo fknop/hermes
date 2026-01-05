@@ -20,3 +20,5 @@ parking_lot = { version = "0.12.4", features = ["serde"] }
 jiff = "0.2.15"
 geo = "0.30.0"
 mimalloc = "0.1.47"
+hermes_matrix_providers = { version = "0.1.0", path = "../crates/hermes_matrix_providers" }
+anyhow = {workspace = true}

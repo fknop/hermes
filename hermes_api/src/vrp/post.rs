@@ -6,39 +6,11 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use hermes_optimizer::problem::{
-    location::Location,
-    service::Service,
-    travel_cost_matrix::{Time, TravelMatrices},
-    vehicle::Vehicle,
-    vehicle_profile::VehicleProfile,
-    vehicle_routing_problem::VehicleRoutingProblemBuilder,
-};
-use serde::{Deserialize, Serialize};
+use hermes_optimizer::json::types::JsonVehicleRoutingProblem;
+use serde::Serialize;
 use uuid::Uuid;
 
 use crate::{error::ApiError, state::AppState};
-
-#[derive(Deserialize)]
-pub struct PostRequestTravelCosts {
-    pub distances: Vec<Vec<f64>>,
-    pub times: Vec<Vec<Time>>,
-    pub costs: Vec<Vec<f64>>,
-}
-
-impl PostRequestTravelCosts {
-    pub fn flatten(self) -> TravelMatrices {
-        TravelMatrices::new(self.distances, self.times, self.costs)
-    }
-}
-
-#[derive(Deserialize)]
-pub struct PostRequestBody {
-    locations: Vec<Location>,
-    vehicles: Vec<Vehicle>,
-    services: Vec<Service>,
-    travel_costs: PostRequestTravelCosts,
-}
 
 #[derive(Serialize)]
 pub struct PostResponse {
@@ -53,24 +25,13 @@ impl IntoResponse for PostResponse {
 
 pub async fn post_handler(
     State(state): State<Arc<AppState>>,
-    Json(body): Json<PostRequestBody>,
+    Json(body): Json<JsonVehicleRoutingProblem>,
 ) -> Result<PostResponse, ApiError> {
     let solver_manager = &state.solver_manager;
 
     let job_id = Uuid::new_v4().to_string();
 
-    let mut builder = VehicleRoutingProblemBuilder::default();
-
-    builder
-        .set_services(body.services)
-        .set_fleet(Fleet::Finite(vehicles))
-        .set_locations(body.locations)
-        .set_vehicle_profiles(vec![VehicleProfile::new(
-            "profile".to_owned(),
-            body.travel_costs.flatten(),
-        )]);
-
-    let vrp = builder.build();
+    let vrp = body.build_problem(&state.matrix_client).await?;
 
     solver_manager.solve(job_id.clone(), vrp).await;
 

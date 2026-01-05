@@ -1,1 +1,2 @@
-pub mod vehicle_routing_problem_input;
+pub mod schema;
+pub mod types;

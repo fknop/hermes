@@ -10,6 +10,7 @@ use crate::state::AppState;
 use axum::http::Method;
 use axum::routing::{any, get, post};
 use axum::{Router, serve};
+use hermes_matrix_providers::travel_matrix_client::TravelMatrixClient;
 use hermes_optimizer::solver::solver_manager::SolverManager;
 use hermes_routing::hermes::Hermes;
 use landmarks::get_landmarks;
@@ -32,6 +33,7 @@ async fn main() {
     let app_state = Arc::new(AppState {
         hermes,
         solver_manager: SolverManager::default(),
+        matrix_client: TravelMatrixClient::default(),
     });
 
     let cors_layer = CorsLayer::new()

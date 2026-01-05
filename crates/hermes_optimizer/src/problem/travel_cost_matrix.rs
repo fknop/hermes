@@ -24,6 +24,17 @@ pub struct TravelMatrices {
     is_symmetric: bool,
 }
 
+fn is_flat_matrix_symmetric(matrix: &[f64], num_locations: usize) -> bool {
+    for i in 0..num_locations {
+        for j in 0..num_locations {
+            if matrix[i * num_locations + j] != matrix[j * num_locations + i] {
+                return false;
+            }
+        }
+    }
+    true
+}
+
 impl TravelMatrices {
     pub fn new(
         distances: Vec<Vec<Distance>>,
@@ -42,6 +53,31 @@ impl TravelMatrices {
             distances: Arc::new(distances.into_iter().flatten().collect()),
             times: Arc::new(times.into_iter().flatten().collect()),
             costs: Arc::new(costs.into_iter().flatten().collect()),
+            num_locations,
+            is_symmetric,
+        }
+    }
+
+    // TODO: later pass the objective
+    pub fn from_travel_matrices(
+        matrices: hermes_matrix_providers::travel_matrices::TravelMatrices,
+    ) -> Self {
+        let distances = Arc::new(matrices.distances);
+        let times = Arc::new(matrices.times);
+        let costs = if let Some(costs) = matrices.costs {
+            Arc::new(costs)
+        } else {
+            Arc::clone(&times)
+        };
+
+        let len = distances.len();
+        let num_locations = len.isqrt();
+        let is_symmetric = is_flat_matrix_symmetric(&distances, num_locations);
+
+        Self {
+            distances,
+            times,
+            costs,
             num_locations,
             is_symmetric,
         }

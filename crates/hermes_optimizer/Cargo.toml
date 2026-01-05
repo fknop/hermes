@@ -25,6 +25,8 @@ tracing = { workspace = true }
 uuid = { features = ["v4"], version = "1.17.0" }
 anyhow = { workspace = true }
 thread_local = "1.1.9"
+schemars = { workspace = true }
+futures = "0.3.31"
 
 [dev-dependencies]
 criterion = "0.7.0"

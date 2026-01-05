@@ -1,0 +1,265 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "VehicleRoutingProblem",
+  "type": "object",
+  "properties": {
+    "locations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Location"
+      }
+    },
+    "services": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Service"
+      }
+    },
+    "vehicle_profiles": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/VehicleProfile"
+      }
+    },
+    "vehicles": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Vehicle"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "required": ["locations", "services", "vehicle_profiles", "vehicles"],
+  "$defs": {
+    "CustomMatrices": {
+      "type": "object",
+      "properties": {
+        "costs": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "double"
+            }
+          }
+        },
+        "distances": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "double"
+            }
+          }
+        },
+        "times": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "double"
+            }
+          }
+        }
+      },
+      "required": ["times", "distances", "costs"]
+    },
+    "GraphHopperProfile": {
+      "type": "string",
+      "enum": ["car", "bike", "foot", "small_truck", "truck"]
+    },
+    "Location": {
+      "type": "object",
+      "properties": {
+        "coordinates": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "format": "double"
+          },
+          "maxItems": 2,
+          "minItems": 2
+        }
+      },
+      "additionalProperties": false,
+      "required": ["coordinates"]
+    },
+    "Service": {
+      "type": "object",
+      "properties": {
+        "demand": {
+          "type": ["array", "null"],
+          "items": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "duration": {
+          "type": ["string", "null"],
+          "format": "duration"
+        },
+        "id": {
+          "type": "string"
+        },
+        "location_id": {
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "service_type": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ServiceType"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "skills": {
+          "type": ["array", "null"],
+          "items": {
+            "type": "string"
+          }
+        },
+        "time_windows": {
+          "type": ["array", "null"],
+          "items": {
+            "$ref": "#/$defs/TimeWindow"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": ["id", "location_id"]
+    },
+    "ServiceType": {
+      "type": "string",
+      "enum": ["Pickup", "Delivery"]
+    },
+    "TimeWindow": {
+      "type": "object",
+      "properties": {
+        "end": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "start": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        }
+      }
+    },
+    "TravelMatrixProvider": {
+      "oneOf": [
+        {
+          "description": "https://docs.graphhopper.com/openapi/map-data-and-routing-profiles/openstreetmap/standard-routing-profiles",
+          "type": "object",
+          "properties": {
+            "GraphHopperApi": {
+              "type": "object",
+              "properties": {
+                "gh_profile": {
+                  "$ref": "#/$defs/GraphHopperProfile"
+                }
+              },
+              "required": ["gh_profile"]
+            }
+          },
+          "additionalProperties": false,
+          "required": ["GraphHopperApi"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "AsTheCrowFlies": {
+              "type": "object",
+              "properties": {
+                "speed_kmh": {
+                  "type": "number",
+                  "format": "double"
+                }
+              },
+              "required": ["speed_kmh"]
+            }
+          },
+          "additionalProperties": false,
+          "required": ["AsTheCrowFlies"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "Custom": {
+              "type": "object",
+              "properties": {
+                "matrices": {
+                  "$ref": "#/$defs/CustomMatrices"
+                }
+              },
+              "required": ["matrices"]
+            }
+          },
+          "additionalProperties": false,
+          "required": ["Custom"]
+        }
+      ]
+    },
+    "Vehicle": {
+      "type": "object",
+      "properties": {
+        "capacity": {
+          "type": ["array", "null"],
+          "items": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "depot_duration": {
+          "type": ["string", "null"],
+          "format": "duration"
+        },
+        "depot_location_id": {
+          "type": ["integer", "null"],
+          "format": "uint",
+          "minimum": 0
+        },
+        "id": {
+          "type": "string"
+        },
+        "profile": {
+          "type": "string"
+        },
+        "return_depot_duration": {
+          "type": ["string", "null"],
+          "format": "duration"
+        },
+        "should_return_to_depot": {
+          "type": ["boolean", "null"]
+        },
+        "skills": {
+          "type": ["array", "null"],
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": ["id", "profile"]
+    },
+    "VehicleProfile": {
+      "type": "object",
+      "properties": {
+        "cost_provider": {
+          "$ref": "#/$defs/TravelMatrixProvider"
+        },
+        "id": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": ["id", "cost_provider"]
+    }
+  }
+}

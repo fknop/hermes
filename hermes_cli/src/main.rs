@@ -4,9 +4,10 @@ use clap::{Parser, Subcommand};
 use mimalloc::MiMalloc;
 use tracing::info;
 
-use crate::optimize_dataset::OptimizeDatasetArgs;
+use crate::{generate::GenerateSubcommands, optimize_dataset::OptimizeDatasetArgs};
 
 mod file_utils;
+mod generate;
 mod optimize_dataset;
 mod parsers;
 
@@ -45,6 +46,11 @@ enum Commands {
         #[command(flatten)]
         args: OptimizeDatasetArgs,
     },
+    #[command(visible_alias = "g")]
+    Generate {
+        #[command(subcommand)]
+        commands: GenerateSubcommands,
+    },
 }
 
 #[tokio::main]
@@ -66,6 +72,7 @@ async fn main() -> Result<(), anyhow::Error> {
             info!("{}", duration)
         }
         Some(Commands::OptimizeDataset { args }) => optimize_dataset::run(args)?,
+        Some(Commands::Generate { commands }) => generate::run(commands)?,
         None => {
             // Handle no command provided
         }

@@ -1,5 +1,6 @@
 use std::{fmt::Display, time::Duration};
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tracing::debug;
@@ -8,7 +9,7 @@ use crate::travel_matrices::TravelMatrices;
 
 pub type GHPoint = [f64; 2];
 
-#[derive(Deserialize, Serialize, Copy, Clone, Hash)]
+#[derive(Deserialize, Serialize, JsonSchema, Copy, Clone, Hash)]
 #[serde(rename_all = "snake_case")]
 pub enum GraphHopperProfile {
     Car,

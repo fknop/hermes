@@ -7,6 +7,12 @@ pub enum ApiError {
     NotFound(String),
 }
 
+impl From<anyhow::Error> for ApiError {
+    fn from(error: anyhow::Error) -> Self {
+        ApiError::InternalServerError(error.to_string())
+    }
+}
+
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         match self {

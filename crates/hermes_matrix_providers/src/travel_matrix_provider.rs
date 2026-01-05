@@ -1,8 +1,31 @@
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{graphhopper_api::GraphHopperProfile, travel_matrices::TravelMatrices};
+use crate::graphhopper_api::GraphHopperProfile;
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, JsonSchema)]
+pub struct CustomMatrices {
+    pub times: Vec<Vec<f64>>,
+    pub distances: Vec<Vec<f64>>,
+    pub costs: Vec<Vec<f64>>,
+}
+
+impl std::hash::Hash for CustomMatrices {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        for d in self.distances.iter().flatten() {
+            state.write_u64(d.to_bits());
+        }
+        for t in self.times.iter().flatten() {
+            state.write_u64(t.to_bits());
+        }
+
+        for c in self.costs.iter().flatten() {
+            state.write_u64(c.to_bits());
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, JsonSchema)]
 pub enum TravelMatrixProvider {
     /// https://docs.graphhopper.com/openapi/map-data-and-routing-profiles/openstreetmap/standard-routing-profiles
     GraphHopperApi {
@@ -15,7 +38,7 @@ pub enum TravelMatrixProvider {
     },
 
     Custom {
-        matrices: TravelMatrices,
+        matrices: CustomMatrices,
     },
 }
 

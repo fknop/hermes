@@ -2,6 +2,7 @@ use std::default;
 
 use fxhash::FxHashSet;
 use jiff::SignedDuration;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 
@@ -9,7 +10,7 @@ use crate::problem::skill::Skill;
 
 use super::{capacity::Capacity, location::LocationIdx, time_window::TimeWindow};
 
-#[derive(Deserialize, Serialize, Debug, Copy, Clone, Default, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, JsonSchema, Debug, Copy, Clone, Default, PartialEq, Eq)]
 pub enum ServiceType {
     Pickup,
     #[default]

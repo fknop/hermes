@@ -84,10 +84,10 @@ impl Vehicle {
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
 pub struct VehicleShift {
-    earliest_start: Option<Timestamp>,
-    latest_end: Option<Timestamp>,
-    maximum_transport_duration: Option<SignedDuration>,
-    maximum_working_duration: Option<SignedDuration>,
+    pub(crate) earliest_start: Option<Timestamp>,
+    pub(crate) latest_end: Option<Timestamp>,
+    pub(crate) maximum_transport_duration: Option<SignedDuration>,
+    pub(crate) maximum_working_duration: Option<SignedDuration>,
 }
 
 impl VehicleShift {

@@ -54,7 +54,11 @@ where
             TravelMatrixProvider::AsTheCrowFlies { speed_kmh } => {
                 Ok(as_the_crow_flies_matrices(points, *speed_kmh))
             }
-            TravelMatrixProvider::Custom { matrices } => Ok(matrices.clone()),
+            TravelMatrixProvider::Custom { matrices } => Ok(TravelMatrices {
+                distances: matrices.distances.iter().flatten().copied().collect(),
+                times: matrices.times.iter().flatten().copied().collect(),
+                costs: Some(matrices.costs.iter().flatten().copied().collect()),
+            }),
         };
 
         if let Ok(ref matrices) = result {

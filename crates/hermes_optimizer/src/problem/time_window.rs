@@ -1,9 +1,10 @@
 use std::cmp;
 
 use jiff::Timestamp;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Debug, Serialize, Clone)]
+#[derive(Deserialize, JsonSchema, Debug, Serialize, Clone)]
 pub struct TimeWindow {
     start: Option<Timestamp>,
     end: Option<Timestamp>,
