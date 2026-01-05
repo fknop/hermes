@@ -31,7 +31,10 @@ impl Solver {
         }
     }
 
-    pub fn on_best_solution(&mut self, callback: fn(&AcceptedSolution)) {
+    pub fn on_best_solution<F>(&mut self, callback: F)
+    where
+        F: FnMut(&AcceptedSolution) + Send + Sync + 'static,
+    {
         self.search.on_best_solution(callback);
     }
 

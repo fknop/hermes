@@ -1,4 +1,4 @@
-use std::{fs::File, io::BufReader, path::PathBuf};
+use std::{cell::RefCell, fs::File, io::BufReader, path::PathBuf, rc::Rc, sync::Arc};
 
 use clap::{Args, arg};
 use hermes_matrix_providers::travel_matrix_client::TravelMatrixClient;
@@ -10,6 +10,7 @@ use hermes_optimizer::{
     },
 };
 use indicatif::ProgressBar;
+use parking_lot::Mutex;
 
 use crate::parsers;
 
@@ -38,9 +39,9 @@ pub async fn run(args: OptimizeArgs) -> anyhow::Result<()> {
         .to_string_lossy()
         .into_owned();
 
-    let mut loading_bar = ProgressBar::new(args.timeout.as_secs() as u64);
-    loading_bar.set_prefix(file_name);
-    loading_bar.set_message("pending...");
+    let mut loading_bar = Arc::new(Mutex::new(ProgressBar::new(args.timeout.as_secs() as u64)));
+    loading_bar.lock().set_prefix(file_name);
+    loading_bar.lock().set_message("pending...");
 
     let f = File::open(args.input)?;
     let content: JsonVehicleRoutingProblem = serde_json::from_reader(f)?;
@@ -57,25 +58,32 @@ pub async fn run(args: OptimizeArgs) -> anyhow::Result<()> {
         },
     );
 
-    // solver.on_best_solution(|best_solution| {
-    //     loading_bar.set_message("running...");
-    // });
+    let closure_loading_bar = Arc::clone(&loading_bar);
+    solver.on_best_solution(move |best_solution| {
+        closure_loading_bar.lock().set_message(format!(
+            "running... routes = {}, costs = {}",
+            best_solution.solution.non_empty_routes_count(),
+            best_solution.solution.total_transport_costs(),
+        ));
+    });
 
-    loading_bar.set_message("running...");
+    loading_bar.lock().set_message("running...");
 
     solver.solve();
     let best_solution = solver.current_best_solution();
     if let Some(best_solution) = best_solution {
         let n_routes = best_solution.solution.non_empty_routes_count();
         let total_transport_cost = best_solution.solution.total_transport_costs();
-        loading_bar.finish_with_message(format!(
+        loading_bar.lock().finish_with_message(format!(
             "Finished: routes = {}, costs = {}, unassigned = {}",
             n_routes,
             total_transport_cost,
             best_solution.solution.unassigned_jobs().len(),
         ));
     } else {
-        loading_bar.finish_with_message("No solution".to_string());
+        loading_bar
+            .lock()
+            .finish_with_message("No solution".to_string());
     }
 
     Ok(())

@@ -1,7 +1,7 @@
 use std::{collections::VecDeque, sync::Arc, thread};
 
 use jiff::Timestamp;
-use parking_lot::{MappedRwLockReadGuard, RwLock, RwLockReadGuard};
+use parking_lot::{MappedRwLockReadGuard, Mutex, RwLock, RwLockReadGuard};
 use rand::{Rng, SeedableRng, rngs::SmallRng};
 use tracing::debug;
 
@@ -64,7 +64,8 @@ pub struct Search {
     tabu: Arc<RwLock<VecDeque<AcceptedSolution>>>,
     solution_selector: SolutionSelector,
     solution_acceptor: SolutionAcceptor,
-    on_best_solution_handler: Arc<Option<fn(&AcceptedSolution)>>,
+    on_best_solution_handler:
+        Option<Arc<Mutex<dyn FnMut(&AcceptedSolution) + Send + Sync + 'static>>>,
     alns_weights: Arc<RwLock<AlnsWeights<(RuinStrategy, RecreateStrategy)>>>,
     is_stopped: Arc<RwLock<bool>>,
     statistics: Arc<SearchStatistics>,
@@ -151,7 +152,7 @@ impl Search {
             tabu: Arc::new(RwLock::new(VecDeque::with_capacity(params.tabu_size))),
             solution_selector,
             solution_acceptor,
-            on_best_solution_handler: Arc::new(None),
+            on_best_solution_handler: None,
             alns_weights: Arc::new(RwLock::new(AlnsWeights::new(strategies))),
             is_stopped: Arc::new(RwLock::new(false)),
             statistics: Arc::new(SearchStatistics::new(
@@ -188,8 +189,11 @@ impl Search {
         ]
     }
 
-    pub fn on_best_solution(&mut self, callback: fn(&AcceptedSolution)) {
-        self.on_best_solution_handler = Arc::new(Some(callback));
+    pub fn on_best_solution<F>(&mut self, callback: F)
+    where
+        F: FnMut(&AcceptedSolution) + Send + Sync + 'static,
+    {
+        self.on_best_solution_handler = Some(Arc::new(Mutex::new(callback)));
     }
 
     pub fn best_solution(&self) -> Option<MappedRwLockReadGuard<'_, AcceptedSolution>> {
@@ -553,8 +557,8 @@ impl Search {
                         // );
                         // info!("Vehicles {:?}", guard[0].solution.routes().len());
 
-                        if let Some(callback) = self.on_best_solution_handler.as_ref() {
-                            callback(&guard[0]);
+                        if let Some(callback) = &self.on_best_solution_handler {
+                            callback.lock()(&guard[0]);
                         }
                     }
                 });
