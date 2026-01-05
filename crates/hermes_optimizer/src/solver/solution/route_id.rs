@@ -1,5 +1,5 @@
 use crate::{
-    define_index_newtype, problem::vehicle::VehicleIdx,
+    define_index_newtype,
     solver::solution::route::WorkingSolutionRoute,
 };
 

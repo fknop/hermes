@@ -415,7 +415,7 @@ impl VehicleRoutingProblem {
         let mut precomputed_average_cost_from_depot = Vec::with_capacity(locations.len());
 
         precomputed_average_cost_from_depot.extend(locations.iter().enumerate_idx().map(
-            |(location_id, location)| {
+            |(location_id, _location)| {
                 vehicles
                     .iter()
                     .filter_map(|vehicle| {

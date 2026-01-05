@@ -3,7 +3,7 @@ use std::{collections::VecDeque, sync::Arc, thread};
 use jiff::Timestamp;
 use parking_lot::{MappedRwLockReadGuard, RwLock, RwLockReadGuard};
 use rand::{Rng, SeedableRng, rngs::SmallRng};
-use tracing::{debug, info};
+use tracing::debug;
 
 use crate::{
     acceptor::{
@@ -602,7 +602,7 @@ impl Search {
         }
     }
 
-    fn create_num_jobs_to_remove(&self, state: &ThreadedSearchState, rng: &mut SmallRng) -> usize {
+    fn create_num_jobs_to_remove(&self, _state: &ThreadedSearchState, rng: &mut SmallRng) -> usize {
         let ruin_minimum_ratio = self.params.ruin.ruin_minimum_ratio;
         let ruin_maximum_ratio = self.params.ruin.ruin_maximum_ratio;
 

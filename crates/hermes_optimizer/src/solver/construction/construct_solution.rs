@@ -9,7 +9,6 @@ use crate::{
         amount::AmountExpression,
         capacity::Capacity,
         job::{Job, JobIdx},
-        location::{Location, LocationIdx},
         service::ServiceType,
         vehicle_routing_problem::VehicleRoutingProblem,
     },
@@ -80,7 +79,7 @@ fn compute_convex_hull(problem: &VehicleRoutingProblem) -> (Vec<JobIdx>, Vec<Job
                 .locations()
                 .iter()
                 .enumerate_idx()
-                .find(|(idx, location)| location.x() == point.x() && location.y() == point.y())
+                .find(|(_idx, location)| location.x() == point.x() && location.y() == point.y())
                 .map(|(idx, _)| idx)
         })
         .flat_map(|location_id| {

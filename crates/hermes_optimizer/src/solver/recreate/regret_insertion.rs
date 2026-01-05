@@ -1,14 +1,11 @@
 use rand::Rng;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
-use crate::{
-    problem::job::JobIdx,
-    solver::{
+use crate::solver::{
         insertion::{Insertion, for_each_insertion},
-        score::{self, Score},
+        score::Score,
         solution::working_solution::WorkingSolution,
-    },
-};
+    };
 
 use super::{recreate_context::RecreateContext, recreate_solution::RecreateSolution};
 

@@ -14,8 +14,8 @@ pub async fn handler(ws: WebSocketUpgrade, State(state): State<Arc<AppState>>) -
     ws.on_upgrade(|socket| handle_socket(socket, state))
 }
 
-async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
+async fn handle_socket(mut socket: WebSocket, _state: Arc<AppState>) {
     while let Some(Ok(msg)) = socket.recv().await {
-        if let Message::Text(msg) = msg {}
+        if let Message::Text(_msg) = msg {}
     }
 }

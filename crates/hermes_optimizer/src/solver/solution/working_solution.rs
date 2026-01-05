@@ -247,7 +247,7 @@ impl WorkingSolution {
                     self.create_additional_route(vehicle_id);
                 }
             }
-            Insertion::Shipment(context) => {
+            Insertion::Shipment(_context) => {
                 unimplemented!()
             }
         }

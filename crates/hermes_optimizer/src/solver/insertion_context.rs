@@ -2,7 +2,7 @@ use jiff::Timestamp;
 
 use crate::{
     problem::{
-        job::{ActivityId, JobIdx},
+        job::ActivityId,
         vehicle_routing_problem::VehicleRoutingProblem,
     },
     solver::{
@@ -51,7 +51,7 @@ impl<'a> InsertionContext<'a> {
 
         match *self.insertion {
             Insertion::Service(ServiceInsertion {
-                route_id,
+                route_id: _,
                 job_index,
                 position,
             }) => {
@@ -74,7 +74,7 @@ impl<'a> InsertionContext<'a> {
             Insertion::Shipment(ShipmentInsertion {
                 job_index,
                 pickup_position,
-                route_id,
+                route_id: _,
                 ..
             }) => {
                 if pickup_position == 0 {

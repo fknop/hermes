@@ -21,7 +21,7 @@ impl GlobalConstraint for UnassignedJobConstraint {
         )
     }
 
-    fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
+    fn compute_insertion_score(&self, _context: &InsertionContext) -> Score {
         Score::zero()
     }
 }

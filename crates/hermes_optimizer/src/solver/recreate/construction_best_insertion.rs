@@ -1,8 +1,7 @@
-use fxhash::FxHashMap;
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use rayon::iter::ParallelIterator;
 
 use crate::solver::{
-    insertion::{Insertion, for_each_insertion, for_each_route_insertion},
+    insertion::{Insertion, for_each_route_insertion},
     score::Score,
     solution::{route_id::RouteIdx, working_solution::WorkingSolution},
 };

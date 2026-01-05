@@ -1,5 +1,4 @@
-use geo::{Bearing, Distance, Euclidean, EuclideanDistance, Haversine, HaversineBearing};
-use serde::Deserialize;
+use geo::{Bearing, Distance, Euclidean, Haversine};
 
 use crate::define_index_newtype;
 

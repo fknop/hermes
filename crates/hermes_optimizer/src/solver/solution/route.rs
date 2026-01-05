@@ -502,7 +502,7 @@ impl WorkingSolutionRoute {
 
     pub fn remove_activity(
         &mut self,
-        problem: &VehicleRoutingProblem,
+        _problem: &VehicleRoutingProblem,
         position: usize,
     ) -> Option<ActivityId> {
         if let Some(job_id) = self.remove(position) {
@@ -553,8 +553,8 @@ impl WorkingSolutionRoute {
                 self.insert_service(problem, *position, *job_index);
             }
             Insertion::Shipment(ShipmentInsertion {
-                job_index,
-                delivery_position,
+                job_index: _,
+                delivery_position: _,
                 ..
             }) => {
                 unimplemented!()

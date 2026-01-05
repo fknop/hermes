@@ -133,7 +133,7 @@ impl WitnessSearch {
         target: NodeId,
         max_weight: Weight,
         max_settled_nodes: usize,
-        max_hops: HopLimit,
+        _max_hops: HopLimit,
     ) -> Weight {
         if self.start_node == target {
             return 0;

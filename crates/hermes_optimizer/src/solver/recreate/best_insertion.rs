@@ -1,4 +1,4 @@
-use std::{fmt::Display, ops::ControlFlow};
+use std::fmt::Display;
 
 use jiff::Timestamp;
 use rand::{Rng, rngs::SmallRng, seq::SliceRandom};

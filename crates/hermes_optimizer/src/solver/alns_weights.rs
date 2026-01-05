@@ -1,8 +1,7 @@
-use std::{fmt::Display, hash::Hash};
+use std::hash::Hash;
 
 use fxhash::FxHashMap;
 use rand::seq::IndexedRandom;
-use tracing::info;
 
 use crate::solver::solver_params::SolverParams;
 
