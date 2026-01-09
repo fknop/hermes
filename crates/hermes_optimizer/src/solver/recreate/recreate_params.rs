@@ -11,7 +11,7 @@ impl Default for RecreateParams {
         RecreateParams {
             insert_on_failure: false,
             recreate_strategies: vec![
-                RecreateStrategy::RegretInsertion,
+                RecreateStrategy::RegretInsertion(2),
                 RecreateStrategy::BestInsertion(BestInsertionSortStrategy::Random),
                 RecreateStrategy::BestInsertion(BestInsertionSortStrategy::Demand),
                 RecreateStrategy::BestInsertion(BestInsertionSortStrategy::Far),

@@ -139,7 +139,8 @@ impl DatasetParser for SolomonParser {
             .set_fleet(Fleet::Finite(vehicles))
             .set_locations(locations)
             .set_services(services)
-            .set_distance_method(DistanceMethod::Euclidean);
+            .set_distance_method(DistanceMethod::Euclidean)
+            .set_penalize_waiting_duration(false);
 
         Ok(builder.build())
     }

@@ -22,6 +22,14 @@ pub struct RecreateContext<'a> {
 }
 
 impl<'a> RecreateContext<'a> {
+    pub fn apply_noise(&self, score: Score, insertion: &Insertion) -> Score {
+        if let Some(noise_generator) = self.noise_generator {
+            score + Score::soft(noise_generator.create_noise(insertion.job_idx()))
+        } else {
+            score
+        }
+    }
+
     pub fn compute_insertion_score(
         &self,
         solution: &WorkingSolution,
@@ -30,9 +38,18 @@ impl<'a> RecreateContext<'a> {
     ) -> Score {
         let context = InsertionContext::new(self.problem, solution, insertion);
         compute_insertion_score(self.constraints, &context, best_score)
-            + self.noise_generator.map_or(Score::ZERO, |noise_generator| {
-                Score::soft(noise_generator.create_noise(context.insertion.job_idx()))
-            })
+    }
+
+    pub fn compute_noisy_insertion_score(
+        &self,
+        solution: &WorkingSolution,
+        insertion: &Insertion,
+        best_score: Option<&Score>,
+    ) -> Score {
+        self.apply_noise(
+            self.compute_insertion_score(solution, insertion, best_score),
+            insertion,
+        )
     }
 
     pub fn should_insert(&self, score: &Score) -> bool {

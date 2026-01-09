@@ -555,12 +555,6 @@ impl Search {
                     guard.sort_unstable_by(|a, b| a.score.cmp(&b.score));
 
                     if is_best {
-                        // info!(
-                        //     thread = thread::current().name().unwrap_or("main"),
-                        //     "Score: {:?}", guard[0].score_analysis,
-                        // );
-                        // info!("Vehicles {:?}", guard[0].solution.routes().len());
-
                         if let Some(callback) = &self.on_best_solution_handler {
                             callback.lock()(&guard[0]);
                         }
@@ -591,6 +585,8 @@ impl Search {
             );
         }
 
+        let segment_size = (self.problem.jobs().len() / 5).clamp(50, 200);
+
         if state.iteration > 0 {
             if state.iterations_without_improvement > 0
                 && state
@@ -599,10 +595,7 @@ impl Search {
             {
                 self.alns_weights.write().reset();
                 state.alns_scores.reset();
-            } else if state
-                .iteration
-                .is_multiple_of(self.params.alns_segment_iterations)
-            {
+            } else if state.iteration.is_multiple_of(segment_size) {
                 self.alns_weights
                     .write()
                     .update_weights(&mut state.alns_scores, self.params.alns_reaction_factor);
@@ -611,24 +604,27 @@ impl Search {
     }
 
     fn create_num_jobs_to_remove(&self, state: &ThreadedSearchState, rng: &mut SmallRng) -> usize {
-        // let progress =
-        //     (state.iteration as f64 / state.max_iterations.unwrap_or(10000) as f64).min(1.0);
-        // let stagnation_factor = (state.iterations_without_improvement as f64 / 1000.0).min(1.0);
+        let progress = (state.iteration as f64 / state.max_iterations.unwrap_or(10000) as f64);
+        let stagnation_factor = (state.iterations_without_improvement as f64 / 1000.0).min(1.0);
 
-        // let ruin_maximum_ratio = 0.5 - 0.35 * progress + 0.2 * stagnation_factor;
-        // let ruin_minimum_ratio = 0.05 + 0.1 * stagnation_factor;
+        let ruin_minimum_ratio = 0.05 + 0.1 * stagnation_factor;
+        let ruin_maximum_ratio = 0.4 - (0.30 * progress).min(0.30) + 0.2 * stagnation_factor;
 
-        let ruin_minimum_ratio = self.params.ruin.ruin_minimum_ratio;
-        let ruin_maximum_ratio = self.params.ruin.ruin_maximum_ratio;
+        // let ruin_minimum_ratio = self.params.ruin.ruin_minimum_ratio;
+        // let ruin_maximum_ratio = self.params.ruin.ruin_maximum_ratio;
 
-        let minimum_ruin_size = ((ruin_minimum_ratio * self.problem.jobs().len() as f64).ceil()
-            as usize)
-            .max(self.params.ruin.ruin_minimum_size);
+        let minimum_ruin_size =
+            ((ruin_minimum_ratio * self.problem.jobs().len() as f64).ceil() as usize);
+        // .max(self.params.ruin.ruin_minimum_size);
 
-        let maximum_ruin_size = ((ruin_maximum_ratio * self.problem.jobs().len() as f64).floor()
-            as usize)
-            .min(self.params.ruin.ruin_maximum_size);
+        let maximum_ruin_size =
+            ((ruin_maximum_ratio * self.problem.jobs().len() as f64).floor() as usize);
+        // .min(self.params.ruin.ruin_maximum_size);
 
+        assert!(
+            maximum_ruin_size > minimum_ruin_size,
+            "{maximum_ruin_size} > {minimum_ruin_size}"
+        );
         rng.random_range(minimum_ruin_size..=maximum_ruin_size)
     }
 

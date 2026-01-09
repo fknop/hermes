@@ -36,7 +36,7 @@ impl ConstructionBestInsertion {
                             best_score_for_service = entry.score;
                             best_insertion_for_service = Some(entry.insertion.clone());
                         } else {
-                            let mut best_score_for_route = Score::MAX;
+                            let mut best_score_for_route: Option<Score> = None;
                             let mut best_insertion_for_route: Option<Insertion> = None;
                             for_each_route_insertion(solution, route_id, job_id, |insertion| {
                                 let score = context.compute_insertion_score(
@@ -45,8 +45,8 @@ impl ConstructionBestInsertion {
                                     Some(&best_score_for_service),
                                 );
 
-                                if score < best_score_for_route {
-                                    best_score_for_route = score;
+                                if score < best_score_for_route.unwrap_or(Score::MAX) {
+                                    best_score_for_route = Some(score);
                                     best_insertion_for_route = Some(insertion.clone());
                                 }
 
@@ -56,12 +56,14 @@ impl ConstructionBestInsertion {
                                 }
                             });
 
-                            if let Some(best_insertion) = &best_insertion_for_route {
+                            if let Some(best_insertion) = &best_insertion_for_route
+                                && let Some(best_score) = best_score_for_route
+                            {
                                 insertion_cache.insert(
                                     route_id,
                                     solution.route(route_id).version(),
                                     job_id,
-                                    best_score_for_route,
+                                    best_score,
                                     best_insertion.clone(),
                                 );
                             }

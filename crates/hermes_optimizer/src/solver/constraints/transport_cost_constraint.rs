@@ -8,7 +8,7 @@ use super::global_constraint::GlobalConstraint;
 pub struct TransportCostConstraint;
 
 // TODO: update this weight
-pub const TRANSPORT_COST_WEIGHT: f64 = 1.0; // 70.0;
+pub const TRANSPORT_COST_WEIGHT: f64 = 1.0; //70.0;
 
 const SCORE_LEVEL: ScoreLevel = ScoreLevel::Soft;
 

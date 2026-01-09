@@ -8,7 +8,7 @@ use crate::{
 
 pub struct MaximumActivitiesConstraint;
 
-const WEIGHT: f64 = 10000.0;
+const WEIGHT: f64 = 1000.0;
 
 impl RouteConstraint for MaximumActivitiesConstraint {
     fn score_level(&self) -> ScoreLevel {

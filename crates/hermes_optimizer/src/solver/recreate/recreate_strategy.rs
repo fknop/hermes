@@ -19,7 +19,7 @@ use super::{
 pub enum RecreateStrategy {
     CompleteBestInsertion,
     BestInsertion(BestInsertionSortStrategy),
-    RegretInsertion,
+    RegretInsertion(usize),
 }
 
 impl Display for RecreateStrategy {
@@ -27,7 +27,7 @@ impl Display for RecreateStrategy {
         match self {
             Self::CompleteBestInsertion => write!(f, "CompleteBestInsertion"),
             Self::BestInsertion(sort_method) => write!(f, "BestInsertion({sort_method})"),
-            Self::RegretInsertion => write!(f, "RegretInsertion"),
+            Self::RegretInsertion(k) => write!(f, "RegretInsertion({k})"),
         }
     }
 }
@@ -46,8 +46,8 @@ impl RecreateSolution for RecreateStrategy {
                 });
                 strategy.recreate_solution(solution, context);
             }
-            RecreateStrategy::RegretInsertion => {
-                let strategy = RegretInsertion::new(2);
+            RecreateStrategy::RegretInsertion(k) => {
+                let strategy = RegretInsertion::new(*k);
                 strategy.recreate_solution(solution, context);
             }
         }

@@ -153,7 +153,7 @@ impl BestInsertion {
                 }
 
                 let score =
-                    context.compute_insertion_score(solution, &insertion, Some(&best_score));
+                    context.compute_noisy_insertion_score(solution, &insertion, Some(&best_score));
 
                 if score < best_score {
                     best_score = score;

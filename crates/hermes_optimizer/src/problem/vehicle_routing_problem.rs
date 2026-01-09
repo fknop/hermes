@@ -52,6 +52,7 @@ struct VehicleRoutingProblemParams {
     jobs: Vec<Job>,
     // travel_costs: TravelMatrices,
     distance_method: DistanceMethod,
+    penalize_waiting_duration: bool,
 }
 
 impl VehicleRoutingProblem {
@@ -68,7 +69,7 @@ impl VehicleRoutingProblem {
         let precomputed_average_cost_from_depot =
             VehicleRoutingProblem::precompute_average_cost_from_depot(
                 &params.locations,
-                &params.fleet.vehicles(),
+                params.fleet.vehicles(),
                 &params.vehicle_profiles,
             );
 
@@ -90,12 +91,17 @@ impl VehicleRoutingProblem {
             .max()
             .unwrap_or(0);
 
-        let waiting_duration_weight =
-            VehicleRoutingProblem::precompute_waiting_duration_weight(&params.vehicle_profiles);
+        let waiting_duration_weight = if params.penalize_waiting_duration {
+            VehicleRoutingProblem::precompute_waiting_duration_weight(&params.vehicle_profiles)
+        } else {
+            0.0
+        };
+
+        println!("{waiting_duration_weight}");
 
         let precomputed_vehicle_compatibilities =
             VehicleRoutingProblem::precompute_vehicle_compatibilities(
-                &params.fleet.vehicles(),
+                params.fleet.vehicles(),
                 &params.jobs,
             );
 
@@ -337,6 +343,10 @@ impl VehicleRoutingProblem {
         self.precomputed_vehicle_compatibilities[index]
     }
 
+    pub fn set_waiting_duration_weight(&mut self, cost: f64) {
+        self.waiting_duration_weight = cost;
+    }
+
     fn precompute_vehicle_compatibilities(vehicles: &[Vehicle], jobs: &[Job]) -> Vec<bool> {
         let mut compatibilities = vec![true; vehicles.len() * jobs.len()];
 
@@ -444,6 +454,7 @@ pub struct VehicleRoutingProblemBuilder {
     fleet: Option<Fleet>,
     vehicle_profiles: Option<Vec<VehicleProfile>>,
     distance_method: Option<DistanceMethod>,
+    penalize_waiting_duration: Option<bool>,
 }
 
 impl VehicleRoutingProblemBuilder {
@@ -452,6 +463,14 @@ impl VehicleRoutingProblemBuilder {
         distance_method: DistanceMethod,
     ) -> &mut VehicleRoutingProblemBuilder {
         self.distance_method = Some(distance_method);
+        self
+    }
+
+    pub fn set_penalize_waiting_duration(
+        &mut self,
+        penalize: bool,
+    ) -> &mut VehicleRoutingProblemBuilder {
+        self.penalize_waiting_duration = Some(penalize);
         self
     }
 
@@ -531,6 +550,7 @@ impl VehicleRoutingProblemBuilder {
             vehicle_profiles,
             jobs,
             distance_method,
+            penalize_waiting_duration: self.penalize_waiting_duration.unwrap_or(true),
         })
     }
 }
