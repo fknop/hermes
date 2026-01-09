@@ -122,16 +122,11 @@ impl Default for SolverParams {
 }
 
 impl SolverParams {
-    pub fn strategies(&self) -> Vec<(RuinStrategy, RecreateStrategy)> {
-        self.ruin
-            .ruin_strategies
-            .iter()
-            .flat_map(|ruin_strategy| {
-                self.recreate
-                    .recreate_strategies
-                    .iter()
-                    .map(|recreate_strategy| (*ruin_strategy, *recreate_strategy))
-            })
-            .collect::<Vec<_>>()
+    pub fn ruin_strategies(&self) -> &Vec<RuinStrategy> {
+        &self.ruin.ruin_strategies
+    }
+
+    pub fn recreate_strategies(&self) -> &Vec<RecreateStrategy> {
+        &self.recreate.recreate_strategies
     }
 }

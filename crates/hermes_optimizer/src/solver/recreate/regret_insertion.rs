@@ -2,10 +2,10 @@ use rand::Rng;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 use crate::solver::{
-        insertion::{Insertion, for_each_insertion},
-        score::Score,
-        solution::working_solution::WorkingSolution,
-    };
+    insertion::{Insertion, for_each_insertion},
+    score::Score,
+    solution::working_solution::WorkingSolution,
+};
 
 use super::{recreate_context::RecreateContext, recreate_solution::RecreateSolution};
 
@@ -57,7 +57,7 @@ impl RegretInsertion {
                 );
 
                 for_each_insertion(solution, job_id, |insertion| {
-                    let score = context.compute_insertion_score(solution, &insertion, None);
+                    let score = context.compute_noisy_insertion_score(solution, &insertion, None);
 
                     if let Some(last) = potential_insertions.last()
                         && !potential_insertions.is_empty()

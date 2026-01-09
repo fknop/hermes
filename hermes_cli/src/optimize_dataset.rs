@@ -94,7 +94,8 @@ pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
             vrp,
             SolverParams {
                 terminations: vec![Termination::Duration(args.timeout)],
-                insertion_threads: Threads::Multi(args.threads as usize),
+                search_threads: Threads::Multi(args.threads as usize),
+                insertion_threads: Threads::Multi(4),
                 run_intensify_search: true,
                 ..SolverParams::default()
             },

@@ -829,15 +829,26 @@ impl WorkingSolutionRoute {
             .update_expr(vehicle_capacity - &self.current_load[self.len()]);
 
         if problem.has_time_windows() {
-            let mut next_activity_time_slack = SignedDuration::MAX;
+            let mut next_activity_time_slack: Option<SignedDuration> = None;
             for (index, &activity_job_id) in self.activity_ids.iter().enumerate().rev() {
                 assert_ne!(self.arrival_times[index], Timestamp::MAX);
-                let current_time_slack =
-                    compute_time_slack(problem, activity_job_id, self.arrival_times[index]);
+                let current_time_slack = compute_time_slack(
+                    problem,
+                    activity_job_id,
+                    self.arrival_times[index],
+                    self.waiting_durations[index],
+                );
 
-                self.time_slacks[index] = current_time_slack.min(next_activity_time_slack);
+                self.time_slacks[index] = if let Some(next_activity_time_slack) =
+                    next_activity_time_slack
+                {
+                    current_time_slack
+                        .min(next_activity_time_slack.saturating_add(self.waiting_durations[index]))
+                } else {
+                    current_time_slack
+                };
 
-                next_activity_time_slack = self.time_slacks[index];
+                next_activity_time_slack = Some(self.time_slacks[index]);
             }
         } else {
             self.time_slacks.fill(SignedDuration::MAX);
@@ -957,6 +968,16 @@ impl WorkingSolutionRoute {
                         .saturating_add(current_time_slack)
                         .unwrap()
                 {
+                    // println!(
+                    //     "{job_id}, false, {current_time_slack} - {arrival_time} - {current_arrival_time}"
+                    // );
+                    // println!(
+                    //     "{} > {}",
+                    //     arrival_time,
+                    //     current_arrival_time
+                    //         .saturating_add(current_time_slack)
+                    //         .unwrap()
+                    // );
                     return false;
                 }
 

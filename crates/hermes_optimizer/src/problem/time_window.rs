@@ -45,10 +45,14 @@ impl TimeWindow {
         }
     }
 
-    pub fn overtime(&self, arrival: Timestamp) -> i64 {
+    pub fn overtime(&self, arrival: Timestamp) -> f64 {
         match self.end {
-            Some(end) => cmp::max(arrival.as_second() - end.as_second(), 0),
-            None => 0,
+            Some(end) => {
+                let secs = arrival.duration_since(end).as_secs_f64();
+
+                if secs > 0.0 { secs } else { 0.0 }
+            }
+            None => 0.0,
         }
     }
 }

@@ -67,7 +67,9 @@ pub struct Search {
     solution_acceptor: SolutionAcceptor,
     on_best_solution_handler:
         Option<Arc<Mutex<dyn FnMut(&AcceptedSolution) + Send + Sync + 'static>>>,
-    alns_weights: Arc<RwLock<AlnsWeights<(RuinStrategy, RecreateStrategy)>>>,
+    alns_ruin_weights: Arc<RwLock<AlnsWeights<RuinStrategy>>>,
+    alns_recreate_weights: Arc<RwLock<AlnsWeights<RecreateStrategy>>>,
+    // alns_weights: Arc<RwLock<AlnsWeights<(RuinStrategy, RecreateStrategy)>>>,
     is_stopped: Arc<RwLock<bool>>,
     statistics: Arc<SearchStatistics>,
 
@@ -143,7 +145,8 @@ impl Search {
             SolverAcceptorStrategy::Any => SolutionAcceptor::Any,
         };
 
-        let strategies = params.strategies();
+        let ruin_strategies = params.ruin_strategies().clone();
+        let recreate_strategies = params.recreate_strategies().clone();
 
         Search {
             problem: Arc::clone(&problem),
@@ -154,7 +157,8 @@ impl Search {
             solution_selector,
             solution_acceptor,
             on_best_solution_handler: None,
-            alns_weights: Arc::new(RwLock::new(AlnsWeights::new(strategies))),
+            alns_ruin_weights: Arc::new(RwLock::new(AlnsWeights::new(ruin_strategies))),
+            alns_recreate_weights: Arc::new(RwLock::new(AlnsWeights::new(recreate_strategies))),
             is_stopped: Arc::new(RwLock::new(false)),
             statistics: Arc::new(SearchStatistics::new(
                 params.search_threads.number_of_threads(),
@@ -173,10 +177,10 @@ impl Search {
             Constraint::Global(GlobalConstraintType::UnassignedJobCost(
                 UnassignedJobConstraint,
             )),
-            Constraint::Route(RouteConstraintType::Capacity(CapacityConstraint::default())),
             Constraint::Activity(ActivityConstraintType::TimeWindow(
                 TimeWindowConstraint::default(),
             )),
+            Constraint::Route(RouteConstraintType::Capacity(CapacityConstraint::default())),
             Constraint::Route(RouteConstraintType::Shift(ShiftConstraint)),
             Constraint::Route(RouteConstraintType::MaximumWorkingDuration(
                 MaximumWorkingDurationConstraint,
@@ -286,7 +290,8 @@ impl Search {
                 let mut thread_rng = SmallRng::from_rng(&mut rng);
                 let builder = thread::Builder::new().name(thread_index.to_string());
 
-                let operator_scores = AlnsScores::new(self.params.strategies());
+                let ruin_scores = AlnsScores::new(self.params.ruin_strategies().clone());
+                let recreate_scores = AlnsScores::new(self.params.recreate_strategies().clone());
 
                 builder
                     .spawn_scoped(s, move || {
@@ -294,7 +299,8 @@ impl Search {
                             start,
                             thread: thread_index,
                             iterations_without_improvement: 0,
-                            alns_scores: operator_scores,
+                            alns_ruin_scores: ruin_scores,
+                            alns_recreate_scores: recreate_scores,
                             best_solutions,
                             tabu,
                             iteration: 0,
@@ -349,18 +355,18 @@ impl Search {
                             } else {
                                 state.iteration += 1;
 
-                                if (state.iteration).is_multiple_of(500) {
-                                    debug!(
-                                        thread = thread::current().name().unwrap_or("main"),
-                                        "Thread {}: Iteration {}/{} - {}",
-                                        thread_index,
-                                        state.iteration,
-                                        max_iterations
-                                            .map(|max| max.to_string())
-                                            .unwrap_or(String::from("N/A")),
-                                        self.alns_weights.read(),
-                                    );
-                                }
+                                // if (state.iteration).is_multiple_of(500) {
+                                //     debug!(
+                                //         thread = thread::current().name().unwrap_or("main"),
+                                //         "Thread {}: Iteration {}/{} - {}",
+                                //         thread_index,
+                                //         state.iteration,
+                                //         max_iterations
+                                //             .map(|max| max.to_string())
+                                //             .unwrap_or(String::from("N/A")),
+                                //         self.alns_weights.read(),
+                                //     );
+                                // }
 
                                 self.perform_iteration(&mut state, &mut thread_rng);
                             }
@@ -563,8 +569,17 @@ impl Search {
             }
 
             if let Some(strategy) = iteration_info.strategy() {
-                state.alns_scores.update_scores(
-                    strategy,
+                state.alns_ruin_scores.update_scores(
+                    strategy.0,
+                    &self.params,
+                    UpdateScoreParams {
+                        is_best,
+                        improved: score < iteration_info.current_score,
+                        accepted: true,
+                    },
+                );
+                state.alns_recreate_scores.update_scores(
+                    strategy.1,
                     &self.params,
                     UpdateScoreParams {
                         is_best,
@@ -574,8 +589,17 @@ impl Search {
                 );
             }
         } else if let Some(strategy) = iteration_info.strategy() {
-            state.alns_scores.update_scores(
-                strategy,
+            state.alns_ruin_scores.update_scores(
+                strategy.0,
+                &self.params,
+                UpdateScoreParams {
+                    is_best: false,
+                    improved: false,
+                    accepted: false,
+                },
+            );
+            state.alns_recreate_scores.update_scores(
+                strategy.1,
                 &self.params,
                 UpdateScoreParams {
                     is_best: false,
@@ -593,25 +617,33 @@ impl Search {
                     .iterations_without_improvement
                     .is_multiple_of(self.params.alns_iterations_without_improvement_reset)
             {
-                self.alns_weights.write().reset();
-                state.alns_scores.reset();
+                self.alns_ruin_weights.write().reset();
+                self.alns_recreate_weights.write().reset();
+                state.alns_ruin_scores.reset();
+                state.alns_recreate_scores.reset();
             } else if state.iteration.is_multiple_of(segment_size) {
-                self.alns_weights
-                    .write()
-                    .update_weights(&mut state.alns_scores, self.params.alns_reaction_factor);
+                self.alns_ruin_weights.write().update_weights(
+                    &mut state.alns_ruin_scores,
+                    self.params.alns_reaction_factor,
+                );
+
+                self.alns_recreate_weights.write().update_weights(
+                    &mut state.alns_recreate_scores,
+                    self.params.alns_reaction_factor,
+                );
             }
         }
     }
 
     fn create_num_jobs_to_remove(&self, state: &ThreadedSearchState, rng: &mut SmallRng) -> usize {
-        let progress = (state.iteration as f64 / state.max_iterations.unwrap_or(10000) as f64);
-        let stagnation_factor = (state.iterations_without_improvement as f64 / 1000.0).min(1.0);
+        // let progress = (state.iteration as f64 / state.max_iterations.unwrap_or(10000) as f64);
+        // let stagnation_factor = (state.iterations_without_improvement as f64 / 1000.0).min(1.0);
 
-        let ruin_minimum_ratio = 0.05 + 0.1 * stagnation_factor;
-        let ruin_maximum_ratio = 0.4 - (0.30 * progress).min(0.30) + 0.2 * stagnation_factor;
+        // let ruin_minimum_ratio = 0.05 + 0.1 * stagnation_factor;
+        // let ruin_maximum_ratio = 0.4 - (0.30 * progress).min(0.30) + 0.2 * stagnation_factor;
 
-        // let ruin_minimum_ratio = self.params.ruin.ruin_minimum_ratio;
-        // let ruin_maximum_ratio = self.params.ruin.ruin_maximum_ratio;
+        let ruin_minimum_ratio = self.params.ruin.ruin_minimum_ratio;
+        let ruin_maximum_ratio = self.params.ruin.ruin_maximum_ratio;
 
         let minimum_ruin_size =
             ((ruin_minimum_ratio * self.problem.jobs().len() as f64).ceil() as usize);
@@ -674,7 +706,9 @@ impl Search {
         &self,
         rng: &mut SmallRng,
     ) -> (RuinStrategy, RecreateStrategy) {
-        self.alns_weights.read().select_strategy(rng)
+        let ruin_strategy = self.alns_ruin_weights.read().select_strategy(rng);
+        let recreate_strategy = self.alns_recreate_weights.read().select_strategy(rng);
+        (ruin_strategy, recreate_strategy)
     }
 
     fn compute_solution_score(&self, solution: &WorkingSolution) -> (Score, ScoreAnalysis) {
@@ -712,7 +746,8 @@ struct ThreadedSearchState {
     thread: usize,
     last_intensify_iteration: Option<usize>,
     iterations_without_improvement: usize,
-    alns_scores: AlnsScores<(RuinStrategy, RecreateStrategy)>,
+    alns_ruin_scores: AlnsScores<RuinStrategy>,
+    alns_recreate_scores: AlnsScores<RecreateStrategy>,
     best_solutions: Arc<RwLock<Vec<AcceptedSolution>>>,
     tabu: Arc<RwLock<VecDeque<AcceptedSolution>>>,
     iteration: usize,

@@ -36,8 +36,14 @@ impl<'a> RecreateContext<'a> {
         insertion: &Insertion,
         best_score: Option<&Score>,
     ) -> Score {
-        let context = InsertionContext::new(self.problem, solution, insertion);
-        compute_insertion_score(self.constraints, &context, best_score)
+        let context =
+            InsertionContext::new(self.problem, solution, insertion, self.insert_on_failure);
+        compute_insertion_score(
+            self.constraints,
+            &context,
+            best_score,
+            self.insert_on_failure,
+        )
     }
 
     pub fn compute_noisy_insertion_score(

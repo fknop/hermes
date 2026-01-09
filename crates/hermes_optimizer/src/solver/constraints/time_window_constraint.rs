@@ -2,9 +2,10 @@ use jiff::Timestamp;
 
 use crate::{
     problem::{
-        time_window::TimeWindow, vehicle_routing_problem::VehicleRoutingProblem,
+        job::ActivityId, time_window::TimeWindow, vehicle_routing_problem::VehicleRoutingProblem,
     },
     solver::{
+        insertion::Insertion,
         insertion_context::InsertionContext,
         score::Score,
         score_level::ScoreLevel,
@@ -51,9 +52,9 @@ impl TimeWindowConstraint {
             .iter()
             .filter(|time_window| !time_window.is_satisfied(arrival_time))
             .map(|time_window| time_window.overtime(arrival_time))
-            .min();
+            .min_by(|a, b| a.partial_cmp(b).unwrap());
 
-        Score::of(level, overtime.unwrap_or(0) as f64)
+        Score::of(level, overtime.unwrap_or(0.0))
     }
 }
 
@@ -80,15 +81,23 @@ impl ActivityConstraint for TimeWindowConstraint {
             return Score::zero();
         }
 
-        // let route = context.insertion.route(context.solution);
-        // if route.is_valid_tw_change(
-        //     problem,
-        //     std::iter::once(ActivityId::Service(context.insertion.service_id())),
-        //     context.insertion.position(),
-        //     context.insertion.position(),
-        // ) {
-        //     return Score::zero();
-        // }
+        let route = context.insertion.route(context.solution);
+
+        match context.insertion {
+            Insertion::Service(insertion) => {
+                if route.is_valid_tw_change(
+                    problem,
+                    std::iter::once(ActivityId::Service(context.insertion.job_idx())),
+                    insertion.position,
+                    insertion.position,
+                ) {
+                    return Score::zero();
+                } else if !context.insert_on_failure && self.score_level == ScoreLevel::Hard {
+                    return Score::hard(1.0);
+                }
+            }
+            Insertion::Shipment(_) => todo!(),
+        }
 
         let mut total_score = Score::zero();
 

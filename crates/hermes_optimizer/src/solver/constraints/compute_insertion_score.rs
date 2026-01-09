@@ -6,12 +6,14 @@ pub fn compute_insertion_score(
     constraints: &[Constraint],
     context: &InsertionContext,
     best_score: Option<&Score>,
+    insert_on_failure: bool,
 ) -> Score {
     let mut score = Score::zero();
 
-    let skip_hard_failure = best_score
-        .map(|best_score| best_score.hard_score == 0.0)
-        .unwrap_or(false);
+    let skip_on_failure = !insert_on_failure
+        || best_score
+            .map(|best_score| best_score.hard_score == 0.0)
+            .unwrap_or(false);
 
     for constraint in constraints
         .iter()
@@ -19,7 +21,7 @@ pub fn compute_insertion_score(
     {
         score += constraint.compute_insertion_score(context);
 
-        if score.hard_score > 0.0 && skip_hard_failure {
+        if score.is_failure() && skip_on_failure {
             return score;
         }
     }

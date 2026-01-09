@@ -1,10 +1,7 @@
 use jiff::Timestamp;
 
 use crate::{
-    problem::{
-        job::ActivityId,
-        vehicle_routing_problem::VehicleRoutingProblem,
-    },
+    problem::{job::ActivityId, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{
         insertion::{ServiceInsertion, ShipmentInsertion},
         solution::{
@@ -23,6 +20,7 @@ pub struct InsertionContext<'a> {
     pub problem: &'a VehicleRoutingProblem,
     pub solution: &'a WorkingSolution,
     pub insertion: &'a Insertion,
+    pub insert_on_failure: bool,
 }
 
 impl<'a> InsertionContext<'a> {
@@ -30,11 +28,13 @@ impl<'a> InsertionContext<'a> {
         problem: &'a VehicleRoutingProblem,
         solution: &'a WorkingSolution,
         insertion: &'a Insertion,
+        insert_on_failure: bool,
     ) -> Self {
         InsertionContext {
             problem,
             solution,
             insertion,
+            insert_on_failure,
         }
     }
 

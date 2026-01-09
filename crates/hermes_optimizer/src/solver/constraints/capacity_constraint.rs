@@ -82,6 +82,10 @@ impl RouteConstraint for CapacityConstraint {
                             vehicle.capacity(),
                             &(service.demand() + route.bwd_load_peak(insertion.position)),
                         ) {
+                            // if !context.insert_on_failure {
+                            //     return Score::hard(1.0);
+                            // }
+
                             score += Score::of(
                                 self.score_level,
                                 over_capacity_demand(
@@ -96,6 +100,10 @@ impl RouteConstraint for CapacityConstraint {
                             vehicle.capacity(),
                             &(service.demand() + route.fwd_load_peak(insertion.position)),
                         ) {
+                            // if !context.insert_on_failure {
+                            //     return Score::hard(1.0);
+                            // }
+
                             score += Score::of(
                                 self.score_level,
                                 over_capacity_demand(

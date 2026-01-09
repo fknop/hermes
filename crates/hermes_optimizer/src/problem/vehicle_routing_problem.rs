@@ -97,8 +97,6 @@ impl VehicleRoutingProblem {
             0.0
         };
 
-        println!("{waiting_duration_weight}");
-
         let precomputed_vehicle_compatibilities =
             VehicleRoutingProblem::precompute_vehicle_compatibilities(
                 params.fleet.vehicles(),
