@@ -57,6 +57,30 @@ export default function VehicleRoutingScreen() {
             </Button>
 
             <div className="flex flex-col gap-1">
+              <div>{solution?.solution?.duration}</div>
+              <div>
+                {solution?.solution
+                  ? solution.solution.routes.reduce(
+                      (acc, route) => acc + route.distance,
+                      0
+                    ) / 1000
+                  : 'N/A'}
+                km
+              </div>
+              <div>
+                {solution?.solution
+                  ? solution.solution.routes
+                      .reduce(
+                        (acc, route) =>
+                          acc.add(
+                            Temporal.Duration.from(route.transport_duration)
+                          ),
+                        Temporal.Duration.from({ minutes: 0 })
+                      )
+                      .toString()
+                  : 'N/A'}
+              </div>
+
               {solution?.solution?.routes.map((route, index) => {
                 return (
                   <div className="flex flex-col">

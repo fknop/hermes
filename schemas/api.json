@@ -3,6 +3,12 @@
   "title": "VehicleRoutingProblem",
   "type": "object",
   "properties": {
+    "id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "locations": {
       "type": "array",
       "items": {
@@ -29,7 +35,12 @@
     }
   },
   "additionalProperties": false,
-  "required": ["locations", "services", "vehicle_profiles", "vehicles"],
+  "required": [
+    "locations",
+    "services",
+    "vehicle_profiles",
+    "vehicles"
+  ],
   "$defs": {
     "CustomMatrices": {
       "type": "object",
@@ -65,11 +76,21 @@
           }
         }
       },
-      "required": ["times", "distances", "costs"]
+      "required": [
+        "times",
+        "distances",
+        "costs"
+      ]
     },
     "GraphHopperProfile": {
       "type": "string",
-      "enum": ["car", "bike", "foot", "small_truck", "truck"]
+      "enum": [
+        "car",
+        "bike",
+        "foot",
+        "small_truck",
+        "truck"
+      ]
     },
     "Location": {
       "type": "object",
@@ -85,20 +106,28 @@
         }
       },
       "additionalProperties": false,
-      "required": ["coordinates"]
+      "required": [
+        "coordinates"
+      ]
     },
     "Service": {
       "type": "object",
       "properties": {
         "demand": {
-          "type": ["array", "null"],
+          "type": [
+            "array",
+            "null"
+          ],
           "items": {
             "type": "number",
             "format": "double"
           }
         },
         "duration": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "format": "duration"
         },
         "id": {
@@ -120,34 +149,52 @@
           ]
         },
         "skills": {
-          "type": ["array", "null"],
+          "type": [
+            "array",
+            "null"
+          ],
           "items": {
             "type": "string"
           }
         },
         "time_windows": {
-          "type": ["array", "null"],
+          "type": [
+            "array",
+            "null"
+          ],
           "items": {
             "$ref": "#/$defs/TimeWindow"
           }
         }
       },
       "additionalProperties": false,
-      "required": ["id", "location_id"]
+      "required": [
+        "id",
+        "location_id"
+      ]
     },
     "ServiceType": {
       "type": "string",
-      "enum": ["Pickup", "Delivery"]
+      "enum": [
+        "pickup",
+        "delivery"
+      ]
     },
     "TimeWindow": {
       "type": "object",
       "properties": {
         "end": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "format": "date-time"
         },
         "start": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "format": "date-time"
         }
       }
@@ -158,23 +205,31 @@
           "description": "https://docs.graphhopper.com/openapi/map-data-and-routing-profiles/openstreetmap/standard-routing-profiles",
           "type": "object",
           "properties": {
-            "GraphHopperApi": {
+            "config": {
               "type": "object",
               "properties": {
                 "gh_profile": {
                   "$ref": "#/$defs/GraphHopperProfile"
                 }
               },
-              "required": ["gh_profile"]
+              "required": [
+                "gh_profile"
+              ]
+            },
+            "type": {
+              "type": "string",
+              "const": "graph_hopper_api"
             }
           },
-          "additionalProperties": false,
-          "required": ["GraphHopperApi"]
+          "required": [
+            "type",
+            "config"
+          ]
         },
         {
           "type": "object",
           "properties": {
-            "AsTheCrowFlies": {
+            "config": {
               "type": "object",
               "properties": {
                 "speed_kmh": {
@@ -182,27 +237,43 @@
                   "format": "double"
                 }
               },
-              "required": ["speed_kmh"]
+              "required": [
+                "speed_kmh"
+              ]
+            },
+            "type": {
+              "type": "string",
+              "const": "as_the_crow_flies"
             }
           },
-          "additionalProperties": false,
-          "required": ["AsTheCrowFlies"]
+          "required": [
+            "type",
+            "config"
+          ]
         },
         {
           "type": "object",
           "properties": {
-            "Custom": {
+            "config": {
               "type": "object",
               "properties": {
                 "matrices": {
                   "$ref": "#/$defs/CustomMatrices"
                 }
               },
-              "required": ["matrices"]
+              "required": [
+                "matrices"
+              ]
+            },
+            "type": {
+              "type": "string",
+              "const": "custom"
             }
           },
-          "additionalProperties": false,
-          "required": ["Custom"]
+          "required": [
+            "type",
+            "config"
+          ]
         }
       ]
     },
@@ -210,18 +281,27 @@
       "type": "object",
       "properties": {
         "capacity": {
-          "type": ["array", "null"],
+          "type": [
+            "array",
+            "null"
+          ],
           "items": {
             "type": "number",
             "format": "double"
           }
         },
         "depot_duration": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "format": "duration"
         },
         "depot_location_id": {
-          "type": ["integer", "null"],
+          "type": [
+            "integer",
+            "null"
+          ],
           "format": "uint",
           "minimum": 0
         },
@@ -232,21 +312,43 @@
           "type": "string"
         },
         "return_depot_duration": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "format": "duration"
         },
+        "shift": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VehicleShift"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "should_return_to_depot": {
-          "type": ["boolean", "null"]
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "skills": {
-          "type": ["array", "null"],
+          "type": [
+            "array",
+            "null"
+          ],
           "items": {
             "type": "string"
           }
         }
       },
       "additionalProperties": false,
-      "required": ["id", "profile"]
+      "required": [
+        "id",
+        "profile"
+      ]
     },
     "VehicleProfile": {
       "type": "object",
@@ -259,7 +361,44 @@
         }
       },
       "additionalProperties": false,
-      "required": ["id", "cost_provider"]
+      "required": [
+        "id",
+        "cost_provider"
+      ]
+    },
+    "VehicleShift": {
+      "type": "object",
+      "properties": {
+        "earliest_start": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "latest_end": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "maximum_transport_duration": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "duration"
+        },
+        "maximum_working_duration": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "duration"
+        }
+      },
+      "additionalProperties": false
     }
   }
 }

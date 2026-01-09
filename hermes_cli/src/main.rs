@@ -29,6 +29,9 @@ struct Cli {
 
     #[arg(short, long)]
     debug: bool,
+
+    #[arg(long, global = true)]
+    env: Option<String>,
 }
 
 #[derive(Subcommand)]
@@ -50,10 +53,15 @@ enum Commands {
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
+    let cli = Cli::parse();
+
+    if let Some(env) = cli.env {
+        dotenvy::from_filename(env).ok();
+    }
+
     #[cfg(feature = "dhat-heap")]
     let _profiler = dhat::Profiler::new_heap();
 
-    let cli = Cli::parse();
     tracing_subscriber::fmt()
         .with_max_level(if cli.debug {
             tracing::Level::DEBUG

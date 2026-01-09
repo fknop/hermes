@@ -21,6 +21,7 @@ pub struct Vehicle {
     depot_duration: Option<SignedDuration>,
     end_depot_duration: Option<SignedDuration>,
     should_return_to_depot: bool,
+    maximum_activities: Option<usize>,
     skills: FxHashSet<Skill>,
 }
 
@@ -41,6 +42,10 @@ impl Vehicle {
         self.shift.as_ref().and_then(|shift| shift.earliest_start)
     }
 
+    pub fn latest_start_time(&self) -> Option<Timestamp> {
+        self.shift.as_ref().and_then(|shift| shift.latest_start)
+    }
+
     pub fn maximum_transport_duration(&self) -> Option<SignedDuration> {
         self.shift
             .as_ref()
@@ -59,6 +64,10 @@ impl Vehicle {
 
     pub fn should_return_to_depot(&self) -> bool {
         self.should_return_to_depot
+    }
+
+    pub fn maximum_activities(&self) -> Option<usize> {
+        self.maximum_activities
     }
 
     pub fn depot_duration(&self) -> SignedDuration {
@@ -85,6 +94,7 @@ impl Vehicle {
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
 pub struct VehicleShift {
     pub(crate) earliest_start: Option<Timestamp>,
+    pub(crate) latest_start: Option<Timestamp>,
     pub(crate) latest_end: Option<Timestamp>,
     pub(crate) maximum_transport_duration: Option<SignedDuration>,
     pub(crate) maximum_working_duration: Option<SignedDuration>,
@@ -103,6 +113,10 @@ impl VehicleShift {
         self.earliest_start
     }
 
+    pub fn latest_start(&self) -> Option<Timestamp> {
+        self.latest_start
+    }
+
     pub fn latest_end(&self) -> Option<Timestamp> {
         self.latest_end
     }
@@ -111,6 +125,7 @@ impl VehicleShift {
 #[derive(Default)]
 pub struct VehicleShiftBuilder {
     earliest_start: Option<Timestamp>,
+    latest_start: Option<Timestamp>,
     latest_end: Option<Timestamp>,
     maximum_transport_duration: Option<SignedDuration>,
     maximum_working_duration: Option<SignedDuration>,
@@ -119,6 +134,11 @@ pub struct VehicleShiftBuilder {
 impl VehicleShiftBuilder {
     pub fn set_earliest_start(&mut self, earliest_start: Timestamp) -> &mut VehicleShiftBuilder {
         self.earliest_start = Some(earliest_start);
+        self
+    }
+
+    pub fn set_latest_start(&mut self, latest_start: Timestamp) -> &mut VehicleShiftBuilder {
+        self.latest_start = Some(latest_start);
         self
     }
 
@@ -146,6 +166,7 @@ impl VehicleShiftBuilder {
     pub fn build(self) -> VehicleShift {
         VehicleShift {
             earliest_start: self.earliest_start,
+            latest_start: self.latest_start,
             latest_end: self.latest_end,
             maximum_transport_duration: self.maximum_transport_duration,
             maximum_working_duration: self.maximum_working_duration,
@@ -164,6 +185,7 @@ pub struct VehicleBuilder {
     depot_duration: Option<SignedDuration>,
     end_depot_duration: Option<SignedDuration>,
     skills: Option<Vec<Skill>>,
+    maximum_activities: Option<usize>,
 }
 
 impl VehicleBuilder {
@@ -174,6 +196,11 @@ impl VehicleBuilder {
 
     pub fn set_vehicle_id(&mut self, external_id: String) -> &mut VehicleBuilder {
         self.external_id = Some(external_id);
+        self
+    }
+
+    pub fn set_maximum_activities(&mut self, maximum_activities: usize) -> &mut VehicleBuilder {
+        self.maximum_activities = Some(maximum_activities);
         self
     }
 
@@ -226,6 +253,7 @@ impl VehicleBuilder {
             depot_duration: self.depot_duration,
             end_depot_duration: self.end_depot_duration,
             skills: FxHashSet::from_iter(self.skills.unwrap_or_default()),
+            maximum_activities: self.maximum_activities,
         }
     }
 }

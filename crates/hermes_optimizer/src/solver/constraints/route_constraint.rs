@@ -1,6 +1,7 @@
 use crate::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
+        constraints::maximum_activities_constraint::MaximumActivitiesConstraint,
         insertion_context::InsertionContext, score::Score, score_level::ScoreLevel,
         solution::route::WorkingSolutionRoute,
     },
@@ -27,6 +28,7 @@ pub enum RouteConstraintType {
     MaximumWorkingDuration(MaximumWorkingDurationConstraint),
     WaitingDuration(WaitingDurationConstraint),
     VehicleCost(VehicleCostConstraint),
+    MaximumJobs(MaximumActivitiesConstraint),
 }
 
 impl RouteConstraintType {
@@ -37,6 +39,7 @@ impl RouteConstraintType {
             RouteConstraintType::WaitingDuration(_) => "waiting_duration",
             RouteConstraintType::VehicleCost(_) => "vehicle_cost",
             RouteConstraintType::MaximumWorkingDuration(_) => "maximum_working_duration",
+            RouteConstraintType::MaximumJobs(_) => "maximum_activities",
         }
     }
 }
@@ -45,19 +48,21 @@ impl RouteConstraint for RouteConstraintType {
     fn score_level(&self) -> ScoreLevel {
         match self {
             RouteConstraintType::Capacity(c) => c.score_level(),
-            RouteConstraintType::Shift(s) => s.score_level(),
-            RouteConstraintType::WaitingDuration(w) => w.score_level(),
-            RouteConstraintType::VehicleCost(v) => v.score_level(),
-            RouteConstraintType::MaximumWorkingDuration(m) => m.score_level(),
+            RouteConstraintType::Shift(c) => c.score_level(),
+            RouteConstraintType::WaitingDuration(c) => c.score_level(),
+            RouteConstraintType::VehicleCost(c) => c.score_level(),
+            RouteConstraintType::MaximumWorkingDuration(c) => c.score_level(),
+            RouteConstraintType::MaximumJobs(c) => c.score_level(),
         }
     }
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
         match self {
             RouteConstraintType::Capacity(c) => c.compute_insertion_score(context),
-            RouteConstraintType::Shift(s) => s.compute_insertion_score(context),
-            RouteConstraintType::WaitingDuration(w) => w.compute_insertion_score(context),
-            RouteConstraintType::VehicleCost(v) => v.compute_insertion_score(context),
-            RouteConstraintType::MaximumWorkingDuration(m) => m.compute_insertion_score(context),
+            RouteConstraintType::Shift(c) => c.compute_insertion_score(context),
+            RouteConstraintType::WaitingDuration(c) => c.compute_insertion_score(context),
+            RouteConstraintType::VehicleCost(c) => c.compute_insertion_score(context),
+            RouteConstraintType::MaximumWorkingDuration(c) => c.compute_insertion_score(context),
+            RouteConstraintType::MaximumJobs(c) => c.compute_insertion_score(context),
         }
     }
 
@@ -68,10 +73,11 @@ impl RouteConstraint for RouteConstraintType {
     ) -> Score {
         match self {
             RouteConstraintType::Capacity(c) => c.compute_score(problem, route),
-            RouteConstraintType::Shift(s) => s.compute_score(problem, route),
-            RouteConstraintType::WaitingDuration(w) => w.compute_score(problem, route),
-            RouteConstraintType::VehicleCost(v) => v.compute_score(problem, route),
-            RouteConstraintType::MaximumWorkingDuration(m) => m.compute_score(problem, route),
+            RouteConstraintType::Shift(c) => c.compute_score(problem, route),
+            RouteConstraintType::WaitingDuration(c) => c.compute_score(problem, route),
+            RouteConstraintType::VehicleCost(c) => c.compute_score(problem, route),
+            RouteConstraintType::MaximumWorkingDuration(c) => c.compute_score(problem, route),
+            RouteConstraintType::MaximumJobs(c) => c.compute_score(problem, route),
         }
     }
 }

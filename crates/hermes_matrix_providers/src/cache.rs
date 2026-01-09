@@ -31,7 +31,7 @@ pub trait MatricesCache {
         hash_points(points, &mut hasher);
         provider.hash(&mut hasher);
 
-        format!("{:016x}.json", hasher.finish())
+        format!("{:016x}", hasher.finish())
     }
 
     fn cache<P>(
