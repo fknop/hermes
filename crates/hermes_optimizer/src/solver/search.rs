@@ -610,7 +610,14 @@ impl Search {
         }
     }
 
-    fn create_num_jobs_to_remove(&self, _state: &ThreadedSearchState, rng: &mut SmallRng) -> usize {
+    fn create_num_jobs_to_remove(&self, state: &ThreadedSearchState, rng: &mut SmallRng) -> usize {
+        // let progress =
+        //     (state.iteration as f64 / state.max_iterations.unwrap_or(10000) as f64).min(1.0);
+        // let stagnation_factor = (state.iterations_without_improvement as f64 / 1000.0).min(1.0);
+
+        // let ruin_maximum_ratio = 0.5 - 0.35 * progress + 0.2 * stagnation_factor;
+        // let ruin_minimum_ratio = 0.05 + 0.1 * stagnation_factor;
+
         let ruin_minimum_ratio = self.params.ruin.ruin_minimum_ratio;
         let ruin_maximum_ratio = self.params.ruin.ruin_maximum_ratio;
 
