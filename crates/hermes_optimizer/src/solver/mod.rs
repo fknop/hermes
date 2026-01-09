@@ -3,6 +3,7 @@ pub mod alns_weights;
 pub mod constraints;
 pub mod construction;
 pub mod insertion;
+pub(crate) mod insertion_cache;
 pub mod insertion_context;
 pub mod intensify;
 pub mod noise;

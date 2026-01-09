@@ -27,6 +27,8 @@ use crate::{
 
 #[derive(Clone)]
 pub struct WorkingSolutionRoute {
+    pub(super) version: usize,
+
     pub(super) vehicle_id: VehicleIdx,
     // Map of JobId to index in activities vector
     pub(super) jobs: FxHashMap<ActivityId, usize>,
@@ -89,11 +91,11 @@ pub struct WorkingSolutionRoute {
 impl WorkingSolutionRoute {
     pub fn empty(problem: &VehicleRoutingProblem, vehicle_id: VehicleIdx) -> Self {
         let mut route = WorkingSolutionRoute {
+            version: 1,
             vehicle_id,
             jobs: FxHashMap::default(),
             bbox: BBox::default(),
             updated_in_iteration: false,
-
             activity_ids: Vec::new(),
             arrival_times: Vec::new(),
             departure_times: Vec::new(),
@@ -124,12 +126,8 @@ impl WorkingSolutionRoute {
         self.activity_ids.is_empty()
     }
 
-    pub fn reset(&mut self, problem: &VehicleRoutingProblem) {
-        self.jobs.clear();
-        self.activity_ids.clear();
-        self.bbox = BBox::default();
-
-        self.update_activity_data(problem);
+    pub fn version(&self) -> usize {
+        self.version
     }
 
     pub fn bbox_intersects(&self, other: &WorkingSolutionRoute) -> bool {
@@ -490,6 +488,19 @@ impl WorkingSolutionRoute {
         }
     }
 
+    fn increase_version(&mut self) {
+        self.updated_in_iteration = true;
+        self.version += 1;
+    }
+
+    pub fn reset(&mut self, problem: &VehicleRoutingProblem) {
+        self.jobs.clear();
+        self.activity_ids.clear();
+        self.bbox = BBox::default();
+
+        self.update_activity_data(problem);
+    }
+
     fn remove(&mut self, position: usize) -> Option<ActivityId> {
         if position >= self.activity_ids.len() {
             return None;
@@ -497,6 +508,9 @@ impl WorkingSolutionRoute {
 
         let job_id = self.activity_ids[position];
         self.activity_ids.remove(position);
+
+        self.increase_version();
+
         Some(job_id)
     }
 
@@ -511,7 +525,7 @@ impl WorkingSolutionRoute {
                 self.jobs.insert(job_id, index + position);
             }
 
-            self.updated_in_iteration = true;
+            self.increase_version();
 
             Some(job_id)
         } else {
@@ -574,7 +588,6 @@ impl WorkingSolutionRoute {
 
         self.activity_ids
             .insert(position, ActivityId::Service(service_id));
-        self.updated_in_iteration = true;
 
         // Update the arrival times and departure times of subsequent activities
         self.update_activity_data(problem);
@@ -613,6 +626,7 @@ impl WorkingSolutionRoute {
     }
 
     fn update_activity_data(&mut self, problem: &VehicleRoutingProblem) {
+        self.increase_version();
         self.jobs.clear();
         self.jobs.extend(
             self.activity_ids
