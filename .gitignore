@@ -11,3 +11,4 @@ flamegraph.svg
 .env.local
 results
 dhat-heap.json
+.cache

@@ -9,8 +9,8 @@ export function transformSolutionToGeoJson(
   const getLocationForServiceId = (serviceId: number): [number, number] => {
     const locationId = problem.services[serviceId].location_id
     return [
-      problem.locations[locationId].lon,
-      problem.locations[locationId].lat,
+      problem.locations[locationId].coordinates[0],
+      problem.locations[locationId].coordinates[1],
     ]
   }
 

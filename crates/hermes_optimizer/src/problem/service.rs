@@ -1,4 +1,3 @@
-
 use fxhash::FxHashSet;
 use jiff::SignedDuration;
 use schemars::JsonSchema;
@@ -10,6 +9,7 @@ use crate::problem::skill::Skill;
 use super::{capacity::Capacity, location::LocationIdx, time_window::TimeWindow};
 
 #[derive(Deserialize, Serialize, JsonSchema, Debug, Copy, Clone, Default, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
 pub enum ServiceType {
     Pickup,
     #[default]

@@ -21,6 +21,7 @@ use crate::problem::{
 #[derive(Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields, rename = "VehicleRoutingProblem")]
 pub struct JsonVehicleRoutingProblem {
+    pub id: Option<String>,
     pub locations: Vec<JsonLocation>,
     pub services: Vec<JsonService>,
     pub vehicle_profiles: Vec<JsonVehicleProfile>,
@@ -36,6 +37,8 @@ pub struct JsonService {
     pub demand: Option<Vec<f64>>,
     pub skills: Option<Vec<String>>,
     pub time_windows: Option<Vec<TimeWindow>>,
+
+    #[serde(rename = "type")]
     pub service_type: Option<ServiceType>,
 }
 
@@ -64,12 +67,14 @@ pub struct JsonVehicle {
     pub should_return_to_depot: Option<bool>,
     pub return_depot_duration: Option<SignedDuration>,
     pub skills: Option<Vec<String>>,
+    pub maximum_activities: Option<usize>,
 }
 
 #[derive(Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields, rename = "VehicleShift")]
 pub struct JsonVehicleShift {
     pub earliest_start: Option<Timestamp>,
+    pub latest_start: Option<Timestamp>,
     pub latest_end: Option<Timestamp>,
     pub maximum_transport_duration: Option<SignedDuration>,
     pub maximum_working_duration: Option<SignedDuration>,
@@ -79,6 +84,7 @@ impl From<JsonVehicleShift> for VehicleShift {
     fn from(value: JsonVehicleShift) -> Self {
         VehicleShift {
             earliest_start: value.earliest_start,
+            latest_start: value.latest_start,
             latest_end: value.latest_end,
             maximum_transport_duration: value.maximum_transport_duration,
             maximum_working_duration: value.maximum_working_duration,
@@ -142,6 +148,16 @@ impl JsonVehicleRoutingProblem {
             .map(|vehicle| {
                 let mut builder = VehicleBuilder::default();
 
+                builder.set_vehicle_id(vehicle.id);
+
+                if let Some(position) = self
+                    .vehicle_profiles
+                    .iter()
+                    .position(|profile| profile.id == vehicle.profile)
+                {
+                    builder.set_profile_id(position);
+                }
+
                 if let Some(shift) = vehicle.shift {
                     builder.set_vehicle_shift(shift.into());
                 }
@@ -168,6 +184,10 @@ impl JsonVehicleRoutingProblem {
 
                 if let Some(skills) = vehicle.skills {
                     builder.set_skills(skills);
+                }
+
+                if let Some(maximum_activities) = vehicle.maximum_activities {
+                    builder.set_maximum_activities(maximum_activities);
                 }
 
                 builder.build()

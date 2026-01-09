@@ -26,6 +26,7 @@ impl std::hash::Hash for CustomMatrices {
 }
 
 #[derive(Deserialize, Serialize, JsonSchema)]
+#[serde(tag = "type", content = "config", rename_all = "snake_case")]
 pub enum TravelMatrixProvider {
     /// https://docs.graphhopper.com/openapi/map-data-and-routing-profiles/openstreetmap/standard-routing-profiles
     GraphHopperApi {

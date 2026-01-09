@@ -33,9 +33,31 @@ pub(crate) fn compute_first_activity_arrival_time(
         .min_by_key(|tw| tw.start())
         .and_then(|tw| tw.start());
 
-    match time_window_start {
-        Some(start) => (earliest_start_time + travel_time + depot_duration).max(start),
-        None => earliest_start_time + travel_time + depot_duration,
+    let latest_start = vehicle.latest_start_time();
+
+    // e.g. earliest = 13:30
+    //  latest = 13:30
+    //  time_window_start = 13:30
+
+    let minimum_depot_departure_time = earliest_start_time + depot_duration;
+    let maximum_depot_departure_time = latest_start
+        .map(|latest| latest + depot_duration)
+        .unwrap_or(Timestamp::MAX);
+
+    match (latest_start, time_window_start) {
+        (Some(_), Some(tw_start)) => {
+            let ideal_depot_departure_time = tw_start - travel_time;
+
+            let depot_departure_time = ideal_depot_departure_time
+                .max(minimum_depot_departure_time)
+                .min(maximum_depot_departure_time);
+
+            depot_departure_time + travel_time
+            // ((earliest_start_time + travel_time + depot_duration).max(tw_start)).min(latest_start)
+        }
+        (Some(latest_start), None) => earliest_start_time + travel_time + depot_duration,
+        (None, Some(tw_start)) => tw_start,
+        (None, None) => minimum_depot_departure_time + travel_time,
     }
 }
 

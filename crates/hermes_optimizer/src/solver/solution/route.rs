@@ -30,7 +30,7 @@ pub struct WorkingSolutionRoute {
     pub(super) version: usize,
 
     pub(super) vehicle_id: VehicleIdx,
-    // Map of JobId to index in activities vector
+    // Map of ActivityId to index in activities vector
     pub(super) jobs: FxHashMap<ActivityId, usize>,
 
     /// List of activity job IDs in the route order

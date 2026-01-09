@@ -28,8 +28,8 @@ where
     fn create_default_graphhopper_client() -> GraphHopperMatrixClient {
         GraphHopperMatrixClient::new(GraphhopperMatrixClientParams {
             api_key: std::env::var("GRAPHHOPPER_API_KEY").expect("GRAPHHOPPER_API_KEY must be set"),
-            max_poll_attempts: 40, // max 20s, already really long time
-            poll_interval: std::time::Duration::from_millis(500),
+            max_poll_attempts: 100, // max 20s, already really long time
+            poll_interval: std::time::Duration::from_millis(200),
         })
     }
 

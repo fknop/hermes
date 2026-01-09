@@ -11,6 +11,7 @@ use hermes_optimizer::{
 };
 use indicatif::ProgressBar;
 use parking_lot::Mutex;
+use tracing::info;
 
 use crate::parsers;
 
@@ -39,9 +40,9 @@ pub async fn run(args: OptimizeArgs) -> anyhow::Result<()> {
         .to_string_lossy()
         .into_owned();
 
-    let mut loading_bar = Arc::new(Mutex::new(ProgressBar::new(args.timeout.as_secs() as u64)));
-    loading_bar.lock().set_prefix(file_name);
-    loading_bar.lock().set_message("pending...");
+    // let mut loading_bar = Arc::new(Mutex::new(ProgressBar::new(args.timeout.as_secs() as u64)));
+    // loading_bar.lock().set_prefix(file_name);
+    // loading_bar.lock().set_message("pending...");
 
     let f = File::open(args.input)?;
     let content: JsonVehicleRoutingProblem = serde_json::from_reader(f)?;
@@ -58,32 +59,39 @@ pub async fn run(args: OptimizeArgs) -> anyhow::Result<()> {
         },
     );
 
-    let closure_loading_bar = Arc::clone(&loading_bar);
-    solver.on_best_solution(move |best_solution| {
-        closure_loading_bar.lock().set_message(format!(
-            "running... routes = {}, costs = {}",
-            best_solution.solution.non_empty_routes_count(),
-            best_solution.solution.total_transport_costs(),
-        ));
-    });
+    // let closure_loading_bar = Arc::clone(&loading_bar);
+    // solver.on_best_solution(move |best_solution| {
+    //     closure_loading_bar.lock().set_message(format!(
+    //         "running... routes = {}, costs = {}",
+    //         best_solution.solution.non_empty_routes_count(),
+    //         best_solution.solution.total_transport_costs(),
+    //     ));
+    // });
 
-    loading_bar.lock().set_message("running...");
+    // loading_bar.lock().set_message("running...");
 
     solver.solve();
     let best_solution = solver.current_best_solution();
     if let Some(best_solution) = best_solution {
         let n_routes = best_solution.solution.non_empty_routes_count();
         let total_transport_cost = best_solution.solution.total_transport_costs();
-        loading_bar.lock().finish_with_message(format!(
+        info!(
             "Finished: routes = {}, costs = {}, unassigned = {}",
             n_routes,
             total_transport_cost,
             best_solution.solution.unassigned_jobs().len(),
-        ));
+        );
+        // loading_bar.lock().finish_with_message(format!(
+        //     "Finished: routes = {}, costs = {}, unassigned = {}",
+        //     n_routes,
+        //     total_transport_cost,
+        //     best_solution.solution.unassigned_jobs().len(),
+        // ));
     } else {
-        loading_bar
-            .lock()
-            .finish_with_message("No solution".to_string());
+        info!("No solution found");
+        // loading_bar
+        //     .lock()
+        //     .finish_with_message("No solution".to_string());
     }
 
     Ok(())

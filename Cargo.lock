@@ -1175,6 +1175,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum",
+ "dotenvy",
  "geo",
  "geojson",
  "hermes_matrix_providers",
@@ -1200,6 +1201,7 @@ dependencies = [
  "anyhow",
  "clap",
  "dhat",
+ "dotenvy",
  "hermes_matrix_providers",
  "hermes_optimizer",
  "indicatif",

@@ -23,6 +23,7 @@ use crate::{
         constraints::{
             activity_constraint::ActivityConstraintType, capacity_constraint::CapacityConstraint,
             global_constraint::GlobalConstraintType,
+            maximum_activities_constraint::MaximumActivitiesConstraint,
             maximum_working_duration_constraint::MaximumWorkingDurationConstraint,
             route_constraint::RouteConstraintType, shift_constraint::ShiftConstraint,
             time_window_constraint::TimeWindowConstraint,
@@ -179,6 +180,9 @@ impl Search {
             Constraint::Route(RouteConstraintType::Shift(ShiftConstraint)),
             Constraint::Route(RouteConstraintType::MaximumWorkingDuration(
                 MaximumWorkingDurationConstraint,
+            )),
+            Constraint::Route(RouteConstraintType::MaximumJobs(
+                MaximumActivitiesConstraint,
             )),
             // Soft constraints
             Constraint::Global(GlobalConstraintType::TransportCost(TransportCostConstraint)),
