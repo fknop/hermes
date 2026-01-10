@@ -32,7 +32,6 @@ use crate::{
             route_constraint::RouteConstraintType, shift_constraint::ShiftConstraint,
             time_window_constraint::TimeWindowConstraint,
             transport_cost_constraint::TransportCostConstraint,
-            unassigned_job_constraint::UnassignedJobConstraint,
             vehicle_cost_constraint::VehicleCostConstraint,
             waiting_duration_constraint::WaitingDurationConstraint,
         },
@@ -193,9 +192,6 @@ impl Search {
     fn create_constraints() -> Vec<Constraint> {
         vec![
             // Hard constraints
-            Constraint::Global(GlobalConstraintType::UnassignedJobCost(
-                UnassignedJobConstraint,
-            )),
             Constraint::Activity(ActivityConstraintType::TimeWindow(
                 TimeWindowConstraint::default(),
             )),
@@ -628,7 +624,13 @@ impl Search {
                         score,
                         score_analysis,
                     });
-                    guard.sort_unstable_by(|a, b| a.score.cmp(&b.score));
+                    guard.sort_unstable_by(|a, b| {
+                        a.solution
+                            .unassigned_jobs()
+                            .len()
+                            .cmp(&b.solution.unassigned_jobs().len())
+                            .then(a.score.cmp(&b.score))
+                    });
 
                     if is_best {
                         if let Some(callback) = &self.on_best_solution_handler {

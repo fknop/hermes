@@ -71,7 +71,6 @@ impl CancellableBarrier {
     }
 
     pub fn cancel(&self) {
-        println!("Cancel barrier");
         let mut state = self.state.lock();
         state.cancelled = true;
         self.cvar.notify_all();

@@ -29,7 +29,7 @@ impl RouteConstraint for ShiftConstraint {
         {
             Score::of(
                 self.score_level(),
-                (route.end(problem).as_second() - latest_end.as_second()) as f64,
+                route.end(problem).duration_since(latest_end).as_secs_f64(),
             )
         } else {
             Score::zero()
@@ -53,7 +53,7 @@ impl RouteConstraint for ShiftConstraint {
             {
                 Score::of(
                     self.score_level(),
-                    (new_end.as_second() - latest_end.as_second()) as f64,
+                    new_end.duration_since(latest_end).as_secs_f64(),
                 )
             } else {
                 Score::zero()

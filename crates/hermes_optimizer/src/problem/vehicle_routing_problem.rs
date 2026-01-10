@@ -284,11 +284,6 @@ impl VehicleRoutingProblem {
         waiting_duration.as_secs_f64() * self.waiting_duration_weight()
     }
 
-    pub fn unassigned_job_cost(&self) -> Cost {
-        // Should always be more worth to assign a job than leave it unassigned
-        self.fixed_vehicle_costs() + 1.0
-    }
-
     pub fn fixed_vehicle_costs(&self) -> f64 {
         100000.0 //self.max_cost() // Placeholder for the static cost of a route
     }

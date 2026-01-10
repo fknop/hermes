@@ -9,6 +9,5 @@ pub mod route_constraint;
 pub mod shift_constraint;
 pub mod time_window_constraint;
 pub mod transport_cost_constraint;
-pub mod unassigned_job_constraint;
 pub mod vehicle_cost_constraint;
 pub mod waiting_duration_constraint;
