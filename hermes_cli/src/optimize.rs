@@ -9,8 +9,7 @@ use hermes_optimizer::{
         solver_params::{SolverParams, Termination, Threads},
     },
 };
-use indicatif::ProgressBar;
-use parking_lot::Mutex;
+
 use tracing::info;
 
 use crate::parsers;
@@ -26,6 +25,9 @@ pub struct OptimizeArgs {
 
     #[arg(long, default_value_t = 1)]
     threads: u8,
+
+    #[arg(long, short = 'n')]
+    iterations: Option<usize>,
 
     /// Output folder into .sol files
     #[arg(long, short = 'o')]

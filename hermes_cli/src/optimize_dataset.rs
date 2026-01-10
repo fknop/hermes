@@ -30,8 +30,14 @@ pub struct OptimizeDatasetArgs {
     #[arg(short, long, value_parser=parsers::parse_duration, default_value = "5s")]
     timeout: jiff::SignedDuration,
 
+    #[arg(long, default_value_t = 4)]
+    ithreads: u8,
+
     #[arg(long, default_value_t = 1)]
-    threads: u8,
+    sthreads: u8,
+
+    #[arg(long, short = 'n')]
+    iterations: Option<usize>,
 
     /// Output folder into .sol files
     #[arg(long, short = 'o')]
@@ -90,12 +96,18 @@ pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
             continue;
         };
 
+        let mut terminations: Vec<Termination> = vec![Termination::Duration(args.timeout)];
+
+        if let Some(iterations) = args.iterations {
+            terminations.push(Termination::Iterations(iterations));
+        }
+
         let solver = Solver::new(
             vrp,
             SolverParams {
-                terminations: vec![Termination::Duration(args.timeout)],
-                search_threads: Threads::Multi(args.threads as usize),
-                insertion_threads: Threads::Multi(4),
+                terminations,
+                search_threads: Threads::Multi(args.sthreads as usize),
+                insertion_threads: Threads::Multi(args.ithreads as usize),
                 run_intensify_search: true,
                 ..SolverParams::default()
             },
