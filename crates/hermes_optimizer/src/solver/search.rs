@@ -39,6 +39,7 @@ use crate::{
         intensify::intensify_search::IntensifySearch,
         statistics::SearchStatisticsIteration,
     },
+    utils::cancellable_barrier::{CancellableBarrier, WaitResult},
 };
 
 use super::{
@@ -275,7 +276,7 @@ impl Search {
 
         debug!("Running search on {} threads", num_threads);
 
-        let barrier = Arc::new(Barrier::new(num_threads));
+        let barrier = Arc::new(CancellableBarrier::new(num_threads));
 
         thread::scope(|s| {
             for thread_index in 0..num_threads {
@@ -392,7 +393,7 @@ impl Search {
                                 .iteration
                                 .is_multiple_of(self.params.threads_sync_iterations_interval)
                             {
-                                info!("Accumulating scores");
+                                debug!("Accumulating scores");
                                 // Update accumulated global stats from local stats
                                 self.global_alns_ruin_scores
                                     .lock()
@@ -401,24 +402,32 @@ impl Search {
                                     .lock()
                                     .accumulate(&mut state.alns_recreate_scores);
 
-                                let wait_result = thread_barrier.wait();
-                                if wait_result.is_leader() {
-                                    info!("Updating global weights from leader");
-                                    // Update global weights
-                                    self.global_alns_ruin_weights.lock().update_weights(
-                                        &mut self.global_alns_ruin_scores.lock(),
-                                        self.params.alns_reaction_factor,
-                                    );
+                                match thread_barrier.wait() {
+                                    WaitResult::Leader => {
+                                        debug!("Updating global weights from leader");
+                                        // Update global weights
+                                        self.global_alns_ruin_weights.lock().update_weights(
+                                            &mut self.global_alns_ruin_scores.lock(),
+                                            self.params.alns_reaction_factor,
+                                        );
 
-                                    self.global_alns_recreate_weights.lock().update_weights(
-                                        &mut self.global_alns_recreate_scores.lock(),
-                                        self.params.alns_reaction_factor,
-                                    );
+                                        self.global_alns_recreate_weights.lock().update_weights(
+                                            &mut self.global_alns_recreate_scores.lock(),
+                                            self.params.alns_reaction_factor,
+                                        );
+                                    }
+                                    WaitResult::Cancelled => {
+                                        break;
+                                    }
+                                    _ => {}
                                 }
 
-                                thread_barrier.wait();
+                                let wait_result = thread_barrier.wait();
+                                if wait_result.is_cancelled() {
+                                    break;
+                                }
 
-                                info!("Updating local weights from global weights");
+                                debug!("Updating local weights from global weights");
 
                                 // Update local weights from global
                                 state.alns_ruin_weights =
@@ -428,11 +437,10 @@ impl Search {
                                     self.global_alns_recreate_weights.lock().clone();
                             }
 
-                            // TODO: this can deadlock if threads start waiting on the barrier and another terminates
-
                             let should_terminate =
                                 *is_stopped.read() || self.should_terminate(&state);
                             if should_terminate {
+                                thread_barrier.cancel();
                                 // Make sure other threads stop as well
                                 *is_stopped.write() = true;
 
