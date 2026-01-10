@@ -27,6 +27,8 @@ pub struct SolverParams {
     pub insertion_threads: Threads,
     pub search_threads: Threads,
 
+    pub threads_sync_iterations_interval: usize,
+
     pub noise_probability: f64,
     pub noise_level: f64,
 
@@ -108,6 +110,7 @@ impl Default for SolverParams {
 
             alns_iterations_without_improvement_reset: 2000,
             alns_segment_iterations: 100,
+            threads_sync_iterations_interval: 500,
             alns_reaction_factor: 0.3,
             alns_best_factor: 20.0,
             alns_improvement_factor: 9.0,

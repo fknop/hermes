@@ -1,9 +1,13 @@
-use std::{collections::VecDeque, sync::Arc, thread};
+use std::{
+    collections::VecDeque,
+    sync::{Arc, Barrier},
+    thread,
+};
 
 use jiff::Timestamp;
 use parking_lot::{MappedRwLockReadGuard, Mutex, RwLock, RwLockReadGuard};
 use rand::{Rng, SeedableRng, rngs::SmallRng};
-use tracing::debug;
+use tracing::{debug, info};
 
 use crate::{
     acceptor::{
@@ -57,6 +61,8 @@ use super::{
 
 use super::statistics::{SearchStatistics, ThreadSearchStatistics};
 
+type BestSolutionHandler = Arc<Mutex<dyn FnMut(&AcceptedSolution) + Send + Sync + 'static>>;
+
 pub struct Search {
     problem: Arc<VehicleRoutingProblem>,
     constraints: Vec<Constraint>,
@@ -65,15 +71,16 @@ pub struct Search {
     tabu: Arc<RwLock<VecDeque<AcceptedSolution>>>,
     solution_selector: SolutionSelector,
     solution_acceptor: SolutionAcceptor,
-    on_best_solution_handler:
-        Option<Arc<Mutex<dyn FnMut(&AcceptedSolution) + Send + Sync + 'static>>>,
-    alns_ruin_weights: Arc<RwLock<AlnsWeights<RuinStrategy>>>,
-    alns_recreate_weights: Arc<RwLock<AlnsWeights<RecreateStrategy>>>,
-    // alns_weights: Arc<RwLock<AlnsWeights<(RuinStrategy, RecreateStrategy)>>>,
+
+    global_alns_ruin_weights: Arc<Mutex<AlnsWeights<RuinStrategy>>>,
+    global_alns_recreate_weights: Arc<Mutex<AlnsWeights<RecreateStrategy>>>,
+    global_alns_ruin_scores: Arc<Mutex<AlnsScores<RuinStrategy>>>,
+    global_alns_recreate_scores: Arc<Mutex<AlnsScores<RecreateStrategy>>>,
+
+    on_best_solution_handler: Option<BestSolutionHandler>,
+
     is_stopped: Arc<RwLock<bool>>,
     statistics: Arc<SearchStatistics>,
-
-    thread_pool: rayon::ThreadPool,
 }
 
 impl Search {
@@ -145,30 +152,41 @@ impl Search {
             SolverAcceptorStrategy::Any => SolutionAcceptor::Any,
         };
 
-        let ruin_strategies = params.ruin_strategies().clone();
-        let recreate_strategies = params.recreate_strategies().clone();
-
         Search {
             problem: Arc::clone(&problem),
-
             constraints: Self::create_constraints(),
             best_solutions: Arc::new(RwLock::new(Vec::with_capacity(params.max_solutions))),
+            global_alns_ruin_weights: Arc::new(Mutex::new(AlnsWeights::new(
+                params.ruin_strategies().clone(),
+            ))),
+            global_alns_recreate_weights: Arc::new(Mutex::new(AlnsWeights::new(
+                params.recreate_strategies().clone(),
+            ))),
+            global_alns_ruin_scores: Arc::new(Mutex::new(AlnsScores::new(
+                params.ruin_strategies().clone(),
+            ))),
+            global_alns_recreate_scores: Arc::new(Mutex::new(AlnsScores::new(
+                params.recreate_strategies().clone(),
+            ))),
+
             tabu: Arc::new(RwLock::new(VecDeque::with_capacity(params.tabu_size))),
             solution_selector,
             solution_acceptor,
             on_best_solution_handler: None,
-            alns_ruin_weights: Arc::new(RwLock::new(AlnsWeights::new(ruin_strategies))),
-            alns_recreate_weights: Arc::new(RwLock::new(AlnsWeights::new(recreate_strategies))),
+
             is_stopped: Arc::new(RwLock::new(false)),
             statistics: Arc::new(SearchStatistics::new(
                 params.search_threads.number_of_threads(),
             )),
-            thread_pool: rayon::ThreadPoolBuilder::new()
-                .num_threads(params.insertion_threads.number_of_threads())
-                .build()
-                .unwrap(),
             params,
         }
+    }
+
+    fn create_insertion_thread_pool(&self) -> rayon::ThreadPool {
+        rayon::ThreadPoolBuilder::new()
+            .num_threads(self.params.insertion_threads.number_of_threads())
+            .build()
+            .unwrap()
     }
 
     fn create_constraints() -> Vec<Constraint> {
@@ -227,7 +245,7 @@ impl Search {
             &self.problem,
             &mut rng,
             &self.constraints,
-            &self.thread_pool,
+            &self.create_insertion_thread_pool(),
         );
 
         let (score, score_analysis) = self.compute_solution_score(&initial_solution);
@@ -256,8 +274,13 @@ impl Search {
         }
 
         debug!("Running search on {} threads", num_threads);
+
+        let barrier = Arc::new(Barrier::new(num_threads));
+
         thread::scope(|s| {
             for thread_index in 0..num_threads {
+                let thread_barrier = Arc::clone(&barrier);
+
                 let best_solutions = Arc::clone(&self.best_solutions);
                 let tabu = Arc::clone(&self.tabu);
                 let is_stopped = Arc::clone(&self.is_stopped);
@@ -290,25 +313,33 @@ impl Search {
                 let mut thread_rng = SmallRng::from_rng(&mut rng);
                 let builder = thread::Builder::new().name(thread_index.to_string());
 
-                let ruin_scores = AlnsScores::new(self.params.ruin_strategies().clone());
-                let recreate_scores = AlnsScores::new(self.params.recreate_strategies().clone());
-
                 builder
                     .spawn_scoped(s, move || {
                         let mut state = ThreadedSearchState {
                             start,
                             thread: thread_index,
+                            iteration: 0,
                             iterations_without_improvement: 0,
-                            alns_ruin_scores: ruin_scores,
-                            alns_recreate_scores: recreate_scores,
+                            alns_ruin_weights: AlnsWeights::new(
+                                self.params.ruin_strategies().clone(),
+                            ),
+                            alns_recreate_weights: AlnsWeights::new(
+                                self.params.recreate_strategies().clone(),
+                            ),
+                            alns_ruin_scores: AlnsScores::new(
+                                self.params.ruin_strategies().clone(),
+                            ),
+                            alns_recreate_scores: AlnsScores::new(
+                                self.params.recreate_strategies().clone(),
+                            ),
                             best_solutions,
                             tabu,
-                            iteration: 0,
                             last_intensify_iteration: None,
                             max_iterations,
                             global_statistics,
                             thread_statistics,
                             noise_generator: thread_noise_generator,
+                            insertion_thread_pool: self.create_insertion_thread_pool(),
                         };
 
                         loop {
@@ -354,26 +385,57 @@ impl Search {
                                 self.update_solutions(working_solution, &mut state, iteration_info);
                             } else {
                                 state.iteration += 1;
-
-                                // if (state.iteration).is_multiple_of(500) {
-                                //     debug!(
-                                //         thread = thread::current().name().unwrap_or("main"),
-                                //         "Thread {}: Iteration {}/{} - {}",
-                                //         thread_index,
-                                //         state.iteration,
-                                //         max_iterations
-                                //             .map(|max| max.to_string())
-                                //             .unwrap_or(String::from("N/A")),
-                                //         self.alns_weights.read(),
-                                //     );
-                                // }
-
                                 self.perform_iteration(&mut state, &mut thread_rng);
                             }
+
+                            if state
+                                .iteration
+                                .is_multiple_of(self.params.threads_sync_iterations_interval)
+                            {
+                                info!("Accumulating scores");
+                                // Update accumulated global stats from local stats
+                                self.global_alns_ruin_scores
+                                    .lock()
+                                    .accumulate(&mut state.alns_ruin_scores);
+                                self.global_alns_recreate_scores
+                                    .lock()
+                                    .accumulate(&mut state.alns_recreate_scores);
+
+                                let wait_result = thread_barrier.wait();
+                                if wait_result.is_leader() {
+                                    info!("Updating global weights from leader");
+                                    // Update global weights
+                                    self.global_alns_ruin_weights.lock().update_weights(
+                                        &mut self.global_alns_ruin_scores.lock(),
+                                        self.params.alns_reaction_factor,
+                                    );
+
+                                    self.global_alns_recreate_weights.lock().update_weights(
+                                        &mut self.global_alns_recreate_scores.lock(),
+                                        self.params.alns_reaction_factor,
+                                    );
+                                }
+
+                                thread_barrier.wait();
+
+                                info!("Updating local weights from global weights");
+
+                                // Update local weights from global
+                                state.alns_ruin_weights =
+                                    self.global_alns_ruin_weights.lock().clone();
+
+                                state.alns_recreate_weights =
+                                    self.global_alns_recreate_weights.lock().clone();
+                            }
+
+                            // TODO: this can deadlock if threads start waiting on the barrier and another terminates
 
                             let should_terminate =
                                 *is_stopped.read() || self.should_terminate(&state);
                             if should_terminate {
+                                // Make sure other threads stop as well
+                                *is_stopped.write() = true;
+
                                 break;
                             }
                         }
@@ -449,7 +511,7 @@ impl Search {
             }
         }; // Lock is released here
 
-        let (ruin_strategy, recreate_strategy) = self.select_ruin_recreate_strategy(rng);
+        let (ruin_strategy, recreate_strategy) = self.select_ruin_recreate_strategy(&state, rng);
 
         self.ruin(&mut working_solution, ruin_strategy, state, rng);
 
@@ -609,7 +671,7 @@ impl Search {
             );
         }
 
-        let segment_size = (self.problem.jobs().len() / 5).clamp(50, 200);
+        // let segment_size = (self.problem.jobs().len() / 5).clamp(50, 200);
 
         if state.iteration > 0 {
             if state.iterations_without_improvement > 0
@@ -617,17 +679,20 @@ impl Search {
                     .iterations_without_improvement
                     .is_multiple_of(self.params.alns_iterations_without_improvement_reset)
             {
-                self.alns_ruin_weights.write().reset();
-                self.alns_recreate_weights.write().reset();
+                state.alns_ruin_weights.reset();
+                state.alns_recreate_weights.reset();
                 state.alns_ruin_scores.reset();
                 state.alns_recreate_scores.reset();
-            } else if state.iteration.is_multiple_of(segment_size) {
-                self.alns_ruin_weights.write().update_weights(
+            } else if state
+                .iteration
+                .is_multiple_of(self.params.alns_segment_iterations)
+            {
+                state.alns_ruin_weights.update_weights(
                     &mut state.alns_ruin_scores,
                     self.params.alns_reaction_factor,
                 );
 
-                self.alns_recreate_weights.write().update_weights(
+                state.alns_recreate_weights.update_weights(
                     &mut state.alns_recreate_scores,
                     self.params.alns_reaction_factor,
                 );
@@ -694,7 +759,7 @@ impl Search {
                 constraints: &self.constraints,
                 noise_generator: Some(&state.noise_generator),
                 problem: &self.problem,
-                thread_pool: &self.thread_pool,
+                thread_pool: &state.insertion_thread_pool,
                 insert_on_failure: self.params.recreate.insert_on_failure,
             },
         );
@@ -704,10 +769,11 @@ impl Search {
 
     fn select_ruin_recreate_strategy(
         &self,
+        state: &ThreadedSearchState,
         rng: &mut SmallRng,
     ) -> (RuinStrategy, RecreateStrategy) {
-        let ruin_strategy = self.alns_ruin_weights.read().select_strategy(rng);
-        let recreate_strategy = self.alns_recreate_weights.read().select_strategy(rng);
+        let ruin_strategy = state.alns_ruin_weights.select_strategy(rng);
+        let recreate_strategy = state.alns_recreate_weights.select_strategy(rng);
         (ruin_strategy, recreate_strategy)
     }
 
@@ -746,6 +812,9 @@ struct ThreadedSearchState {
     thread: usize,
     last_intensify_iteration: Option<usize>,
     iterations_without_improvement: usize,
+
+    alns_ruin_weights: AlnsWeights<RuinStrategy>,
+    alns_recreate_weights: AlnsWeights<RecreateStrategy>,
     alns_ruin_scores: AlnsScores<RuinStrategy>,
     alns_recreate_scores: AlnsScores<RecreateStrategy>,
     best_solutions: Arc<RwLock<Vec<AcceptedSolution>>>,
@@ -755,4 +824,5 @@ struct ThreadedSearchState {
     global_statistics: Arc<RwLock<GlobalStatistics>>,
     thread_statistics: Arc<RwLock<ThreadSearchStatistics>>,
     noise_generator: NoiseGenerator,
+    insertion_thread_pool: rayon::ThreadPool,
 }

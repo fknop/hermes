@@ -5,7 +5,7 @@ use rand::seq::IndexedRandom;
 
 use crate::solver::solver_params::SolverParams;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AlnsWeights<S>
 where
     S: Copy + Eq + Hash,
@@ -73,22 +73,43 @@ where
 
 #[derive(Debug)]
 struct ScoreEntry {
-    pub score: f64,
-    pub iterations: usize,
+    score: f64,
+    iterations: usize,
+
+    accumulated_score: f64,
+    accumulated_iterations: usize,
 }
 
 impl ScoreEntry {
+    pub fn from_score(score: f64) -> Self {
+        ScoreEntry {
+            score,
+            iterations: 1,
+            accumulated_score: score,
+            accumulated_iterations: 1,
+        }
+    }
+
     pub fn reset(&mut self) {
         self.score = 0.0;
         self.iterations = 0;
     }
+
+    pub fn increase_score(&mut self, score: f64) {
+        self.score += score;
+        self.accumulated_score += score;
+        self.iterations += 1;
+        self.accumulated_iterations += 1;
+    }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Operator<S> {
     pub strategy: S,
     pub weight: f64,
 }
+
+const MIN_WEIGHT: f64 = 0.1;
 
 impl<T> Operator<T> {
     fn update_weight(&mut self, entry: &ScoreEntry, reaction_factor: f64) {
@@ -99,7 +120,7 @@ impl<T> Operator<T> {
                 + reaction_factor * (entry.score / entry.iterations as f64)
         };
 
-        self.weight = new_weight.max(0.01);
+        self.weight = new_weight.max(MIN_WEIGHT);
     }
 
     fn reset(&mut self) {
@@ -134,6 +155,8 @@ where
                         ScoreEntry {
                             score: 0.0,
                             iterations: 0,
+                            accumulated_score: 0.0,
+                            accumulated_iterations: 0,
                         },
                     )
                 })
@@ -155,16 +178,33 @@ where
 
     pub fn update_score(&mut self, strategy: S, score: f64) {
         if let Some(entry) = self.scores.get_mut(&strategy) {
-            entry.score += score;
-            entry.iterations += 1;
+            entry.increase_score(score);
         } else {
-            self.scores.insert(
-                strategy,
-                ScoreEntry {
-                    score,
-                    iterations: 1,
-                },
-            );
+            self.scores.insert(strategy, ScoreEntry::from_score(score));
+        }
+    }
+
+    pub fn accumulate(&mut self, alns_scores: &mut AlnsScores<S>) {
+        for (strategy, entry) in &mut alns_scores.scores {
+            if let Some(self_entry) = self.scores.get_mut(strategy) {
+                self_entry.score += entry.score;
+                self_entry.iterations += entry.iterations;
+                self_entry.accumulated_score += entry.accumulated_score;
+                self_entry.accumulated_iterations += entry.accumulated_iterations;
+            } else {
+                self.scores.insert(
+                    *strategy,
+                    ScoreEntry {
+                        score: entry.score,
+                        iterations: entry.iterations,
+                        accumulated_score: entry.score,
+                        accumulated_iterations: entry.iterations,
+                    },
+                );
+            }
+
+            entry.accumulated_iterations = 0;
+            entry.accumulated_score = 0.0;
         }
     }
 
