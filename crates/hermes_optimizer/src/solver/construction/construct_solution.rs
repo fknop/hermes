@@ -44,6 +44,7 @@ fn find_minimum_vehicles(problem: &VehicleRoutingProblem) -> usize {
             let demand = total_demand.get(index);
             if capacity_dimension > 0.0 {
                 let required_vehicles = (demand / capacity_dimension).ceil() as usize;
+
                 minimum_for_vehicle_capacity = minimum_for_vehicle_capacity.max(required_vehicles);
             } else if demand > 0.0 {
                 // If there's demand but the vehicle has no capacity in this dimension,
@@ -53,7 +54,11 @@ fn find_minimum_vehicles(problem: &VehicleRoutingProblem) -> usize {
             }
         }
 
-        minimum_vehicles = minimum_vehicles.min(minimum_for_vehicle_capacity);
+        if problem.fleet().is_infinite() {
+            minimum_vehicles = minimum_vehicles.max(minimum_for_vehicle_capacity);
+        } else {
+            minimum_vehicles = minimum_vehicles.min(minimum_for_vehicle_capacity);
+        }
     }
 
     minimum_vehicles
@@ -99,7 +104,7 @@ fn compute_convex_hull(problem: &VehicleRoutingProblem) -> (Vec<JobIdx>, Vec<Job
         .collect();
 
     let interior: Vec<JobIdx> = (0..problem.jobs().len())
-        .map(|i| JobIdx::new(i))
+        .map(JobIdx::new)
         .filter(|i| !exterior.contains(i))
         .collect();
 
@@ -123,35 +128,50 @@ fn create_initial_routes(problem: &VehicleRoutingProblem, solution: &mut Working
         let service_a = problem.service(a);
         let service_b = problem.service(b);
 
-        let urgency_a = service_a
-            .time_windows()
-            .iter()
-            .filter_map(|time_window| time_window.end())
-            .max()
-            .map(|end| {
-                end - problem.travel_time(
-                    problem.vehicle(0.into()),
-                    depot_id,
-                    service_a.location_id(),
-                )
-            })
-            .unwrap_or(Timestamp::MAX); // If no time window end -> no urgency
+        if problem.has_time_windows() {
+            let urgency_a = service_a
+                .time_windows()
+                .iter()
+                .filter_map(|time_window| time_window.end())
+                .max()
+                .map(|end| {
+                    end - problem.travel_time(
+                        problem.vehicle(0.into()),
+                        depot_id,
+                        service_a.location_id(),
+                    )
+                })
+                .unwrap_or(Timestamp::MAX); // If no time window end -> no urgency
 
-        let urgency_b = service_b
-            .time_windows()
-            .iter()
-            .filter_map(|time_window| time_window.end())
-            .max()
-            .map(|end| {
-                end - problem.travel_time(
-                    problem.vehicle(0.into()),
-                    depot_id,
-                    service_b.location_id(),
-                )
-            })
-            .unwrap_or(Timestamp::MAX); // If no time window end -> no urgency
+            let urgency_b = service_b
+                .time_windows()
+                .iter()
+                .filter_map(|time_window| time_window.end())
+                .max()
+                .map(|end| {
+                    end - problem.travel_time(
+                        problem.vehicle(0.into()),
+                        depot_id,
+                        service_b.location_id(),
+                    )
+                })
+                .unwrap_or(Timestamp::MAX); // If no time window end -> no urgency
 
-        urgency_a.cmp(&urgency_b)
+            urgency_a.cmp(&urgency_b)
+        } else if problem.has_capacity() {
+            let first_demand_a = service_a.demand().get(0);
+            let first_demand_b = service_b.demand().get(0);
+
+            first_demand_a.total_cmp(&first_demand_b).reverse()
+        } else {
+            let distance_from_depot_to_a = problem.average_cost_from_depot(service_a.location_id());
+            let distance_from_depot_to_b = problem.average_cost_from_depot(service_b.location_id());
+
+            distance_from_depot_to_a
+                .partial_cmp(&distance_from_depot_to_b)
+                .unwrap()
+                .reverse()
+        }
     });
 
     let mut seed_customers: Vec<JobIdx> = Vec::with_capacity(k_min);
@@ -253,12 +273,20 @@ fn create_initial_routes(problem: &VehicleRoutingProblem, solution: &mut Working
     }
 
     for &customer in &seed_customers {
-        let vehicle_id = solution.available_vehicles_for_insertion().next().unwrap();
-        solution.insert(&Insertion::Service(ServiceInsertion {
-            route_id: RouteIdx::new(vehicle_id.get()), // TODO: won't work
-            job_index: customer,
-            position: 0,
-        }));
+        if let Some(route_id) = solution
+            .routes()
+            .iter()
+            .enumerate_idx()
+            .filter(|(_, route)| route.is_empty())
+            .map(|(id, _)| id)
+            .next()
+        {
+            solution.insert(&Insertion::Service(ServiceInsertion {
+                route_id: RouteIdx::new(route_id), // TODO: won't work
+                job_index: customer,
+                position: 0,
+            }));
+        }
     }
 }
 
@@ -269,7 +297,6 @@ pub fn construct_solution(
     thread_pool: &rayon::ThreadPool,
 ) -> WorkingSolution {
     let mut solution = WorkingSolution::new(Arc::clone(problem));
-
     create_initial_routes(problem, &mut solution);
 
     // ConstructionBestInsertion::insert_services(

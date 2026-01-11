@@ -192,18 +192,25 @@ pub fn parse(text: &str) -> Result<CvrpInstance, anyhow::Error> {
     })
 }
 
-pub fn parse_solution_file<P: AsRef<Path>>(path: P) -> Option<f64> {
+pub fn parse_solution_file<P: AsRef<Path>>(path: P) -> Option<(usize, f64)> {
     if !path.as_ref().exists() {
         return None;
     }
 
     let content = std::fs::read_to_string(path).ok()?;
 
-    content
+    let cost = content
         .lines()
         .rev()
         .find_map(|line| line.strip_prefix("Cost "))
-        .and_then(|cost| cost.trim().parse().ok())
+        .and_then(|cost| cost.trim().parse().ok());
+
+    let routes = content
+        .lines()
+        .filter(|line| line.starts_with("Route"))
+        .count();
+
+    cost.map(|c| (routes, c))
 }
 
 #[cfg(test)]

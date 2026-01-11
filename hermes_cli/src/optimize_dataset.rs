@@ -11,9 +11,10 @@ use hermes_optimizer::{
         solomon::SolomonParser,
     },
     solver::{
+        recreate::recreate_params::RecreateParams,
         solution::working_solution::WorkingSolution,
         solver::Solver,
-        solver_params::{SolverParams, Termination, Threads},
+        solver_params::{SolverParams, SolverParamsDebugOptions, Termination, Threads},
     },
 };
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
@@ -77,7 +78,8 @@ pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
             .map(|ext| ext == "txt" || ext == "vrp")
             .unwrap_or(false)
     }) {
-        let mut optimal_cost: Option<f64> = None;
+        let mut optimal_sol: Option<(usize, f64)> = None;
+
         let extension = path.extension().unwrap();
         let now = Instant::now();
 
@@ -89,7 +91,7 @@ pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
 
             let mut solution_path = path.clone();
             solution_path.set_extension("sol");
-            optimal_cost = parse_solution_file(solution_path);
+            optimal_sol = parse_solution_file(solution_path);
 
             parser.parse(path)?
         } else {
@@ -102,12 +104,22 @@ pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
             terminations.push(Termination::Iterations(iterations));
         }
 
+        if let Some(optimal_sol) = optimal_sol {
+            terminations.push(Termination::VehiclesAndCosts {
+                vehicles: optimal_sol.0,
+                costs: optimal_sol.1,
+            });
+        }
+
         let solver = Solver::new(
             vrp,
             SolverParams {
                 terminations,
                 search_threads: Threads::Multi(args.sthreads as usize),
                 insertion_threads: Threads::Multi(args.ithreads as usize),
+                debug_options: SolverParamsDebugOptions {
+                    enable_local_search: true,
+                },
                 ..SolverParams::default()
             },
         );
@@ -126,12 +138,15 @@ pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
             let n_routes = best_solution.solution.non_empty_routes_count();
             let total_transport_cost = best_solution.solution.total_transport_costs();
             bar.finish_with_message(format!(
-                "Finished - routes = {}, costs = {}, unassigned = {}, gap = {}",
+                "Finished - routes = {}{}, costs = {}, unassigned = {}, gap = {}",
                 n_routes,
+                optimal_sol
+                    .map(|os| format!(" ({:+})", n_routes - os.0))
+                    .unwrap_or_default(),
                 total_transport_cost,
                 best_solution.solution.unassigned_jobs().len(),
-                optimal_cost
-                    .map(|oc| format!("{:+.2}%", gap_percent(total_transport_cost, oc)))
+                optimal_sol
+                    .map(|oc| format!("{:+.2}%", gap_percent(total_transport_cost, oc.1)))
                     .unwrap_or_else(|| "n/a".to_string())
             ));
 

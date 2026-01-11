@@ -12,7 +12,7 @@ pub fn compute_insertion_score(
 
     let skip_on_failure = !insert_on_failure
         || best_score
-            .map(|best_score| best_score.hard_score == 0.0)
+            .map(|best_score| !best_score.is_failure())
             .unwrap_or(false);
 
     for constraint in constraints
@@ -30,7 +30,8 @@ pub fn compute_insertion_score(
         .iter()
         .filter(|c| c.score_level() == ScoreLevel::Soft)
     {
-        score += constraint.compute_insertion_score(context);
+        let c_score = constraint.compute_insertion_score(context);
+        score += c_score;
     }
 
     score
