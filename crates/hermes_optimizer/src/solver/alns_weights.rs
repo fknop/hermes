@@ -59,7 +59,7 @@ where
         R: rand::Rng,
     {
         self.weights
-            .choose_weighted(rng, |operator| operator.weight)
+            .choose_weighted(rng, |operator| (operator.weight / 5.0).exp())
             .map(|operator| operator.strategy)
             .expect("No ruin strategy configured on solver")
     }

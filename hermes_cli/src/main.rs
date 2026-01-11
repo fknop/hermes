@@ -27,7 +27,7 @@ struct Cli {
     #[command(subcommand)]
     command: Option<Commands>,
 
-    #[arg(short, long)]
+    #[arg(long, global = true)]
     debug: bool,
 
     #[arg(long, global = true)]

@@ -76,6 +76,7 @@ impl Threads {
 pub enum SolverAcceptorStrategy {
     Greedy,
     Schrimpf,
+    SimulatedAnnealing,
     Any,
 }
 
@@ -109,8 +110,8 @@ impl Default for SolverParams {
             noise_probability: 0.15,
 
             alns_iterations_without_improvement_reset: 4000,
-            alns_segment_iterations: 100,
-            threads_sync_iterations_interval: 500,
+            alns_segment_iterations: 50,
+            threads_sync_iterations_interval: 250,
             alns_reaction_factor: 0.3,
             alns_best_factor: 20.0,
             alns_improvement_factor: 9.0,

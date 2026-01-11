@@ -282,7 +282,7 @@ fn create_initial_routes(problem: &VehicleRoutingProblem, solution: &mut Working
             .next()
         {
             solution.insert(&Insertion::Service(ServiceInsertion {
-                route_id: RouteIdx::new(route_id), // TODO: won't work
+                route_id: RouteIdx::new(route_id),
                 job_index: customer,
                 position: 0,
             }));

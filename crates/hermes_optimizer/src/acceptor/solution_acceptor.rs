@@ -1,5 +1,9 @@
-use crate::solver::{
-    accepted_solution::AcceptedSolution, score::Score, solution::working_solution::WorkingSolution,
+use crate::{
+    acceptor::simulated_annealing_acceptor::SimulatedAnnealingAcceptor,
+    solver::{
+        accepted_solution::AcceptedSolution, score::Score,
+        solution::working_solution::WorkingSolution,
+    },
 };
 
 use super::{
@@ -11,6 +15,7 @@ use super::{
 pub enum SolutionAcceptor {
     Greedy(GreedySolutionAcceptor),
     Schrimpf(SchrimpfAcceptor),
+    SimulatedAnnealing(SimulatedAnnealingAcceptor),
     Any,
 }
 
@@ -27,6 +32,9 @@ impl AcceptSolution for SolutionAcceptor {
                 acceptor.accept(current_solutions, solution, score, context)
             }
             SolutionAcceptor::Schrimpf(acceptor) => {
+                acceptor.accept(current_solutions, solution, score, context)
+            }
+            SolutionAcceptor::SimulatedAnnealing(acceptor) => {
                 acceptor.accept(current_solutions, solution, score, context)
             }
             SolutionAcceptor::Any => true,

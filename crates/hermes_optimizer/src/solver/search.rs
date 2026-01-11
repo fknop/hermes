@@ -14,6 +14,7 @@ use crate::{
         accept_solution::{AcceptSolution, AcceptSolutionContext},
         greedy_solution_acceptor::GreedySolutionAcceptor,
         schrimpf_acceptor::SchrimpfAcceptor,
+        simulated_annealing_acceptor::SimulatedAnnealingAcceptor,
         solution_acceptor::SolutionAcceptor,
     },
     problem::vehicle_routing_problem::VehicleRoutingProblem,
@@ -36,6 +37,7 @@ use crate::{
             waiting_duration_constraint::WaitingDurationConstraint,
         },
         intensify::intensify_search::IntensifySearch,
+        solver_params::SolverParamsDebugOptions,
         statistics::SearchStatisticsIteration,
     },
     utils::cancellable_barrier::{CancellableBarrier, WaitResult},
@@ -148,6 +150,38 @@ impl Search {
                 );
 
                 SolutionAcceptor::Schrimpf(SchrimpfAcceptor::new(initial_threshold))
+            }
+            SolverAcceptorStrategy::SimulatedAnnealing => {
+                let initial_temperature_search = Self::new(
+                    SolverParams {
+                        terminations: vec![Termination::Iterations(1)],
+                        max_solutions: 1,
+                        solver_acceptor: SolverAcceptorStrategy::Any,
+                        search_threads: Threads::Single,
+                        solver_selector: SolverSelectorStrategy::SelectBest,
+                        tabu_enabled: false,
+                        run_intensify_search: false,
+                        debug_options: SolverParamsDebugOptions {
+                            enable_local_search: false,
+                        },
+                        ..params.clone()
+                    },
+                    Arc::clone(&problem),
+                );
+
+                initial_temperature_search.run();
+                let soft_score = initial_temperature_search
+                    .best_solution()
+                    .unwrap()
+                    .score
+                    .soft_score;
+
+                let w = 0.3;
+                let start_temperature = w * soft_score / (0.5_f64.ln().abs());
+                SolutionAcceptor::SimulatedAnnealing(SimulatedAnnealingAcceptor::new(
+                    start_temperature,
+                    0.99999,
+                ))
             }
             SolverAcceptorStrategy::Any => SolutionAcceptor::Any,
         };
@@ -380,7 +414,12 @@ impl Search {
                                     current_score,
                                 };
 
-                                self.update_solutions(working_solution, &mut state, iteration_info);
+                                self.update_solutions(
+                                    working_solution,
+                                    &mut state,
+                                    iteration_info,
+                                    &mut thread_rng,
+                                );
                             } else {
                                 state.iteration += 1;
                                 self.perform_iteration(&mut state, &mut thread_rng);
@@ -534,6 +573,7 @@ impl Search {
                 recreate_strategy: Some(recreate_strategy),
                 current_score,
             },
+            rng,
         );
     }
 
@@ -542,6 +582,7 @@ impl Search {
         solution: WorkingSolution,
         state: &mut ThreadedSearchState,
         iteration_info: IterationInfo,
+        rng: &mut SmallRng,
     ) {
         if self.params.tabu_enabled
             && state.iteration > 0
@@ -562,6 +603,7 @@ impl Search {
                 iteration: state.iteration,
                 max_iterations: state.max_iterations,
                 max_solutions: self.params.max_solutions,
+                rng,
             },
         ) {
             let is_duplicate = guard.iter().any(|accepted_solution| {

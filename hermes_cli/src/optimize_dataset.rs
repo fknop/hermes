@@ -28,7 +28,7 @@ pub struct OptimizeDatasetArgs {
     #[arg(short, long)]
     dataset: PathBuf,
 
-    #[arg(short, long, value_parser=parsers::parse_duration, default_value = "5s")]
+    #[arg(short, long, value_parser=parsers::parse_duration, default_value = "2m")]
     timeout: jiff::SignedDuration,
 
     #[arg(long, default_value_t = 4)]

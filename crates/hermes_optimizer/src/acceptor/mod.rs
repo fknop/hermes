@@ -1,4 +1,5 @@
 pub mod accept_solution;
 pub mod greedy_solution_acceptor;
 pub mod schrimpf_acceptor;
+pub mod simulated_annealing_acceptor;
 pub mod solution_acceptor;

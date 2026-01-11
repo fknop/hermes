@@ -58,22 +58,27 @@ impl AcceptSolution for SchrimpfAcceptor {
 
 #[cfg(test)]
 mod tests {
+    use rand::{SeedableRng, rngs::SmallRng};
+
     use super::*;
 
     #[test]
     fn test_compute_threshold() {
         let acceptor = SchrimpfAcceptor::new(5000.0);
+        let mut rng = SmallRng::seed_from_u64(42);
 
         let mut threshold = acceptor.compute_threshold(&AcceptSolutionContext {
             iteration: 0,
             max_solutions: 100,
             max_iterations: Some(1000),
+            rng: &mut rng,
         });
         println!("{threshold:?}");
         threshold = acceptor.compute_threshold(&AcceptSolutionContext {
             iteration: 1,
             max_solutions: 100,
             max_iterations: Some(1000),
+            rng: &mut rng,
         });
 
         println!("{threshold:?}");
@@ -82,6 +87,7 @@ mod tests {
             iteration: 999,
             max_solutions: 100,
             max_iterations: Some(1000),
+            rng: &mut rng,
         });
 
         println!("{threshold:?}");
@@ -90,6 +96,7 @@ mod tests {
             iteration: 1000,
             max_solutions: 100,
             max_iterations: Some(1000),
+            rng: &mut rng,
         });
 
         println!("{threshold:?}");
@@ -98,6 +105,7 @@ mod tests {
             iteration: 2000,
             max_solutions: 100,
             max_iterations: Some(1000),
+            rng: &mut rng,
         });
 
         println!("{threshold:?}");
