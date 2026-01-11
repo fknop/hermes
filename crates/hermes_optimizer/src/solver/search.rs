@@ -1,6 +1,6 @@
 use std::{
     collections::VecDeque,
-    sync::{Arc, Barrier},
+    sync::{Arc, Barrier, atomic::AtomicBool},
     thread,
 };
 
@@ -79,7 +79,7 @@ pub struct Search {
 
     on_best_solution_handler: Option<BestSolutionHandler>,
 
-    is_stopped: Arc<RwLock<bool>>,
+    is_stopped: Arc<AtomicBool>,
     statistics: Arc<SearchStatistics>,
 }
 
@@ -174,7 +174,7 @@ impl Search {
             solution_acceptor,
             on_best_solution_handler: None,
 
-            is_stopped: Arc::new(RwLock::new(false)),
+            is_stopped: Arc::new(AtomicBool::new(false)),
             statistics: Arc::new(SearchStatistics::new(
                 params.search_threads.number_of_threads(),
             )),
@@ -228,7 +228,8 @@ impl Search {
     }
 
     pub fn stop(&self) {
-        *self.is_stopped.write() = true;
+        self.is_stopped
+            .store(true, std::sync::atomic::Ordering::Relaxed);
     }
 
     pub fn run(&self) {
@@ -433,13 +434,16 @@ impl Search {
                                     self.global_alns_recreate_weights.lock().clone();
                             }
 
-                            let should_terminate =
-                                *is_stopped.read() || self.should_terminate(&state);
+                            let is_stopped =
+                                self.is_stopped.load(std::sync::atomic::Ordering::Relaxed);
+                            let should_terminate = is_stopped || self.should_terminate(&state);
                             if should_terminate {
-                                thread_barrier.cancel();
                                 // Make sure other threads stop as well
-                                *is_stopped.write() = true;
+                                if !is_stopped {
+                                    self.stop();
+                                }
 
+                                thread_barrier.cancel();
                                 break;
                             }
                         }
