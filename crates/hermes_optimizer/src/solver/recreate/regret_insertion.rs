@@ -1,10 +1,13 @@
 use rand::Rng;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
-use crate::solver::{
-    insertion::{Insertion, for_each_insertion},
-    score::Score,
-    solution::working_solution::WorkingSolution,
+use crate::{
+    problem::{self, job::JobIdx},
+    solver::{
+        insertion::{Insertion, for_each_insertion},
+        score::Score,
+        solution::working_solution::WorkingSolution,
+    },
 };
 
 use super::{recreate_context::RecreateContext, recreate_solution::RecreateSolution};
@@ -44,11 +47,14 @@ impl RegretInsertion {
         &self,
         solution: &mut WorkingSolution,
         context: &mut RecreateContext,
+        iteration_seed: u64,
     ) -> Option<(Score, Insertion)> {
         let regret_values: Vec<(Score, Insertion, Score)> = solution
             .unassigned_jobs()
             .par_iter()
             .filter_map(|&job_id| {
+                let noiser_seed = context.create_noiser_seed(iteration_seed, job_id);
+                let mut noiser = context.create_noiser(noiser_seed);
                 let mut potential_insertions: Vec<(Score, Insertion)> = Vec::with_capacity(
                     self.k + 2, // // One insertion after each activity
                                 // (context.problem.jobs().len() - solution.unassigned_jobs().len())
@@ -57,7 +63,8 @@ impl RegretInsertion {
                 );
 
                 for_each_insertion(solution, job_id, |insertion| {
-                    let score = context.compute_noisy_insertion_score(solution, &insertion, None);
+                    let score = noiser
+                        .apply_noise(context.compute_insertion_score(solution, &insertion, None));
 
                     if let Some(last) = potential_insertions.last()
                         && !potential_insertions.is_empty()
@@ -116,10 +123,12 @@ impl RegretInsertion {
     }
 
     pub fn insert_services(&self, solution: &mut WorkingSolution, mut context: RecreateContext) {
+        let iteration_seed = context.create_iteration_seed();
+
         while !solution.unassigned_jobs().is_empty() {
             let best_insertion_for_max_regret = context
                 .thread_pool
-                .install(|| self.compute_best_insertion(solution, &mut context));
+                .install(|| self.compute_best_insertion(solution, &mut context, iteration_seed));
 
             // 4. Perform the insertion of the service with the highest regret
             if let Some((best_score, insertion)) = best_insertion_for_max_regret {

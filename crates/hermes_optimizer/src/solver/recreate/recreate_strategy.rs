@@ -52,6 +52,6 @@ impl RecreateSolution for RecreateStrategy {
             }
         }
 
-        solution.resync();
+        // solution.resync();
     }
 }

@@ -201,7 +201,7 @@ impl RuinSolution for RuinString {
                     self.ruin_split_string(solution, context.rng, route_id);
                 }
 
-                solution.resync();
+                solution.resync_route(route_id);
                 ruined_routes.insert(route_id);
             }
 

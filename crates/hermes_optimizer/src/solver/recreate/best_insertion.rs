@@ -141,19 +141,25 @@ impl BestInsertion {
         &self,
         unassigned_jobs: &Vec<JobIdx>,
         solution: &mut WorkingSolution,
-        context: RecreateContext,
+        mut context: RecreateContext,
     ) {
+        let iteration_seed = context.create_iteration_seed();
         for &job_id in unassigned_jobs {
             let mut best_insertion: Option<Insertion> = None;
             let mut best_score = Score::MAX;
+            let noiser_seed = context.create_noiser_seed(iteration_seed, job_id);
+            let mut noiser = context.create_noiser(noiser_seed);
 
             for_each_insertion(solution, job_id, |insertion| {
                 if self.should_blink(context.rng) {
                     return;
                 }
 
-                let score =
-                    context.compute_noisy_insertion_score(solution, &insertion, Some(&best_score));
+                let score = noiser.apply_noise(context.compute_insertion_score(
+                    solution,
+                    &insertion,
+                    Some(&best_score),
+                ));
 
                 if score < best_score {
                     best_score = score;

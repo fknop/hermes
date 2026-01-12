@@ -314,6 +314,10 @@ impl WorkingSolution {
         }
     }
 
+    pub fn resync_route(&mut self, route_id: RouteIdx) {
+        self.routes[route_id].resync(&self.problem);
+    }
+
     pub fn remove_route(&mut self, route_id: RouteIdx) -> usize {
         let mut removed = 0;
         removed += self.routes[route_id].len();
