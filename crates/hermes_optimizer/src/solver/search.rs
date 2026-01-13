@@ -271,8 +271,6 @@ impl Search {
         let start = Timestamp::now();
         let num_threads = self.params.search_threads.number_of_threads();
 
-        let max_cost = self.problem.max_cost();
-
         let initial_solution = construct_solution(
             &self.problem,
             &self.params,

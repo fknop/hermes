@@ -5,7 +5,9 @@ use axum::{
     response::IntoResponse,
 };
 use hermes_optimizer::solver::{
-    accepted_solution::AcceptedSolution, solver::SolverStatus, statistics::SearchStatistics,
+    accepted_solution::AcceptedSolution,
+    solver::SolverStatus,
+    statistics::{AggregatedStatistics, SearchStatistics},
 };
 use serde::Serialize;
 use uuid::Uuid;
@@ -19,13 +21,13 @@ use super::benchmark_solution::{
 #[derive(Serialize)]
 pub struct PollSolverRunning {
     solution: Option<BenchmarkSolution>,
-    statistics: Option<Arc<SearchStatistics>>,
+    statistics: Option<AggregatedStatistics>,
 }
 
 #[derive(Serialize)]
 pub struct PollSolverCompleted {
     solution: Option<BenchmarkSolution>,
-    statistics: Option<Arc<SearchStatistics>>,
+    statistics: Option<AggregatedStatistics>,
 }
 
 #[derive(Serialize)]
@@ -89,7 +91,7 @@ pub async fn poll_handler(
 
                 Ok(PollBenchmarkResponse::Running(PollSolverRunning {
                     solution: solution.map(|solution| transform_solution(&solution)),
-                    statistics,
+                    statistics: statistics.map(|s| s.aggregate()),
                 }))
             }
             SolverStatus::Completed => {
@@ -97,7 +99,7 @@ pub async fn poll_handler(
                 let statistics = solver_manager.get_statistics(&job_id.to_string()).await;
                 Ok(PollBenchmarkResponse::Completed(PollSolverCompleted {
                     solution: solution.map(|solution| transform_solution(&solution)),
-                    statistics,
+                    statistics: statistics.map(|s| s.aggregate()),
                 }))
             }
         }
