@@ -4,7 +4,7 @@ use std::{
     thread,
 };
 
-use jiff::Timestamp;
+use jiff::{SignedDuration, Timestamp};
 use parking_lot::{MappedRwLockReadGuard, Mutex, RwLock, RwLockReadGuard};
 use rand::{Rng, SeedableRng, rngs::SmallRng};
 use tracing::{debug, info};
@@ -399,10 +399,8 @@ impl Search {
 
                                 state.iteration += iterations;
                                 state.last_intensify_iteration = Some(state.iteration);
-                                let iteration_info = IterationInfo {
+                                let iteration_info = IterationInfo::Intensify {
                                     iteration: state.iteration,
-                                    ruin_strategy: None,
-                                    recreate_strategy: None,
                                     current_score,
                                 };
 
@@ -552,18 +550,24 @@ impl Search {
 
         let (ruin_strategy, recreate_strategy) = self.select_ruin_recreate_strategy(&state, rng);
 
+        let now = Timestamp::now();
         self.ruin(&mut working_solution, ruin_strategy, state, rng);
+        let ruin_duration = Timestamp::now().duration_since(now);
 
+        let now = Timestamp::now();
         self.recreate(&mut working_solution, recreate_strategy, state, rng);
+        let recreate_duration = Timestamp::now().duration_since(now);
 
         self.update_solutions(
             working_solution,
             state,
-            IterationInfo {
+            IterationInfo::RuinRecreate {
                 iteration: state.iteration,
-                ruin_strategy: Some(ruin_strategy),
-                recreate_strategy: Some(recreate_strategy),
+                ruin_strategy,
+                recreate_strategy,
                 current_score,
+                ruin_duration,
+                recreate_duration,
             },
             rng,
         );
@@ -624,16 +628,39 @@ impl Search {
 
             #[cfg(feature = "statistics")]
             {
-                state
-                    .thread_statistics
-                    .write()
-                    .add_iteration_info(SearchStatisticsIteration {
-                        timestamp: Timestamp::now(),
-                        improved: score < iteration_info.current_score,
-                        is_best,
-                        recreate_strategy: iteration_info.recreate_strategy,
-                        ruin_strategy: iteration_info.ruin_strategy,
-                    });
+                match iteration_info {
+                    IterationInfo::RuinRecreate {
+                        current_score,
+                        ruin_strategy,
+                        recreate_strategy,
+                        ruin_duration,
+                        recreate_duration,
+                        ..
+                    } => {
+                        state.thread_statistics.write().add_iteration_info(
+                            SearchStatisticsIteration::RuinRecreate {
+                                timestamp: Timestamp::now(),
+                                improved: score < current_score,
+                                is_best,
+                                recreate_strategy,
+                                ruin_strategy,
+                                score_before: current_score,
+                                score_after: score,
+                                ruin_duration,
+                                recreate_duration,
+                            },
+                        );
+                    }
+                    IterationInfo::Intensify { current_score, .. } => {
+                        state.thread_statistics.write().add_iteration_info(
+                            SearchStatisticsIteration::Intensify {
+                                timestamp: Timestamp::now(),
+                                improved: score < current_score,
+                                is_best,
+                            },
+                        );
+                    }
+                }
             }
 
             let is_tabu = self.params.tabu_enabled
@@ -684,7 +711,7 @@ impl Search {
                     &self.params,
                     UpdateScoreParams {
                         is_best,
-                        improved: score < iteration_info.current_score,
+                        improved: score < iteration_info.current_score(),
                         accepted: true,
                     },
                 );
@@ -693,7 +720,7 @@ impl Search {
                     &self.params,
                     UpdateScoreParams {
                         is_best,
-                        improved: score < iteration_info.current_score,
+                        improved: score < iteration_info.current_score(),
                         accepted: true,
                     },
                 );
@@ -843,18 +870,37 @@ impl Search {
     }
 }
 
-struct IterationInfo {
-    pub iteration: usize,
-    pub ruin_strategy: Option<RuinStrategy>,
-    pub recreate_strategy: Option<RecreateStrategy>,
-    pub current_score: Score,
+pub enum IterationInfo {
+    RuinRecreate {
+        iteration: usize,
+        ruin_strategy: RuinStrategy,
+        recreate_strategy: RecreateStrategy,
+        current_score: Score,
+        ruin_duration: SignedDuration,
+        recreate_duration: SignedDuration,
+    },
+    Intensify {
+        iteration: usize,
+        current_score: Score,
+    },
 }
 
 impl IterationInfo {
     fn strategy(&self) -> Option<(RuinStrategy, RecreateStrategy)> {
-        match (self.ruin_strategy, self.recreate_strategy) {
-            (Some(ruin), Some(recreate)) => Some((ruin, recreate)),
+        match self {
+            IterationInfo::RuinRecreate {
+                ruin_strategy,
+                recreate_strategy,
+                ..
+            } => Some((*ruin_strategy, *recreate_strategy)),
             _ => None,
+        }
+    }
+
+    fn current_score(&self) -> Score {
+        match self {
+            IterationInfo::RuinRecreate { current_score, .. } => *current_score,
+            IterationInfo::Intensify { current_score, .. } => *current_score,
         }
     }
 }
@@ -864,7 +910,6 @@ struct ThreadedSearchState {
     thread: usize,
     last_intensify_iteration: Option<usize>,
     iterations_without_improvement: usize,
-
     alns_ruin_weights: AlnsWeights<RuinStrategy>,
     alns_recreate_weights: AlnsWeights<RecreateStrategy>,
     alns_ruin_scores: AlnsScores<RuinStrategy>,

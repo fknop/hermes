@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use fxhash::FxHashMap;
-use jiff::Timestamp;
+use jiff::{SignedDuration, Timestamp};
 use parking_lot::RwLock;
 use serde::Serialize;
 use serde_with::{DisplayFromStr, serde_as};
@@ -60,12 +60,23 @@ impl GlobalStatistics {
 }
 
 #[derive(Serialize)]
-pub struct SearchStatisticsIteration {
-    pub timestamp: Timestamp,
-    pub ruin_strategy: Option<RuinStrategy>,
-    pub recreate_strategy: Option<RecreateStrategy>,
-    pub improved: bool,
-    pub is_best: bool,
+pub enum SearchStatisticsIteration {
+    RuinRecreate {
+        timestamp: Timestamp,
+        ruin_strategy: RuinStrategy,
+        recreate_strategy: RecreateStrategy,
+        improved: bool,
+        is_best: bool,
+        score_before: Score,
+        score_after: Score,
+        ruin_duration: SignedDuration,
+        recreate_duration: SignedDuration,
+    },
+    Intensify {
+        timestamp: Timestamp,
+        improved: bool,
+        is_best: bool,
+    },
 }
 
 #[serde_as]
@@ -82,14 +93,16 @@ pub struct ThreadSearchStatistics {
 
 impl ThreadSearchStatistics {
     pub fn add_iteration_info(&mut self, iteration: SearchStatisticsIteration) {
-        if let Some(ruin_strategy) = iteration.ruin_strategy {
+        if let SearchStatisticsIteration::RuinRecreate {
+            ruin_strategy,
+            recreate_strategy,
+            ..
+        } = iteration
+        {
             self.ruin_strategies
                 .entry(ruin_strategy)
                 .and_modify(|entry| *entry += 1)
                 .or_insert(1);
-        }
-
-        if let Some(recreate_strategy) = iteration.recreate_strategy {
             self.recreate_strategies
                 .entry(recreate_strategy)
                 .and_modify(|entry| *entry += 1)
