@@ -33,7 +33,11 @@ function getVariantClassNames(
 ) {
   switch (variant) {
     case 'primary':
-      return clsx('bg-slate-800', 'hover:bg-slate-700', 'text-white')
+      return clsx(
+        'bg-slate-800 disabled:bg-slate-700/50',
+        'hover:bg-slate-700',
+        'text-white disabled:text-white/50'
+      )
     default:
       return ''
   }

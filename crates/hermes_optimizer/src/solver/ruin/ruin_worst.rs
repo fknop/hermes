@@ -92,7 +92,7 @@ impl RuinSolution for RuinWorst {
             // Remove the activity with the worst savings
             if let Some(job_id) = candidates.get(index).map(|candidate| candidate.0) {
                 solution.remove_service(job_id.into());
-                solution.resync();
+                // solution.resync();
             } else {
                 break;
             }

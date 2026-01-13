@@ -2,65 +2,75 @@ import { Source } from 'react-map-gl/mapbox'
 import { Button } from '../../components/Button.tsx'
 import { MapSidePanel } from '../../components/MapSidePanel.tsx'
 import { Map } from '../../Map.tsx'
-import { MultiPointLayer } from '../../MultiPointLayer.tsx'
-import { transformSolutionToGeoJson } from './transformSolutionToGeoJson.tsx'
+import { transformSolutionToGeoJson, getGeoJSONFromProblem } from './geojson.ts'
 import { usePollRouting } from './usePollRouting.ts'
-import { POST_BODY, usePostRouting } from './usePostRouting.ts'
+import { usePostRouting } from './usePostRouting.ts'
 import { PolylineLayer } from '../../PolylineLayer.tsx'
 import { ActivitiesLayer } from './ActivityLayer.tsx'
 import { VRP_COLORS } from './colors.ts'
 import { Temporal } from 'temporal-polyfill'
+import { VehicleRoutingProblem } from './input.ts'
+import { Dropzone } from '../../components/Dropzone.tsx'
+import { JsonFileUpload } from './JsonFileUpload.tsx'
+import { useState } from 'react'
+import { isNil } from '../../utils/isNil.ts'
+import { LocationsLayer } from './LocationsLayer.tsx'
 
 export default function VehicleRoutingScreen() {
+  const [input, setInput] = useState<VehicleRoutingProblem | null>(null)
   const [postRouting, { loading, data }] = usePostRouting()
-  const { solution } = usePollRouting({ jobId: data?.job_id ?? null })
+  const { response } = usePollRouting({ jobId: data?.job_id ?? null })
 
-  const polling = solution?.status === 'Running'
+  const polling = response?.status === 'Running'
 
-  const geojson = solution?.solution
-    ? transformSolutionToGeoJson(POST_BODY, solution)
-    : null
+  const solutionGeoJson =
+    response?.solution && !isNil(input)
+      ? transformSolutionToGeoJson(input, response.solution)
+      : null
 
-  const totalTime = solution?.solution?.duration
+  const problemGeoJson = !isNil(input) ? getGeoJSONFromProblem(input) : null
 
-  const totalDistance = solution?.solution?.routes.reduce(
-    (acc, route) => acc + route.distance,
-    0
-  )
-  const totalTransportDuration = solution?.solution?.routes.reduce(
+  const totalTime = response?.solution?.duration
+
+  const totalDistance =
+    response?.solution?.routes.reduce(
+      (acc, route) => acc + route.distance,
+      0
+    ) ?? 0
+
+  const totalTransportDuration = response?.solution?.routes.reduce(
     (acc, route) => acc.add(Temporal.Duration.from(route.transport_duration)),
     Temporal.Duration.from({ seconds: 0 })
   )
-
-  if (solution?.solution) {
-    console.log(
-      totalTime,
-      totalTransportDuration?.toLocaleString(),
-      totalDistance / 1000,
-      solution?.solution.score
-    )
-  }
 
   return (
     <div className="h-screen w-screen">
       <Map>
         <MapSidePanel>
+          <JsonFileUpload
+            onFileUpload={async (file) => {
+              const data = await file.text()
+              setInput(JSON.parse(data))
+            }}
+          />
           <div className="flex flex-col gap-6">
             <Button
               variant="primary"
-              disabled={loading || polling}
+              disabled={loading || polling || isNil(input)}
               onClick={() => {
-                postRouting()
+                if (!isNil(input)) {
+                  postRouting(input)
+                }
               }}
             >
               Start
             </Button>
 
             <div className="flex flex-col gap-1">
-              <div>{solution?.solution?.duration}</div>
+              <div>{response?.solution?.duration}</div>
               <div>
-                {solution?.solution
-                  ? solution.solution.routes.reduce(
+                {response?.solution
+                  ? response.solution.routes.reduce(
                       (acc, route) => acc + route.distance,
                       0
                     ) / 1000
@@ -68,8 +78,8 @@ export default function VehicleRoutingScreen() {
                 km
               </div>
               <div>
-                {solution?.solution
-                  ? solution.solution.routes
+                {response?.solution
+                  ? response.solution.routes
                       .reduce(
                         (acc, route) =>
                           acc.add(
@@ -81,7 +91,7 @@ export default function VehicleRoutingScreen() {
                   : 'N/A'}
               </div>
 
-              {solution?.solution?.routes.map((route, index) => {
+              {response?.solution?.routes.map((route, index) => {
                 return (
                   <div className="flex flex-col">
                     <span className="inline-flex items-center gap-2">
@@ -90,7 +100,7 @@ export default function VehicleRoutingScreen() {
                         style={{
                           backgroundColor:
                             VRP_COLORS[
-                              index % solution.solution!.routes.length
+                              index % response.solution!.routes.length
                             ],
                         }}
                       />
@@ -110,9 +120,9 @@ export default function VehicleRoutingScreen() {
           </div>
         </MapSidePanel>
 
-        {solution && (
+        {response && (
           <>
-            {solution.solution?.routes.map((route, index) => {
+            {response.solution?.routes.map((route, index) => {
               return (
                 <Source
                   key={index}
@@ -132,10 +142,22 @@ export default function VehicleRoutingScreen() {
           </>
         )}
 
-        {geojson && (
+        {solutionGeoJson && (
           <>
-            <Source type="geojson" data={geojson.points} id="geojson">
+            <Source type="geojson" data={solutionGeoJson.points} id="geojson">
               <ActivitiesLayer id="activities" sourceId="geojson" />
+            </Source>
+          </>
+        )}
+
+        {problemGeoJson && (
+          <>
+            <Source
+              type="geojson"
+              data={problemGeoJson.points}
+              id="locations-geojson"
+            >
+              <LocationsLayer id="locations" sourceId="locations-geojson" />
             </Source>
           </>
         )}

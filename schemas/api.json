@@ -138,16 +138,6 @@
           "format": "uint",
           "minimum": 0
         },
-        "service_type": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/ServiceType"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
         "skills": {
           "type": [
             "array",
@@ -165,6 +155,16 @@
           "items": {
             "$ref": "#/$defs/TimeWindow"
           }
+        },
+        "type": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ServiceType"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false,
@@ -308,6 +308,14 @@
         "id": {
           "type": "string"
         },
+        "maximum_activities": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint",
+          "minimum": 0
+        },
         "profile": {
           "type": "string"
         },
@@ -377,6 +385,13 @@
           "format": "date-time"
         },
         "latest_end": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "latest_start": {
           "type": [
             "string",
             "null"

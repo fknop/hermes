@@ -8,5 +8,7 @@
   --color-primary-hover: var(--color-slate-700);
   --color-primary-active: var(--color-slate-600);
 
+  --radius-primary: var(--radius-lg);
+
   --font-display: 'Noto Sans', sans-serif;
 }

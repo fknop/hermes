@@ -1,6 +1,6 @@
 use std::{
     collections::VecDeque,
-    sync::{Arc, Barrier, atomic::AtomicBool},
+    sync::{Arc, atomic::AtomicBool},
     thread,
 };
 
@@ -37,6 +37,7 @@ use crate::{
             waiting_duration_constraint::WaitingDurationConstraint,
         },
         intensify::intensify_search::IntensifySearch,
+        noise::NoiseParams,
         solver_params::SolverParamsDebugOptions,
         statistics::SearchStatisticsIteration,
     },
@@ -47,7 +48,6 @@ use super::{
     accepted_solution::AcceptedSolution,
     constraints::constraint::Constraint,
     construction::construct_solution::construct_solution,
-    noise::NoiseGenerator,
     recreate::{
         recreate_context::RecreateContext, recreate_solution::RecreateSolution,
         recreate_strategy::RecreateStrategy,
@@ -275,6 +275,7 @@ impl Search {
 
         let initial_solution = construct_solution(
             &self.problem,
+            &self.params,
             &mut rng,
             &self.constraints,
             &self.create_insertion_thread_pool(),
@@ -315,17 +316,9 @@ impl Search {
 
                 let best_solutions = Arc::clone(&self.best_solutions);
                 let tabu = Arc::clone(&self.tabu);
-                let is_stopped = Arc::clone(&self.is_stopped);
 
                 let global_statistics = Arc::clone(self.statistics.global_statistics());
                 let thread_statistics = Arc::clone(self.statistics.thread_statistics(thread_index));
-                let thread_noise_generator = NoiseGenerator::new(
-                    self.problem.jobs().len(),
-                    max_cost,
-                    self.params.noise_probability,
-                    self.params.noise_level,
-                    &mut rng,
-                );
 
                 // let on_best_solution_handler = Arc::clone(&self.on_best_solution_handler);
 
@@ -370,7 +363,6 @@ impl Search {
                             max_iterations,
                             global_statistics,
                             thread_statistics,
-                            noise_generator: thread_noise_generator,
                             insertion_thread_pool: self.create_insertion_thread_pool(),
                         };
 
@@ -813,7 +805,11 @@ impl Search {
             RecreateContext {
                 rng,
                 constraints: &self.constraints,
-                noise_generator: Some(&state.noise_generator),
+                noise_params: NoiseParams {
+                    max_cost: self.problem.max_cost(),
+                    noise_level: self.params.noise_level,
+                    noise_probability: self.params.noise_probability,
+                },
                 problem: &self.problem,
                 thread_pool: &state.insertion_thread_pool,
                 insert_on_failure: self.params.recreate.insert_on_failure,
@@ -879,6 +875,5 @@ struct ThreadedSearchState {
     max_iterations: Option<usize>,
     global_statistics: Arc<RwLock<GlobalStatistics>>,
     thread_statistics: Arc<RwLock<ThreadSearchStatistics>>,
-    noise_generator: NoiseGenerator,
     insertion_thread_pool: rayon::ThreadPool,
 }

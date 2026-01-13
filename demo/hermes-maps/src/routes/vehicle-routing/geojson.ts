@@ -1,10 +1,11 @@
+import { isNil } from '../../utils/isNil'
 import { VRP_COLORS } from './colors'
-import { SolutionResponse } from './usePollRouting'
-import { POST_BODY } from './usePostRouting'
+import { VehicleRoutingProblem } from './input'
+import { Solution } from './solution'
 
 export function transformSolutionToGeoJson(
-  problem: typeof POST_BODY,
-  { solution }: SolutionResponse
+  problem: VehicleRoutingProblem,
+  solution: Solution
 ): { points: GeoJSON.FeatureCollection<GeoJSON.Point> } {
   const getLocationForServiceId = (serviceId: number): [number, number] => {
     const locationId = problem.services[serviceId].location_id
@@ -32,6 +33,37 @@ export function transformSolutionToGeoJson(
             },
           }
         })
+    }
+  )
+
+  return {
+    points: {
+      type: 'FeatureCollection',
+      features: points,
+    },
+  }
+}
+
+export function getGeoJSONFromProblem(problem: VehicleRoutingProblem): {
+  points: GeoJSON.FeatureCollection<GeoJSON.Point>
+} {
+  const depotLocationIds: number[] = problem.vehicles
+    .map((vehicle) => vehicle.depot_location_id)
+    .filter((id) => !isNil(id))
+
+  const points: GeoJSON.Feature<GeoJSON.Point>[] = problem.locations.map(
+    (location, index) => {
+      return {
+        geometry: {
+          type: 'Point',
+          coordinates: location.coordinates,
+        },
+        type: 'Feature',
+        properties: {
+          locationId: (index + 1).toString(),
+          color: depotLocationIds.includes(index) ? 'black' : '#475569',
+        },
+      }
     }
   )
 

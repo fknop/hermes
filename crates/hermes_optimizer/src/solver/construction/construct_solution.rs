@@ -15,11 +15,13 @@ use crate::{
     solver::{
         constraints::constraint::Constraint,
         insertion::{Insertion, ServiceInsertion},
+        noise::NoiseParams,
         recreate::{
             construction_best_insertion::ConstructionBestInsertion,
             recreate_context::RecreateContext,
         },
         solution::{route_id::RouteIdx, working_solution::WorkingSolution},
+        solver_params::SolverParams,
     },
     utils::enumerate_idx::EnumerateIdx,
 };
@@ -292,6 +294,7 @@ fn create_initial_routes(problem: &VehicleRoutingProblem, solution: &mut Working
 
 pub fn construct_solution(
     problem: &Arc<VehicleRoutingProblem>,
+    params: &SolverParams,
     rng: &mut SmallRng,
     constraints: &Vec<Constraint>,
     thread_pool: &rayon::ThreadPool,
@@ -372,7 +375,11 @@ pub fn construct_solution(
         RecreateContext {
             rng,
             constraints,
-            noise_generator: None,
+            noise_params: NoiseParams {
+                max_cost: problem.max_cost(),
+                noise_level: params.noise_level,
+                noise_probability: params.noise_probability,
+            },
             problem,
             thread_pool,
             insert_on_failure: false,

@@ -1,19 +1,20 @@
 import { useCallback } from 'react'
-import sample from './sample/sample.json'
 import { useFetch } from '../../hooks/useFetch'
-
-export const POST_BODY = sample
+import { VehicleRoutingProblem } from './input'
 
 export const usePostRouting = () => {
   const [fetch, { data, loading }] = useFetch<{ job_id: string }>('/vrp')
 
   return [
-    useCallback(async () => {
-      await fetch({
-        body: POST_BODY,
-        method: 'POST',
-      })
-    }, [fetch]),
+    useCallback(
+      async (body: VehicleRoutingProblem) => {
+        await fetch({
+          body,
+          method: 'POST',
+        })
+      },
+      [fetch]
+    ),
     { data, loading },
   ] as const
 }
