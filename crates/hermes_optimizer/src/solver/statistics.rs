@@ -117,9 +117,12 @@ impl ThreadSearchStatistics {
     }
 }
 
+#[serde_as]
 #[derive(Serialize)]
 pub struct AggregatedStatistics {
+    #[serde_as(as = "FxHashMap<DisplayFromStr, _>")]
     pub ruin_statistics: FxHashMap<RuinStrategy, AggregatedOperatorStatistics>,
+    #[serde_as(as = "FxHashMap<DisplayFromStr, _>")]
     pub recreate_statistics: FxHashMap<RecreateStrategy, AggregatedOperatorStatistics>,
 }
 

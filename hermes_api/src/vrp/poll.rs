@@ -12,7 +12,7 @@ use hermes_optimizer::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
         accepted_solution::AcceptedSolution, solution::route::WorkingSolutionRoute,
-        solver::SolverStatus,
+        solver::SolverStatus, statistics::AggregatedStatistics,
     },
 };
 use hermes_routing::{
@@ -34,11 +34,13 @@ use super::api_solution::{
 #[derive(Serialize)]
 pub struct PollSolverRunning {
     solution: Option<ApiSolution>,
+    statistics: Option<AggregatedStatistics>,
 }
 
 #[derive(Serialize)]
 pub struct PollSolverCompleted {
     solution: Option<ApiSolution>,
+    statistics: Option<AggregatedStatistics>,
 }
 
 #[derive(Serialize)]
@@ -166,14 +168,24 @@ pub async fn poll_handler(
             SolverStatus::Pending => Ok(PollResponse::Pending),
             SolverStatus::Running => {
                 let solution = solver_manager.get_solution(&job_id.to_string()).await;
+                let statistics = solver_manager
+                    .get_statistics(&job_id.to_string())
+                    .await
+                    .map(|stats| stats.aggregate());
                 Ok(PollResponse::Running(PollSolverRunning {
                     solution: solution.map(|solution| transform_solution(&solution, &state.hermes)),
+                    statistics,
                 }))
             }
             SolverStatus::Completed => {
                 let solution = solver_manager.get_solution(&job_id.to_string()).await;
+                let statistics = solver_manager
+                    .get_statistics(&job_id.to_string())
+                    .await
+                    .map(|stats| stats.aggregate());
                 Ok(PollResponse::Completed(PollSolverCompleted {
                     solution: solution.map(|solution| transform_solution(&solution, &state.hermes)),
+                    statistics,
                 }))
             }
         }
