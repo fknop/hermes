@@ -4,11 +4,13 @@ use clap::{Parser, Subcommand};
 use mimalloc::MiMalloc;
 
 use crate::{
-    generate::GenerateSubcommands, optimize::OptimizeArgs, optimize_dataset::OptimizeDatasetArgs,
+    generate::GenerateSubcommands, get_matrix::GetMatrixArgs, optimize::OptimizeArgs,
+    optimize_dataset::OptimizeDatasetArgs,
 };
 
 mod file_utils;
 mod generate;
+mod get_matrix;
 mod optimize;
 mod optimize_dataset;
 mod parsers;
@@ -49,6 +51,10 @@ enum Commands {
         #[command(subcommand)]
         commands: GenerateSubcommands,
     },
+    GetMatrix {
+        #[command(flatten)]
+        args: GetMatrixArgs,
+    },
 }
 
 #[tokio::main]
@@ -74,6 +80,7 @@ async fn main() -> Result<(), anyhow::Error> {
         Some(Commands::Optimize { args }) => optimize::run(args).await?,
         Some(Commands::OptimizeDataset { args }) => optimize_dataset::run(args)?,
         Some(Commands::Generate { commands }) => generate::run(commands)?,
+        Some(Commands::GetMatrix { args }) => get_matrix::run(args).await?,
         None => {
             // Handle no command provided
         }

@@ -5,6 +5,7 @@ use std::{
 };
 
 use fxhash::FxHasher64;
+use tracing::debug;
 
 use crate::{travel_matrices::TravelMatrices, travel_matrix_provider::TravelMatrixProvider};
 
@@ -80,10 +81,12 @@ impl MatricesCache for FileCache {
         let cache_key = self.cache_key(provider, points);
         let filename = format!("{}.json", cache_key);
 
-        let file = std::fs::File::create(self.directory.join(filename))?;
+        let file = std::fs::File::create(self.directory.join(&filename))?;
         let mut writer = BufWriter::with_capacity(64 * 1024, file);
         serde_json::to_writer(&mut writer, &matrices)?;
         writer.flush()?;
+
+        debug!("Saved matrix to {}", filename);
 
         Ok(())
     }
@@ -98,7 +101,7 @@ impl MatricesCache for FileCache {
     {
         let cache_key = self.cache_key(provider, points);
         let filename = format!("{}.json", cache_key);
-        let file_path = self.directory.join(filename);
+        let file_path = self.directory.join(&filename);
 
         if !file_path.is_file() {
             return Ok(None);
@@ -106,6 +109,8 @@ impl MatricesCache for FileCache {
 
         let file = std::fs::File::open(file_path)?;
         let matrices: TravelMatrices = serde_json::from_reader(file)?;
+
+        debug!("Found cached matrix at {}", filename);
 
         Ok(Some(matrices))
     }

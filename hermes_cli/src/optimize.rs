@@ -35,13 +35,6 @@ pub struct OptimizeArgs {
 }
 
 pub async fn run(args: OptimizeArgs) -> anyhow::Result<()> {
-    let file_name = args
-        .input
-        .file_name()
-        .unwrap()
-        .to_string_lossy()
-        .into_owned();
-
     // let mut loading_bar = Arc::new(Mutex::new(ProgressBar::new(args.timeout.as_secs() as u64)));
     // loading_bar.lock().set_prefix(file_name);
     // loading_bar.lock().set_message("pending...");

@@ -48,6 +48,12 @@ pub struct JsonLocation {
     pub coordinates: [f64; 2],
 }
 
+impl From<&JsonLocation> for geo::Point {
+    fn from(value: &JsonLocation) -> Self {
+        geo::Point::new(value.coordinates[0], value.coordinates[1])
+    }
+}
+
 #[derive(Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields, rename = "VehicleProfile")]
 pub struct JsonVehicleProfile {
