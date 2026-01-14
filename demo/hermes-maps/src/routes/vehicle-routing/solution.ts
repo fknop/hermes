@@ -33,19 +33,39 @@ export type Solution = {
   }[]
 }
 
+export type OperatorStatistics = {
+  total_invocations: number
+  total_improvements: number
+  total_best: number
+  total_duration: string
+  total_score_improvement: number
+  total_score_percentage_improvement: number
+  avg_duration: string
+  avg_score_improvement: number
+  avg_score_percentage_improvement: number
+}
+
+export type SolutionStatistics = {
+  aggregated_ruin_statistics: { [name: string]: OperatorStatistics }
+  aggregated_recreate_statistics: { [name: string]: OperatorStatistics }
+}
+
 export type SolutionPending = {
   status: 'Pending'
   solution: Solution | null
+  statistics: SolutionStatistics | null
 }
 
 export type SolutionRunning = {
   status: 'Running'
   solution: Solution | null
+  statistics: SolutionStatistics | null
 }
 
 export type SolutionCompleted = {
   status: 'Completed'
   solution: Solution
+  statistics: SolutionStatistics | null
 }
 
 export type SolutionResponse =

@@ -15,6 +15,7 @@ import { JsonFileUpload } from './JsonFileUpload.tsx'
 import { useState } from 'react'
 import { isNil } from '../../utils/isNil.ts'
 import { LocationsLayer } from './LocationsLayer.tsx'
+import { StatisticsPanel } from './StatisticsPanel.tsx'
 
 export default function VehicleRoutingScreen() {
   const [input, setInput] = useState<VehicleRoutingProblem | null>(null)
@@ -46,7 +47,7 @@ export default function VehicleRoutingScreen() {
   return (
     <div className="h-screen w-screen">
       <Map>
-        <MapSidePanel>
+        <MapSidePanel side="left">
           <JsonFileUpload
             onFileUpload={async (file) => {
               const data = await file.text()
@@ -119,6 +120,12 @@ export default function VehicleRoutingScreen() {
             </div>
           </div>
         </MapSidePanel>
+
+        {response?.statistics && (
+          <MapSidePanel side="right">
+            <StatisticsPanel statistics={response.statistics} />
+          </MapSidePanel>
+        )}
 
         {response && (
           <>
