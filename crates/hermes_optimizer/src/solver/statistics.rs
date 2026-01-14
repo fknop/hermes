@@ -40,7 +40,34 @@ impl SearchStatistics {
     }
 
     pub fn aggregate(&self) -> AggregatedStatistics {
-        AggregatedStatistics::from_statistics(self)
+        let mut aggregated_statistics = AggregatedStatistics::default();
+
+        for thread_stats in &self.thread_statistics {
+            let thread_stats = thread_stats.read();
+            for (ruin_strategy, ruin_stats) in &thread_stats
+                .aggregated_statistics
+                .aggregated_ruin_statistics
+            {
+                let agg_stats = aggregated_statistics
+                    .aggregated_ruin_statistics
+                    .entry(*ruin_strategy)
+                    .or_default();
+                agg_stats.accumulate(ruin_stats);
+            }
+
+            for (recreate_strategy, recreate_stats) in &thread_stats
+                .aggregated_statistics
+                .aggregated_recreate_statistics
+            {
+                let agg_stats = aggregated_statistics
+                    .aggregated_recreate_statistics
+                    .entry(*recreate_strategy)
+                    .or_default();
+                agg_stats.accumulate(recreate_stats);
+            }
+        }
+
+        aggregated_statistics
     }
 }
 
@@ -88,11 +115,7 @@ pub enum SearchStatisticsIteration {
 pub struct ThreadSearchStatistics {
     #[serde(skip_serializing)]
     iterations: Vec<SearchStatisticsIteration>,
-
-    #[serde_as(as = "FxHashMap<DisplayFromStr, _>")]
-    ruin_strategies: FxHashMap<RuinStrategy, usize>,
-    #[serde_as(as = "FxHashMap<DisplayFromStr, _>")]
-    recreate_strategies: FxHashMap<RecreateStrategy, usize>,
+    aggregated_statistics: AggregatedStatistics,
 }
 
 impl ThreadSearchStatistics {
@@ -103,135 +126,122 @@ impl ThreadSearchStatistics {
             ..
         } = iteration
         {
-            self.ruin_strategies
+            let ruin_statistics = self
+                .aggregated_statistics
+                .aggregated_ruin_statistics
                 .entry(ruin_strategy)
-                .and_modify(|entry| *entry += 1)
-                .or_insert(1);
-            self.recreate_strategies
+                .or_default();
+            let recreate_statistics = self
+                .aggregated_statistics
+                .aggregated_recreate_statistics
                 .entry(recreate_strategy)
-                .and_modify(|entry| *entry += 1)
-                .or_insert(1);
+                .or_default();
+
+            Self::update_aggregated_statistics(ruin_statistics, recreate_statistics, &iteration);
         }
 
         self.iterations.push(iteration);
     }
-}
 
-#[serde_as]
-#[derive(Serialize)]
-pub struct AggregatedStatistics {
-    #[serde_as(as = "FxHashMap<DisplayFromStr, _>")]
-    pub ruin_statistics: FxHashMap<RuinStrategy, AggregatedOperatorStatistics>,
-    #[serde_as(as = "FxHashMap<DisplayFromStr, _>")]
-    pub recreate_statistics: FxHashMap<RecreateStrategy, AggregatedOperatorStatistics>,
-}
+    fn update_aggregated_statistics(
+        ruin_stats: &mut AggregatedOperatorStatistics,
+        recreate_stats: &mut AggregatedOperatorStatistics,
+        iteration: &SearchStatisticsIteration,
+    ) {
+        if let &SearchStatisticsIteration::RuinRecreate {
+            improved,
+            is_best,
+            ruin_duration,
+            recreate_duration,
+            score_before,
+            score_after,
+            ..
+        } = iteration
+        {
+            ruin_stats.total_invocations += 1;
+            recreate_stats.total_invocations += 1;
 
-impl AggregatedStatistics {
-    pub fn from_statistics(statistics: &SearchStatistics) -> Self {
-        let mut ruin_statistics: FxHashMap<RuinStrategy, AggregatedOperatorStatistics> =
-            FxHashMap::default();
-        let mut recreate_statistics: FxHashMap<RecreateStrategy, AggregatedOperatorStatistics> =
-            FxHashMap::default();
-
-        for thread_statistics in statistics.thread_statistics.iter() {
-            for iteration in &thread_statistics.read().iterations {
-                if let SearchStatisticsIteration::RuinRecreate {
-                    ruin_strategy,
-                    recreate_strategy,
-                    improved,
-                    is_best,
-                    ruin_duration,
-                    recreate_duration,
-                    score_before,
-                    score_after,
-                    ..
-                } = iteration
-                {
-                    let ruin_stats = ruin_statistics.entry(*ruin_strategy).or_insert(
-                        AggregatedOperatorStatistics {
-                            total_invocations: 0,
-                            total_improvements: 0,
-                            total_best: 0,
-                            avg_duration: SignedDuration::ZERO,
-                            avg_score_improvement: 0.0,
-                            avg_score_percentage_improvement: 0.0,
-                        },
-                    );
-
-                    let recreate_stats = recreate_statistics.entry(*recreate_strategy).or_insert(
-                        AggregatedOperatorStatistics {
-                            total_invocations: 0,
-                            total_improvements: 0,
-                            total_best: 0,
-                            avg_duration: SignedDuration::ZERO,
-                            avg_score_improvement: 0.0,
-                            avg_score_percentage_improvement: 0.0,
-                        },
-                    );
-
-                    ruin_stats.total_invocations += 1;
-                    recreate_stats.total_invocations += 1;
-
-                    if *improved {
-                        ruin_stats.total_improvements += 1;
-                        recreate_stats.total_improvements += 1;
-                    }
-                    if *is_best {
-                        ruin_stats.total_best += 1;
-                        recreate_stats.total_best += 1;
-                    }
-
-                    ruin_stats.avg_duration = ruin_stats.avg_duration
-                        + (*ruin_duration - ruin_stats.avg_duration)
-                            / (ruin_stats.total_invocations as i32);
-
-                    recreate_stats.avg_duration = recreate_stats.avg_duration
-                        + (*recreate_duration - recreate_stats.avg_duration)
-                            / (recreate_stats.total_invocations as i32);
-
-                    let score_improvement = score_before.soft_score - score_after.soft_score;
-                    let score_percentage_improvement =
-                        if score_before.soft_score.abs() > f64::EPSILON {
-                            score_improvement / score_before.soft_score.abs()
-                        } else {
-                            0.0
-                        };
-
-                    ruin_stats.avg_score_improvement = ruin_stats.avg_score_improvement
-                        + (score_improvement - ruin_stats.avg_score_improvement)
-                            / (ruin_stats.total_invocations as f64);
-                    recreate_stats.avg_score_improvement = recreate_stats.avg_score_improvement
-                        + (score_improvement - recreate_stats.avg_score_improvement)
-                            / (recreate_stats.total_invocations as f64);
-
-                    ruin_stats.avg_score_percentage_improvement = ruin_stats
-                        .avg_score_percentage_improvement
-                        + (score_percentage_improvement
-                            - ruin_stats.avg_score_percentage_improvement)
-                            / (ruin_stats.total_invocations as f64);
-
-                    recreate_stats.avg_score_percentage_improvement = recreate_stats
-                        .avg_score_percentage_improvement
-                        + (score_percentage_improvement
-                            - recreate_stats.avg_score_percentage_improvement)
-                            / (recreate_stats.total_invocations as f64);
-                }
+            if is_best {
+                ruin_stats.total_best += 1;
+                recreate_stats.total_best += 1;
             }
-        }
 
-        AggregatedStatistics {
-            ruin_statistics,
-            recreate_statistics,
+            if improved {
+                ruin_stats.total_improvements += 1;
+                recreate_stats.total_improvements += 1;
+            }
+
+            ruin_stats.total_duration += ruin_duration;
+            recreate_stats.total_duration += recreate_duration;
+
+            ruin_stats.avg_duration =
+                ruin_stats.total_duration / ruin_stats.total_invocations as i32;
+            recreate_stats.avg_duration =
+                recreate_stats.total_duration / recreate_stats.total_invocations as i32;
+
+            let score_improvement = score_before.soft_score - score_after.soft_score;
+            ruin_stats.total_score_improvement += score_improvement;
+            recreate_stats.total_score_improvement += score_improvement;
+
+            ruin_stats.avg_score_improvement =
+                ruin_stats.total_score_improvement / ruin_stats.total_invocations as f64;
+            recreate_stats.avg_score_improvement =
+                recreate_stats.total_score_improvement / recreate_stats.total_invocations as f64;
+
+            let score_percentage_improvement = if score_before.soft_score.abs() > f64::EPSILON {
+                score_improvement / score_before.soft_score.abs()
+            } else {
+                0.0
+            };
+
+            ruin_stats.total_score_percentage_improvement += score_percentage_improvement;
+            recreate_stats.total_score_percentage_improvement += score_percentage_improvement;
+            ruin_stats.avg_score_percentage_improvement =
+                ruin_stats.total_score_percentage_improvement / ruin_stats.total_invocations as f64;
+            recreate_stats.avg_score_percentage_improvement = recreate_stats
+                .total_score_percentage_improvement
+                / recreate_stats.total_invocations as f64;
         }
     }
 }
 
-#[derive(Serialize)]
+#[serde_as]
+#[derive(Serialize, Default)]
+pub struct AggregatedStatistics {
+    #[serde_as(as = "FxHashMap<DisplayFromStr, _>")]
+    aggregated_ruin_statistics: FxHashMap<RuinStrategy, AggregatedOperatorStatistics>,
+    #[serde_as(as = "FxHashMap<DisplayFromStr, _>")]
+    aggregated_recreate_statistics: FxHashMap<RecreateStrategy, AggregatedOperatorStatistics>,
+}
+
+#[derive(Serialize, Default)]
 pub struct AggregatedOperatorStatistics {
     pub total_invocations: usize,
     pub total_improvements: usize,
     pub total_best: usize,
+    pub total_duration: SignedDuration,
+    pub total_score_improvement: f64,
+    pub total_score_percentage_improvement: f64,
     pub avg_duration: SignedDuration,
     pub avg_score_improvement: f64,
     pub avg_score_percentage_improvement: f64,
+}
+
+impl AggregatedOperatorStatistics {
+    pub fn accumulate(&mut self, other: &AggregatedOperatorStatistics) {
+        self.total_invocations += other.total_invocations;
+        self.total_improvements += other.total_improvements;
+        self.total_best += other.total_best;
+        self.total_duration += other.total_duration;
+        self.total_score_improvement += other.total_score_improvement;
+        self.total_score_percentage_improvement += other.total_score_percentage_improvement;
+
+        if self.total_invocations > 0 {
+            self.avg_duration = self.total_duration / self.total_invocations as i32;
+            self.avg_score_improvement =
+                self.total_score_improvement / self.total_invocations as f64;
+            self.avg_score_percentage_improvement =
+                self.total_score_percentage_improvement / self.total_invocations as f64;
+        }
+    }
 }
