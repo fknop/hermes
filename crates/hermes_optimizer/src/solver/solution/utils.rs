@@ -82,16 +82,15 @@ pub(crate) fn compute_vehicle_start(
 pub(crate) fn compute_vehicle_end(
     problem: &VehicleRoutingProblem,
     vehicle_id: VehicleIdx,
-    job_id: ActivityId,
+    activity_id: ActivityId,
     last_departure_time: Timestamp,
 ) -> Timestamp {
-    let job_task = problem.job_task(job_id);
+    let job_task = problem.job_task(activity_id);
     let vehicle = problem.vehicle(vehicle_id);
     if let Some(depot_location_id) = vehicle.depot_location_id()
         && vehicle.should_return_to_depot()
     {
         let travel_time = problem.travel_time(vehicle, job_task.location_id(), depot_location_id);
-
         last_departure_time + travel_time + vehicle.end_depot_duration()
     } else {
         last_departure_time
@@ -101,13 +100,13 @@ pub(crate) fn compute_vehicle_end(
 pub(crate) fn compute_activity_arrival_time(
     problem: &VehicleRoutingProblem,
     vehicle_id: VehicleIdx,
-    previous_job_id: ActivityId,
+    previous_activity_id: ActivityId,
     previous_activity_departure_time: Timestamp,
     id: ActivityId,
 ) -> Timestamp {
     let travel_time = problem.travel_time(
         problem.vehicle(vehicle_id),
-        problem.job_task(previous_job_id).location_id(),
+        problem.job_task(previous_activity_id).location_id(),
         problem.job_task(id).location_id(),
     );
 
@@ -116,12 +115,12 @@ pub(crate) fn compute_activity_arrival_time(
 
 pub(crate) fn compute_waiting_duration(
     problem: &VehicleRoutingProblem,
-    job_id: ActivityId,
+    activity_id: ActivityId,
     arrival_time: Timestamp,
 ) -> SignedDuration {
     SignedDuration::from_secs(
         problem
-            .job_task(job_id)
+            .job_task(activity_id)
             .time_windows()
             .iter()
             .filter(|tw| tw.is_satisfied(arrival_time))

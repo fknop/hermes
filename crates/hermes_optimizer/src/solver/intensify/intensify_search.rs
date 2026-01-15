@@ -1,6 +1,6 @@
 use std::f64;
 
-use tracing::debug;
+use tracing::{debug, info, warn};
 
 use crate::{
     problem::{job::ActivityId, vehicle_routing_problem::VehicleRoutingProblem},
@@ -16,6 +16,7 @@ use crate::{
             swap::{SwapOperator, SwapOperatorParams},
             two_opt::{TwoOptOperator, TwoOptParams},
         },
+        search::Search,
         solution::{route_id::RouteIdx, working_solution::WorkingSolution},
     },
 };
@@ -87,12 +88,13 @@ impl IntensifySearch {
 
     pub fn intensify(
         &mut self,
+        search: &Search,
         problem: &VehicleRoutingProblem,
         solution: &mut WorkingSolution,
         iterations: usize,
     ) -> usize {
         for i in 0..iterations {
-            if !self.run_iteration(problem, solution) {
+            if !self.run_iteration(search, problem, solution) {
                 return i + 1;
             }
         }
@@ -102,6 +104,7 @@ impl IntensifySearch {
 
     fn run_iteration(
         &mut self,
+        search: &Search,
         problem: &VehicleRoutingProblem,
         solution: &mut WorkingSolution,
     ) -> bool {
@@ -420,6 +423,15 @@ impl IntensifySearch {
             );
 
             op.apply(problem, solution);
+
+            let score = search.compute_solution_score(solution);
+            if score.0.is_failure() {
+                warn!(
+                    "Operator {} broke hard constraint {:?}",
+                    op.operator_name(),
+                    score.1
+                );
+            }
 
             self.pairs.clear();
 

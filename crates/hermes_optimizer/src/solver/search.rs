@@ -374,13 +374,17 @@ impl Search {
 
                         loop {
                             let should_intensify = self.params.run_intensify_search
-                                && state.iterations_without_improvement > 500
                                 && state.iteration - state.last_intensify_iteration.unwrap_or(0)
                                     > 1000;
 
                             if should_intensify {
                                 let best_selector = SelectBestSelector;
-                                let (mut working_solution, current_score, best_score) = {
+                                let (
+                                    mut working_solution,
+                                    current_score,
+                                    best_score,
+                                    best_unassigned_count,
+                                ) = {
                                     let solutions_guard = state.best_solutions.read();
                                     if !solutions_guard.is_empty()
                                         && let Some(AcceptedSolution {
@@ -388,27 +392,41 @@ impl Search {
                                         }) = best_selector
                                             .select_solution(&solutions_guard, &mut thread_rng)
                                     {
-                                        (solution.clone(), *score, solutions_guard[0].score)
+                                        (
+                                            solution.clone(),
+                                            *score,
+                                            solutions_guard[0].score,
+                                            solutions_guard[0].solution.unassigned_jobs().len(),
+                                        )
                                     } else {
                                         panic!("No solutions selected");
                                     }
                                 }; // Lock is released here
 
+                                let unassigned_count = working_solution.unassigned_jobs().len();
+
                                 let max_intensify_iterations = 1500
                                     .min(max_iterations.unwrap_or(usize::MAX) - state.iteration);
                                 let mut intensify_search = IntensifySearch::new(&working_solution);
                                 let iterations = intensify_search.intensify(
+                                    self,
                                     &self.problem,
                                     &mut working_solution,
                                     max_intensify_iterations,
                                 );
 
-                                state.iteration += iterations;
+                                assert_eq!(
+                                    unassigned_count,
+                                    working_solution.unassigned_jobs().len()
+                                );
+
+                                state.iteration += 1;
                                 state.last_intensify_iteration = Some(state.iteration);
                                 let iteration_info = IterationInfo::Intensify {
                                     iteration: state.iteration,
                                     current_score,
                                     best_score,
+                                    best_unassigned_count,
                                 };
 
                                 self.update_solutions(
@@ -540,7 +558,7 @@ impl Search {
     }
 
     fn run_iteration(&self, state: &mut ThreadedSearchState, rng: &mut SmallRng) {
-        let (mut working_solution, current_score, best_score) = {
+        let (mut working_solution, current_score, best_score, best_unassigned_count) = {
             let solutions_guard = state.best_solutions.read();
             if !solutions_guard.is_empty()
                 && let Some(AcceptedSolution {
@@ -549,7 +567,12 @@ impl Search {
                     .solution_selector
                     .select_solution(&solutions_guard, rng)
             {
-                (solution.clone(), *score, solutions_guard[0].score)
+                (
+                    solution.clone(),
+                    *score,
+                    solutions_guard[0].score,
+                    solutions_guard[0].solution.unassigned_jobs().len(),
+                )
             } else {
                 panic!("No solutions selected");
             }
@@ -574,6 +597,7 @@ impl Search {
                 recreate_strategy,
                 current_score,
                 best_score,
+                best_unassigned_count,
                 ruin_duration,
                 recreate_duration,
             },
@@ -599,23 +623,27 @@ impl Search {
 
         let mut guard = state.best_solutions.upgradable_read();
 
-        if self.solution_acceptor.accept(
-            &guard,
-            &solution,
-            &score,
-            AcceptSolutionContext {
-                iteration: state.iteration,
-                max_iterations: state.max_iterations,
-                max_solutions: self.params.max_solutions,
-                rng,
-            },
-        ) {
+        let is_best = score < iteration_info.best_score()
+            || solution.unassigned_jobs().len() < iteration_info.best_unassigned_count();
+
+        if is_best
+            || self.solution_acceptor.accept(
+                &guard,
+                &solution,
+                &score,
+                AcceptSolutionContext {
+                    iteration: state.iteration,
+                    max_iterations: state.max_iterations,
+                    max_solutions: self.params.max_solutions,
+                    rng,
+                },
+            )
+        {
             let is_duplicate = guard.iter().any(|accepted_solution| {
                 accepted_solution.score == score
                     && accepted_solution.solution.is_identical(&solution)
             });
 
-            let is_best = score < iteration_info.best_score();
             if !is_best {
                 state.iterations_without_improvement += 1;
             } else {
@@ -648,7 +676,7 @@ impl Search {
                         state.thread_statistics.write().add_iteration_info(
                             SearchStatisticsIteration::RuinRecreate {
                                 timestamp: Timestamp::now(),
-                                improved: score < current_score,
+                                improved: score < current_score || is_best,
                                 is_best,
                                 recreate_strategy,
                                 ruin_strategy,
@@ -663,7 +691,7 @@ impl Search {
                         state.thread_statistics.write().add_iteration_info(
                             SearchStatisticsIteration::Intensify {
                                 timestamp: Timestamp::now(),
-                                improved: score < current_score,
+                                improved: score < current_score || is_best,
                                 is_best,
                             },
                         );
@@ -864,7 +892,7 @@ impl Search {
         (ruin_strategy, recreate_strategy)
     }
 
-    fn compute_solution_score(&self, solution: &WorkingSolution) -> (Score, ScoreAnalysis) {
+    pub fn compute_solution_score(&self, solution: &WorkingSolution) -> (Score, ScoreAnalysis) {
         let mut score_analysis = ScoreAnalysis::default();
 
         for constraint in self.constraints.iter() {
@@ -885,6 +913,7 @@ pub enum IterationInfo {
         recreate_strategy: RecreateStrategy,
         current_score: Score,
         best_score: Score,
+        best_unassigned_count: usize,
         ruin_duration: SignedDuration,
         recreate_duration: SignedDuration,
     },
@@ -892,6 +921,7 @@ pub enum IterationInfo {
         iteration: usize,
         current_score: Score,
         best_score: Score,
+        best_unassigned_count: usize,
     },
 }
 
@@ -911,6 +941,19 @@ impl IterationInfo {
         match self {
             IterationInfo::RuinRecreate { best_score, .. } => *best_score,
             IterationInfo::Intensify { best_score, .. } => *best_score,
+        }
+    }
+
+    fn best_unassigned_count(&self) -> usize {
+        match self {
+            IterationInfo::RuinRecreate {
+                best_unassigned_count,
+                ..
+            } => *best_unassigned_count,
+            IterationInfo::Intensify {
+                best_unassigned_count,
+                ..
+            } => *best_unassigned_count,
         }
     }
 

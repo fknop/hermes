@@ -12,17 +12,19 @@ impl SelectSolution for SelectBestSelector {
         solutions: &'a [AcceptedSolution],
         _: &mut SmallRng,
     ) -> Option<&'a AcceptedSolution> {
+        // Assumption that it's sorted
+        solutions.first()
         // TODO
-        let mut max_score = Score::MAX;
-        let mut best_solution = None;
+        // let mut max_score = Score::MAX;
+        // let mut best_solution = None;
 
-        for solution in solutions {
-            if solution.score < max_score {
-                best_solution = Some(solution);
-                max_score = solution.score;
-            }
-        }
+        // for solution in solutions {
+        // if solution.score < max_score {
+        // best_solution = Some(solution);
+        // max_score = solution.score;
+        // }
+        // }
 
-        best_solution
+        // best_solution
     }
 }

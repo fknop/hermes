@@ -95,13 +95,15 @@ fn for_each_service_insertion(
         .iter()
         .enumerate_idx()
         .for_each(|(route_id, route)| {
-            (0..=route.len()).for_each(|position| {
-                f(Insertion::Service(ServiceInsertion {
-                    route_id,
-                    job_index,
-                    position,
-                }));
-            });
+            if !route.has_maximum_activities(solution.problem()) {
+                (0..=route.len()).for_each(|position| {
+                    f(Insertion::Service(ServiceInsertion {
+                        route_id,
+                        job_index,
+                        position,
+                    }));
+                });
+            }
         });
 }
 
@@ -112,6 +114,10 @@ fn for_each_route_service_insertion(
     mut f: impl FnMut(Insertion),
 ) {
     let route = solution.route(route_index);
+    if route.has_maximum_activities(solution.problem()) {
+        return;
+    }
+
     for position in 0..=route.len() {
         f(Insertion::Service(ServiceInsertion {
             route_id: route_index,

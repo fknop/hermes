@@ -8,7 +8,7 @@ use crate::{
         job::{ActivityId, Job, JobIdx, JobTask},
         location::LocationIdx,
         service::{Service, ServiceType},
-        vehicle::{Vehicle, VehicleIdx},
+        vehicle::{self, Vehicle, VehicleIdx},
         vehicle_routing_problem::VehicleRoutingProblem,
     },
     solver::{
@@ -172,6 +172,16 @@ impl WorkingSolutionRoute {
         vehicle.depot_location_id().is_some() && vehicle.should_return_to_depot()
     }
 
+    pub fn has_maximum_activities(&self, problem: &VehicleRoutingProblem) -> bool {
+        let vehicle = problem.vehicle(self.vehicle_id);
+        // Assuming the vehicle has a method `maximum_activities` that returns the maximum allowed activities
+        if let Some(max_activities) = vehicle.maximum_activities() {
+            self.activity_ids.len() >= max_activities
+        } else {
+            false
+        }
+    }
+
     pub fn compute_location_ids(&self, problem: &VehicleRoutingProblem) -> Vec<LocationIdx> {
         let mut location_ids = vec![];
 
@@ -201,7 +211,7 @@ impl WorkingSolutionRoute {
             problem,
             self.vehicle_id,
             first.activity_id(),
-            self.arrival_times[0],
+            first.arrival_time(),
         )
     }
 
@@ -211,7 +221,7 @@ impl WorkingSolutionRoute {
             problem,
             self.vehicle_id,
             last.activity_id(),
-            self.departure_times[self.len() - 1],
+            last.departure_time(),
         )
     }
 
@@ -899,10 +909,27 @@ impl WorkingSolutionRoute {
         start: usize,
         end: usize,
     ) -> bool {
-        let is_valid_tw_change = self.is_valid_tw_change(problem, job_ids.clone(), start, end);
-        let is_valid_capacity_change = self.is_valid_capacity_change(problem, job_ids, start, end);
+        self.is_valid_maximum_activities_change(problem, job_ids.clone(), start, end)
+            && self.is_valid_tw_change(problem, job_ids.clone(), start, end)
+            && self.is_valid_capacity_change(problem, job_ids, start, end)
+    }
 
-        is_valid_tw_change && is_valid_capacity_change
+    fn is_valid_maximum_activities_change(
+        &self,
+        problem: &VehicleRoutingProblem,
+        job_ids: impl Iterator<Item = ActivityId>,
+        start: usize,
+        end: usize,
+    ) -> bool {
+        let vehicle = self.vehicle(problem);
+        if let Some(maximum_activities) = vehicle.maximum_activities() {
+            let new_len = start + job_ids.count() + (self.len() - end);
+            if new_len > maximum_activities {
+                return false;
+            }
+        }
+
+        true
     }
 
     /// Checks whether inserting the given job IDs between the given [start, end) indices is valid
@@ -935,6 +962,18 @@ impl WorkingSolutionRoute {
             &[]
         };
 
+        let mut vehicle_start: Option<Timestamp> = if self.is_empty() {
+            None
+        } else {
+            Some(self.start(problem))
+        };
+
+        let mut vehicle_end: Option<Timestamp> = if self.is_empty() {
+            None
+        } else {
+            Some(self.end(problem))
+        };
+
         for job_id in job_ids.chain(succeeding_activities.iter().copied()) {
             let arrival_time = if let Some(previous_job_id) = previous_job_id
                 && let Some(previous_departure_time) = previous_departure_time
@@ -947,7 +986,17 @@ impl WorkingSolutionRoute {
                     job_id,
                 )
             } else {
-                compute_first_activity_arrival_time(problem, self.vehicle_id, job_id)
+                let first_arrival_time =
+                    compute_first_activity_arrival_time(problem, self.vehicle_id, job_id);
+
+                vehicle_start = Some(compute_vehicle_start(
+                    problem,
+                    self.vehicle_id,
+                    job_id,
+                    first_arrival_time,
+                ));
+
+                first_arrival_time
             };
 
             let waiting_duration = compute_waiting_duration(problem, job_id, arrival_time);
@@ -955,6 +1004,12 @@ impl WorkingSolutionRoute {
             previous_job_id = Some(job_id);
             let new_departure_time =
                 compute_departure_time(problem, arrival_time, waiting_duration, job_id);
+            vehicle_end = Some(compute_vehicle_end(
+                problem,
+                self.vehicle_id,
+                job_id,
+                new_departure_time,
+            ));
             previous_departure_time = Some(new_departure_time);
 
             if let Some(&current_activity_index) = self.jobs.get(&job_id)
@@ -968,16 +1023,6 @@ impl WorkingSolutionRoute {
                         .saturating_add(current_time_slack)
                         .unwrap()
                 {
-                    // println!(
-                    //     "{job_id}, false, {current_time_slack} - {arrival_time} - {current_arrival_time}"
-                    // );
-                    // println!(
-                    //     "{} > {}",
-                    //     arrival_time,
-                    //     current_arrival_time
-                    //         .saturating_add(current_time_slack)
-                    //         .unwrap()
-                    // );
                     return false;
                 }
 
@@ -994,6 +1039,14 @@ impl WorkingSolutionRoute {
             {
                 return false;
             }
+        }
+
+        if let Some(max_working_duration) = self.vehicle(problem).maximum_working_duration()
+            && let Some(vehicle_start) = vehicle_start
+            && let Some(vehicle_end) = vehicle_end
+            && vehicle_end.duration_since(vehicle_start) > max_working_duration
+        {
+            return false;
         }
 
         true
@@ -1788,5 +1841,134 @@ mod tests {
             2,
         );
         assert!(!is_valid);
+    }
+
+    fn create_problem_for_maximum_activities(
+        services: usize,
+        maximum_activities: usize,
+    ) -> VehicleRoutingProblem {
+        // 10 locations from (0, 0) to (9, 0)
+        let locations = test_utils::create_location_grid(1, services + 1);
+
+        let mut vehicle_builder = VehicleBuilder::default();
+        vehicle_builder.set_depot_location_id(0);
+        vehicle_builder.set_capacity(Capacity::from_vec(vec![100.0]));
+        vehicle_builder.set_vehicle_id(String::from("vehicle"));
+        vehicle_builder.set_profile_id(0);
+        vehicle_builder.set_maximum_activities(maximum_activities);
+        let vehicle = vehicle_builder.build();
+        let vehicles = vec![vehicle];
+
+        let services = (0..services)
+            .map(|i| {
+                let mut service_builder = ServiceBuilder::default();
+                service_builder.set_demand(Capacity::from_vec(vec![10.0]));
+                service_builder.set_external_id(format!("service_{}", i + 1));
+                service_builder.set_service_duration(SignedDuration::from_mins(10));
+                service_builder.set_location_id(i + 1);
+                service_builder.build()
+            })
+            .collect::<Vec<_>>();
+
+        let mut builder = VehicleRoutingProblemBuilder::default();
+        // Travel time of 30 mins between consecutive locations
+
+        builder.set_vehicle_profiles(vec![VehicleProfile::new(
+            "test_profile".to_owned(),
+            TravelMatrices::from_constant(
+                &locations,
+                SignedDuration::from_mins(30).as_secs_f64(),
+                100.0,
+                SignedDuration::from_mins(30).as_secs_f64(),
+            ),
+        )]);
+        builder.set_locations(locations);
+        builder.set_fleet(Fleet::Finite(vehicles));
+        builder.set_services(services);
+
+        builder.build()
+    }
+
+    #[test]
+    fn test_is_valid_maximum_activities_change() {
+        let problem = create_problem_for_maximum_activities(10, 5);
+
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        // Route: 0 -> 1 -> 2 (arrival times: 08:30, 09:10, 09:50)
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        route.insert_service(&problem, 1, JobIdx::new(1));
+        route.insert_service(&problem, 2, JobIdx::new(2));
+
+        let is_valid = route.is_valid_maximum_activities_change(
+            &problem,
+            std::iter::once(ActivityId::service(5)),
+            1,
+            1,
+        );
+        assert!(is_valid);
+
+        let is_valid = route.is_valid_maximum_activities_change(
+            &problem,
+            [ActivityId::service(5), ActivityId::service(6)].into_iter(),
+            1,
+            1,
+        );
+        assert!(is_valid);
+
+        let is_valid = route.is_valid_maximum_activities_change(
+            &problem,
+            [
+                ActivityId::service(5),
+                ActivityId::service(6),
+                ActivityId::service(7),
+            ]
+            .into_iter(),
+            1,
+            1,
+        );
+        assert!(!is_valid);
+
+        let is_valid = route.is_valid_maximum_activities_change(
+            &problem,
+            [
+                ActivityId::service(5),
+                ActivityId::service(6),
+                ActivityId::service(7),
+            ]
+            .into_iter(),
+            1,
+            2,
+        );
+        assert!(is_valid);
+
+        let is_valid = route.is_valid_maximum_activities_change(
+            &problem,
+            [
+                ActivityId::service(5),
+                ActivityId::service(6),
+                ActivityId::service(7),
+                ActivityId::service(8),
+                ActivityId::service(9),
+            ]
+            .into_iter(),
+            0,
+            2,
+        );
+        assert!(!is_valid);
+
+        let is_valid = route.is_valid_maximum_activities_change(
+            &problem,
+            [
+                ActivityId::service(5),
+                ActivityId::service(6),
+                ActivityId::service(7),
+                ActivityId::service(8),
+                ActivityId::service(9),
+            ]
+            .into_iter(),
+            0,
+            3,
+        );
+        assert!(is_valid);
     }
 }

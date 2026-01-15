@@ -43,12 +43,15 @@ impl RuinSolution for RuinRoute {
 
             if let Ok((route_id, _, _)) =
                 routes.choose_weighted(context.rng, |(_, route, fit_in_other_route)| {
+                    let is_full = route.has_maximum_activities(solution.problem());
+                    let full_weight = if is_full { 2.0 } else { 1.0 };
                     if no_fit || all_fit {
-                        return route.duration(context.problem).as_secs_f64() * 0.7
-                            + route.total_waiting_duration().as_secs_f64() * 0.3;
+                        return full_weight
+                            * (route.duration(context.problem).as_secs_f64() * 0.7
+                                + route.total_waiting_duration().as_secs_f64() * 0.3);
                     }
 
-                    if *fit_in_other_route { 10.0 } else { 1.0 }
+                    full_weight * if *fit_in_other_route { 10.0 } else { 1.0 }
                 })
             {
                 let removed = solution.remove_route(*route_id);

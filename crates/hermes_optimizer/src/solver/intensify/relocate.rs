@@ -86,7 +86,7 @@ impl IntensifyOp for RelocateOperator {
                 self.params.to,
             )
         } else {
-            // Moving E before B, in_between_jobs will be E - B - C - D
+            // Moving E before B, in_between_jobs will be B - C - D
             let in_between_jobs = route.job_ids_iter(self.params.to, self.params.from);
 
             // Contains E - B - C - D

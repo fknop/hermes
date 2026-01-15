@@ -117,7 +117,7 @@ impl Default for SolverParams {
             alns_improvement_factor: 9.0,
             alns_accepted_worst_factor: 3.0,
 
-            run_intensify_search: false,
+            run_intensify_search: true,
             debug_options: SolverParamsDebugOptions {
                 enable_local_search: true,
             },
