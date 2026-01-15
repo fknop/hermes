@@ -163,13 +163,13 @@ pub async fn poll_handler(
     State(state): State<Arc<AppState>>,
 ) -> Result<PollResponse, ApiError> {
     let solver_manager = &state.solver_manager;
-    if let Some(status) = solver_manager.get_status(&job_id.to_string()).await {
+    if let Some(status) = solver_manager.job_status(&job_id.to_string()).await {
         match status {
             SolverStatus::Pending => Ok(PollResponse::Pending),
             SolverStatus::Running => {
-                let solution = solver_manager.get_solution(&job_id.to_string()).await;
+                let solution = solver_manager.job_solution(&job_id.to_string()).await;
                 let statistics = solver_manager
-                    .get_statistics(&job_id.to_string())
+                    .job_statistics(&job_id.to_string())
                     .await
                     .map(|stats| stats.aggregate());
                 Ok(PollResponse::Running(PollSolverRunning {
@@ -178,9 +178,9 @@ pub async fn poll_handler(
                 }))
             }
             SolverStatus::Completed => {
-                let solution = solver_manager.get_solution(&job_id.to_string()).await;
+                let solution = solver_manager.job_solution(&job_id.to_string()).await;
                 let statistics = solver_manager
-                    .get_statistics(&job_id.to_string())
+                    .job_statistics(&job_id.to_string())
                     .await
                     .map(|stats| stats.aggregate());
                 Ok(PollResponse::Completed(PollSolverCompleted {

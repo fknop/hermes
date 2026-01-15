@@ -1,6 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use tokio::sync::RwLock;
+use uuid::Uuid;
 
 use crate::problem::vehicle_routing_problem::VehicleRoutingProblem;
 
@@ -29,12 +30,30 @@ impl SolverManager {
         });
     }
 
-    pub async fn get_status(&self, job_id: &str) -> Option<SolverStatus> {
+    pub async fn job_status(&self, job_id: &str) -> Option<SolverStatus> {
         self.solvers
             .read()
             .await
             .get(job_id)
             .map(|solver| solver.status())
+    }
+
+    pub async fn create_job(&self, problem: VehicleRoutingProblem) -> String {
+        let job_id = Uuid::new_v4().to_string();
+        let solver = Arc::new(Solver::new(problem, SolverParams::default()));
+        self.solvers.write().await.insert(job_id.clone(), solver);
+        job_id
+    }
+
+    pub async fn start(&self, job_id: &str) {
+        if let Some(solver) = self.solvers.read().await.get(job_id) {
+            tokio::spawn({
+                let solver = solver.clone();
+                async move {
+                    solver.solve();
+                }
+            });
+        }
     }
 
     pub async fn stop(&self, job_id: &str) {
@@ -43,7 +62,7 @@ impl SolverManager {
         }
     }
 
-    pub async fn get_solution(&self, job_id: &str) -> Option<AcceptedSolution> {
+    pub async fn job_solution(&self, job_id: &str) -> Option<AcceptedSolution> {
         self.solvers
             .read()
             .await
@@ -52,7 +71,8 @@ impl SolverManager {
             .map(|solution| solution.clone())
     }
 
-    pub async fn get_statistics(&self, job_id: &str) -> Option<Arc<SearchStatistics>> {
+    #[cfg(feature = "statistics")]
+    pub async fn job_statistics(&self, job_id: &str) -> Option<Arc<SearchStatistics>> {
         self.solvers
             .read()
             .await

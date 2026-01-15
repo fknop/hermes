@@ -83,7 +83,7 @@ impl TravelMatrices {
     }
 
     #[inline(always)]
-    fn get_index(&self, from: LocationIdx, to: LocationIdx) -> usize {
+    fn index(&self, from: LocationIdx, to: LocationIdx) -> usize {
         from.get() * self.num_locations + to.get()
     }
 
@@ -164,7 +164,7 @@ impl TravelMatrices {
             return 0.0;
         }
 
-        self.distances[self.get_index(from, to)]
+        self.distances[self.index(from, to)]
     }
 
     #[inline(always)]
@@ -173,7 +173,7 @@ impl TravelMatrices {
             return SignedDuration::ZERO;
         }
 
-        SignedDuration::from_secs_f64(self.times[self.get_index(from, to)])
+        SignedDuration::from_secs_f64(self.times[self.index(from, to)])
     }
 
     #[inline(always)]
@@ -182,7 +182,7 @@ impl TravelMatrices {
             return 0.0;
         }
 
-        self.costs[self.get_index(from, to)]
+        self.costs[self.index(from, to)]
     }
 
     pub fn max_cost(&self) -> Cost {

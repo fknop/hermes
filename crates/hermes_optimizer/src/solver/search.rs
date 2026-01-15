@@ -257,6 +257,7 @@ impl Search {
         RwLockReadGuard::try_map(self.best_solutions.read(), |solutions| solutions.first()).ok()
     }
 
+    #[cfg(feature = "statistics")]
     pub fn statistics(&self) -> Arc<SearchStatistics> {
         Arc::clone(&self.statistics)
     }

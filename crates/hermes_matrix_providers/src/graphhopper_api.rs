@@ -221,7 +221,10 @@ impl GraphHopperMatrixClient {
         self.poll_until_completed(&job_response.job_id).await
     }
 
-    async fn get_solution(&self, job_id: &str) -> Result<Option<MatrixSolution>, GraphHopperError> {
+    async fn fetch_solution(
+        &self,
+        job_id: &str,
+    ) -> Result<Option<MatrixSolution>, GraphHopperError> {
         let url = format!("{}/{}", GRAPHOPPER_MATRIX_ASYNC_POLL_API_URL, job_id);
         let poll_response = self
             .client
@@ -251,7 +254,7 @@ impl GraphHopperMatrixClient {
                 "GraphHopperApi: Polling for job completion {}/{}",
                 attempt, self.params.max_poll_attempts
             );
-            if let Some(solution) = self.get_solution(job_id).await? {
+            if let Some(solution) = self.fetch_solution(job_id).await? {
                 return Ok(solution);
             }
 

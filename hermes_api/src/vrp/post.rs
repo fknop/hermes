@@ -29,11 +29,9 @@ pub async fn post_handler(
 ) -> Result<PostResponse, ApiError> {
     let solver_manager = &state.solver_manager;
 
-    let job_id = Uuid::new_v4().to_string();
-
-    let vrp = body.build_problem(&state.matrix_client).await?;
-
-    solver_manager.solve(job_id.clone(), vrp).await;
+    let problem = body.build_problem(&state.matrix_client).await?;
+    let job_id = solver_manager.create_job(problem).await;
+    solver_manager.start(&job_id).await;
 
     Ok(PostResponse { job_id })
 }

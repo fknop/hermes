@@ -57,6 +57,7 @@ impl Solver {
         self.search.best_solution()
     }
 
+    #[cfg(feature = "statistics")]
     pub fn statistics(&self) -> Arc<SearchStatistics> {
         self.search.statistics()
     }
