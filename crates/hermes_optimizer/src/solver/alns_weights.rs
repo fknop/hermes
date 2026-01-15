@@ -2,10 +2,11 @@ use std::hash::Hash;
 
 use fxhash::FxHashMap;
 use rand::seq::IndexedRandom;
+use serde::Serialize;
 
 use crate::solver::solver_params::SolverParams;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct AlnsWeights<S>
 where
     S: Copy + Eq + Hash,
@@ -103,7 +104,7 @@ impl ScoreEntry {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Operator<S> {
     pub strategy: S,
     pub weight: f64,

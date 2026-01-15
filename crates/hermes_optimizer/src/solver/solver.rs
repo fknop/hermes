@@ -2,7 +2,13 @@ use std::sync::Arc;
 
 use parking_lot::{MappedRwLockReadGuard, RwLock};
 
-use crate::problem::vehicle_routing_problem::VehicleRoutingProblem;
+use crate::{
+    problem::vehicle_routing_problem::VehicleRoutingProblem,
+    solver::{
+        alns_weights::AlnsWeights, recreate::recreate_strategy::RecreateStrategy,
+        ruin::ruin_strategy::RuinStrategy,
+    },
+};
 
 use super::{
     accepted_solution::AcceptedSolution, search::Search, solver_params::SolverParams,
@@ -60,6 +66,10 @@ impl Solver {
     #[cfg(feature = "statistics")]
     pub fn statistics(&self) -> Arc<SearchStatistics> {
         self.search.statistics()
+    }
+
+    pub fn weights(&self) -> (AlnsWeights<RuinStrategy>, AlnsWeights<RecreateStrategy>) {
+        self.search.weights_cloned()
     }
 }
 

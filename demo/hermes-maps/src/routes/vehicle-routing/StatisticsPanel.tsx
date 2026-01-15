@@ -37,6 +37,12 @@ function OperatorStatisticsPanel({
             <RowValue>
               {Temporal.Duration.from(stats.avg_duration).toLocaleString()}
             </RowValue>
+            <RowValue>
+              {Math.round(stats.avg_score_percentage_improvement * 100) / 100}%
+            </RowValue>
+            <RowValue>
+              {Math.round(stats.total_score_improvement * 100) / 100}
+            </RowValue>
           </tr>
         )
       })}
@@ -59,6 +65,8 @@ export function StatisticsPanel({
             <Header>Total Best</Header>
             <Header>Total improved</Header>
             <Header>Avg duration</Header>
+            <Header>Avg %</Header>
+            <Header>Score improvement</Header>
           </tr>
         </thead>
         <tbody>

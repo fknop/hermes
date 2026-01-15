@@ -3,7 +3,13 @@ use std::{collections::HashMap, sync::Arc};
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
-use crate::problem::vehicle_routing_problem::VehicleRoutingProblem;
+use crate::{
+    problem::vehicle_routing_problem::VehicleRoutingProblem,
+    solver::{
+        alns_weights::AlnsWeights, recreate::recreate_strategy::RecreateStrategy,
+        ruin::ruin_strategy::RuinStrategy,
+    },
+};
 
 use super::{
     accepted_solution::AcceptedSolution,
@@ -69,6 +75,21 @@ impl SolverManager {
             .get(job_id)
             .and_then(|solver| solver.current_best_solution())
             .map(|solution| solution.clone())
+    }
+
+    pub async fn solver(&self, job_id: &str) -> Option<Arc<Solver>> {
+        self.solvers.read().await.get(job_id).cloned()
+    }
+
+    pub async fn job_weights(
+        &self,
+        job_id: &str,
+    ) -> Option<(AlnsWeights<RuinStrategy>, AlnsWeights<RecreateStrategy>)> {
+        self.solvers
+            .read()
+            .await
+            .get(job_id)
+            .map(|solver| solver.weights())
     }
 
     #[cfg(feature = "statistics")]

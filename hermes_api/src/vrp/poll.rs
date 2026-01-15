@@ -11,8 +11,10 @@ use geojson::{Feature, Geometry};
 use hermes_optimizer::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
-        accepted_solution::AcceptedSolution, solution::route::WorkingSolutionRoute,
-        solver::SolverStatus, statistics::AggregatedStatistics,
+        accepted_solution::AcceptedSolution, alns_weights::AlnsWeights,
+        recreate::recreate_strategy::RecreateStrategy, ruin::ruin_strategy::RuinStrategy,
+        solution::route::WorkingSolutionRoute, solver::SolverStatus,
+        statistics::AggregatedStatistics,
     },
 };
 use hermes_routing::{
@@ -32,15 +34,23 @@ use super::api_solution::{
 };
 
 #[derive(Serialize)]
+struct OperatorWeights {
+    ruin: AlnsWeights<RuinStrategy>,
+    recreate: AlnsWeights<RecreateStrategy>,
+}
+
+#[derive(Serialize)]
 pub struct PollSolverRunning {
     solution: Option<ApiSolution>,
     statistics: Option<AggregatedStatistics>,
+    weights: Option<OperatorWeights>,
 }
 
 #[derive(Serialize)]
 pub struct PollSolverCompleted {
     solution: Option<ApiSolution>,
     statistics: Option<AggregatedStatistics>,
+    weights: Option<OperatorWeights>,
 }
 
 #[derive(Serialize)]
@@ -162,35 +172,39 @@ pub async fn poll_handler(
     Path(job_id): Path<Uuid>,
     State(state): State<Arc<AppState>>,
 ) -> Result<PollResponse, ApiError> {
-    let solver_manager = &state.solver_manager;
-    if let Some(status) = solver_manager.job_status(&job_id.to_string()).await {
-        match status {
-            SolverStatus::Pending => Ok(PollResponse::Pending),
-            SolverStatus::Running => {
-                let solution = solver_manager.job_solution(&job_id.to_string()).await;
-                let statistics = solver_manager
-                    .job_statistics(&job_id.to_string())
-                    .await
-                    .map(|stats| stats.aggregate());
-                Ok(PollResponse::Running(PollSolverRunning {
-                    solution: solution.map(|solution| transform_solution(&solution, &state.hermes)),
-                    statistics,
-                }))
-            }
-            SolverStatus::Completed => {
-                let solution = solver_manager.job_solution(&job_id.to_string()).await;
-                let statistics = solver_manager
-                    .job_statistics(&job_id.to_string())
-                    .await
-                    .map(|stats| stats.aggregate());
-                Ok(PollResponse::Completed(PollSolverCompleted {
-                    solution: solution.map(|solution| transform_solution(&solution, &state.hermes)),
-                    statistics,
-                }))
-            }
+    let solver = state
+        .solver_manager
+        .solver(&job_id.to_string())
+        .await
+        .ok_or(ApiError::NotFound(job_id.to_string()))?;
+
+    match solver.status() {
+        SolverStatus::Pending => Ok(PollResponse::Pending),
+        SolverStatus::Running => {
+            let solution = solver.current_best_solution();
+            let statistics = solver.statistics().aggregate();
+            let weights = solver.weights();
+            Ok(PollResponse::Running(PollSolverRunning {
+                solution: solution.map(|solution| transform_solution(&solution, &state.hermes)),
+                statistics: Some(statistics),
+                weights: Some(OperatorWeights {
+                    ruin: weights.0,
+                    recreate: weights.1,
+                }),
+            }))
         }
-    } else {
-        println!("NOT FOUND?");
-        Err(ApiError::NotFound(job_id.to_string()))
+        SolverStatus::Completed => {
+            let solution = solver.current_best_solution();
+            let statistics = solver.statistics().aggregate();
+            let weights = solver.weights();
+            Ok(PollResponse::Completed(PollSolverCompleted {
+                solution: solution.map(|solution| transform_solution(&solution, &state.hermes)),
+                statistics: Some(statistics),
+                weights: Some(OperatorWeights {
+                    ruin: weights.0,
+                    recreate: weights.1,
+                }),
+            }))
+        }
     }
 }

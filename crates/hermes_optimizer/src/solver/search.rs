@@ -74,10 +74,10 @@ pub struct Search {
     solution_selector: SolutionSelector,
     solution_acceptor: SolutionAcceptor,
 
-    global_alns_ruin_weights: Arc<Mutex<AlnsWeights<RuinStrategy>>>,
-    global_alns_recreate_weights: Arc<Mutex<AlnsWeights<RecreateStrategy>>>,
-    global_alns_ruin_scores: Arc<Mutex<AlnsScores<RuinStrategy>>>,
-    global_alns_recreate_scores: Arc<Mutex<AlnsScores<RecreateStrategy>>>,
+    global_alns_ruin_weights: Arc<RwLock<AlnsWeights<RuinStrategy>>>,
+    global_alns_recreate_weights: Arc<RwLock<AlnsWeights<RecreateStrategy>>>,
+    global_alns_ruin_scores: Arc<RwLock<AlnsScores<RuinStrategy>>>,
+    global_alns_recreate_scores: Arc<RwLock<AlnsScores<RecreateStrategy>>>,
 
     on_best_solution_handler: Option<BestSolutionHandler>,
 
@@ -190,16 +190,16 @@ impl Search {
             problem: Arc::clone(&problem),
             constraints: Self::create_constraints(),
             best_solutions: Arc::new(RwLock::new(Vec::with_capacity(params.max_solutions))),
-            global_alns_ruin_weights: Arc::new(Mutex::new(AlnsWeights::new(
+            global_alns_ruin_weights: Arc::new(RwLock::new(AlnsWeights::new(
                 params.ruin_strategies().clone(),
             ))),
-            global_alns_recreate_weights: Arc::new(Mutex::new(AlnsWeights::new(
+            global_alns_recreate_weights: Arc::new(RwLock::new(AlnsWeights::new(
                 params.recreate_strategies().clone(),
             ))),
-            global_alns_ruin_scores: Arc::new(Mutex::new(AlnsScores::new(
+            global_alns_ruin_scores: Arc::new(RwLock::new(AlnsScores::new(
                 params.ruin_strategies().clone(),
             ))),
-            global_alns_recreate_scores: Arc::new(Mutex::new(AlnsScores::new(
+            global_alns_recreate_scores: Arc::new(RwLock::new(AlnsScores::new(
                 params.recreate_strategies().clone(),
             ))),
 
@@ -260,6 +260,13 @@ impl Search {
     #[cfg(feature = "statistics")]
     pub fn statistics(&self) -> Arc<SearchStatistics> {
         Arc::clone(&self.statistics)
+    }
+
+    pub fn weights_cloned(&self) -> (AlnsWeights<RuinStrategy>, AlnsWeights<RecreateStrategy>) {
+        (
+            self.global_alns_ruin_weights.read().clone(),
+            self.global_alns_recreate_weights.read().clone(),
+        )
     }
 
     pub fn stop(&self) {
@@ -422,23 +429,23 @@ impl Search {
                                 debug!("Accumulating scores");
                                 // Update accumulated global stats from local stats
                                 self.global_alns_ruin_scores
-                                    .lock()
+                                    .write()
                                     .accumulate(&mut state.alns_ruin_scores);
                                 self.global_alns_recreate_scores
-                                    .lock()
+                                    .write()
                                     .accumulate(&mut state.alns_recreate_scores);
 
                                 match thread_barrier.wait() {
                                     WaitResult::Leader => {
                                         debug!("Updating global weights from leader");
                                         // Update global weights
-                                        self.global_alns_ruin_weights.lock().update_weights(
-                                            &mut self.global_alns_ruin_scores.lock(),
+                                        self.global_alns_ruin_weights.write().update_weights(
+                                            &mut self.global_alns_ruin_scores.write(),
                                             self.params.alns_reaction_factor,
                                         );
 
-                                        self.global_alns_recreate_weights.lock().update_weights(
-                                            &mut self.global_alns_recreate_scores.lock(),
+                                        self.global_alns_recreate_weights.write().update_weights(
+                                            &mut self.global_alns_recreate_scores.write(),
                                             self.params.alns_reaction_factor,
                                         );
                                     }
@@ -457,10 +464,10 @@ impl Search {
 
                                 // Update local weights from global
                                 state.alns_ruin_weights =
-                                    self.global_alns_ruin_weights.lock().clone();
+                                    self.global_alns_ruin_weights.read().clone();
 
                                 state.alns_recreate_weights =
-                                    self.global_alns_recreate_weights.lock().clone();
+                                    self.global_alns_recreate_weights.read().clone();
                             }
 
                             let is_stopped =
