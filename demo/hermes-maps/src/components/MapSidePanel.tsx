@@ -8,7 +8,7 @@ export function MapSidePanel({
   return (
     <div
       className={clsx(
-        'z-10 absolute top-0 bottom-0 bg-white drop-shadow-xs  border-zinc-900/20 min-w-96',
+        'z-10 absolute top-0 bottom-0 bg-white drop-shadow-xs  border-zinc-900/20 min-w-96 overflow-auto',
         {
           'left-0 border-r-2': side === 'left',
           'right-0 border-l-2': side === 'right',

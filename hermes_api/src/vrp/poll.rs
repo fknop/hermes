@@ -42,15 +42,15 @@ struct OperatorWeights {
 #[derive(Serialize)]
 pub struct PollSolverRunning {
     solution: Option<ApiSolution>,
-    statistics: Option<AggregatedStatistics>,
-    weights: Option<OperatorWeights>,
+    statistics: AggregatedStatistics,
+    weights: OperatorWeights,
 }
 
 #[derive(Serialize)]
 pub struct PollSolverCompleted {
     solution: Option<ApiSolution>,
-    statistics: Option<AggregatedStatistics>,
-    weights: Option<OperatorWeights>,
+    statistics: AggregatedStatistics,
+    weights: OperatorWeights,
 }
 
 #[derive(Serialize)]
@@ -59,12 +59,6 @@ pub enum PollResponse {
     Pending,
     Running(PollSolverRunning),
     Completed(PollSolverCompleted),
-}
-
-impl IntoResponse for PollResponse {
-    fn into_response(self) -> Response {
-        (StatusCode::OK, Json(self)).into_response()
-    }
 }
 
 fn compute_polyline(
@@ -171,7 +165,7 @@ fn transform_solution(accepted_solution: &AcceptedSolution, hermes: &Hermes) -> 
 pub async fn poll_handler(
     Path(job_id): Path<Uuid>,
     State(state): State<Arc<AppState>>,
-) -> Result<PollResponse, ApiError> {
+) -> Result<Json<PollResponse>, ApiError> {
     let solver = state
         .solver_manager
         .solver(&job_id.to_string())
@@ -179,32 +173,36 @@ pub async fn poll_handler(
         .ok_or(ApiError::NotFound(job_id.to_string()))?;
 
     match solver.status() {
-        SolverStatus::Pending => Ok(PollResponse::Pending),
+        SolverStatus::Pending => Ok(Json(PollResponse::Pending)),
         SolverStatus::Running => {
-            let solution = solver.current_best_solution();
+            let solution = solver
+                .current_best_solution()
+                .map(|solution| transform_solution(&solution, &state.hermes));
             let statistics = solver.statistics().aggregate();
             let weights = solver.weights();
-            Ok(PollResponse::Running(PollSolverRunning {
-                solution: solution.map(|solution| transform_solution(&solution, &state.hermes)),
-                statistics: Some(statistics),
-                weights: Some(OperatorWeights {
+            Ok(Json(PollResponse::Running(PollSolverRunning {
+                solution,
+                statistics,
+                weights: OperatorWeights {
                     ruin: weights.0,
                     recreate: weights.1,
-                }),
-            }))
+                },
+            })))
         }
         SolverStatus::Completed => {
-            let solution = solver.current_best_solution();
+            let solution = solver
+                .current_best_solution()
+                .map(|solution| transform_solution(&solution, &state.hermes));
             let statistics = solver.statistics().aggregate();
             let weights = solver.weights();
-            Ok(PollResponse::Completed(PollSolverCompleted {
-                solution: solution.map(|solution| transform_solution(&solution, &state.hermes)),
-                statistics: Some(statistics),
-                weights: Some(OperatorWeights {
+            Ok(Json(PollResponse::Completed(PollSolverCompleted {
+                solution,
+                statistics,
+                weights: OperatorWeights {
                     ruin: weights.0,
                     recreate: weights.1,
-                }),
-            }))
+                },
+            })))
         }
     }
 }

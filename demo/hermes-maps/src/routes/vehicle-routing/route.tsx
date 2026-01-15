@@ -10,12 +10,12 @@ import { ActivitiesLayer } from './ActivityLayer.tsx'
 import { VRP_COLORS } from './colors.ts'
 import { Temporal } from 'temporal-polyfill'
 import { VehicleRoutingProblem } from './input.ts'
-import { Dropzone } from '../../components/Dropzone.tsx'
 import { JsonFileUpload } from './JsonFileUpload.tsx'
 import { useState } from 'react'
 import { isNil } from '../../utils/isNil.ts'
 import { LocationsLayer } from './LocationsLayer.tsx'
 import { StatisticsPanel } from './StatisticsPanel.tsx'
+import { WeightsPanel } from './WeightsPanel.tsx'
 
 export default function VehicleRoutingScreen() {
   const [input, setInput] = useState<VehicleRoutingProblem | null>(null)
@@ -121,9 +121,10 @@ export default function VehicleRoutingScreen() {
           </div>
         </MapSidePanel>
 
-        {response?.statistics && (
+        {response?.statistics && response?.weights && (
           <MapSidePanel side="right">
             <StatisticsPanel statistics={response.statistics} />
+            <WeightsPanel weights={response.weights} />
           </MapSidePanel>
         )}
 

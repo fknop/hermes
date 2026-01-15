@@ -15,11 +15,20 @@ use super::{
     regret_insertion::RegretInsertion,
 };
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum RecreateStrategy {
     CompleteBestInsertion,
     BestInsertion(BestInsertionSortStrategy),
     RegretInsertion(usize),
+}
+
+impl Serialize for RecreateStrategy {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
+    }
 }
 
 impl Display for RecreateStrategy {

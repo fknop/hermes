@@ -1,8 +1,9 @@
-use std::hash::Hash;
+use std::{fmt::Display, hash::Hash};
 
 use fxhash::FxHashMap;
 use rand::seq::IndexedRandom;
 use serde::Serialize;
+use serde_with::serde_as;
 
 use crate::solver::solver_params::SolverParams;
 
@@ -129,6 +130,7 @@ impl<T> Operator<T> {
     }
 }
 
+#[derive(Debug)]
 pub struct AlnsScores<S>
 where
     S: Hash + Eq,
@@ -188,16 +190,16 @@ where
     pub fn accumulate(&mut self, alns_scores: &mut AlnsScores<S>) {
         for (strategy, entry) in &mut alns_scores.scores {
             if let Some(self_entry) = self.scores.get_mut(strategy) {
-                self_entry.score += entry.score;
-                self_entry.iterations += entry.iterations;
+                self_entry.score += entry.accumulated_score;
+                self_entry.iterations += entry.accumulated_iterations;
                 self_entry.accumulated_score += entry.accumulated_score;
                 self_entry.accumulated_iterations += entry.accumulated_iterations;
             } else {
                 self.scores.insert(
                     *strategy,
                     ScoreEntry {
-                        score: entry.score,
-                        iterations: entry.iterations,
+                        score: entry.accumulated_score,
+                        iterations: entry.accumulated_iterations,
                         accumulated_score: entry.score,
                         accumulated_iterations: entry.iterations,
                     },

@@ -45,6 +45,13 @@ export type OperatorStatistics = {
   avg_score_percentage_improvement: number
 }
 
+export type AlnsWeights = { weights: { strategy: string; weight: number }[] }
+
+export type OperatorWeights = {
+  ruin: AlnsWeights
+  recreate: AlnsWeights
+}
+
 export type SolutionStatistics = {
   aggregated_ruin_statistics: { [name: string]: OperatorStatistics }
   aggregated_recreate_statistics: { [name: string]: OperatorStatistics }
@@ -52,20 +59,23 @@ export type SolutionStatistics = {
 
 export type SolutionPending = {
   status: 'Pending'
-  solution: Solution | null
-  statistics: SolutionStatistics | null
+  solution: undefined
+  statistics: undefined
+  weights: undefined
 }
 
 export type SolutionRunning = {
   status: 'Running'
   solution: Solution | null
-  statistics: SolutionStatistics | null
+  statistics: SolutionStatistics
+  weights: OperatorWeights
 }
 
 export type SolutionCompleted = {
   status: 'Completed'
-  solution: Solution
-  statistics: SolutionStatistics | null
+  solution: Solution | null
+  statistics: SolutionStatistics
+  weights: OperatorWeights
 }
 
 export type SolutionResponse =
