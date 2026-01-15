@@ -8,7 +8,6 @@ use axum::{
 };
 use hermes_optimizer::json::types::JsonVehicleRoutingProblem;
 use serde::Serialize;
-use uuid::Uuid;
 
 use crate::{error::ApiError, state::AppState};
 

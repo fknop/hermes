@@ -373,7 +373,7 @@ impl Search {
 
                             if should_intensify {
                                 let best_selector = SelectBestSelector;
-                                let (mut working_solution, current_score) = {
+                                let (mut working_solution, current_score, best_score) = {
                                     let solutions_guard = state.best_solutions.read();
                                     if !solutions_guard.is_empty()
                                         && let Some(AcceptedSolution {
@@ -381,7 +381,7 @@ impl Search {
                                         }) = best_selector
                                             .select_solution(&solutions_guard, &mut thread_rng)
                                     {
-                                        (solution.clone(), *score)
+                                        (solution.clone(), *score, solutions_guard[0].score)
                                     } else {
                                         panic!("No solutions selected");
                                     }
@@ -401,6 +401,7 @@ impl Search {
                                 let iteration_info = IterationInfo::Intensify {
                                     iteration: state.iteration,
                                     current_score,
+                                    best_score,
                                 };
 
                                 self.update_solutions(
@@ -411,7 +412,7 @@ impl Search {
                                 );
                             } else {
                                 state.iteration += 1;
-                                self.perform_iteration(&mut state, &mut thread_rng);
+                                self.run_iteration(&mut state, &mut thread_rng);
                             }
 
                             if state
@@ -531,8 +532,8 @@ impl Search {
         })
     }
 
-    fn perform_iteration(&self, state: &mut ThreadedSearchState, rng: &mut SmallRng) {
-        let (mut working_solution, current_score) = {
+    fn run_iteration(&self, state: &mut ThreadedSearchState, rng: &mut SmallRng) {
+        let (mut working_solution, current_score, best_score) = {
             let solutions_guard = state.best_solutions.read();
             if !solutions_guard.is_empty()
                 && let Some(AcceptedSolution {
@@ -541,13 +542,13 @@ impl Search {
                     .solution_selector
                     .select_solution(&solutions_guard, rng)
             {
-                (solution.clone(), *score)
+                (solution.clone(), *score, solutions_guard[0].score)
             } else {
                 panic!("No solutions selected");
             }
         }; // Lock is released here
 
-        let (ruin_strategy, recreate_strategy) = self.select_ruin_recreate_strategy(&state, rng);
+        let (ruin_strategy, recreate_strategy) = self.select_ruin_recreate_strategy(state, rng);
 
         let now = Timestamp::now();
         self.ruin(&mut working_solution, ruin_strategy, state, rng);
@@ -565,6 +566,7 @@ impl Search {
                 ruin_strategy,
                 recreate_strategy,
                 current_score,
+                best_score,
                 ruin_duration,
                 recreate_duration,
             },
@@ -606,7 +608,7 @@ impl Search {
                     && accepted_solution.solution.is_identical(&solution)
             });
 
-            let is_best = guard.is_empty() || score < guard[0].score;
+            let is_best = score < iteration_info.best_score();
             if !is_best {
                 state.iterations_without_improvement += 1;
             } else {
@@ -875,12 +877,14 @@ pub enum IterationInfo {
         ruin_strategy: RuinStrategy,
         recreate_strategy: RecreateStrategy,
         current_score: Score,
+        best_score: Score,
         ruin_duration: SignedDuration,
         recreate_duration: SignedDuration,
     },
     Intensify {
         iteration: usize,
         current_score: Score,
+        best_score: Score,
     },
 }
 
@@ -893,6 +897,13 @@ impl IterationInfo {
                 ..
             } => Some((*ruin_strategy, *recreate_strategy)),
             _ => None,
+        }
+    }
+
+    fn best_score(&self) -> Score {
+        match self {
+            IterationInfo::RuinRecreate { best_score, .. } => *best_score,
+            IterationInfo::Intensify { best_score, .. } => *best_score,
         }
     }
 
