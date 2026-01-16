@@ -253,24 +253,24 @@ impl WorkingSolution {
         }
     }
 
-    pub fn remove_activity(&mut self, route_id: RouteIdx, activity_id: usize) {
+    pub fn remove_route_activity(&mut self, route_id: RouteIdx, activity_id: usize) {
         if route_id.get() >= self.routes.len() {
             return; // Invalid route ID
         }
 
         let route = &mut self.routes[route_id];
-        if let Some(job_id) = route.remove_activity(&self.problem, activity_id) {
+        if let Some(job_id) = route.remove(activity_id) {
             self.unassigned_jobs.insert(job_id.job_id());
         }
     }
 
-    pub fn remove_job(&mut self, job_id: ActivityId) -> bool {
+    pub fn remove_activity(&mut self, activity_id: ActivityId) -> bool {
         let mut removed = false;
         for route in self.routes.iter_mut() {
-            removed = route.remove_job(&self.problem, job_id);
+            removed = route.remove_activity(&self.problem, activity_id);
 
             if removed {
-                self.unassigned_jobs.insert(job_id.job_id());
+                self.unassigned_jobs.insert(activity_id.job_id());
                 break;
             }
         }
@@ -279,14 +279,14 @@ impl WorkingSolution {
     }
 
     pub fn remove_service(&mut self, service_id: JobIdx) -> bool {
-        self.remove_job(ActivityId::Service(service_id))
+        self.remove_activity(ActivityId::Service(service_id))
     }
 
     pub fn remove_service_from_route(&mut self, route_id: usize, service_id: JobIdx) -> bool {
         let mut removed = false;
         let route = &mut self.routes[route_id];
         if route.contains_activity(ActivityId::Service(service_id)) {
-            removed = route.remove_job(&self.problem, ActivityId::Service(service_id));
+            removed = route.remove_activity(&self.problem, ActivityId::Service(service_id));
 
             if removed {
                 self.unassigned_jobs.insert(service_id);

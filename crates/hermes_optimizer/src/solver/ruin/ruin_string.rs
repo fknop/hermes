@@ -95,7 +95,7 @@ impl RuinString {
 
         for _ in start..(start + string_length) {
             // Always remove the start, as the start+1 becomes the start once start is removed
-            solution.remove_activity(route_id, start);
+            solution.remove_route_activity(route_id, start);
         }
     }
 
@@ -164,7 +164,7 @@ impl RuinString {
 
             // s, s+1, p, p+1, s+4
 
-            solution.remove_activity(route_id, start + preserved);
+            solution.remove_route_activity(route_id, start + preserved);
         }
     }
 }

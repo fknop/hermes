@@ -99,10 +99,10 @@ impl IntensifyOp for InterSwapOperator {
     fn apply(&self, problem: &VehicleRoutingProblem, solution: &mut WorkingSolution) {
         if let Some(first_job_id) = solution
             .route_mut(self.params.first_route_id)
-            .remove_activity(problem, self.params.first)
+            .remove(self.params.first)
             && let Some(second_job_id) = solution
                 .route_mut(self.params.second_route_id)
-                .remove_activity(problem, self.params.second)
+                .remove(self.params.second)
         {
             solution.route_mut(self.params.first_route_id).insert(
                 problem,

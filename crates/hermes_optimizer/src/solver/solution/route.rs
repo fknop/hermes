@@ -8,7 +8,7 @@ use crate::{
         job::{ActivityId, Job, JobIdx, JobTask},
         location::LocationIdx,
         service::{Service, ServiceType},
-        vehicle::{self, Vehicle, VehicleIdx},
+        vehicle::{Vehicle, VehicleIdx},
         vehicle_routing_problem::VehicleRoutingProblem,
     },
     solver::{
@@ -113,7 +113,7 @@ impl WorkingSolutionRoute {
             pickup_load_slack: problem.vehicle(vehicle_id).capacity().clone(),
         };
 
-        route.update_activity_data(problem);
+        route.update_data(problem);
 
         route
     }
@@ -508,58 +508,47 @@ impl WorkingSolutionRoute {
         self.activity_ids.clear();
         self.bbox = BBox::default();
 
-        self.update_activity_data(problem);
+        self.update_data(problem);
     }
 
-    fn remove(&mut self, position: usize) -> Option<ActivityId> {
+    pub fn remove(&mut self, position: usize) -> Option<ActivityId> {
         if position >= self.activity_ids.len() {
             return None;
         }
 
-        let job_id = self.activity_ids[position];
-        self.activity_ids.remove(position);
+        let activity_id = self.activity_ids.remove(position);
+
+        self.jobs.remove(&activity_id);
+        for (index, &activity_id) in self.activity_ids.iter().skip(position).enumerate() {
+            self.jobs.insert(activity_id, index + position);
+        }
 
         self.increase_version();
 
-        Some(job_id)
+        Some(activity_id)
     }
 
     pub fn remove_activity(
         &mut self,
-        _problem: &VehicleRoutingProblem,
-        position: usize,
-    ) -> Option<ActivityId> {
-        if let Some(job_id) = self.remove(position) {
-            self.jobs.remove(&job_id);
-            for (index, &job_id) in self.activity_ids.iter().skip(position).enumerate() {
-                self.jobs.insert(job_id, index + position);
-            }
-
-            self.increase_version();
-
-            Some(job_id)
-        } else {
-            None
-        }
-    }
-
-    pub fn remove_job(&mut self, problem: &VehicleRoutingProblem, job_id: ActivityId) -> bool {
-        if !self.contains_activity(job_id) {
+        problem: &VehicleRoutingProblem,
+        activity_id: ActivityId,
+    ) -> bool {
+        if !self.contains_activity(activity_id) {
             return false; // Service is not in the route
         }
 
-        if let Some(&activity_id) = self.jobs.get(&job_id) {
-            match job_id {
-                ActivityId::Service(_) => self.remove_activity(problem, activity_id).is_some(),
+        if let Some(&position) = self.jobs.get(&activity_id) {
+            match activity_id {
+                ActivityId::Service(_) => self.remove(position).is_some(),
                 ActivityId::ShipmentPickup(id) => {
                     let delivery = self.jobs.get(&ActivityId::ShipmentDelivery(id));
-                    self.remove_activity(problem, *delivery.unwrap());
-                    self.remove_activity(problem, activity_id).is_some()
+                    self.remove(*delivery.unwrap());
+                    self.remove(position).is_some()
                 }
                 ActivityId::ShipmentDelivery(id) => {
-                    self.remove_activity(problem, activity_id);
+                    self.remove(position);
                     let pickup = self.jobs.get(&ActivityId::ShipmentPickup(id));
-                    self.remove_activity(problem, *pickup.unwrap()).is_some()
+                    self.remove(*pickup.unwrap()).is_some()
                 }
             }
         } else {
@@ -600,7 +589,7 @@ impl WorkingSolutionRoute {
             .insert(position, ActivityId::Service(service_id));
 
         // Update the arrival times and departure times of subsequent activities
-        self.update_activity_data(problem);
+        self.update_data(problem);
     }
 
     pub fn replace_activities(
@@ -614,38 +603,7 @@ impl WorkingSolutionRoute {
             .splice(start..end, job_ids.iter().copied());
 
         // Update the arrival times and departure times of subsequent activities
-        self.update_activity_data(problem);
-    }
-
-    pub fn move_activity(&mut self, problem: &VehicleRoutingProblem, from: usize, to: usize) {
-        if from > self.activity_ids.len() || to > self.activity_ids.len() || from == to {
-            return;
-        }
-
-        let activity = self.activity_ids.remove(from);
-        self.activity_ids
-            .insert(if to > from { to - 1 } else { to }, activity);
-
-        self.update_activity_data(problem);
-    }
-
-    pub fn swap_activities(&mut self, problem: &VehicleRoutingProblem, i: usize, j: usize) {
-        self.activity_ids.swap(i, j);
-
-        self.update_activity_data(problem);
-    }
-
-    fn update_activity_data(&mut self, problem: &VehicleRoutingProblem) {
-        self.increase_version();
-        self.jobs.clear();
-        self.jobs.extend(
-            self.activity_ids
-                .iter()
-                .enumerate()
-                .map(|(index, &job_id)| (job_id, index)),
-        );
         self.update_data(problem);
-        self.update_bbox(problem);
     }
 
     pub(super) fn resync(&mut self, problem: &VehicleRoutingProblem) {
@@ -653,7 +611,7 @@ impl WorkingSolutionRoute {
             return;
         }
 
-        self.update_activity_data(problem);
+        self.update_data(problem);
     }
 
     fn update_bbox(&mut self, problem: &VehicleRoutingProblem) {
@@ -713,6 +671,15 @@ impl WorkingSolutionRoute {
     }
 
     fn update_data(&mut self, problem: &VehicleRoutingProblem) {
+        self.increase_version();
+        self.jobs.clear();
+        self.jobs.extend(
+            self.activity_ids
+                .iter()
+                .enumerate()
+                .map(|(index, &job_id)| (job_id, index)),
+        );
+        self.update_bbox(problem);
         self.resize_data(problem);
 
         if self.is_empty() {
@@ -944,7 +911,7 @@ impl WorkingSolutionRoute {
             return true;
         }
 
-        let mut previous_job_id = if start == 0 {
+        let mut previous_activity_id = if start == 0 {
             None
         } else {
             Some(self.activity_ids[start - 1])
@@ -974,8 +941,8 @@ impl WorkingSolutionRoute {
             Some(self.end(problem))
         };
 
-        for job_id in job_ids.chain(succeeding_activities.iter().copied()) {
-            let arrival_time = if let Some(previous_job_id) = previous_job_id
+        for activity_id in job_ids.chain(succeeding_activities.iter().copied()) {
+            let arrival_time = if let Some(previous_job_id) = previous_activity_id
                 && let Some(previous_departure_time) = previous_departure_time
             {
                 compute_activity_arrival_time(
@@ -983,36 +950,36 @@ impl WorkingSolutionRoute {
                     self.vehicle_id,
                     previous_job_id,
                     previous_departure_time,
-                    job_id,
+                    activity_id,
                 )
             } else {
                 let first_arrival_time =
-                    compute_first_activity_arrival_time(problem, self.vehicle_id, job_id);
+                    compute_first_activity_arrival_time(problem, self.vehicle_id, activity_id);
 
                 vehicle_start = Some(compute_vehicle_start(
                     problem,
                     self.vehicle_id,
-                    job_id,
+                    activity_id,
                     first_arrival_time,
                 ));
 
                 first_arrival_time
             };
 
-            let waiting_duration = compute_waiting_duration(problem, job_id, arrival_time);
+            let waiting_duration = compute_waiting_duration(problem, activity_id, arrival_time);
 
-            previous_job_id = Some(job_id);
+            previous_activity_id = Some(activity_id);
             let new_departure_time =
-                compute_departure_time(problem, arrival_time, waiting_duration, job_id);
+                compute_departure_time(problem, arrival_time, waiting_duration, activity_id);
             vehicle_end = Some(compute_vehicle_end(
                 problem,
                 self.vehicle_id,
-                job_id,
+                activity_id,
                 new_departure_time,
             ));
             previous_departure_time = Some(new_departure_time);
 
-            if let Some(&current_activity_index) = self.jobs.get(&job_id)
+            if let Some(&current_activity_index) = self.jobs.get(&activity_id)
                 && current_activity_index >= end
             {
                 let current_time_slack = self.time_slacks[current_activity_index];
@@ -1034,7 +1001,7 @@ impl WorkingSolutionRoute {
             }
 
             if !problem
-                .job_task(job_id)
+                .job_task(activity_id)
                 .time_windows_satisfied(arrival_time)
             {
                 return false;
@@ -1544,7 +1511,7 @@ mod tests {
 
         assert_eq!(route.len(), 3);
         assert_eq!(
-            route.activity_ids.iter().copied().collect::<Vec<_>>(),
+            route.activity_ids.to_vec(),
             vec![
                 ActivityId::service(1),
                 ActivityId::service(2),
@@ -1560,7 +1527,7 @@ mod tests {
         );
 
         assert_eq!(
-            route.activity_ids.iter().copied().collect::<Vec<_>>(),
+            route.activity_ids.to_vec(),
             vec![
                 ActivityId::Service(1.into()),
                 ActivityId::Service(0.into()),
@@ -1583,7 +1550,7 @@ mod tests {
 
         assert_eq!(route.len(), 2);
         assert_eq!(
-            route.activity_ids.iter().copied().collect::<Vec<_>>(),
+            route.activity_ids.to_vec(),
             vec![ActivityId::service(0), ActivityId::service(1)]
         );
 

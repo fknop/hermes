@@ -21,7 +21,7 @@ impl RuinSolution for RuinRadial {
 
         let mut remaining_jobs_to_remove = num_jobs_to_remove;
         for job_id in problem.nearest_jobs_of_location(random_location_id) {
-            if solution.remove_job(job_id) {
+            if solution.remove_activity(job_id) {
                 remaining_jobs_to_remove -= 1;
             }
 

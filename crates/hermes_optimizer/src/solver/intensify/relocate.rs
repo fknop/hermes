@@ -129,8 +129,6 @@ impl IntensifyOp for RelocateOperator {
                 self.params.from + 1,
             );
         }
-
-        // route.move_activity(problem, self.params.from, self.params.to);
     }
 
     fn updated_routes(&self) -> Vec<RouteIdx> {

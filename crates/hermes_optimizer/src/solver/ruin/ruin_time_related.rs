@@ -123,7 +123,7 @@ impl RuinSolution for RuinTimeRelated {
 
         let mut remaining_to_remove = context.num_jobs_to_remove;
 
-        solution.remove_activity(target_route_id, target_activity_id);
+        solution.remove_route_activity(target_route_id, target_activity_id);
         remaining_to_remove -= 1;
 
         for related_activity in related_activities {
