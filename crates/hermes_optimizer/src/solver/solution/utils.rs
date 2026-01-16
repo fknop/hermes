@@ -118,17 +118,10 @@ pub(crate) fn compute_waiting_duration(
     activity_id: ActivityId,
     arrival_time: Timestamp,
 ) -> SignedDuration {
-    SignedDuration::from_secs(
-        problem
-            .job_task(activity_id)
-            .time_windows()
-            .iter()
-            .filter(|tw| tw.is_satisfied(arrival_time))
-            .filter_map(|tw| tw.start())
-            .map(|start| (start.as_second() - arrival_time.as_second()).max(0))
-            .min()
-            .unwrap_or(0),
-    )
+    problem
+        .job_task(activity_id)
+        .time_windows()
+        .waiting_duration(arrival_time)
 }
 
 pub(crate) fn compute_departure_time(
@@ -151,7 +144,7 @@ pub(crate) fn compute_time_slack(
     // TODO: we need to take into account waiting duration for time slacks
     // e.g., if we arrive at 10:00, but have to wait until 12:00 to start service,
     // // the time slack should be calculated from 12:00, not 10:00.
-    if let Some(max_end) = task.time_windows().iter().filter_map(|tw| tw.end()).max() {
+    if let Some(max_end) = task.time_windows().end() {
         max_end.duration_since(arrival_time)
     } else {
         SignedDuration::MAX

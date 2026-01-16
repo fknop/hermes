@@ -4,10 +4,11 @@ use serde::Serialize;
 use smallvec::SmallVec;
 
 use crate::problem::{
-    capacity::Capacity, location::LocationIdx, skill::Skill, time_window::TimeWindow,
+    capacity::Capacity,
+    location::LocationIdx,
+    skill::Skill,
+    time_window::{TimeWindow, TimeWindows},
 };
-
-type TimeWindows = SmallVec<[TimeWindow; 1]>;
 
 #[derive(Serialize, Debug, Clone)]
 pub struct ShipmentLocation {
@@ -29,14 +30,8 @@ impl ShipmentLocation {
         &self.time_windows
     }
 
-    pub fn time_windows_satisfied(&self, arrival_time: jiff::Timestamp) -> bool {
-        self.time_windows
-            .iter()
-            .any(|tw| tw.is_satisfied(arrival_time))
-    }
-
     pub fn has_time_windows(&self) -> bool {
-        self.time_windows.iter().any(|tw| !tw.is_empty())
+        !self.time_windows.is_empty()
     }
 }
 
@@ -71,7 +66,6 @@ impl Shipment {
     }
 
     pub fn has_time_windows(&self) -> bool {
-        self.pickup.time_windows.iter().any(|tw| !tw.is_empty())
-            || self.delivery.time_windows.iter().any(|tw| !tw.is_empty())
+        !self.pickup.time_windows.is_empty() || !self.delivery.time_windows.is_empty()
     }
 }

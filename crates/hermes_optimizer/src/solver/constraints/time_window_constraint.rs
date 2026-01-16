@@ -2,7 +2,9 @@ use jiff::Timestamp;
 
 use crate::{
     problem::{
-        job::ActivityId, time_window::TimeWindow, vehicle_routing_problem::VehicleRoutingProblem,
+        job::ActivityId,
+        time_window::{TimeWindow, TimeWindows},
+        vehicle_routing_problem::VehicleRoutingProblem,
     },
     solver::{
         insertion::Insertion,
@@ -36,25 +38,10 @@ impl TimeWindowConstraint {
 impl TimeWindowConstraint {
     pub fn compute_time_window_score(
         level: ScoreLevel,
-        time_windows: &[TimeWindow],
+        time_windows: &TimeWindows,
         arrival_time: Timestamp,
     ) -> Score {
-        if time_windows.is_empty() {
-            return Score::zero();
-        }
-
-        // If at least one time window is satisfied, the constraint is satisfied
-        if time_windows.iter().any(|tw| tw.is_satisfied(arrival_time)) {
-            return Score::zero();
-        }
-
-        let overtime = time_windows
-            .iter()
-            .filter(|time_window| !time_window.is_satisfied(arrival_time))
-            .map(|time_window| time_window.overtime(arrival_time))
-            .min_by(|a, b| a.partial_cmp(b).unwrap());
-
-        Score::of(level, overtime.unwrap_or(0.0))
+        Score::of(level, time_windows.overtime(arrival_time))
     }
 }
 

@@ -108,7 +108,7 @@ impl AcceptSolution for SimulatedAnnealingAcceptor {
         // are typically handled separately
         let delta = if score.hard_score > best.score.hard_score {
             // Hard constraint violation - use a large penalty
-            (score.hard_score - best.score.hard_score)
+            score.hard_score - best.score.hard_score
         } else {
             score.soft_score - best.score.soft_score
         };

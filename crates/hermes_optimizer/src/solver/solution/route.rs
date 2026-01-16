@@ -1002,7 +1002,8 @@ impl WorkingSolutionRoute {
 
             if !problem
                 .job_task(activity_id)
-                .time_windows_satisfied(arrival_time)
+                .time_windows()
+                .is_satisfied(arrival_time)
             {
                 return false;
             }

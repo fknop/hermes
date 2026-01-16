@@ -6,8 +6,12 @@ use jiff::SignedDuration;
 use crate::{
     define_index_newtype,
     problem::{
-        capacity::Capacity, location::LocationIdx, service::Service, shipment::Shipment,
-        skill::Skill, time_window::TimeWindow,
+        capacity::Capacity,
+        location::LocationIdx,
+        service::Service,
+        shipment::Shipment,
+        skill::Skill,
+        time_window::{TimeWindow, TimeWindows},
     },
 };
 
@@ -72,7 +76,7 @@ pub enum JobTask<'a> {
 }
 
 impl JobTask<'_> {
-    pub fn time_windows(&self) -> &[TimeWindow] {
+    pub fn time_windows(&self) -> &TimeWindows {
         match self {
             JobTask::Service(service) => service.time_windows(),
             JobTask::ShipmentPickup(shipment) => shipment.pickup().time_windows(),
@@ -102,12 +106,6 @@ impl JobTask<'_> {
             JobTask::ShipmentPickup(shipment) => shipment.pickup().has_time_windows(),
             JobTask::ShipmentDelivery(shipment) => shipment.delivery().has_time_windows(),
         }
-    }
-
-    pub fn time_windows_satisfied(&self, arrival_time: jiff::Timestamp) -> bool {
-        self.time_windows()
-            .iter()
-            .any(|tw| tw.is_satisfied(arrival_time))
     }
 }
 

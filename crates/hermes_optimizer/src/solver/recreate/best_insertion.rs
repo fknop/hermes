@@ -125,7 +125,7 @@ impl BestInsertion {
                         Job::Shipment(shipment) => shipment.pickup().time_windows(),
                     };
 
-                    let end = time_windows.iter().filter_map(|tw| tw.end()).max();
+                    let end = time_windows.end();
 
                     end.unwrap_or(Timestamp::MAX)
                 });

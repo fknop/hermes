@@ -822,11 +822,11 @@ impl Search {
         let ruin_maximum_ratio = self.params.ruin.ruin_maximum_ratio;
 
         let minimum_ruin_size =
-            ((ruin_minimum_ratio * self.problem.jobs().len() as f64).ceil() as usize);
+            (ruin_minimum_ratio * self.problem.jobs().len() as f64).ceil() as usize;
         // .max(self.params.ruin.ruin_minimum_size);
 
         let maximum_ruin_size =
-            ((ruin_maximum_ratio * self.problem.jobs().len() as f64).floor() as usize);
+            (ruin_maximum_ratio * self.problem.jobs().len() as f64).floor() as usize;
         // .min(self.params.ruin.ruin_maximum_size);
 
         assert!(

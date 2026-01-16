@@ -4,7 +4,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 
-use crate::problem::skill::Skill;
+use crate::problem::{skill::Skill, time_window::TimeWindows};
 
 use super::{capacity::Capacity, location::LocationIdx, time_window::TimeWindow};
 
@@ -15,8 +15,6 @@ pub enum ServiceType {
     #[default]
     Delivery,
 }
-
-type TimeWindows = SmallVec<[TimeWindow; 1]>;
 
 #[derive(Serialize, Debug, Clone)]
 pub struct Service {
@@ -58,18 +56,12 @@ impl Service {
         self.service_type
     }
 
-    pub fn time_windows(&self) -> &[TimeWindow] {
+    pub fn time_windows(&self) -> &TimeWindows {
         &self.time_windows
     }
 
     pub fn has_time_windows(&self) -> bool {
-        self.time_windows.iter().any(|tw| !tw.is_empty())
-    }
-
-    pub fn time_windows_satisfied(&self, arrival_time: jiff::Timestamp) -> bool {
-        self.time_windows
-            .iter()
-            .any(|tw| tw.is_satisfied(arrival_time))
+        !self.time_windows.is_empty()
     }
 }
 
@@ -136,7 +128,9 @@ impl ServiceBuilder {
             location_id: self.location_id.expect("Expected location id").into(),
             demand: self.demand.unwrap_or_default(),
             service_duration: self.service_duration.unwrap_or(SignedDuration::ZERO),
-            time_windows: SmallVec::from_vec(self.time_windows.unwrap_or_default()),
+            time_windows: TimeWindows::new(SmallVec::from_vec(
+                self.time_windows.unwrap_or_default(),
+            )),
             service_type: self.service_type.unwrap_or(ServiceType::Delivery),
             skills: FxHashSet::from_iter(self.skills.unwrap_or_default()),
         }
