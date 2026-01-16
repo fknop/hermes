@@ -941,6 +941,7 @@ impl WorkingSolutionRoute {
             Some(self.end(problem))
         };
 
+        let mut index = start;
         for activity_id in job_ids.chain(succeeding_activities.iter().copied()) {
             let arrival_time = if let Some(previous_activity_id) = previous_activity_id
                 && let Some(previous_departure_time) = previous_departure_time
@@ -979,8 +980,10 @@ impl WorkingSolutionRoute {
             ));
             previous_departure_time = Some(new_departure_time);
 
+            // TODO: tests
             if let Some(&current_activity_index) = self.jobs.get(&activity_id)
-                && current_activity_index >= end
+                // This means we're in the succeeding_activities and the end chain should not change
+                && index >= end
             {
                 let current_time_slack = self.time_slacks[current_activity_index];
                 let current_arrival_time = self.arrival_times[current_activity_index];
@@ -1007,6 +1010,8 @@ impl WorkingSolutionRoute {
             {
                 return false;
             }
+
+            index += 1;
         }
 
         if let Some(max_working_duration) = self.vehicle(problem).maximum_working_duration()

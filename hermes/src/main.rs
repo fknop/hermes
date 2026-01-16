@@ -235,6 +235,7 @@ async fn main() {
                     // Termination::IterationsWithoutImprovement(10000),
                     Termination::Duration(SignedDuration::from_secs(10)),
                 ],
+                run_intensify_search: false,
                 insertion_threads: Threads::Multi(2),
                 search_threads: Threads::Multi(4),
                 debug_options: SolverParamsDebugOptions {

@@ -415,6 +415,13 @@ impl Search {
                                     max_intensify_iterations,
                                 );
 
+                                println!(
+                                    "{:?} to {:?} ({} iterations)",
+                                    current_score,
+                                    self.compute_solution_score(&working_solution).0,
+                                    iterations
+                                );
+
                                 assert_eq!(
                                     unassigned_count,
                                     working_solution.unassigned_jobs().len()
@@ -623,8 +630,12 @@ impl Search {
 
         let mut guard = state.best_solutions.upgradable_read();
 
-        let is_best = score < iteration_info.best_score()
+        let is_best = (score < iteration_info.best_score()
+            && solution.unassigned_jobs().len() <= iteration_info.best_unassigned_count())
             || solution.unassigned_jobs().len() < iteration_info.best_unassigned_count();
+
+        let improved = score < iteration_info.current_score()
+            && solution.unassigned_jobs().len() <= iteration_info.best_unassigned_count();
 
         if is_best
             || self.solution_acceptor.accept(
@@ -676,7 +687,7 @@ impl Search {
                         state.thread_statistics.write().add_iteration_info(
                             SearchStatisticsIteration::RuinRecreate {
                                 timestamp: Timestamp::now(),
-                                improved: score < current_score || is_best,
+                                improved,
                                 is_best,
                                 recreate_strategy,
                                 ruin_strategy,
@@ -691,7 +702,7 @@ impl Search {
                         state.thread_statistics.write().add_iteration_info(
                             SearchStatisticsIteration::Intensify {
                                 timestamp: Timestamp::now(),
-                                improved: score < current_score || is_best,
+                                improved,
                                 is_best,
                             },
                         );
@@ -747,7 +758,7 @@ impl Search {
                     &self.params,
                     UpdateScoreParams {
                         is_best,
-                        improved: score < iteration_info.current_score(),
+                        improved,
                         accepted: true,
                     },
                 );
@@ -756,7 +767,7 @@ impl Search {
                     &self.params,
                     UpdateScoreParams {
                         is_best,
-                        improved: score < iteration_info.current_score(),
+                        improved,
                         accepted: true,
                     },
                 );

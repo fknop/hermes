@@ -193,47 +193,6 @@ mod tests {
     };
 
     #[test]
-    fn test_compute_waiting_duration() {
-        let time_windows = vec![
-            TimeWindowBuilder::default()
-                .with_iso_start("2025-06-10T08:00:00+02:00")
-                .with_iso_end("2025-06-10T10:00:00+02:00")
-                .build(),
-            TimeWindowBuilder::default()
-                .with_iso_start("2025-06-10T14:00:00+02:00")
-                .with_iso_end("2025-06-10T16:00:00+02:00")
-                .build(),
-        ];
-        let mut builder = ServiceBuilder::default();
-
-        builder
-            .set_time_windows(time_windows)
-            .set_external_id(String::from("0"))
-            .set_location_id(0);
-
-        let service = builder.build();
-
-        // TODO: fix tests
-
-        // let mut waiting_duration =
-        //     compute_waiting_duration(&service, "2025-06-10T09:00:00+02:00".parse().unwrap());
-
-        // assert_eq!(waiting_duration.as_secs(), 0);
-
-        // waiting_duration =
-        //     compute_waiting_duration(&service, "2025-06-10T07:00:00+02:00".parse().unwrap());
-        // assert_eq!(waiting_duration.as_secs(), 3600); // 1 hour waiting time
-
-        // waiting_duration =
-        //     compute_waiting_duration(&service, "2025-06-10T11:00:00+02:00".parse().unwrap());
-        // assert_eq!(waiting_duration.as_secs(), 10800); // 3 hours waiting time
-
-        // waiting_duration =
-        //     compute_waiting_duration(&service, "2025-06-10T15:00:00+02:00".parse().unwrap());
-        // assert_eq!(waiting_duration.as_secs(), 0);
-    }
-
-    #[test]
     fn test_compute_initial_arrival_time() {
         let time_windows = TimeWindows::from_vec(vec![TimeWindow::from_iso(
             Some("2026-01-16T15:00:00+01:00"),

@@ -433,41 +433,6 @@ impl IntensifySearch {
                     v2,
                     score.1
                 );
-
-                let r1 = solution.route(RouteIdx::new(v1));
-                let r2 = solution.route(RouteIdx::new(v2));
-
-                for activity in r1.activities_iter() {
-                    if !problem
-                        .job_task(activity.activity_id())
-                        .time_windows()
-                        .is_satisfied(activity.arrival_time())
-                    {
-                        error!(
-                            "Route {}, activity: {:?}, arrival_time: {:?}, time_windows: {:?}",
-                            v1,
-                            activity.activity_id(),
-                            activity.arrival_time(),
-                            problem.job_task(activity.activity_id()).time_windows()
-                        )
-                    }
-                }
-
-                for activity in r2.activities_iter() {
-                    if !problem
-                        .job_task(activity.activity_id())
-                        .time_windows()
-                        .is_satisfied(activity.arrival_time())
-                    {
-                        error!(
-                            "Route {}, activity: {:?}, arrival_time: {:?}, time_windows: {:?}",
-                            v2,
-                            activity.activity_id(),
-                            activity.arrival_time(),
-                            problem.job_task(activity.activity_id()).time_windows()
-                        )
-                    }
-                }
             }
 
             self.pairs.clear();
