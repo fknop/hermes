@@ -942,13 +942,13 @@ impl WorkingSolutionRoute {
         };
 
         for activity_id in job_ids.chain(succeeding_activities.iter().copied()) {
-            let arrival_time = if let Some(previous_job_id) = previous_activity_id
+            let arrival_time = if let Some(previous_activity_id) = previous_activity_id
                 && let Some(previous_departure_time) = previous_departure_time
             {
                 compute_activity_arrival_time(
                     problem,
                     self.vehicle_id,
-                    previous_job_id,
+                    previous_activity_id,
                     previous_departure_time,
                     activity_id,
                 )

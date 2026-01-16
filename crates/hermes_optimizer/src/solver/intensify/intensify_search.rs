@@ -1,6 +1,6 @@
 use std::f64;
 
-use tracing::{debug, info, warn};
+use tracing::{debug, error, info, warn};
 
 use crate::{
     problem::{job::ActivityId, vehicle_routing_problem::VehicleRoutingProblem},
@@ -233,8 +233,8 @@ impl IntensifySearch {
             for from_pos in 0..from_route.activity_ids().len() {
                 for to_pos in 0..to_route.activity_ids().len() {
                     let op = InterSwapOperator::new(InterSwapOperatorParams {
-                        first_route_id: v1.into(),
-                        second_route_id: v2.into(),
+                        first_route_id: v1,
+                        second_route_id: v2,
                         first: from_pos,
                         second: to_pos,
                     });
@@ -254,8 +254,8 @@ impl IntensifySearch {
                 continue;
             }
 
-            let from_route = solution.route(v1.into());
-            let to_route = solution.route(v2.into());
+            let from_route = solution.route(v1);
+            let to_route = solution.route(v2);
 
             for from_pos in 0..from_route.activity_ids().len() {
                 let from_job_id = from_route.job_id(from_pos);
@@ -266,8 +266,8 @@ impl IntensifySearch {
 
                 for to_pos in 0..=to_route.activity_ids().len() {
                     let op = InterRelocateOperator::new(InterRelocateParams {
-                        from_route_id: v1.into(),
-                        to_route_id: v2.into(),
+                        from_route_id: v1,
+                        to_route_id: v2,
                         from: from_pos,
                         to: to_pos,
                     });
@@ -427,10 +427,47 @@ impl IntensifySearch {
             let score = search.compute_solution_score(solution);
             if score.0.is_failure() {
                 warn!(
-                    "Operator {} broke hard constraint {:?}",
+                    "Operator {} ({}, {}) broke hard constraint {:?}",
                     op.operator_name(),
+                    v1,
+                    v2,
                     score.1
                 );
+
+                let r1 = solution.route(RouteIdx::new(v1));
+                let r2 = solution.route(RouteIdx::new(v2));
+
+                for activity in r1.activities_iter() {
+                    if !problem
+                        .job_task(activity.activity_id())
+                        .time_windows()
+                        .is_satisfied(activity.arrival_time())
+                    {
+                        error!(
+                            "Route {}, activity: {:?}, arrival_time: {:?}, time_windows: {:?}",
+                            v1,
+                            activity.activity_id(),
+                            activity.arrival_time(),
+                            problem.job_task(activity.activity_id()).time_windows()
+                        )
+                    }
+                }
+
+                for activity in r2.activities_iter() {
+                    if !problem
+                        .job_task(activity.activity_id())
+                        .time_windows()
+                        .is_satisfied(activity.arrival_time())
+                    {
+                        error!(
+                            "Route {}, activity: {:?}, arrival_time: {:?}, time_windows: {:?}",
+                            v2,
+                            activity.activity_id(),
+                            activity.arrival_time(),
+                            problem.job_task(activity.activity_id()).time_windows()
+                        )
+                    }
+                }
             }
 
             self.pairs.clear();

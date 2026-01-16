@@ -1,13 +1,10 @@
-use rand::Rng;
+use rand::{Rng, RngCore};
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
-use crate::{
-    problem::{self, job::JobIdx},
-    solver::{
-        insertion::{Insertion, for_each_insertion},
-        score::Score,
-        solution::working_solution::WorkingSolution,
-    },
+use crate::solver::{
+    insertion::{Insertion, for_each_insertion},
+    score::Score,
+    solution::working_solution::WorkingSolution,
 };
 
 use super::{recreate_context::RecreateContext, recreate_solution::RecreateSolution};
@@ -47,8 +44,8 @@ impl RegretInsertion {
         &self,
         solution: &mut WorkingSolution,
         context: &mut RecreateContext,
-        iteration_seed: u64,
     ) -> Option<(Score, Insertion)> {
+        let iteration_seed = context.create_iteration_seed();
         let regret_values: Vec<(Score, Insertion, Score)> = solution
             .unassigned_jobs()
             .par_iter()
@@ -123,12 +120,10 @@ impl RegretInsertion {
     }
 
     pub fn insert_services(&self, solution: &mut WorkingSolution, mut context: RecreateContext) {
-        let iteration_seed = context.create_iteration_seed();
-
         while !solution.unassigned_jobs().is_empty() {
             let best_insertion_for_max_regret = context
                 .thread_pool
-                .install(|| self.compute_best_insertion(solution, &mut context, iteration_seed));
+                .install(|| self.compute_best_insertion(solution, &mut context));
 
             // 4. Perform the insertion of the service with the highest regret
             if let Some((best_score, insertion)) = best_insertion_for_max_regret {
