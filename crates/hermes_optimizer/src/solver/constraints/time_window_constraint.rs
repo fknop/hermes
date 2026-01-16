@@ -41,7 +41,7 @@ impl TimeWindowConstraint {
         time_windows: &TimeWindows,
         arrival_time: Timestamp,
     ) -> Score {
-        Score::of(level, time_windows.overtime(arrival_time))
+        Score::of(level, time_windows.overtime(arrival_time).as_secs_f64())
     }
 }
 

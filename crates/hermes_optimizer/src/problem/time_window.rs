@@ -46,14 +46,18 @@ impl TimeWindow {
         }
     }
 
-    pub fn overtime(&self, arrival: Timestamp) -> f64 {
+    pub fn overtime(&self, arrival: Timestamp) -> SignedDuration {
         match self.end {
             Some(end) => {
-                let secs = arrival.duration_since(end).as_secs_f64();
+                let secs = arrival.duration_since(end);
 
-                if secs > 0.0 { secs } else { 0.0 }
+                if secs > SignedDuration::ZERO {
+                    secs
+                } else {
+                    SignedDuration::ZERO
+                }
             }
-            None => 0.0,
+            None => SignedDuration::ZERO,
         }
     }
 
@@ -88,9 +92,9 @@ impl TimeWindows {
         self.0.iter().any(|tw| tw.is_satisfied(arrival))
     }
 
-    pub fn overtime(&self, arrival: Timestamp) -> f64 {
+    pub fn overtime(&self, arrival: Timestamp) -> SignedDuration {
         if self.is_satisfied(arrival) {
-            return 0.0;
+            return SignedDuration::ZERO;
         }
 
         self.0
@@ -98,7 +102,7 @@ impl TimeWindows {
             .filter(|tw| !tw.is_satisfied(arrival))
             .map(|tw| tw.overtime(arrival))
             .min_by(|a, b| a.partial_cmp(b).unwrap())
-            .unwrap_or(0.0)
+            .unwrap_or(SignedDuration::ZERO)
     }
 
     pub fn end(&self) -> Option<Timestamp> {
@@ -229,11 +233,11 @@ mod tests {
 
         assert_eq!(
             time_window.overtime("2025-06-10T07:00:00+02:00".parse().unwrap()),
-            0.0
+            SignedDuration::ZERO
         );
         assert_eq!(
             time_window.overtime("2025-06-10T10:00:01+02:00".parse().unwrap()),
-            1.0
+            SignedDuration::from_secs(1)
         );
 
         let time_window = TimeWindowBuilder::default()
@@ -242,11 +246,11 @@ mod tests {
 
         assert_eq!(
             time_window.overtime("2025-06-10T07:00:00+02:00".parse().unwrap()),
-            0.0
+            SignedDuration::ZERO
         );
         assert_eq!(
             time_window.overtime("2025-06-10T10:00:01+02:00".parse().unwrap()),
-            1.0
+            SignedDuration::from_secs(1)
         );
 
         let time_window = TimeWindowBuilder::default()
@@ -255,11 +259,11 @@ mod tests {
 
         assert_eq!(
             time_window.overtime("2025-06-10T07:00:00+02:00".parse().unwrap()),
-            0.0
+            SignedDuration::ZERO
         );
         assert_eq!(
             time_window.overtime("2025-06-10T10:00:01+02:00".parse().unwrap()),
-            0.0
+            SignedDuration::ZERO
         );
     }
 
@@ -337,31 +341,31 @@ mod tests {
 
         assert_eq!(
             tws.overtime("2025-06-10T07:00:00+02:00".parse().unwrap()),
-            0.0
+            SignedDuration::ZERO
         );
         assert_eq!(
             tws.overtime("2025-06-10T08:00:00+02:00".parse().unwrap()),
-            0.0
+            SignedDuration::ZERO
         );
         assert_eq!(
             tws.overtime("2025-06-10T09:00:00+02:00".parse().unwrap()),
-            0.0
+            SignedDuration::ZERO
         );
         assert_eq!(
             tws.overtime("2025-06-10T10:00:00+02:00".parse().unwrap()),
-            0.0
+            SignedDuration::ZERO
         );
         assert_eq!(
             tws.overtime("2025-06-10T10:00:01+02:00".parse().unwrap()),
-            0.0
+            SignedDuration::ZERO
         );
         assert_eq!(
             tws.overtime("2025-06-10T15:00:00+02:00".parse().unwrap()),
-            0.0
+            SignedDuration::ZERO
         );
         assert_eq!(
             tws.overtime("2025-06-10T16:30:00+02:00".parse().unwrap()),
-            60.0 * 30.0
+            SignedDuration::from_mins(30)
         );
     }
 
