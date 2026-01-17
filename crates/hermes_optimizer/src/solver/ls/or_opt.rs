@@ -1,7 +1,7 @@
 use crate::{
     problem::{job::ActivityId, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{
-        intensify::intensify_operator::IntensifyOp,
+        ls::r#move::LocalSearchOperator,
         solution::{
             route::WorkingSolutionRoute, route_id::RouteIdx, working_solution::WorkingSolution,
         },
@@ -80,29 +80,29 @@ impl OrOptOperator {
     }
 }
 
-impl IntensifyOp for OrOptOperator {
+impl LocalSearchOperator for OrOptOperator {
     fn transport_cost_delta(&self, solution: &WorkingSolution) -> f64 {
         let problem = solution.problem();
         let route = solution.route(self.params.route_id);
 
-        let A = route.previous_location_id(problem, self.params.from);
+        let a = route.previous_location_id(problem, self.params.from);
         let from = route.location_id(problem, self.params.from);
 
         let end = route.location_id(problem, self.params.from + self.params.count - 1);
-        let B = route.next_location_id(problem, self.params.from + self.params.count - 1);
+        let b = route.next_location_id(problem, self.params.from + self.params.count - 1);
 
-        let X = route.location_id(problem, self.params.to - 1);
-        let Y = route.next_location_id(problem, self.params.to - 1);
+        let x = route.location_id(problem, self.params.to - 1);
+        let y = route.next_location_id(problem, self.params.to - 1);
 
         let mut delta = 0.0;
 
-        delta -= problem.travel_cost_or_zero(route.vehicle(problem), A, from);
-        delta -= problem.travel_cost_or_zero(route.vehicle(problem), end, B);
-        delta -= problem.travel_cost_or_zero(route.vehicle(problem), X, Y);
+        delta -= problem.travel_cost_or_zero(route.vehicle(problem), a, from);
+        delta -= problem.travel_cost_or_zero(route.vehicle(problem), end, b);
+        delta -= problem.travel_cost_or_zero(route.vehicle(problem), x, y);
 
-        delta += problem.travel_cost_or_zero(route.vehicle(problem), A, B);
-        delta += problem.travel_cost_or_zero(route.vehicle(problem), X, from);
-        delta += problem.travel_cost_or_zero(route.vehicle(problem), end, Y);
+        delta += problem.travel_cost_or_zero(route.vehicle(problem), a, b);
+        delta += problem.travel_cost_or_zero(route.vehicle(problem), x, from);
+        delta += problem.travel_cost_or_zero(route.vehicle(problem), end, y);
 
         delta
     }
@@ -165,8 +165,8 @@ mod tests {
 
     use crate::{
         solver::{
-            intensify::{
-                intensify_operator::IntensifyOp,
+            ls::{
+                r#move::LocalSearchOperator,
                 or_opt::{OrOptOperator, OrOptOperatorParams},
             },
             solution::route_id::RouteIdx,

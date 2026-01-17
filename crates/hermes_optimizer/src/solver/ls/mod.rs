@@ -1,9 +1,9 @@
 pub mod cross_exchange;
-pub mod intensify_operator;
-pub mod intensify_search;
 pub mod inter_relocate;
 pub mod inter_swap;
 pub mod inter_two_opt_star;
+pub mod local_search;
+pub mod r#move;
 pub mod or_opt;
 pub mod relocate;
 pub mod swap;

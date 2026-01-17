@@ -5,9 +5,7 @@ use axum::{
     response::IntoResponse,
 };
 use hermes_optimizer::solver::{
-    accepted_solution::AcceptedSolution,
-    solver::SolverStatus,
-    statistics::{AggregatedStatistics, SearchStatistics},
+    accepted_solution::AcceptedSolution, solver::SolverStatus, statistics::AggregatedStatistics,
 };
 use serde::Serialize;
 use uuid::Uuid;
@@ -21,13 +19,13 @@ use super::benchmark_solution::{
 #[derive(Serialize)]
 pub struct PollSolverRunning {
     solution: Option<BenchmarkSolution>,
-    statistics: Option<AggregatedStatistics>,
+    statistics: AggregatedStatistics,
 }
 
 #[derive(Serialize)]
 pub struct PollSolverCompleted {
     solution: Option<BenchmarkSolution>,
-    statistics: Option<AggregatedStatistics>,
+    statistics: AggregatedStatistics,
 }
 
 #[derive(Serialize)]
@@ -82,28 +80,35 @@ pub async fn poll_handler(
     State(state): State<Arc<AppState>>,
 ) -> Result<PollBenchmarkResponse, ApiError> {
     let solver_manager = &state.solver_manager;
-    if let Some(status) = solver_manager.job_status(&job_id.to_string()).await {
-        match status {
-            SolverStatus::Pending => Ok(PollBenchmarkResponse::Pending),
-            SolverStatus::Running => {
-                let solution = solver_manager.job_solution(&job_id.to_string()).await;
-                let statistics = solver_manager.job_statistics(&job_id.to_string()).await;
+    let solver = solver_manager
+        .solver(&job_id.to_string())
+        .await
+        .ok_or(ApiError::NotFound(job_id.to_string()))?;
 
-                Ok(PollBenchmarkResponse::Running(PollSolverRunning {
-                    solution: solution.map(|solution| transform_solution(&solution)),
-                    statistics: statistics.map(|s| s.aggregate()),
-                }))
-            }
-            SolverStatus::Completed => {
-                let solution = solver_manager.job_solution(&job_id.to_string()).await;
-                let statistics = solver_manager.job_statistics(&job_id.to_string()).await;
-                Ok(PollBenchmarkResponse::Completed(PollSolverCompleted {
-                    solution: solution.map(|solution| transform_solution(&solution)),
-                    statistics: statistics.map(|s| s.aggregate()),
-                }))
-            }
+    let status = solver.status();
+
+    match status {
+        SolverStatus::Pending => Ok(PollBenchmarkResponse::Pending),
+        SolverStatus::Running => {
+            let solution = solver
+                .current_best_solution()
+                .map(|solution| transform_solution(&solution));
+            let statistics = solver.statistics().aggregate();
+
+            Ok(PollBenchmarkResponse::Running(PollSolverRunning {
+                solution,
+                statistics,
+            }))
         }
-    } else {
-        Err(ApiError::NotFound(job_id.to_string()))
+        SolverStatus::Completed => {
+            let solution = solver
+                .current_best_solution()
+                .map(|solution| transform_solution(&solution));
+            let statistics = solver.statistics().aggregate();
+            Ok(PollBenchmarkResponse::Completed(PollSolverCompleted {
+                solution,
+                statistics,
+            }))
+        }
     }
 }

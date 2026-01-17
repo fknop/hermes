@@ -2,9 +2,7 @@ use jiff::Timestamp;
 
 use crate::{
     problem::{
-        job::ActivityId,
-        time_window::{TimeWindow, TimeWindows},
-        vehicle_routing_problem::VehicleRoutingProblem,
+        job::ActivityId, time_window::TimeWindows, vehicle_routing_problem::VehicleRoutingProblem,
     },
     solver::{
         insertion::Insertion,

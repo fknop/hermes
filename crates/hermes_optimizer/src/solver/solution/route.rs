@@ -530,7 +530,7 @@ impl WorkingSolutionRoute {
 
     pub fn remove_activity(
         &mut self,
-        problem: &VehicleRoutingProblem,
+        _problem: &VehicleRoutingProblem,
         activity_id: ActivityId,
     ) -> bool {
         if !self.contains_activity(activity_id) {
@@ -1569,7 +1569,7 @@ mod tests {
 
         assert_eq!(route.len(), 3);
         assert_eq!(
-            route.activity_ids.iter().copied().collect::<Vec<_>>(),
+            route.activity_ids.to_vec(),
             vec![
                 ActivityId::service(0),
                 ActivityId::service(2),

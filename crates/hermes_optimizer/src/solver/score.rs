@@ -232,6 +232,6 @@ mod tests {
 
         assert!(Score::soft(828.9368669428342) <= Score::soft(828.94));
 
-        assert!(!(Score::soft(1788382.5109717606) < Score::soft(1788382.5109717606)));
+        assert!((Score::soft(1788382.5109717606) >= Score::soft(1788382.5109717606)));
     }
 }

@@ -112,7 +112,7 @@ impl Default for SolverParams {
             alns_iterations_without_improvement_reset: 4000,
             alns_segment_iterations: 50,
             threads_sync_iterations_interval: 250,
-            alns_reaction_factor: 0.9,
+            alns_reaction_factor: 0.3,
             alns_best_factor: 33.0,
             alns_improvement_factor: 9.0,
             alns_accepted_worst_factor: 3.0,

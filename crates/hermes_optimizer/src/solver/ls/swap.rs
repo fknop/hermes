@@ -1,7 +1,7 @@
 use crate::{
     problem::{job::ActivityId, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{
-        intensify::intensify_operator::IntensifyOp,
+        ls::r#move::LocalSearchOperator,
         solution::{
             route::WorkingSolutionRoute, route_id::RouteIdx, working_solution::WorkingSolution,
         },
@@ -59,7 +59,7 @@ impl SwapOperator {
     }
 }
 
-impl IntensifyOp for SwapOperator {
+impl LocalSearchOperator for SwapOperator {
     fn transport_cost_delta(&self, solution: &WorkingSolution) -> f64 {
         let problem = solution.problem();
         let route = solution.route(self.params.route_id);
@@ -150,8 +150,8 @@ mod tests {
 
     use crate::{
         solver::{
-            intensify::{
-                intensify_operator::IntensifyOp,
+            ls::{
+                r#move::LocalSearchOperator,
                 swap::{SwapOperator, SwapOperatorParams},
             },
             solution::route_id::RouteIdx,

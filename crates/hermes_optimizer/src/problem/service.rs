@@ -113,7 +113,7 @@ impl ServiceBuilder {
     }
 
     pub fn set_skills(&mut self, skills: Vec<String>) -> &mut ServiceBuilder {
-        self.skills = Some(skills.into_iter().map(|skill| Skill::new(skill)).collect());
+        self.skills = Some(skills.into_iter().map(Skill::new).collect());
         self
     }
 

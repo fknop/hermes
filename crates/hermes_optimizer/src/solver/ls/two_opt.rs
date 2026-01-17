@@ -1,7 +1,7 @@
 use crate::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
-        intensify::intensify_operator::IntensifyOp,
+        ls::r#move::LocalSearchOperator,
         solution::{route_id::RouteIdx, working_solution::WorkingSolution},
     },
 };
@@ -88,7 +88,7 @@ impl TwoOptOperator {
     }
 }
 
-impl IntensifyOp for TwoOptOperator {
+impl LocalSearchOperator for TwoOptOperator {
     fn transport_cost_delta(&self, solution: &WorkingSolution) -> f64 {
         if solution.problem().is_symmetric() {
             self.symmetric_delta(solution)
@@ -138,8 +138,8 @@ mod tests {
 
     use crate::{
         solver::{
-            intensify::{
-                intensify_operator::IntensifyOp,
+            ls::{
+                r#move::LocalSearchOperator,
                 two_opt::{TwoOptOperator, TwoOptParams},
             },
             solution::route_id::RouteIdx,

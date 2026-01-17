@@ -30,7 +30,6 @@ pub struct VehicleRoutingProblem {
     fleet: Fleet,
     vehicle_profiles: Vec<VehicleProfile>,
     jobs: Vec<Job>,
-    // travel_costs: TravelMatrices,
     service_location_index: ServiceLocationIndex,
 
     has_time_windows: bool,
@@ -422,14 +421,10 @@ impl VehicleRoutingProblem {
                 vehicles
                     .iter()
                     .filter_map(|vehicle| {
-                        if let Some(depot_location_id) = vehicle.depot_location_id() {
-                            Some(
-                                profiles[vehicle.profile_id()]
-                                    .travel_cost(depot_location_id, location_id),
-                            )
-                        } else {
-                            None
-                        }
+                        vehicle.depot_location_id().map(|depot_location_id| {
+                            profiles[vehicle.profile_id()]
+                                .travel_cost(depot_location_id, location_id)
+                        })
                     })
                     .sum::<Distance>()
                     / vehicles.len() as Distance

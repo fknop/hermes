@@ -7,7 +7,7 @@ use std::{
 use jiff::{SignedDuration, Timestamp};
 use parking_lot::{MappedRwLockReadGuard, Mutex, RwLock, RwLockReadGuard};
 use rand::{Rng, SeedableRng, rngs::SmallRng};
-use tracing::{debug, info};
+use tracing::debug;
 
 use crate::{
     acceptor::{
@@ -36,7 +36,7 @@ use crate::{
             vehicle_cost_constraint::VehicleCostConstraint,
             waiting_duration_constraint::WaitingDurationConstraint,
         },
-        intensify::intensify_search::IntensifySearch,
+        ls::local_search::IntensifySearch,
         noise::NoiseParams,
         solver_params::SolverParamsDebugOptions,
         statistics::SearchStatisticsIteration,
@@ -65,7 +65,7 @@ use super::statistics::{SearchStatistics, ThreadSearchStatistics};
 
 type BestSolutionHandler = Arc<Mutex<dyn FnMut(&AcceptedSolution) + Send + Sync + 'static>>;
 
-pub struct Search {
+pub struct AlnsSearch {
     problem: Arc<VehicleRoutingProblem>,
     constraints: Vec<Constraint>,
     params: SolverParams,
@@ -85,7 +85,7 @@ pub struct Search {
     statistics: Arc<SearchStatistics>,
 }
 
-impl Search {
+impl AlnsSearch {
     pub fn new(params: SolverParams, problem: Arc<VehicleRoutingProblem>) -> Self {
         if params.terminations.is_empty() {
             panic!(
@@ -186,7 +186,7 @@ impl Search {
             SolverAcceptorStrategy::Any => SolutionAcceptor::Any,
         };
 
-        Search {
+        AlnsSearch {
             problem: Arc::clone(&problem),
             constraints: Self::create_constraints(),
             best_solutions: Arc::new(RwLock::new(Vec::with_capacity(params.max_solutions))),
@@ -698,7 +698,7 @@ impl Search {
                             },
                         );
                     }
-                    IterationInfo::Intensify { current_score, .. } => {
+                    IterationInfo::Intensify { .. } => {
                         state.thread_statistics.write().add_iteration_info(
                             SearchStatisticsIteration::Intensify {
                                 timestamp: Timestamp::now(),
@@ -744,10 +744,8 @@ impl Search {
                             .then(a.score.cmp(&b.score))
                     });
 
-                    if is_best {
-                        if let Some(callback) = &self.on_best_solution_handler {
-                            callback.lock()(&guard[0]);
-                        }
+                    if is_best && let Some(callback) = &self.on_best_solution_handler {
+                        callback.lock()(&guard[0]);
                     }
                 });
             }
@@ -822,7 +820,7 @@ impl Search {
         }
     }
 
-    fn create_num_jobs_to_remove(&self, state: &ThreadedSearchState, rng: &mut SmallRng) -> usize {
+    fn create_num_jobs_to_remove(&self, _state: &ThreadedSearchState, rng: &mut SmallRng) -> usize {
         // let progress = (state.iteration as f64 / state.max_iterations.unwrap_or(10000) as f64);
         // let stagnation_factor = (state.iterations_without_improvement as f64 / 1000.0).min(1.0);
 

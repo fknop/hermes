@@ -2,7 +2,7 @@ use crate::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
         insertion::{Insertion, ServiceInsertion},
-        intensify::intensify_operator::IntensifyOp,
+        ls::r#move::LocalSearchOperator,
         solution::{route_id::RouteIdx, working_solution::WorkingSolution},
     },
 };
@@ -43,7 +43,7 @@ impl InterSwapOperator {
     }
 }
 
-impl IntensifyOp for InterSwapOperator {
+impl LocalSearchOperator for InterSwapOperator {
     fn transport_cost_delta(&self, solution: &WorkingSolution) -> f64 {
         let problem = solution.problem();
         let r1 = solution.route(self.params.first_route_id);
@@ -133,9 +133,9 @@ mod tests {
     use std::sync::Arc;
 
     use crate::{
-        solver::intensify::{
-            intensify_operator::IntensifyOp,
+        solver::ls::{
             inter_swap::{InterSwapOperator, InterSwapOperatorParams},
+            r#move::LocalSearchOperator,
         },
         test_utils::{self, TestRoute},
     };

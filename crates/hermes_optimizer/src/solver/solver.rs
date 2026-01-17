@@ -11,7 +11,7 @@ use crate::{
 };
 
 use super::{
-    accepted_solution::AcceptedSolution, search::Search, solver_params::SolverParams,
+    accepted_solution::AcceptedSolution, alns_search::AlnsSearch, solver_params::SolverParams,
     statistics::SearchStatistics,
 };
 
@@ -23,13 +23,13 @@ pub enum SolverStatus {
 }
 
 pub struct Solver {
-    search: Search,
+    search: AlnsSearch,
     status: RwLock<SolverStatus>,
 }
 
 impl Solver {
     pub fn new(problem: VehicleRoutingProblem, params: SolverParams) -> Self {
-        let search = Search::new(params, Arc::new(problem));
+        let search = AlnsSearch::new(params, Arc::new(problem));
 
         Solver {
             status: RwLock::new(SolverStatus::Pending),

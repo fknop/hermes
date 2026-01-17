@@ -1,7 +1,7 @@
 use crate::{
     problem::{job::ActivityId, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{
-        intensify::intensify_operator::IntensifyOp,
+        ls::r#move::LocalSearchOperator,
         solution::{route_id::RouteIdx, working_solution::WorkingSolution},
     },
 };
@@ -70,7 +70,7 @@ impl CrossExchangeOperator {
     }
 }
 
-impl IntensifyOp for CrossExchangeOperator {
+impl LocalSearchOperator for CrossExchangeOperator {
     fn transport_cost_delta(&self, solution: &WorkingSolution) -> f64 {
         let problem = solution.problem();
 
@@ -158,9 +158,9 @@ mod tests {
     use std::sync::Arc;
 
     use crate::{
-        solver::intensify::{
+        solver::ls::{
             cross_exchange::{CrossExchangeOperator, CrossExchangeOperatorParams},
-            intensify_operator::IntensifyOp,
+            r#move::LocalSearchOperator,
         },
         test_utils::{self, TestRoute},
     };

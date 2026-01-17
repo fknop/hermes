@@ -3,18 +3,9 @@ use hermes_optimizer::{
     parsers::{parser::DatasetParser, solomon::SolomonParser},
     problem::{service::Service, vehicle::Vehicle},
 };
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 use crate::error::ApiError;
-
-#[derive(Deserialize)]
-pub struct GetBenchmarkQuery {
-    category: String,
-    name: String,
-}
-
-#[derive(Serialize)]
-pub struct GetBenchmarkService {}
 
 #[derive(Serialize)]
 pub struct BenchmarkLocation {

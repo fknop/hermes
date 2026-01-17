@@ -20,6 +20,7 @@ pub enum WaitResult {
 }
 
 impl WaitResult {
+    #[allow(dead_code)]
     pub fn is_leader(&self) -> bool {
         matches!(self, WaitResult::Leader)
     }

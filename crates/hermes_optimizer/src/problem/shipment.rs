@@ -1,13 +1,9 @@
 use fxhash::FxHashSet;
 use jiff::SignedDuration;
 use serde::Serialize;
-use smallvec::SmallVec;
 
 use crate::problem::{
-    capacity::Capacity,
-    location::LocationIdx,
-    skill::Skill,
-    time_window::{TimeWindow, TimeWindows},
+    capacity::Capacity, location::LocationIdx, skill::Skill, time_window::TimeWindows,
 };
 
 #[derive(Serialize, Debug, Clone)]

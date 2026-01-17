@@ -8,8 +8,6 @@ pub struct Location {
     point: geo::Point,
 }
 
-const EARTH_RADIUS_METERS: f64 = 6_371_000.0;
-
 impl Location {
     pub fn from_cartesian(x: f64, y: f64) -> Self {
         Self {

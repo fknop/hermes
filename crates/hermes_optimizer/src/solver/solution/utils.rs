@@ -139,7 +139,7 @@ pub(crate) fn compute_time_slack(
     problem: &VehicleRoutingProblem,
     job_id: ActivityId,
     arrival_time: Timestamp,
-    waiting_duration: SignedDuration,
+    _waiting_duration: SignedDuration,
 ) -> SignedDuration {
     let task = problem.job_task(job_id);
 
@@ -187,10 +187,7 @@ fn compute_initial_arrival_time(
 mod tests {
 
     use super::*;
-    use crate::problem::{
-        service::ServiceBuilder,
-        time_window::{TimeWindow, TimeWindowBuilder},
-    };
+    use crate::problem::time_window::TimeWindow;
 
     #[test]
     fn test_compute_initial_arrival_time() {
