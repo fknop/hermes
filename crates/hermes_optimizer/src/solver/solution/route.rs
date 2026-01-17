@@ -1,3 +1,5 @@
+use std::sync::atomic::AtomicUsize;
+
 use fxhash::FxHashMap;
 use jiff::{SignedDuration, Timestamp};
 
@@ -24,6 +26,12 @@ use crate::{
     },
     utils::bbox::BBox,
 };
+
+static GLOBAL_ROUTE_VERSION: AtomicUsize = AtomicUsize::new(0);
+
+fn next_version() -> usize {
+    GLOBAL_ROUTE_VERSION.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+}
 
 #[derive(Clone)]
 pub struct WorkingSolutionRoute {
@@ -91,7 +99,7 @@ pub struct WorkingSolutionRoute {
 impl WorkingSolutionRoute {
     pub fn empty(problem: &VehicleRoutingProblem, vehicle_id: VehicleIdx) -> Self {
         let mut route = WorkingSolutionRoute {
-            version: 1,
+            version: next_version(),
             vehicle_id,
             jobs: FxHashMap::default(),
             bbox: BBox::default(),
@@ -500,7 +508,7 @@ impl WorkingSolutionRoute {
 
     fn increase_version(&mut self) {
         self.updated_in_iteration = true;
-        self.version += 1;
+        self.version = next_version();
     }
 
     pub fn reset(&mut self, problem: &VehicleRoutingProblem) {
@@ -1204,7 +1212,8 @@ mod tests {
             vehicle_routing_problem::{VehicleRoutingProblem, VehicleRoutingProblemBuilder},
         },
         solver::solution::{
-            route::WorkingSolutionRoute, route_update_iterator::RouteUpdateActivityData,
+            route::{WorkingSolutionRoute, next_version},
+            route_update_iterator::RouteUpdateActivityData,
         },
         test_utils,
     };
@@ -1943,5 +1952,12 @@ mod tests {
             3,
         );
         assert!(is_valid);
+    }
+
+    #[test]
+    fn test_global_version() {
+        assert_eq!(next_version(), 0);
+        assert_eq!(next_version(), 1);
+        assert_eq!(next_version(), 2);
     }
 }

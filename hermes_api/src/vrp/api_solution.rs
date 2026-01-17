@@ -53,4 +53,5 @@ pub struct ApiSolution {
     pub duration: SignedDuration,
     pub score: Score,
     pub score_analysis: ScoreAnalysis,
+    pub unassigned_jobs: Vec<JobIdx>,
 }

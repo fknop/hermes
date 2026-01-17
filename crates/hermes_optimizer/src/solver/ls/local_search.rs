@@ -21,7 +21,7 @@ use crate::{
     },
 };
 
-macro_rules! temporary_vehicle_id_index {
+macro_rules! route_idx_index {
     ($t:ty, $output:ty) => {
         // Temporary VehicleId Index
         impl std::ops::Index<RouteIdx> for $t {
@@ -40,17 +40,17 @@ macro_rules! temporary_vehicle_id_index {
     };
 }
 
-temporary_vehicle_id_index!(Vec<f64>, f64);
-temporary_vehicle_id_index!(Vec<Vec<f64>>, Vec<f64>);
-temporary_vehicle_id_index!(Vec<Option<LocalSearchMove>>, Option<LocalSearchMove>);
-temporary_vehicle_id_index!(
+route_idx_index!(Vec<f64>, f64);
+route_idx_index!(Vec<Vec<f64>>, Vec<f64>);
+route_idx_index!(Vec<Option<LocalSearchMove>>, Option<LocalSearchMove>);
+route_idx_index!(
     Vec<Vec<Option<LocalSearchMove>>>,
     Vec<Option<LocalSearchMove>>
 );
 
 type RoutePair = (RouteIdx, RouteIdx);
 
-pub struct IntensifySearch {
+pub struct LocalSearch {
     pairs: Vec<RoutePair>,
     deltas: Vec<Vec<f64>>,
     best_ops: Vec<Vec<Option<LocalSearchMove>>>,
@@ -58,7 +58,7 @@ pub struct IntensifySearch {
 
 const MAX_DELTA: f64 = 0.0;
 
-impl IntensifySearch {
+impl LocalSearch {
     pub fn new(solution: &WorkingSolution) -> Self {
         let route_count = solution.routes().len();
         let mut deltas = Vec::with_capacity(route_count);
@@ -79,7 +79,7 @@ impl IntensifySearch {
             }
         }
 
-        IntensifySearch {
+        LocalSearch {
             deltas,
             pairs,
             best_ops,
@@ -426,13 +426,13 @@ impl IntensifySearch {
 
             let score = search.compute_solution_score(solution);
             if score.0.is_failure() {
-                warn!(
-                    "Operator {} ({}, {}) broke hard constraint {:?}",
-                    op.operator_name(),
-                    v1,
-                    v2,
-                    score.1
-                );
+                // warn!(
+                //     "Operator {} ({}, {}) broke hard constraint {:?}",
+                //     op.operator_name(),
+                //     v1,
+                //     v2,
+                //     score.1
+                // );
             }
 
             self.pairs.clear();

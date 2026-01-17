@@ -42,6 +42,7 @@ pub struct SolverParams {
     pub tabu_size: usize,
     pub tabu_iterations: usize,
 
+    pub intensify_probability: f64,
     pub run_intensify_search: bool,
     pub debug_options: SolverParamsDebugOptions,
 }
@@ -100,8 +101,8 @@ impl Default for SolverParams {
             tabu_enabled: true,
             tabu_size: 5,
             tabu_iterations: 500,
-            solver_acceptor: SolverAcceptorStrategy::SimulatedAnnealing,
-            solver_selector: SolverSelectorStrategy::SelectBest,
+            solver_acceptor: SolverAcceptorStrategy::Schrimpf,
+            solver_selector: SolverSelectorStrategy::SelectWeighted,
             ruin: RuinParams::default(),
             recreate: RecreateParams::default(),
             search_threads: Threads::Multi(4),
@@ -117,7 +118,10 @@ impl Default for SolverParams {
             alns_improvement_factor: 9.0,
             alns_accepted_worst_factor: 3.0,
 
-            run_intensify_search: true,
+            run_intensify_search: false,
+
+            intensify_probability: 0.1,
+
             debug_options: SolverParamsDebugOptions {
                 enable_local_search: true,
             },

@@ -157,6 +157,12 @@ fn transform_solution(accepted_solution: &AcceptedSolution, hermes: &Hermes) -> 
             .iter()
             .fold(SignedDuration::ZERO, |acc, route| acc + route.duration),
         routes,
+        unassigned_jobs: accepted_solution
+            .solution
+            .unassigned_jobs()
+            .iter()
+            .copied()
+            .collect::<Vec<_>>(),
     }
 }
 

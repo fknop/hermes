@@ -36,7 +36,7 @@ use crate::{
             vehicle_cost_constraint::VehicleCostConstraint,
             waiting_duration_constraint::WaitingDurationConstraint,
         },
-        ls::local_search::IntensifySearch,
+        ls::local_search::LocalSearch,
         noise::NoiseParams,
         solver_params::SolverParamsDebugOptions,
         statistics::SearchStatisticsIteration,
@@ -119,6 +119,7 @@ impl AlnsSearch {
                         solver_selector: SolverSelectorStrategy::SelectBest,
                         tabu_enabled: false,
                         run_intensify_search: false,
+                        intensify_probability: 0.0,
                         ..params.clone()
                     },
                     Arc::clone(&problem),
@@ -161,6 +162,7 @@ impl AlnsSearch {
                         solver_selector: SolverSelectorStrategy::SelectBest,
                         tabu_enabled: false,
                         run_intensify_search: false,
+                        intensify_probability: 0.0,
                         debug_options: SolverParamsDebugOptions {
                             enable_local_search: false,
                         },
@@ -407,7 +409,7 @@ impl AlnsSearch {
 
                                 let max_intensify_iterations = 1500
                                     .min(max_iterations.unwrap_or(usize::MAX) - state.iteration);
-                                let mut intensify_search = IntensifySearch::new(&working_solution);
+                                let mut intensify_search = LocalSearch::new(&working_solution);
                                 let iterations = intensify_search.intensify(
                                     self,
                                     &self.problem,
@@ -594,6 +596,11 @@ impl AlnsSearch {
         let now = Timestamp::now();
         self.recreate(&mut working_solution, recreate_strategy, state, rng);
         let recreate_duration = Timestamp::now().duration_since(now);
+
+        // if rng.random_bool(self.params.intensify_probability) {
+        //     let mut intensify_search = IntensifySearch::new(&working_solution);
+        //     intensify_search.intensify(self, &self.problem, &mut working_solution, 1000);
+        // }
 
         self.update_solutions(
             working_solution,
