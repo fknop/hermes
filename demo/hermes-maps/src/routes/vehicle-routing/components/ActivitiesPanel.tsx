@@ -27,13 +27,15 @@ export function ActivitiesPanel({
 
   return (
     <div className="flex flex-col h-full bg-white border-l-2 border-zinc-200 min-w-80 max-w-96">
-      <div className="flex items-center justify-between p-4 border-b border-zinc-100">
+      <div className="flex items-center justify-between p-4 border-b border-zinc-100 flex-shrink-0">
         <div className="flex items-center gap-2">
           <div
             className="w-4 h-4 rounded-full ring-2 ring-white shadow-sm"
             style={{ backgroundColor: color }}
           />
-          <h2 className="font-semibold text-zinc-900">Route {routeIndex + 1}</h2>
+          <h2 className="font-semibold text-zinc-900">
+            Route {routeIndex + 1}
+          </h2>
         </div>
         <button
           onClick={onClose}
@@ -56,7 +58,7 @@ export function ActivitiesPanel({
         </button>
       </div>
 
-      <div className="p-4 border-b border-zinc-100 bg-zinc-50">
+      <div className="p-4 border-b border-zinc-100 bg-zinc-50 flex-shrink-0">
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div className="flex flex-col">
             <span className="text-zinc-400 text-xs uppercase tracking-wide">
