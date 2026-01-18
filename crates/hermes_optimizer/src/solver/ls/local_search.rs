@@ -461,38 +461,42 @@ impl LocalSearch {
                 .state
                 .best_move(solution, RouteIdx::new(r1), RouteIdx::new(r2))
         {
-            let score_before = search.compute_solution_score(solution);
+            let run_assertions = false;
 
-            if score_before.0.is_failure() {
-                panic!("Score before is failure, don't apply");
-            }
+            let score_before = if run_assertions {
+                Some(search.compute_solution_score(solution))
+            } else {
+                None
+            };
 
-            if !op.is_valid(solution) {
+            if run_assertions && !op.is_valid(solution) {
                 tracing::error!(?op, "Operator {} is not valid", op.operator_name());
                 panic!("Stored operator is not valid")
             }
 
-            info!("Apply {} ({}, {})", op.operator_name(), r1, r2);
+            debug!("Apply {} ({}, {})", op.operator_name(), r1, r2);
             op.apply(problem, solution);
 
-            let score = search.compute_solution_score(solution);
-            if !score_before.0.is_failure() && score.0.is_failure() {
-                tracing::error!(
-                    "Iteration {}: Operator {} ({}, {}) broke hard constraint {:?}",
-                    iteration,
-                    op.operator_name(),
-                    r1,
-                    r2,
-                    score.1
-                );
+            if run_assertions && let Some(score_before) = score_before {
+                let score = search.compute_solution_score(solution);
+                if !score_before.0.is_failure() && score.0.is_failure() {
+                    tracing::error!(
+                        "Iteration {}: Operator {} ({}, {}) broke hard constraint {:?}",
+                        iteration,
+                        op.operator_name(),
+                        r1,
+                        r2,
+                        score.1
+                    );
 
-                tracing::error!("{:?}", op);
+                    tracing::error!("{:?}", op);
 
-                for (index, route) in solution.routes().iter().enumerate() {
-                    println!("Route {}: {:?}", index, route.activity_ids());
+                    for (index, route) in solution.routes().iter().enumerate() {
+                        println!("Route {}: {:?}", index, route.activity_ids());
+                    }
+
+                    panic!();
                 }
-
-                panic!("BUG!")
             }
 
             self.pairs.clear();

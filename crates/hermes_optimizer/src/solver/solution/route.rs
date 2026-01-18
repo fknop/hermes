@@ -606,7 +606,7 @@ impl WorkingSolutionRoute {
         self.update_data(problem);
     }
 
-    pub(super) fn resync(&mut self, problem: &VehicleRoutingProblem) {
+    pub(crate) fn resync(&mut self, problem: &VehicleRoutingProblem) {
         if !self.updated_in_iteration {
             return;
         }

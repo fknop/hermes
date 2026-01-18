@@ -1,6 +1,7 @@
 import { Temporal } from 'temporal-polyfill'
 import { useDistanceFormatter } from '../../../hooks/useDistanceFormatter'
 import { Solution } from '../solution'
+import clsx from 'clsx'
 
 type Route = Solution['routes'][number]
 
@@ -45,11 +46,13 @@ export function RouteCard({
   return (
     <button
       onClick={onClick}
-      className={`group flex flex-col gap-2 p-4 rounded-primary border-2 text-left transition-all duration-200 w-full ${
-        isSelected
-          ? 'border-slate-800 bg-slate-50 shadow-md'
-          : 'border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50/50 hover:shadow-sm'
-      }`}
+      className={clsx(
+        'group flex flex-col gap-2 p-4 text-left transition-all duration-200 w-full cursor-pointer',
+        isSelected ? '' : 'hover:bg-neutral-50'
+        // isSelected
+        //   ? 'border-slate-800 bg-slate-50 shadow-md'
+        //   : 'border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50/50 hover:shadow-sm'
+      )}
     >
       <div className="flex items-center justify-between">
         <span className="inline-flex items-center gap-2.5">
@@ -60,7 +63,7 @@ export function RouteCard({
           <span className="font-semibold text-zinc-900">Route {index + 1}</span>
         </span>
         <span className="text-xs font-medium text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-full">
-          Vehicle {route.vehicle_id}
+          Vehicle {route.vehicle_id + 1}
         </span>
       </div>
 
@@ -92,7 +95,10 @@ export function RouteCard({
             Activities
           </span>
           <span className="text-zinc-700 font-medium">
-            {route.activities.length}
+            {
+              route.activities.filter((activity) => activity.type === 'Service')
+                .length
+            }
           </span>
         </div>
         <div className="flex flex-col">

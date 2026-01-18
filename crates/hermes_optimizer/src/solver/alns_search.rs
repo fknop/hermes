@@ -7,7 +7,7 @@ use std::{
 use jiff::{SignedDuration, Timestamp};
 use parking_lot::{MappedRwLockReadGuard, Mutex, RwLock, RwLockReadGuard};
 use rand::{Rng, SeedableRng, rngs::SmallRng};
-use tracing::debug;
+use tracing::{debug, warn};
 
 use crate::{
     acceptor::{
@@ -378,7 +378,7 @@ impl AlnsSearch {
                         loop {
                             let should_intensify = self.params.run_intensify_search
                                 && state.iteration - state.last_intensify_iteration.unwrap_or(0)
-                                    > 1000;
+                                    > 500;
 
                             if should_intensify {
                                 let best_selector = SelectBestSelector;
@@ -408,19 +408,18 @@ impl AlnsSearch {
 
                                 let unassigned_count = working_solution.unassigned_jobs().len();
 
-                                let iterations = state.local_search.intensify(
+                                state.local_search.intensify(
                                     self,
                                     &self.problem,
                                     &mut working_solution,
                                     1000,
                                 );
 
-                                println!(
-                                    "{:?} to {:?} ({} iterations)",
-                                    current_score,
-                                    self.compute_solution_score(&working_solution).0,
-                                    iterations
-                                );
+                                let score = self.compute_solution_score(&working_solution).0;
+
+                                if score.is_failure() {
+                                    warn!("LocalSearch broke hard constraints");
+                                }
 
                                 assert_eq!(
                                     unassigned_count,

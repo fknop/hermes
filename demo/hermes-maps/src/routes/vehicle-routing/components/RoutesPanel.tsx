@@ -3,14 +3,17 @@ import { useDistanceFormatter } from '../../../hooks/useDistanceFormatter'
 import { Solution } from '../solution'
 import { VRP_COLORS } from '../colors'
 import { RouteCard } from './RouteCard'
+import { VehicleRoutingProblem } from '../input'
 
 interface RoutesPanelProps {
+  problem: VehicleRoutingProblem
   solution: Solution
   selectedRouteIndex: number | null
   onRouteSelect: (index: number | null) => void
 }
 
 export function RoutesPanel({
+  problem,
   solution,
   selectedRouteIndex,
   onRouteSelect,
@@ -29,9 +32,9 @@ export function RoutesPanel({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-1 px-3">
         <h2 className="text-lg font-semibold text-zinc-900">
-          Solution Summary
+          Solution summary
         </h2>
         <div className="grid grid-cols-3 gap-3 p-3 bg-neutral-100 rounded-lg">
           <div className="flex flex-col">
@@ -58,14 +61,41 @@ export function RoutesPanel({
               {totalTransportDuration.toLocaleString()}
             </span>
           </div>
+
+          <div className="flex flex-col">
+            <span className="text-zinc-400 text-xs uppercase tracking-wide">
+              Jobs
+            </span>
+            <span className="text-zinc-800 font-semibold">
+              {problem.services.length}
+            </span>
+          </div>
+
+          <div className="flex flex-col">
+            <span className="text-zinc-400 text-xs uppercase tracking-wide">
+              Routes
+            </span>
+            <span className="text-zinc-800 font-semibold">
+              {solution.routes.length}
+            </span>
+          </div>
+
+          <div className="flex flex-col">
+            <span className="text-zinc-400 text-xs uppercase tracking-wide">
+              Unassigned
+            </span>
+            <span className="text-zinc-800 font-semibold">
+              {solution.unassigned_jobs.length}
+            </span>
+          </div>
         </div>
       </div>
 
       <div className="flex flex-col gap-2">
-        <h3 className="text-sm font-semibold text-zinc-700 uppercase tracking-wide">
+        <h3 className="text-sm font-semibold text-zinc-700 uppercase tracking-wide px-3">
           Routes ({solution.routes.length})
         </h3>
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col divide-y divide-gray-900/10">
           {solution.routes.map((route, index) => (
             <RouteCard
               key={index}
