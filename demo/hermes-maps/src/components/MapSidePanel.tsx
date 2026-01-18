@@ -15,7 +15,7 @@ export function MapSidePanel({
         }
       )}
     >
-      <div className="flex flex-col gap-2.5 px-6 py-6">{children}</div>
+      <div className="flex flex-col">{children}</div>
     </div>
   )
 }

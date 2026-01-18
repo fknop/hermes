@@ -1,4 +1,4 @@
-type Activity =
+export type Activity =
   | {
       type: 'Start'
       arrival_time: string
@@ -31,6 +31,7 @@ export type Solution = {
     activities: Activity[]
     polyline: GeoJSON.Feature<GeoJSON.LineString>
   }[]
+  unassigned_jobs: number[]
 }
 
 export type OperatorStatistics = {

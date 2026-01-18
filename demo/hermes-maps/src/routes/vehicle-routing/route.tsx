@@ -8,19 +8,24 @@ import { usePostRouting } from './usePostRouting.ts'
 import { PolylineLayer } from '../../PolylineLayer.tsx'
 import { ActivitiesLayer } from './ActivityLayer.tsx'
 import { VRP_COLORS } from './colors.ts'
-import { Temporal } from 'temporal-polyfill'
 import { VehicleRoutingProblem } from './input.ts'
 import { JsonFileUpload } from './JsonFileUpload.tsx'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { isNil } from '../../utils/isNil.ts'
 import { LocationsLayer } from './LocationsLayer.tsx'
 import { StatisticsPanel } from './StatisticsPanel.tsx'
 import { WeightsPanel } from './WeightsPanel.tsx'
+import { RoutesPanel } from './components/RoutesPanel.tsx'
+import { UnassignedJobsPanel } from './components/UnassignedJobsPanel.tsx'
+import { ActivitiesPanel } from './components/ActivitiesPanel.tsx'
 
 export default function VehicleRoutingScreen() {
   const [input, setInput] = useState<VehicleRoutingProblem | null>(null)
   const [postRouting, { loading, data }] = usePostRouting()
   const { response } = usePollRouting({ jobId: data?.job_id ?? null })
+  const [selectedRouteIndex, setSelectedRouteIndex] = useState<number | null>(
+    null
+  )
 
   const polling = response?.status === 'Running'
 
@@ -31,100 +36,83 @@ export default function VehicleRoutingScreen() {
 
   const problemGeoJson = !isNil(input) ? getGeoJSONFromProblem(input) : null
 
-  const totalTime = response?.solution?.duration
+  const unassignedServices = useMemo(() => {
+    if (!input || !response?.solution) return []
 
-  const totalDistance =
-    response?.solution?.routes.reduce(
-      (acc, route) => acc + route.distance,
-      0
-    ) ?? 0
+    const unassignedServiceIds = response.solution.unassigned_jobs
 
-  const totalTransportDuration = response?.solution?.routes.reduce(
-    (acc, route) => acc.add(Temporal.Duration.from(route.transport_duration)),
-    Temporal.Duration.from({ seconds: 0 })
-  )
+    return input.services.filter((_, index) =>
+      unassignedServiceIds.includes(index)
+    )
+  }, [input, response?.solution])
+
+  const selectedRoute =
+    selectedRouteIndex !== null
+      ? response?.solution?.routes[selectedRouteIndex]
+      : null
 
   return (
     <div className="h-screen w-screen">
       <Map>
-        <MapSidePanel side="left">
-          <JsonFileUpload
-            onFileUpload={async (file) => {
-              const data = await file.text()
-              setInput(JSON.parse(data))
-            }}
-          />
-          <div className="flex flex-col gap-6">
-            <Button
-              variant="primary"
-              disabled={loading || polling || isNil(input)}
-              onClick={() => {
-                if (!isNil(input)) {
-                  postRouting(input)
-                }
-              }}
-            >
-              Start
-            </Button>
+        <div className="z-10 absolute top-0 bottom-0 left-0 flex">
+          <MapSidePanel side="left">
+            <div className="flex flex-row">
+              <div className="flex flex-col gap-6 px-6 py-6">
+                <div className="flex flex-col gap-4">
+                  <JsonFileUpload
+                    onFileUpload={async (file) => {
+                      const data = await file.text()
+                      setInput(JSON.parse(data))
+                    }}
+                  />
 
-            <div className="flex flex-col gap-1">
-              <div>{response?.solution?.duration}</div>
-              <div>
-                {response?.solution
-                  ? response.solution.routes.reduce(
-                      (acc, route) => acc + route.distance,
-                      0
-                    ) / 1000
-                  : 'N/A'}
-                km
-              </div>
-              <div>
-                {response?.solution
-                  ? response.solution.routes
-                      .reduce(
-                        (acc, route) =>
-                          acc.add(
-                            Temporal.Duration.from(route.transport_duration)
-                          ),
-                        Temporal.Duration.from({ minutes: 0 })
-                      )
-                      .toString()
-                  : 'N/A'}
-              </div>
-
-              {response?.solution?.routes.map((route, index) => {
-                return (
-                  <div className="flex flex-col">
-                    <span className="inline-flex items-center gap-2">
-                      <div
-                        className="h-4 w-4 rounded-full"
-                        style={{
-                          backgroundColor:
-                            VRP_COLORS[
-                              index % response.solution!.routes.length
-                            ],
-                        }}
+                  <Button
+                    variant="primary"
+                    disabled={loading || polling || isNil(input)}
+                    onClick={() => {
+                      if (!isNil(input)) {
+                        postRouting(input)
+                      }
+                    }}
+                  >
+                    {polling ? 'Running...' : 'Start'}
+                  </Button>
+                </div>
+                <div className="flex flex-col gap-6">
+                  {response?.solution && (
+                    <>
+                      <RoutesPanel
+                        solution={response.solution}
+                        selectedRouteIndex={selectedRouteIndex}
+                        onRouteSelect={setSelectedRouteIndex}
                       />
-                      <span>Route {index + 1}</span>
-                    </span>
-
-                    <span>Start: {route.activities[0].arrival_time}</span>
-                    <span>Duration: {route.duration}</span>
-                    <span>Distance: {Math.round(route.distance) / 1000}km</span>
-                    <span>Waiting duration: {route.waiting_duration}</span>
-                    <span>Activities: {route.activities.length}</span>
-                    <span>Load: {route.vehicle_max_load * 100}%</span>
-                  </div>
-                )
-              })}
+                      <UnassignedJobsPanel
+                        unassignedServices={unassignedServices}
+                      />
+                    </>
+                  )}
+                </div>
+              </div>
+              {selectedRoute && selectedRouteIndex !== null && (
+                <div className="px-6">
+                  <ActivitiesPanel
+                    route={selectedRoute}
+                    routeIndex={selectedRouteIndex}
+                    color={VRP_COLORS[selectedRouteIndex % VRP_COLORS.length]}
+                    onClose={() => setSelectedRouteIndex(null)}
+                  />
+                </div>
+              )}
             </div>
-          </div>
-        </MapSidePanel>
+          </MapSidePanel>
+        </div>
 
         {response?.statistics && response?.weights && (
           <MapSidePanel side="right">
-            <StatisticsPanel statistics={response.statistics} />
-            <WeightsPanel weights={response.weights} />
+            <div className="p-4">
+              <StatisticsPanel statistics={response.statistics} />
+              <WeightsPanel weights={response.weights} />
+            </div>
           </MapSidePanel>
         )}
 
