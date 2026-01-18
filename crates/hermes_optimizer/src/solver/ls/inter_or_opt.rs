@@ -1,0 +1,173 @@
+use crate::{
+    problem::{job::ActivityId, vehicle_routing_problem::VehicleRoutingProblem},
+    solver::{
+        ls::r#move::LocalSearchOperator,
+        solution::{
+            route::WorkingSolutionRoute, route_id::RouteIdx, working_solution::WorkingSolution,
+        },
+    },
+};
+
+/// **Inter-Route Or-Opt**
+///
+/// Moves a segment (1-3 consecutive nodes) from one route to another.
+///
+/// ```text
+/// BEFORE:
+///    Route 1: ... (A) -> [B -> C] -> (D) -> (E) ...
+///                        <─ seg ─>
+///    Route 2: ... (X) -> (Y) -> (Z) ...
+///
+/// AFTER:
+///    Route 1: ... (A) -> (D) -> (E) ...
+///
+///    Route 2: ... (X) -> [B -> C] -> (Y) -> (Z) ...
+///                        <─ seg ─>
+///
+/// Effect: Transfers a cluster of stops to a better-suited route.
+/// ```
+#[derive(Debug)]
+pub struct InterOrOpt {
+    params: InterOrOptOperatorParams,
+}
+
+#[derive(Debug)]
+pub struct InterOrOptOperatorParams {
+    pub from_route_id: RouteIdx,
+    pub to_route_id: RouteIdx,
+    pub from_route_position: usize,
+    pub segment_length: usize,
+
+    /// Second route position
+    pub to_route_position: usize,
+}
+
+impl InterOrOpt {
+    pub fn new(params: InterOrOptOperatorParams) -> Self {
+        if params.segment_length < 2 {
+            panic!("InterOrOpt: 'count' must be at least 2.");
+        }
+
+        InterOrOpt { params }
+    }
+
+    // fn moved_jobs<'a>(
+    //     &'a self,
+    //     route: &'a WorkingSolutionRoute,
+    // ) -> impl Iterator<Item = ActivityId> + Clone + 'a {
+    //     if self.params.from < self.params.to {
+    //         let moved_jobs =
+    //             route.job_ids_iter(self.params.from, self.params.from + self.params.count);
+
+    //         let in_between_jobs =
+    //             route.job_ids_iter(self.params.from + self.params.count, self.params.to);
+
+    //         in_between_jobs.chain(moved_jobs)
+    //     } else {
+    //         let moved_jobs =
+    //             route.job_ids_iter(self.params.from, self.params.from + self.params.count);
+
+    //         let in_between_jobs = route.job_ids_iter(self.params.to, self.params.from);
+
+    //         moved_jobs.chain(in_between_jobs)
+    //     }
+    // }
+}
+
+impl LocalSearchOperator for InterOrOpt {
+    fn transport_cost_delta(&self, solution: &WorkingSolution) -> f64 {
+        todo!()
+    }
+
+    fn is_valid(&self, solution: &WorkingSolution) -> bool {
+        todo!()
+    }
+
+    fn apply(&self, problem: &VehicleRoutingProblem, solution: &mut WorkingSolution) {
+        todo!()
+    }
+
+    fn updated_routes(&self) -> Vec<RouteIdx> {
+        vec![self.params.from_route_id, self.params.to_route_id]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use crate::{
+        solver::{
+            ls::{
+                inter_or_opt::{InterOrOpt, InterOrOptOperatorParams},
+                r#move::LocalSearchOperator,
+            },
+            solution::route_id::RouteIdx,
+        },
+        test_utils::{self, TestRoute},
+    };
+
+    #[test]
+    fn test_inter_or_opt() {
+        let locations = test_utils::create_location_grid(10, 10);
+
+        let services = test_utils::create_basic_services(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        let vehicles = test_utils::create_basic_vehicles(vec![0, 0]);
+        let problem = Arc::new(test_utils::create_test_problem(
+            locations, services, vehicles,
+        ));
+
+        let mut solution = test_utils::create_test_working_solution(
+            Arc::clone(&problem),
+            vec![
+                TestRoute {
+                    vehicle_id: 0,
+                    service_ids: vec![0, 1, 2, 3, 4, 5, 6, 7],
+                },
+                TestRoute {
+                    vehicle_id: 1,
+                    service_ids: vec![8, 9, 10],
+                },
+            ],
+        );
+
+        // Move [1, 2, 3] to position after 4
+        let operator = InterOrOpt::new(InterOrOptOperatorParams {
+            from_route_id: RouteIdx::new(0),
+            to_route_id: RouteIdx::new(1),
+            from_route_position: 1,
+            segment_length: 3,
+            to_route_position: 2,
+        });
+
+        let distance0 = solution.route(RouteIdx::new(0)).distance(&problem);
+        let distance1 = solution.route(RouteIdx::new(1)).distance(&problem);
+        let delta = operator.transport_cost_delta(&solution);
+        operator.apply(&problem, &mut solution);
+        assert_eq!(
+            solution.route(RouteIdx::new(0)).distance(&problem)
+                + solution.route(RouteIdx::new(1)).distance(&problem),
+            distance0 + distance1 + delta
+        );
+
+        assert_eq!(
+            solution
+                .route(RouteIdx::new(0))
+                .activity_ids()
+                .iter()
+                .map(|activity| activity.job_id().get())
+                .collect::<Vec<_>>(),
+            vec![0, 4, 5, 6, 7],
+        );
+
+        assert_eq!(
+            solution
+                .route(RouteIdx::new(0))
+                .activity_ids()
+                .iter()
+                .map(|activity| activity.job_id().get())
+                .collect::<Vec<_>>(),
+            vec![8, 9, 1, 2, 3, 10],
+        );
+    }
+}
