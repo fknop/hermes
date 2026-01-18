@@ -99,10 +99,10 @@ impl LocalSearchOperator for InterSwapOperator {
     fn apply(&self, problem: &VehicleRoutingProblem, solution: &mut WorkingSolution) {
         if let Some(first_job_id) = solution
             .route_mut(self.params.first_route_id)
-            .remove(self.params.first)
+            .remove(problem, self.params.first)
             && let Some(second_job_id) = solution
                 .route_mut(self.params.second_route_id)
-                .remove(self.params.second)
+                .remove(problem, self.params.second)
         {
             solution.route_mut(self.params.first_route_id).insert(
                 problem,

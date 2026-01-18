@@ -372,6 +372,7 @@ impl AlnsSearch {
                             global_statistics,
                             thread_statistics,
                             insertion_thread_pool: self.create_insertion_thread_pool(),
+                            local_search: LocalSearch::new(&self.problem),
                         };
 
                         loop {
@@ -407,14 +408,11 @@ impl AlnsSearch {
 
                                 let unassigned_count = working_solution.unassigned_jobs().len();
 
-                                let max_intensify_iterations = 1500
-                                    .min(max_iterations.unwrap_or(usize::MAX) - state.iteration);
-                                let mut intensify_search = LocalSearch::new(&working_solution);
-                                let iterations = intensify_search.intensify(
+                                let iterations = state.local_search.intensify(
                                     self,
                                     &self.problem,
                                     &mut working_solution,
-                                    max_intensify_iterations,
+                                    1000,
                                 );
 
                                 println!(
@@ -495,6 +493,8 @@ impl AlnsSearch {
 
                                 state.alns_recreate_weights =
                                     self.global_alns_recreate_weights.read().clone();
+
+                                state.local_search.clear_stale(&self.best_solutions.read());
                             }
 
                             let is_stopped =
@@ -598,8 +598,11 @@ impl AlnsSearch {
         let recreate_duration = Timestamp::now().duration_since(now);
 
         // if rng.random_bool(self.params.intensify_probability) {
-        //     let mut intensify_search = IntensifySearch::new(&working_solution);
-        //     intensify_search.intensify(self, &self.problem, &mut working_solution, 1000);
+        //     // let mut intensify_search = IntensifySearch::new(&working_solution);
+        //     state
+        //         .local_search
+        //         .intensify(self, &self.problem, &mut working_solution, 1000);
+        //     // intensify_search.intensify(self, &self.problem, &mut working_solution, 1000);
         // }
 
         self.update_solutions(
@@ -997,4 +1000,5 @@ struct ThreadedSearchState {
     global_statistics: Arc<RwLock<GlobalStatistics>>,
     thread_statistics: Arc<RwLock<ThreadSearchStatistics>>,
     insertion_thread_pool: rayon::ThreadPool,
+    local_search: LocalSearch,
 }

@@ -1,3 +1,5 @@
+use std::sync::atomic::AtomicUsize;
+
 use jiff::SignedDuration;
 
 use crate::{
@@ -42,6 +44,8 @@ pub struct VehicleRoutingProblem {
 
     /// Normalized weight for converting waiting duration into cost
     waiting_duration_weight: f64,
+
+    version_counter: AtomicUsize,
 }
 
 struct VehicleRoutingProblemParams {
@@ -116,7 +120,13 @@ impl VehicleRoutingProblem {
             precomputed_capacity_dimensions,
             precomputed_vehicle_compatibilities,
             waiting_duration_weight,
+            version_counter: AtomicUsize::new(0),
         }
+    }
+
+    pub(crate) fn next_route_version(&self) -> usize {
+        self.version_counter
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
     }
 
     pub fn jobs(&self) -> &[Job] {

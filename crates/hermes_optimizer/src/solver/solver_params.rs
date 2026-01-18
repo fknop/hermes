@@ -105,7 +105,7 @@ impl Default for SolverParams {
             solver_selector: SolverSelectorStrategy::SelectWeighted,
             ruin: RuinParams::default(),
             recreate: RecreateParams::default(),
-            search_threads: Threads::Multi(4),
+            search_threads: Threads::Multi(1),
             insertion_threads: Threads::Multi(2),
             noise_level: 0.025,
             noise_probability: 0.15,
@@ -118,9 +118,9 @@ impl Default for SolverParams {
             alns_improvement_factor: 9.0,
             alns_accepted_worst_factor: 3.0,
 
-            run_intensify_search: false,
+            run_intensify_search: true,
 
-            intensify_probability: 0.1,
+            intensify_probability: 1.0,
 
             debug_options: SolverParamsDebugOptions {
                 enable_local_search: true,

@@ -1,10 +1,13 @@
 use std::f64;
 
-use tracing::{debug, warn};
+use fxhash::{FxBuildHasher, FxHashMap, FxHashSet};
+use tokio::time::error;
+use tracing::{debug, info, warn};
 
 use crate::{
     problem::{job::ActivityId, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{
+        accepted_solution::AcceptedSolution,
         alns_search::AlnsSearch,
         ls::{
             cross_exchange::{CrossExchangeOperator, CrossExchangeOperatorParams},
@@ -17,8 +20,11 @@ use crate::{
             swap::{SwapOperator, SwapOperatorParams},
             two_opt::{TwoOptOperator, TwoOptParams},
         },
-        solution::{route_id::RouteIdx, working_solution::WorkingSolution},
+        solution::{
+            route::WorkingSolutionRoute, route_id::RouteIdx, working_solution::WorkingSolution,
+        },
     },
+    utils::enumerate_idx::EnumerateIdx,
 };
 
 macro_rules! route_idx_index {
@@ -52,37 +58,34 @@ type RoutePair = (RouteIdx, RouteIdx);
 
 pub struct LocalSearch {
     pairs: Vec<RoutePair>,
-    deltas: Vec<Vec<f64>>,
-    best_ops: Vec<Vec<Option<LocalSearchMove>>>,
+    // deltas: Vec<Vec<f64>>,
+    // best_ops: Vec<Vec<Option<LocalSearchMove>>>,
+    state: LocalSearchState,
 }
 
 const MAX_DELTA: f64 = 0.0;
 
 impl LocalSearch {
-    pub fn new(solution: &WorkingSolution) -> Self {
-        let route_count = solution.routes().len();
-        let mut deltas = Vec::with_capacity(route_count);
-        let mut best_ops: Vec<Vec<Option<LocalSearchMove>>> = Vec::with_capacity(route_count);
+    pub fn new(problem: &VehicleRoutingProblem) -> Self {
+        let count = problem.vehicles().len();
+        // let mut deltas = Vec::with_capacity(route_count);
+        // let mut best_ops: Vec<Vec<Option<LocalSearchMove>>> = Vec::with_capacity(route_count);
 
-        for _ in 0..route_count {
-            deltas.push(vec![MAX_DELTA; route_count]);
+        // for _ in 0..route_count {
+        //     deltas.push(vec![MAX_DELTA; route_count]);
 
-            let mut inner = Vec::with_capacity(route_count);
-            inner.resize_with(route_count, || None);
-            best_ops.push(inner);
-        }
+        //     let mut inner = Vec::with_capacity(route_count);
+        //     inner.resize_with(route_count, || None);
+        //     best_ops.push(inner);
+        // }
 
-        let mut pairs = Vec::with_capacity(route_count * route_count);
-        for i in 0..route_count {
-            for j in 0..route_count {
-                pairs.push((i.into(), j.into()))
-            }
-        }
+        let pairs = Vec::with_capacity(count * count);
 
         LocalSearch {
-            deltas,
             pairs,
-            best_ops,
+            // deltas,
+            // best_ops,
+            state: LocalSearchState::new(),
         }
     }
 
@@ -93,8 +96,9 @@ impl LocalSearch {
         solution: &mut WorkingSolution,
         iterations: usize,
     ) -> usize {
+        self.build_pairs(solution);
         for i in 0..iterations {
-            if !self.run_iteration(search, problem, solution) {
+            if !self.run_iteration(search, problem, solution, i + 1) {
                 return i + 1;
             }
         }
@@ -107,7 +111,15 @@ impl LocalSearch {
         search: &AlnsSearch,
         problem: &VehicleRoutingProblem,
         solution: &mut WorkingSolution,
+        iteration: usize,
     ) -> bool {
+        for &(r1, r2) in &self.pairs {
+            let v1 = solution.route(r1).version();
+            let v2 = solution.route(r2).version();
+
+            assert!(!self.state.contains_key((v1, v2)));
+        }
+
         // TwoOptOperator
         for &(r1, r2) in &self.pairs {
             if r1 != r2 {
@@ -129,24 +141,29 @@ impl LocalSearch {
                     });
 
                     let delta = op.delta(solution);
-                    if delta < self.deltas[r1][r2] && op.is_valid(solution) {
-                        self.deltas[r1][r2] = delta;
-                        self.best_ops[r1][r2] = Some(LocalSearchMove::TwoOpt(op));
+                    if delta < self.delta(solution, r1, r2) && op.is_valid(solution) {
+                        self.state.update_best(
+                            solution,
+                            r1,
+                            r2,
+                            delta,
+                            LocalSearchMove::TwoOpt(op),
+                        );
                     }
                 }
             }
         }
 
         // RelocateOperator
-        for &(v1, v2) in &self.pairs {
-            if v1 != v2 {
+        for &(r1, r2) in &self.pairs {
+            if r1 != r2 {
                 continue;
             }
 
-            let route = solution.route(v1);
+            let route = solution.route(r1);
 
             for from_pos in 0..route.activity_ids().len() {
-                let from_id = route.job_id(from_pos);
+                let from_id = route.activity_id(from_pos);
 
                 let (to_pos_start, to_pos_end) = match from_id {
                     ActivityId::ShipmentPickup(index) => {
@@ -182,113 +199,128 @@ impl LocalSearch {
                     }
 
                     let op = RelocateOperator::new(RelocateOperatorParams {
-                        route_id: v1,
+                        route_id: r1,
                         from: from_pos,
                         to: to_pos,
                     });
 
                     let delta = op.delta(solution);
-                    if delta < self.deltas[v1][v2] && op.is_valid(solution) {
-                        self.deltas[v1][v2] = delta;
-                        self.best_ops[v1][v2] = Some(LocalSearchMove::Relocate(op));
+                    if delta < self.delta(solution, r1, r2) && op.is_valid(solution) {
+                        self.state.update_best(
+                            solution,
+                            r1,
+                            r2,
+                            delta,
+                            LocalSearchMove::Relocate(op),
+                        );
                     }
                 }
             }
         }
 
         // SwapOperator
-        for &(v1, v2) in &self.pairs {
-            if v1 != v2 {
+        for &(r1, r2) in &self.pairs {
+            if r1 != r2 {
                 continue;
             }
 
-            let route = solution.route(v1);
+            let route = solution.route(r1);
 
             for from_pos in 0..route.activity_ids().len() {
                 for to_pos in from_pos + 1..route.activity_ids().len() {
                     let op = SwapOperator::new(SwapOperatorParams {
-                        route_id: v1,
+                        route_id: r1,
                         first: from_pos,
                         second: to_pos,
                     });
 
                     let delta = op.delta(solution);
-                    if delta < self.deltas[v1][v2] && op.is_valid(solution) {
-                        self.deltas[v1][v2] = delta;
-                        self.best_ops[v1][v2] = Some(LocalSearchMove::Swap(op));
+                    if delta < self.delta(solution, r1, r2) && op.is_valid(solution) {
+                        self.state
+                            .update_best(solution, r1, r2, delta, LocalSearchMove::Swap(op));
                     }
                 }
             }
         }
 
         // InterSwapOperator
-        for &(v1, v2) in &self.pairs {
-            if v1 <= v2 {
+        for &(r1, r2) in &self.pairs {
+            if r1 <= r2 {
                 continue;
             }
 
-            let from_route = solution.route(v1);
-            let to_route = solution.route(v2);
+            let from_route = solution.route(r1);
+            let to_route = solution.route(r2);
 
             for from_pos in 0..from_route.activity_ids().len() {
                 for to_pos in 0..to_route.activity_ids().len() {
                     let op = InterSwapOperator::new(InterSwapOperatorParams {
-                        first_route_id: v1,
-                        second_route_id: v2,
+                        first_route_id: r1,
+                        second_route_id: r2,
                         first: from_pos,
                         second: to_pos,
                     });
 
                     let delta = op.delta(solution);
-                    if delta < self.deltas[v1][v2] && op.is_valid(solution) {
-                        self.deltas[v1][v2] = delta;
-                        self.best_ops[v1][v2] = Some(LocalSearchMove::InterSwap(op));
+                    if delta < self.delta(solution, r1, r2) && op.is_valid(solution) {
+                        self.state.update_best(
+                            solution,
+                            r1,
+                            r2,
+                            delta,
+                            LocalSearchMove::InterSwap(op),
+                        );
                     }
                 }
             }
         }
 
         // InterRelocateOperator
-        for &(v1, v2) in &self.pairs {
-            if v1 == v2 {
+        for &(r1, r2) in &self.pairs {
+            if r1 == r2 {
                 continue;
             }
 
-            let from_route = solution.route(v1);
-            let to_route = solution.route(v2);
+            let from_route = solution.route(r1);
+            let to_route = solution.route(r2);
 
             for from_pos in 0..from_route.activity_ids().len() {
-                let from_job_id = from_route.job_id(from_pos);
+                let from_activity_id = from_route.activity_id(from_pos);
 
-                if from_job_id.is_shipment() {
+                if from_activity_id.is_shipment() {
                     continue; // skip shipments for inter-relocate
                 }
 
                 for to_pos in 0..=to_route.activity_ids().len() {
                     let op = InterRelocateOperator::new(InterRelocateParams {
-                        from_route_id: v1,
-                        to_route_id: v2,
+                        from_route_id: r1,
+                        to_route_id: r2,
                         from: from_pos,
                         to: to_pos,
                     });
 
                     let delta = op.delta(solution);
 
-                    if delta < self.deltas[v1][v2] && op.is_valid(solution) {
-                        self.deltas[v1][v2] = delta;
-                        self.best_ops[v1][v2] = Some(LocalSearchMove::InterRelocate(op));
+                    if delta < self.delta(solution, r1, r2) && op.is_valid(solution) {
+                        self.state.update_best(
+                            solution,
+                            r1,
+                            r2,
+                            delta,
+                            LocalSearchMove::InterRelocate(op),
+                        );
                     }
                 }
             }
         }
 
         // OrOptOperator
-        for &(v1, v2) in &self.pairs {
-            if v1 != v2 {
+        for &(r1, r2) in &self.pairs {
+            if r1 != r2 {
                 continue;
             }
 
-            let route = solution.route(v1);
+            let route = solution.route(r1);
             let route_length = route.activity_ids().len();
 
             for from_pos in 0..route_length {
@@ -298,16 +330,21 @@ impl LocalSearch {
                     // A chain is at least length 2
                     for chain_length in 2..=max_length {
                         let op = OrOptOperator::new(OrOptOperatorParams {
-                            route_id: v1,
+                            route_id: r1,
                             from: from_pos,
                             to: to_pos,
                             count: chain_length,
                         });
 
                         let delta = op.delta(solution);
-                        if delta < self.deltas[v1][v2] && op.is_valid(solution) {
-                            self.deltas[v1][v2] = delta;
-                            self.best_ops[v1][v2] = Some(LocalSearchMove::OrOpt(op));
+                        if delta < self.delta(solution, r1, r2) && op.is_valid(solution) {
+                            self.state.update_best(
+                                solution,
+                                r1,
+                                r2,
+                                delta,
+                                LocalSearchMove::OrOpt(op),
+                            );
                         }
                     }
                 }
@@ -315,13 +352,13 @@ impl LocalSearch {
         }
 
         // CrossExchangeOperator
-        for &(v1, v2) in &self.pairs {
-            if v1 <= v2 {
+        for &(r1, r2) in &self.pairs {
+            if r1 <= r2 {
                 continue;
             }
 
-            let from_route = solution.route(v1);
-            let to_route = solution.route(v2);
+            let from_route = solution.route(r1);
+            let to_route = solution.route(r2);
 
             // If the bbox don't intersects, no need to try exchanges
             if !from_route.bbox_intersects(to_route) {
@@ -340,8 +377,8 @@ impl LocalSearch {
                     for from_length in 2..=max_from_chain {
                         for to_length in 2..=max_to_chain {
                             let op = CrossExchangeOperator::new(CrossExchangeOperatorParams {
-                                first_route_id: v1,
-                                second_route_id: v2,
+                                first_route_id: r1,
+                                second_route_id: r2,
 
                                 first_start: from_pos,
                                 second_start: to_pos,
@@ -349,9 +386,14 @@ impl LocalSearch {
                                 second_end: to_pos + to_length - 1,
                             });
                             let delta = op.delta(solution);
-                            if delta < self.deltas[v1][v2] && op.is_valid(solution) {
-                                self.deltas[v1][v2] = delta;
-                                self.best_ops[v1][v2] = Some(LocalSearchMove::CrossExchange(op));
+                            if delta < self.delta(solution, r1, r2) && op.is_valid(solution) {
+                                self.state.update_best(
+                                    solution,
+                                    r1,
+                                    r2,
+                                    delta,
+                                    LocalSearchMove::CrossExchange(op),
+                                );
                             }
                         }
                     }
@@ -360,13 +402,13 @@ impl LocalSearch {
         }
 
         // InterTwoOptStarOperator
-        for &(v1, v2) in &self.pairs {
-            if v1 <= v2 {
+        for &(r1, r2) in &self.pairs {
+            if r1 <= r2 {
                 continue;
             }
 
-            let from_route = solution.route(v1);
-            let to_route = solution.route(v2);
+            let from_route = solution.route(r1);
+            let to_route = solution.route(r2);
 
             // If the bbox don't intersects, no need to try exchanges
             if !from_route.bbox_intersects(to_route) {
@@ -379,81 +421,96 @@ impl LocalSearch {
             for from_pos in 0..from_route_length - 1 {
                 for to_pos in 0..to_route_length - 1 {
                     let op = InterTwoOptStarOperator::new(InterTwoOptStarOperatorParams {
-                        first_route_id: v1,
-                        second_route_id: v2,
+                        first_route_id: r1,
+                        second_route_id: r2,
 
                         first_from: from_pos,
                         second_from: to_pos,
                     });
 
                     let delta = op.delta(solution);
-                    if delta < self.deltas[v1][v2] && op.is_valid(solution) {
-                        self.deltas[v1][v2] = delta;
-                        self.best_ops[v1][v2] = Some(LocalSearchMove::InterTwoOptStar(op));
+                    if delta < self.delta(solution, r1, r2) && op.is_valid(solution) {
+                        self.state.update_best(
+                            solution,
+                            r1,
+                            r2,
+                            delta,
+                            LocalSearchMove::InterTwoOptStar(op),
+                        );
                     }
                 }
             }
         }
 
         let mut best_delta = 0.0;
-        let mut best_v1 = None;
-        let mut best_v2 = None;
+        let mut best_r1 = None;
+        let mut best_r2 = None;
         for i in 0..solution.routes().len() {
             for j in 0..solution.routes().len() {
-                if self.deltas[i][j] < best_delta {
-                    best_delta = self.deltas[i][j];
-                    best_v1 = Some(i);
-                    best_v2 = Some(j);
+                let delta = self.delta(solution, RouteIdx::new(i), RouteIdx::new(j));
+                if delta < best_delta {
+                    best_delta = delta;
+                    best_r1 = Some(i);
+                    best_r2 = Some(j);
                 }
             }
         }
 
-        if let (Some(v1), Some(v2)) = (best_v1, best_v2)
-            && let Some(op) = &self.best_ops[v1][v2]
+        if let (Some(r1), Some(r2)) = (best_r1, best_r2)
+            && let Some(op) = self
+                .state
+                .best_move(solution, RouteIdx::new(r1), RouteIdx::new(r2))
         {
-            debug!(
-                "Apply {} - delta = {} (r1 = {}, r2 = {}) (r1.len() = {}, r2.len() = {}), op = {:?}",
-                op.operator_name(),
-                best_delta,
-                v1,
-                v2,
-                solution.route(v1.into()).activity_ids().len(),
-                solution.route(v2.into()).activity_ids().len(),
-                op
-            );
+            let score_before = search.compute_solution_score(solution);
 
+            if score_before.0.is_failure() {
+                panic!("Score before is failure, don't apply");
+            }
+
+            if !op.is_valid(solution) {
+                tracing::error!(?op, "Operator {} is not valid", op.operator_name());
+                panic!("Stored operator is not valid")
+            }
+
+            info!("Apply {} ({}, {})", op.operator_name(), r1, r2);
             op.apply(problem, solution);
 
             let score = search.compute_solution_score(solution);
-            if score.0.is_failure() {
-                // warn!(
-                //     "Operator {} ({}, {}) broke hard constraint {:?}",
-                //     op.operator_name(),
-                //     v1,
-                //     v2,
-                //     score.1
-                // );
+            if !score_before.0.is_failure() && score.0.is_failure() {
+                tracing::error!(
+                    "Iteration {}: Operator {} ({}, {}) broke hard constraint {:?}",
+                    iteration,
+                    op.operator_name(),
+                    r1,
+                    r2,
+                    score.1
+                );
+
+                tracing::error!("{:?}", op);
+
+                for (index, route) in solution.routes().iter().enumerate() {
+                    println!("Route {}: {:?}", index, route.activity_ids());
+                }
+
+                panic!("BUG!")
             }
 
             self.pairs.clear();
 
             let updated_routes = op.updated_routes();
-            for &updated_route in &updated_routes {
-                self.deltas[updated_route.get()].fill(MAX_DELTA);
-
-                self.best_ops[updated_route.get()].fill_with(|| None);
-            }
+            // for &updated_route in &updated_routes {
+            //     self.deltas[updated_route.get()].fill(MAX_DELTA);
+            //     self.best_ops[updated_route.get()].fill_with(|| None);
+            // }
 
             for i in 0..solution.routes().len() {
                 for &updated_route in &updated_routes {
-                    self.deltas[i][updated_route.get()] = MAX_DELTA;
-                    self.best_ops[i][updated_route.get()] = None;
+                    // self.deltas[i][updated_route.get()] = MAX_DELTA;
+                    // self.best_ops[i][updated_route.get()] = None;
 
-                    self.pairs
-                        .push((RouteIdx::new(i), RouteIdx::new(updated_route.get())));
+                    self.pairs.push((RouteIdx::new(i), updated_route));
                     if i != updated_route.get() {
-                        self.pairs
-                            .push((RouteIdx::new(updated_route.get()), RouteIdx::new(i)));
+                        self.pairs.push((updated_route, RouteIdx::new(i)));
                     }
                 }
             }
@@ -462,5 +519,90 @@ impl LocalSearch {
         } else {
             false
         }
+    }
+
+    pub fn clear_stale(&mut self, accepted_solutions: &[AcceptedSolution]) {
+        self.state.clear_stale(accepted_solutions);
+    }
+
+    fn delta(&self, solution: &WorkingSolution, r1: RouteIdx, r2: RouteIdx) -> f64 {
+        self.state.delta(solution, r1, r2)
+    }
+
+    fn build_pairs(&mut self, solution: &WorkingSolution) {
+        self.pairs.clear();
+
+        for (i, r1) in solution.routes().iter().enumerate_idx() {
+            for (j, r2) in solution.routes().iter().enumerate_idx() {
+                let v1 = r1.version();
+                let v2 = r2.version();
+                if !self.state.contains_key((v1, v2)) {
+                    self.pairs.push((i, j))
+                }
+            }
+        }
+    }
+}
+
+type VersionPair = (usize, usize);
+struct LocalSearchState(FxHashMap<VersionPair, (f64, LocalSearchMove)>);
+
+impl LocalSearchState {
+    fn new() -> Self {
+        Self(FxHashMap::with_capacity_and_hasher(
+            2000,
+            FxBuildHasher::default(),
+        ))
+    }
+
+    fn contains_key(&self, versions: (usize, usize)) -> bool {
+        self.0.contains_key(&versions)
+    }
+
+    fn delta(&self, solution: &WorkingSolution, r1: RouteIdx, r2: RouteIdx) -> f64 {
+        let route_a = solution.route(r1);
+        let route_b = solution.route(r2);
+        self.0
+            .get(&(route_a.version(), route_b.version()))
+            .map(|entry| entry.0)
+            .unwrap_or(MAX_DELTA)
+    }
+
+    fn best_move(
+        &self,
+        solution: &WorkingSolution,
+        r1: RouteIdx,
+        r2: RouteIdx,
+    ) -> Option<&LocalSearchMove> {
+        let route_a = solution.route(r1);
+        let route_b = solution.route(r2);
+        self.0
+            .get(&(route_a.version(), route_b.version()))
+            .map(|entry| &entry.1)
+    }
+
+    fn update_best(
+        &mut self,
+        solution: &WorkingSolution,
+        r1: RouteIdx,
+        r2: RouteIdx,
+        delta: f64,
+        best_move: LocalSearchMove,
+    ) {
+        let route_a = solution.route(r1);
+        let route_b = solution.route(r2);
+        let key = (route_a.version(), route_b.version());
+        self.0.insert(key, (delta, best_move));
+    }
+
+    fn clear_stale(&mut self, solutions: &[AcceptedSolution]) {
+        let versions = solutions
+            .iter()
+            .flat_map(|s| s.solution.routes())
+            .map(|r| r.version())
+            .collect::<FxHashSet<_>>();
+
+        self.0
+            .retain(|&k, _| versions.contains(&k.0) && versions.contains(&k.1))
     }
 }

@@ -1,8 +1,10 @@
-use std::sync::Arc;
+use std::{fs::File, path::PathBuf, str::FromStr, sync::Arc};
 
+use hermes_matrix_providers::{cache::MatricesCache, travel_matrix_client::TravelMatrixClient};
 use rand::RngCore;
 
 use crate::{
+    json::types::JsonVehicleRoutingProblem,
     problem::{
         distance_method::DistanceMethod,
         fleet::Fleet,
@@ -18,6 +20,63 @@ use crate::{
         solution::{route_id::RouteIdx, working_solution::WorkingSolution},
     },
 };
+
+struct TestMatricesCache {
+    path: PathBuf,
+}
+
+impl MatricesCache for TestMatricesCache {
+    fn cache<P>(
+        &self,
+        _provider: &hermes_matrix_providers::travel_matrix_provider::TravelMatrixProvider,
+        _points: &[P],
+        _matrices: &hermes_matrix_providers::travel_matrices::TravelMatrices,
+    ) -> Result<(), anyhow::Error>
+    where
+        for<'a> &'a P: Into<geo::Point>,
+    {
+        Ok(())
+    }
+
+    fn get_cached<P>(
+        &self,
+        _provider: &hermes_matrix_providers::travel_matrix_provider::TravelMatrixProvider,
+        _points: &[P],
+    ) -> Result<Option<hermes_matrix_providers::travel_matrices::TravelMatrices>, anyhow::Error>
+    where
+        for<'a> &'a P: Into<geo::Point>,
+    {
+        let file = File::open(&self.path).unwrap();
+        let json: hermes_matrix_providers::travel_matrices::TravelMatrices =
+            serde_json::from_reader(file).unwrap();
+
+        Ok(Some(json))
+    }
+}
+
+pub async fn create_test_problem_from_json_file(dir: PathBuf) -> VehicleRoutingProblem {
+    let input_path = dir.join("input.json");
+    let matrices_path = dir.join("matrices.json");
+    let file = File::open(&input_path).unwrap();
+    let json: JsonVehicleRoutingProblem = serde_json::from_reader(file).unwrap();
+    let cache = TestMatricesCache {
+        path: matrices_path,
+    };
+
+    let client = TravelMatrixClient::new(cache);
+
+    json.build_problem(&client).await.unwrap()
+}
+
+pub fn data_fixture_path(fixture: &str) -> PathBuf {
+    let current_working_dir = std::env::current_dir().unwrap();
+
+    current_working_dir
+        .join("../../data/optimizer/fixtures/")
+        .join(fixture)
+        .canonicalize()
+        .unwrap()
+}
 
 pub fn create_location_grid(rows: usize, cols: usize) -> Vec<Location> {
     let mut locations = Vec::new();

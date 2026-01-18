@@ -105,6 +105,7 @@ impl JobTask<'_> {
     }
 }
 
+#[derive(Debug)]
 pub enum Job {
     Service(Service),
     Shipment(Shipment),

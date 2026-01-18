@@ -1,5 +1,3 @@
-use std::sync::atomic::AtomicUsize;
-
 use fxhash::FxHashMap;
 use jiff::{SignedDuration, Timestamp};
 
@@ -26,12 +24,6 @@ use crate::{
     },
     utils::bbox::BBox,
 };
-
-static GLOBAL_ROUTE_VERSION: AtomicUsize = AtomicUsize::new(0);
-
-fn next_version() -> usize {
-    GLOBAL_ROUTE_VERSION.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
-}
 
 #[derive(Clone)]
 pub struct WorkingSolutionRoute {
@@ -99,7 +91,7 @@ pub struct WorkingSolutionRoute {
 impl WorkingSolutionRoute {
     pub fn empty(problem: &VehicleRoutingProblem, vehicle_id: VehicleIdx) -> Self {
         let mut route = WorkingSolutionRoute {
-            version: next_version(),
+            version: 0, // Will be set in udpate_data
             vehicle_id,
             jobs: FxHashMap::default(),
             bbox: BBox::default(),
@@ -233,7 +225,7 @@ impl WorkingSolutionRoute {
         )
     }
 
-    pub fn job_id(&self, position: usize) -> ActivityId {
+    pub fn activity_id(&self, position: usize) -> ActivityId {
         self.activity_ids[position]
     }
 
@@ -381,10 +373,6 @@ impl WorkingSolutionRoute {
         &self.activity_ids
     }
 
-    pub fn activity_id(&self, index: usize) -> ActivityId {
-        self.activity_ids[index]
-    }
-
     pub fn activities_iter(&self) -> impl Iterator<Item = RouteActivityInfo> {
         self.activity_ids
             .iter()
@@ -506,9 +494,9 @@ impl WorkingSolutionRoute {
         }
     }
 
-    fn increase_version(&mut self) {
+    fn increment_version(&mut self, problem: &VehicleRoutingProblem) {
         self.updated_in_iteration = true;
-        self.version = next_version();
+        self.version = problem.next_route_version();
     }
 
     pub fn reset(&mut self, problem: &VehicleRoutingProblem) {
@@ -519,7 +507,11 @@ impl WorkingSolutionRoute {
         self.update_data(problem);
     }
 
-    pub fn remove(&mut self, position: usize) -> Option<ActivityId> {
+    pub fn remove(
+        &mut self,
+        problem: &VehicleRoutingProblem,
+        position: usize,
+    ) -> Option<ActivityId> {
         if position >= self.activity_ids.len() {
             return None;
         }
@@ -531,14 +523,14 @@ impl WorkingSolutionRoute {
             self.jobs.insert(activity_id, index + position);
         }
 
-        self.increase_version();
+        self.increment_version(problem);
 
         Some(activity_id)
     }
 
     pub fn remove_activity(
         &mut self,
-        _problem: &VehicleRoutingProblem,
+        problem: &VehicleRoutingProblem,
         activity_id: ActivityId,
     ) -> bool {
         if !self.contains_activity(activity_id) {
@@ -547,16 +539,16 @@ impl WorkingSolutionRoute {
 
         if let Some(&position) = self.jobs.get(&activity_id) {
             match activity_id {
-                ActivityId::Service(_) => self.remove(position).is_some(),
+                ActivityId::Service(_) => self.remove(problem, position).is_some(),
                 ActivityId::ShipmentPickup(id) => {
                     let delivery = self.jobs.get(&ActivityId::ShipmentDelivery(id));
-                    self.remove(*delivery.unwrap());
-                    self.remove(position).is_some()
+                    self.remove(problem, *delivery.unwrap());
+                    self.remove(problem, position).is_some()
                 }
                 ActivityId::ShipmentDelivery(id) => {
-                    self.remove(position);
+                    self.remove(problem, position);
                     let pickup = self.jobs.get(&ActivityId::ShipmentPickup(id));
-                    self.remove(*pickup.unwrap()).is_some()
+                    self.remove(problem, *pickup.unwrap()).is_some()
                 }
             }
         } else {
@@ -679,7 +671,7 @@ impl WorkingSolutionRoute {
     }
 
     fn update_data(&mut self, problem: &VehicleRoutingProblem) {
-        self.increase_version();
+        self.increment_version(problem);
         self.jobs.clear();
         self.jobs.extend(
             self.activity_ids
@@ -1197,6 +1189,8 @@ impl RouteActivityInfo {
 #[cfg(test)]
 mod tests {
 
+    use std::sync::Arc;
+
     use jiff::SignedDuration;
 
     use crate::{
@@ -1212,8 +1206,7 @@ mod tests {
             vehicle_routing_problem::{VehicleRoutingProblem, VehicleRoutingProblemBuilder},
         },
         solver::solution::{
-            route::{WorkingSolutionRoute, next_version},
-            route_update_iterator::RouteUpdateActivityData,
+            route::WorkingSolutionRoute, route_update_iterator::RouteUpdateActivityData,
         },
         test_utils,
     };
@@ -1227,6 +1220,9 @@ mod tests {
         vehicle_builder.set_capacity(Capacity::from_vec(vec![40.0]));
         vehicle_builder.set_vehicle_id(String::from("vehicle"));
         vehicle_builder.set_profile_id(0);
+        vehicle_builder.set_depot_duration(SignedDuration::from_mins(10));
+        vehicle_builder.set_return(true);
+        vehicle_builder.set_end_depot_duration(SignedDuration::from_mins(5));
         let vehicle = vehicle_builder.build();
         let vehicles = vec![vehicle];
 
@@ -1400,6 +1396,11 @@ mod tests {
         assert_eq!(route.delivery_load_slack, Capacity::from_vec(vec![10.0]));
         assert_eq!(route.pickup_load_slack, Capacity::from_vec(vec![30.0]));
 
+        assert_eq!(
+            route.start(&problem),
+            "2025-11-30T09:20:00+02:00".parse().unwrap()
+        );
+
         // Check arrival times
         assert_eq!(
             route.arrival_times[0],
@@ -1412,6 +1413,11 @@ mod tests {
         assert_eq!(
             route.arrival_times[2],
             "2025-11-30T11:20:00+02:00".parse().unwrap()
+        );
+
+        assert_eq!(
+            route.end(&problem),
+            "2025-11-30T12:05:00+02:00".parse().unwrap()
         );
 
         // Check waiting durations
@@ -1956,8 +1962,71 @@ mod tests {
 
     #[test]
     fn test_global_version() {
-        assert_eq!(next_version(), 0);
-        assert_eq!(next_version(), 1);
-        assert_eq!(next_version(), 2);
+        let problem = Arc::new(create_problem());
+
+        assert_eq!(problem.next_route_version(), 0);
+        assert_eq!(problem.next_route_version(), 1);
+        assert_eq!(problem.next_route_version(), 2);
+
+        std::thread::scope(|s| {
+            let problem1 = problem.clone();
+            let h1 = s.spawn(move || problem1.next_route_version());
+            let problem2 = problem.clone();
+            let h2 = s.spawn(move || problem2.next_route_version());
+
+            let v1 = h1.join().unwrap();
+            let v2 = h2.join().unwrap();
+            assert_ne!(v1, v2);
+        });
+
+        assert_eq!(problem.next_route_version(), 5);
+    }
+
+    #[test]
+    fn test_routes_versions() {
+        let problem = create_problem_for_tw_change(vec![
+            TimeWindow::from_iso(
+                Some("2025-11-30T08:00:00+02:00"),
+                Some("2025-11-30T09:00:00+02:00"),
+            ), // 0: TW ends at 09:00
+            TimeWindow::from_iso(
+                Some("2025-11-30T08:00:00+02:00"),
+                Some("2025-11-30T10:00:00+02:00"),
+            ), // 1: TW ends at 10:00
+            TimeWindow::from_iso(
+                Some("2025-11-30T08:00:00+02:00"),
+                Some("2025-11-30T11:00:00+02:00"),
+            ), // 2: TW ends at 11:00
+            TimeWindow::from_iso(
+                Some("2025-11-30T08:00:00+02:00"),
+                Some("2025-11-30T12:00:00+02:00"),
+            ), // 3: TW ends at 12:00
+            TimeWindow::from_iso(
+                Some("2025-11-30T08:00:00+02:00"),
+                Some("2025-11-30T08:35:00+02:00"),
+            ), // 4: TW ends at 08:35 (tight)
+            TimeWindow::from_iso(
+                Some("2025-11-30T08:00:00+02:00"),
+                Some("2025-11-30T14:00:00+02:00"),
+            ), // 5: TW ends at 14:00 (relaxed)
+        ]);
+
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        assert_eq!(route.version(), 0);
+        // Route: 0 -> 1 -> 2 (arrival times: 08:30, 09:10, 09:50)
+        route.insert_service(&problem, 0, JobIdx::new(0));
+
+        assert_eq!(route.version(), 1);
+
+        route.insert_service(&problem, 1, JobIdx::new(1));
+
+        assert_eq!(route.version(), 2);
+
+        route.insert_service(&problem, 2, JobIdx::new(2));
+
+        assert_eq!(route.version(), 3);
+
+        let route2 = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        assert_eq!(route2.version(), 4);
     }
 }

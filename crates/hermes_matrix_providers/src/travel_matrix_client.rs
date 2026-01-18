@@ -10,7 +10,7 @@ pub struct TravelMatrixClient<C>
 where
     C: MatricesCache,
 {
-    graphhopper_client: GraphHopperMatrixClient,
+    graphhopper_client: Option<GraphHopperMatrixClient>,
     cache: C,
 }
 
@@ -25,12 +25,18 @@ where
         }
     }
 
-    fn create_default_graphhopper_client() -> GraphHopperMatrixClient {
-        GraphHopperMatrixClient::new(GraphhopperMatrixClientParams {
-            api_key: std::env::var("GRAPHHOPPER_API_KEY").expect("GRAPHHOPPER_API_KEY must be set"),
-            max_poll_attempts: 100, // max 20s, already really long time
-            poll_interval: std::time::Duration::from_millis(200),
-        })
+    fn create_default_graphhopper_client() -> Option<GraphHopperMatrixClient> {
+        if let Ok(api_key) = std::env::var("GRAPHHOPPER_API_KEY") {
+            Some(GraphHopperMatrixClient::new(
+                GraphhopperMatrixClientParams {
+                    api_key,
+                    max_poll_attempts: 100, // max 20s, already really long time
+                    poll_interval: std::time::Duration::from_millis(200),
+                },
+            ))
+        } else {
+            None
+        }
     }
 
     pub async fn fetch_matrix<P>(
@@ -50,7 +56,14 @@ where
         let result = match &provider {
             TravelMatrixProvider::GraphHopperApi {
                 gh_profile: profile,
-            } => self.graphhopper_client.fetch_matrix(points, *profile).await,
+            } => {
+                let gh_client = self
+                    .graphhopper_client
+                    .as_ref()
+                    .ok_or(anyhow::anyhow!("Missing GH api key"))?;
+
+                gh_client.fetch_matrix(points, *profile).await
+            }
             TravelMatrixProvider::AsTheCrowFlies { speed_kmh } => {
                 Ok(as_the_crow_flies_matrices(points, *speed_kmh))
             }

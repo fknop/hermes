@@ -259,7 +259,7 @@ impl WorkingSolution {
         }
 
         let route = &mut self.routes[route_id];
-        if let Some(job_id) = route.remove(activity_id) {
+        if let Some(job_id) = route.remove(&self.problem, activity_id) {
             self.unassigned_jobs.insert(job_id.job_id());
         }
     }
