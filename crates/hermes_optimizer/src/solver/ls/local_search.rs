@@ -63,6 +63,9 @@ pub struct LocalSearch {
 
 const MAX_DELTA: f64 = 0.0;
 
+// TODO: Multi-threading
+// TODO: Fix bugs with repeating operations
+
 impl LocalSearch {
     pub fn new(problem: &VehicleRoutingProblem) -> Self {
         let count = problem.vehicles().len();
