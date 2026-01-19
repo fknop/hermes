@@ -34,12 +34,12 @@ pub struct OrOptOperatorParams {
     pub route_id: RouteIdx,
     pub from: usize,
     pub to: usize,
-    pub count: usize,
+    pub segment_length: usize,
 }
 
 impl OrOptOperator {
     pub fn new(params: OrOptOperatorParams) -> Self {
-        if params.count < 2 {
+        if params.segment_length < 2 {
             panic!("OrOptOperator: 'count' must be at least 2.");
         }
 
@@ -50,7 +50,7 @@ impl OrOptOperator {
             );
         }
 
-        if params.from + params.count >= params.to && params.to > params.from {
+        if params.from + params.segment_length >= params.to && params.to > params.from {
             panic!("OrOptOperator: Overlapping segments are not allowed.");
         }
 
@@ -62,16 +62,22 @@ impl OrOptOperator {
         route: &'a WorkingSolutionRoute,
     ) -> impl Iterator<Item = ActivityId> + Clone + 'a {
         if self.params.from < self.params.to {
-            let moved_jobs =
-                route.job_ids_iter(self.params.from, self.params.from + self.params.count);
+            let moved_jobs = route.job_ids_iter(
+                self.params.from,
+                self.params.from + self.params.segment_length,
+            );
 
-            let in_between_jobs =
-                route.job_ids_iter(self.params.from + self.params.count, self.params.to);
+            let in_between_jobs = route.job_ids_iter(
+                self.params.from + self.params.segment_length,
+                self.params.to,
+            );
 
             in_between_jobs.chain(moved_jobs)
         } else {
-            let moved_jobs =
-                route.job_ids_iter(self.params.from, self.params.from + self.params.count);
+            let moved_jobs = route.job_ids_iter(
+                self.params.from,
+                self.params.from + self.params.segment_length,
+            );
 
             let in_between_jobs = route.job_ids_iter(self.params.to, self.params.from);
 
@@ -88,8 +94,8 @@ impl LocalSearchOperator for OrOptOperator {
         let a = route.previous_location_id(problem, self.params.from);
         let from = route.location_id(problem, self.params.from);
 
-        let end = route.location_id(problem, self.params.from + self.params.count - 1);
-        let b = route.next_location_id(problem, self.params.from + self.params.count - 1);
+        let end = route.location_id(problem, self.params.from + self.params.segment_length - 1);
+        let b = route.next_location_id(problem, self.params.from + self.params.segment_length - 1);
 
         let x = route.location_id(problem, self.params.to - 1);
         let y = route.next_location_id(problem, self.params.to - 1);
@@ -128,7 +134,7 @@ impl LocalSearchOperator for OrOptOperator {
                 solution.problem(),
                 moved_jobs,
                 self.params.to,
-                self.params.from + self.params.count,
+                self.params.from + self.params.segment_length,
             )
         }
     }
@@ -149,7 +155,7 @@ impl LocalSearchOperator for OrOptOperator {
                 problem,
                 &job_ids,
                 self.params.to,
-                self.params.from + self.params.count,
+                self.params.from + self.params.segment_length,
             );
         }
     }
@@ -202,7 +208,7 @@ mod tests {
         let operator = OrOptOperator::new(OrOptOperatorParams {
             route_id: RouteIdx::new(0),
             from: 1,
-            count: 3,
+            segment_length: 3,
             to: 5,
         });
 
@@ -228,7 +234,7 @@ mod tests {
         let operator = OrOptOperator::new(OrOptOperatorParams {
             route_id: RouteIdx::new(0),
             from: 4,
-            count: 2,
+            segment_length: 2,
             to: 2,
         });
 
@@ -279,7 +285,7 @@ mod tests {
         let operator = OrOptOperator::new(OrOptOperatorParams {
             route_id: RouteIdx::new(0),
             from: 1,
-            count: 3,
+            segment_length: 3,
             to: 8,
         });
 
@@ -324,7 +330,7 @@ mod tests {
         let operator = OrOptOperator::new(OrOptOperatorParams {
             route_id: RouteIdx::new(0),
             from: 0,
-            count: 9,
+            segment_length: 9,
             to: 10,
         });
 
@@ -358,7 +364,7 @@ mod tests {
         OrOptOperator::new(OrOptOperatorParams {
             route_id: RouteIdx::new(0),
             from: 1,
-            count: 3,
+            segment_length: 3,
             to: 4,
         });
     }

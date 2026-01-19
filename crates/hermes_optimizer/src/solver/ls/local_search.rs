@@ -333,7 +333,7 @@ impl LocalSearch {
                             route_id: r1,
                             from: from_pos,
                             to: to_pos,
-                            count: chain_length,
+                            segment_length: chain_length,
                         });
 
                         let delta = op.delta(solution);
