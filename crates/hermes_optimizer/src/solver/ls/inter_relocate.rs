@@ -142,16 +142,11 @@ mod tests {
     use std::sync::Arc;
 
     use crate::{
-        problem::job::JobIdx,
-        solver::{
-            insertion::{Insertion, ServiceInsertion},
-            ls::{
-                inter_relocate::{InterRelocateOperator, InterRelocateParams},
-                r#move::LocalSearchOperator,
-            },
-            solution::{route_id::RouteIdx, working_solution::WorkingSolution},
+        solver::ls::{
+            inter_relocate::{InterRelocateOperator, InterRelocateParams},
+            r#move::LocalSearchOperator,
         },
-        test_utils::{self, TestRoute, create_test_problem_from_json_file, data_fixture_path},
+        test_utils::{self, TestRoute},
     };
 
     #[test]

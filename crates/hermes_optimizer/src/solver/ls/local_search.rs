@@ -282,6 +282,10 @@ impl LocalSearch {
             let from_route = solution.route(r1);
             let to_route = solution.route(r2);
 
+            if to_route.breaks_maximum_activities(problem, 1) {
+                continue;
+            }
+
             for from_pos in 0..from_route.activity_ids().len() {
                 let from_activity_id = from_route.activity_id(from_pos);
 
@@ -430,6 +434,17 @@ impl LocalSearch {
                     // A chain is at least length 2
                     for from_length in 2..=max_from_chain {
                         for to_length in 2..=max_to_chain {
+                            if from_route
+                                .breaks_maximum_activities(problem, to_length - from_length)
+                            {
+                                continue;
+                            }
+
+                            if to_route.breaks_maximum_activities(problem, from_length - to_length)
+                            {
+                                continue;
+                            }
+
                             let op = CrossExchangeOperator::new(CrossExchangeOperatorParams {
                                 first_route_id: r1,
                                 second_route_id: r2,
@@ -474,6 +489,21 @@ impl LocalSearch {
 
             for from_pos in 0..from_route_length - 1 {
                 for to_pos in 0..to_route_length - 1 {
+                    let from_tail_length = from_route_length - from_pos - 1;
+                    let to_tail_length = to_route_length - to_pos - 1;
+
+                    if from_route
+                        .breaks_maximum_activities(problem, to_tail_length - from_tail_length)
+                    {
+                        continue;
+                    }
+
+                    if to_route
+                        .breaks_maximum_activities(problem, from_tail_length - to_tail_length)
+                    {
+                        continue;
+                    }
+
                     let op = InterTwoOptStarOperator::new(InterTwoOptStarOperatorParams {
                         first_route_id: r1,
                         second_route_id: r2,

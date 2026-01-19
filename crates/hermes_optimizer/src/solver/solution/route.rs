@@ -426,11 +426,7 @@ impl WorkingSolutionRoute {
         problem.vehicle(self.vehicle_id)
     }
 
-    pub fn breaks_maximum_activities<'a>(
-        &self,
-        problem: &VehicleRoutingProblem,
-        new: usize,
-    ) -> bool {
+    pub fn breaks_maximum_activities(&self, problem: &VehicleRoutingProblem, new: usize) -> bool {
         if let Some(max) = self.vehicle(problem).maximum_activities() {
             self.len() + new > max
         } else {
@@ -913,8 +909,8 @@ impl WorkingSolutionRoute {
         start: usize,
         end: usize,
     ) -> bool {
-        self.is_valid_maximum_activities_change(problem, job_ids.clone(), start, end)
-            && self.is_valid_tw_change(problem, job_ids.clone(), start, end)
+        // self.is_valid_maximum_activities_change(problem, job_ids.clone(), start, end)
+        self.is_valid_tw_change(problem, job_ids.clone(), start, end)
             && self.is_valid_capacity_change(problem, job_ids, start, end)
     }
 

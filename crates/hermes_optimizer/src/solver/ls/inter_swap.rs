@@ -201,4 +201,66 @@ mod tests {
             vec![6, 7, 8, 1, 10],
         );
     }
+
+    #[test]
+    fn test_inter_swap_second_before_first() {
+        let locations = test_utils::create_location_grid(10, 10);
+
+        let services = test_utils::create_basic_services(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        let vehicles = test_utils::create_basic_vehicles(vec![0, 0]);
+        let problem = Arc::new(test_utils::create_test_problem(
+            locations, services, vehicles,
+        ));
+
+        let mut solution = test_utils::create_test_working_solution(
+            Arc::clone(&problem),
+            vec![
+                TestRoute {
+                    vehicle_id: 0,
+                    service_ids: vec![0, 1, 2, 3, 4, 5],
+                },
+                TestRoute {
+                    vehicle_id: 1,
+                    service_ids: vec![6, 7, 8, 9, 10],
+                },
+            ],
+        );
+
+        let operator = InterSwapOperator::new(InterSwapOperatorParams {
+            first_route_id: 0.into(),
+            second_route_id: 1.into(),
+            first: 4,
+            second: 1,
+        });
+
+        let distances = solution.route(0.into()).distance(&problem)
+            + solution.route(1.into()).distance(&problem);
+        let delta = operator.transport_cost_delta(&solution);
+        operator.apply(&problem, &mut solution);
+        assert_eq!(
+            solution.route(0.into()).distance(&problem)
+                + solution.route(1.into()).distance(&problem),
+            distances + delta,
+        );
+
+        assert_eq!(
+            solution
+                .route(0.into())
+                .activity_ids()
+                .iter()
+                .map(|activity| activity.job_id().get())
+                .collect::<Vec<_>>(),
+            vec![0, 1, 2, 3, 7, 5],
+        );
+
+        assert_eq!(
+            solution
+                .route(1.into())
+                .activity_ids()
+                .iter()
+                .map(|activity| activity.job_id().get())
+                .collect::<Vec<_>>(),
+            vec![6, 4, 8, 9, 10],
+        );
+    }
 }
