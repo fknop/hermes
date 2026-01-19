@@ -4,6 +4,7 @@ use std::{
     thread,
 };
 
+use fxhash::FxHashMap;
 use jiff::{SignedDuration, Timestamp};
 use parking_lot::{MappedRwLockReadGuard, Mutex, RwLock, RwLockReadGuard};
 use rand::{Rng, SeedableRng, rngs::SmallRng};
@@ -415,10 +416,19 @@ impl AlnsSearch {
                                     1000,
                                 );
 
-                                let score = self.compute_solution_score(&working_solution).0;
+                                let score = self.compute_solution_score(&working_solution);
 
-                                if score.is_failure() {
+                                if score.0.is_failure() {
                                     warn!("LocalSearch broke hard constraints");
+
+                                    let analysis = score
+                                        .1
+                                        .scores
+                                        .iter()
+                                        .filter(|(_, s)| s.is_failure())
+                                        .collect::<FxHashMap<_, _>>();
+
+                                    warn!("{:?}", analysis);
                                 }
 
                                 assert_eq!(
