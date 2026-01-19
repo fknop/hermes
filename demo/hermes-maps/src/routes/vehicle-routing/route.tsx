@@ -57,7 +57,7 @@ export default function VehicleRoutingScreen() {
         <div className="z-10 absolute top-0 bottom-0 left-0 flex">
           <MapSidePanel side="left">
             <div className="flex flex-row h-full">
-              <div className="flex flex-col h-full overflow-hidden w-full">
+              <div className="flex flex-col h-full overflow-hidden w-full flex-shrink-0">
                 <div className="flex flex-col gap-4 px-6 py-6 flex-shrink-0">
                   <JsonFileUpload
                     onFileUpload={async (file) => {

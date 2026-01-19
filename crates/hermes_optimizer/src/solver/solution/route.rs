@@ -45,6 +45,11 @@ pub struct WorkingSolutionRoute {
     /// List of waiting durations at each activity
     pub(super) waiting_durations: Vec<SignedDuration>,
 
+    // bwd_time_slacks[i] stores the maximum time delay that can be absorbed at activity i
+    // before violating time windows of subsequent activities
+    // computed backward from end to start
+    pub(super) bwd_time_slacks: Vec<SignedDuration>,
+
     /// Forward load for pickups at each activity
     pub(super) fwd_load_pickups: Vec<Capacity>,
 
@@ -78,11 +83,6 @@ pub struct WorkingSolutionRoute {
     /// Total pickup capacity available for the route
     pub(super) pickup_load_slack: Capacity,
 
-    // time_slacks[i] stores the maximum time delay that can be absorbed at activity i
-    // before violating time windows of subsequent activities
-    // computed backward from end to start
-    pub(super) time_slacks: Vec<SignedDuration>,
-
     bbox: BBox,
 
     updated_in_iteration: bool,
@@ -108,7 +108,7 @@ impl WorkingSolutionRoute {
             fwd_load_deliveries: Vec::new(),
             fwd_load_pickups: Vec::new(),
             fwd_load_shipments: Vec::new(),
-            time_slacks: Vec::new(),
+            bwd_time_slacks: Vec::new(),
             delivery_load_slack: problem.vehicle(vehicle_id).capacity().clone(),
             pickup_load_slack: problem.vehicle(vehicle_id).capacity().clone(),
         };
@@ -631,7 +631,6 @@ impl WorkingSolutionRoute {
         self.departure_times.resize(self.len(), Timestamp::MAX);
         self.waiting_durations
             .resize(self.len(), SignedDuration::ZERO);
-        self.time_slacks.resize(self.len(), SignedDuration::MAX);
 
         self.fwd_load_pickups.resize_with(self.len(), || {
             Capacity::with_dimensions(problem.capacity_dimensions())
@@ -650,6 +649,8 @@ impl WorkingSolutionRoute {
         });
 
         let steps = self.len() + 2;
+        self.bwd_time_slacks.resize(steps, SignedDuration::MAX);
+
         self.fwd_load_peaks.resize_with(steps, || {
             Capacity::with_dimensions(problem.capacity_dimensions())
         });
@@ -806,7 +807,24 @@ impl WorkingSolutionRoute {
             .update_expr(vehicle_capacity - &self.current_load[self.len()]);
 
         if problem.has_time_windows() {
-            let mut next_activity_time_slack: Option<SignedDuration> = None;
+            let vehicle = self.vehicle(problem);
+
+            let latest_end = match (
+                vehicle.latest_end_time(),
+                vehicle.maximum_working_duration(),
+            ) {
+                (Some(latest_end), Some(maximum_working_duration)) => {
+                    latest_end.min(self.start(problem) + maximum_working_duration)
+                }
+                (Some(latest_end), None) => latest_end,
+                (None, Some(maximum_working_duration)) => {
+                    self.start(problem) + maximum_working_duration
+                }
+                (None, None) => Timestamp::MAX,
+            };
+
+            self.bwd_time_slacks[len + 1] = latest_end.duration_since(self.end(problem));
+
             for (index, &activity_job_id) in self.activity_ids.iter().enumerate().rev() {
                 assert_ne!(self.arrival_times[index], Timestamp::MAX);
                 let current_time_slack = compute_time_slack(
@@ -816,8 +834,8 @@ impl WorkingSolutionRoute {
                     self.waiting_durations[index],
                 );
 
-                self.time_slacks[index] = if let Some(next_activity_time_slack) =
-                    next_activity_time_slack
+                self.bwd_time_slacks[index + 1] = if let Some(next_activity_time_slack) =
+                    self.bwd_time_slacks.get(index + 2)
                 {
                     current_time_slack
                         .min(next_activity_time_slack.saturating_add(self.waiting_durations[index]))
@@ -825,10 +843,17 @@ impl WorkingSolutionRoute {
                     current_time_slack
                 };
 
-                next_activity_time_slack = Some(self.time_slacks[index]);
+                // next_activity_time_slack = Some(self.bwd_time_slacks[index + 1]);
+            }
+
+            if let Some(latest_start) = vehicle.latest_start_time() {
+                self.bwd_time_slacks[0] =
+                    (latest_start.duration_since(self.start(problem))).min(self.bwd_time_slacks[1]);
+            } else {
+                self.bwd_time_slacks[0] = self.bwd_time_slacks[1];
             }
         } else {
-            self.time_slacks.fill(SignedDuration::MAX);
+            self.bwd_time_slacks.fill(SignedDuration::MAX);
         }
     }
 
@@ -985,7 +1010,7 @@ impl WorkingSolutionRoute {
                 // This means we're in the succeeding_activities and the end chain should not change
                 && index >= end
             {
-                let current_time_slack = self.time_slacks[current_activity_index];
+                let current_time_slack = self.bwd_time_slacks[current_activity_index + 1];
                 let current_arrival_time = self.arrival_times[current_activity_index];
 
                 if arrival_time
@@ -1191,7 +1216,7 @@ mod tests {
 
     use std::sync::Arc;
 
-    use jiff::SignedDuration;
+    use jiff::{SignedDuration, Timestamp};
 
     use crate::{
         problem::{
@@ -1440,9 +1465,14 @@ mod tests {
         );
 
         // Check time slacks
-        assert_eq!(route.time_slacks[0], SignedDuration::from_mins(40));
-        assert_eq!(route.time_slacks[1], SignedDuration::from_mins(40));
-        assert_eq!(route.time_slacks[2], SignedDuration::from_mins(40))
+        assert_eq!(route.bwd_time_slacks[0], SignedDuration::from_mins(40));
+        assert_eq!(route.bwd_time_slacks[1], SignedDuration::from_mins(40));
+        assert_eq!(route.bwd_time_slacks[2], SignedDuration::from_mins(40));
+        assert_eq!(route.bwd_time_slacks[3], SignedDuration::from_mins(40));
+        assert_eq!(
+            route.bwd_time_slacks[4],
+            Timestamp::MAX.duration_since(route.end(&problem))
+        );
     }
 
     #[test]
