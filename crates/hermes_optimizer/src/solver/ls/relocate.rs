@@ -50,20 +50,20 @@ impl LocalSearchOperator for RelocateOperator {
         let problem = solution.problem();
         let route = solution.route(self.params.route_id);
 
-        let prev_from = route.previous_location_id(problem, self.params.from);
+        let a = route.previous_location_id(problem, self.params.from);
         let from = route.location_id(problem, self.params.from);
-        let next_from = route.next_location_id(problem, self.params.from);
+        let c = route.next_location_id(problem, self.params.from);
 
-        let prev_to = route.previous_location_id(problem, self.params.to);
-        let next_to = route.location_id(problem, self.params.to);
+        let x = route.previous_location_id(problem, self.params.to);
+        let y = route.location_id(problem, self.params.to);
 
-        let current_cost = problem.travel_cost_or_zero(route.vehicle(problem), prev_from, from)
-            + problem.travel_cost_or_zero(route.vehicle(problem), from, next_from)
-            + problem.travel_cost_or_zero(route.vehicle(problem), prev_to, next_to);
+        let current_cost = problem.travel_cost_or_zero(route.vehicle(problem), a, from)
+            + problem.travel_cost_or_zero(route.vehicle(problem), from, c)
+            + problem.travel_cost_or_zero(route.vehicle(problem), x, y);
 
-        let new_cost = problem.travel_cost_or_zero(route.vehicle(problem), prev_from, next_from)
-            + problem.travel_cost_or_zero(route.vehicle(problem), prev_to, from)
-            + problem.travel_cost_or_zero(route.vehicle(problem), from, next_to);
+        let new_cost = problem.travel_cost_or_zero(route.vehicle(problem), a, c)
+            + problem.travel_cost_or_zero(route.vehicle(problem), x, from)
+            + problem.travel_cost_or_zero(route.vehicle(problem), from, y);
 
         new_cost - current_cost
     }

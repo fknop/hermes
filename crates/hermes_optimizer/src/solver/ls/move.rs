@@ -2,10 +2,10 @@ use crate::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
         ls::{
-            cross_exchange::CrossExchangeOperator, inter_relocate::InterRelocateOperator,
-            inter_swap::InterSwapOperator, inter_two_opt_star::InterTwoOptStarOperator,
-            or_opt::OrOptOperator, relocate::RelocateOperator, swap::SwapOperator,
-            two_opt::TwoOptOperator,
+            cross_exchange::CrossExchangeOperator, inter_or_opt::InterOrOptOperator,
+            inter_relocate::InterRelocateOperator, inter_swap::InterSwapOperator,
+            inter_two_opt_star::InterTwoOptStarOperator, or_opt::OrOptOperator,
+            relocate::RelocateOperator, swap::SwapOperator, two_opt::TwoOptOperator,
         },
         solution::{route_id::RouteIdx, working_solution::WorkingSolution},
     },
@@ -37,6 +37,8 @@ pub enum LocalSearchMove {
     /// Or-Opt operator that moves a sequence of activities from one position to another within the same route.
     OrOpt(OrOptOperator),
 
+    InterOrOpt(InterOrOptOperator),
+
     /// Inter-route Relocate operator that moves an activity from one route to another.
     InterRelocate(InterRelocateOperator),
 
@@ -60,6 +62,7 @@ impl LocalSearchMove {
             LocalSearchMove::Relocate { .. } => "Relocate",
             LocalSearchMove::Swap { .. } => "Swap",
             LocalSearchMove::OrOpt { .. } => "Or-Opt",
+            LocalSearchMove::InterOrOpt { .. } => "Inter Or-Opt",
             LocalSearchMove::InterRelocate { .. } => "Inter-Relocate",
             LocalSearchMove::InterSwap { .. } => "Inter-Swap",
             LocalSearchMove::TwoOptStar { .. } => "Two-Opt*",
@@ -74,6 +77,7 @@ impl LocalSearchMove {
             LocalSearchMove::Relocate(op) => op.delta(solution),
             LocalSearchMove::Swap(op) => op.delta(solution),
             LocalSearchMove::OrOpt(op) => op.delta(solution),
+            LocalSearchMove::InterOrOpt(op) => op.delta(solution),
             LocalSearchMove::InterRelocate(op) => op.delta(solution),
             LocalSearchMove::InterSwap(op) => op.delta(solution),
             LocalSearchMove::TwoOptStar(op) => op.delta(solution),
@@ -88,6 +92,7 @@ impl LocalSearchMove {
             LocalSearchMove::Relocate(op) => op.is_valid(solution),
             LocalSearchMove::Swap(op) => op.is_valid(solution),
             LocalSearchMove::OrOpt(op) => op.is_valid(solution),
+            LocalSearchMove::InterOrOpt(op) => op.is_valid(solution),
             LocalSearchMove::InterRelocate(op) => op.is_valid(solution),
             LocalSearchMove::InterSwap(op) => op.is_valid(solution),
             LocalSearchMove::TwoOptStar(op) => op.is_valid(solution),
@@ -102,6 +107,7 @@ impl LocalSearchMove {
             LocalSearchMove::Relocate(op) => op.apply(problem, solution),
             LocalSearchMove::Swap(op) => op.apply(problem, solution),
             LocalSearchMove::OrOpt(op) => op.apply(problem, solution),
+            LocalSearchMove::InterOrOpt(op) => op.apply(problem, solution),
             LocalSearchMove::InterRelocate(op) => op.apply(problem, solution),
             LocalSearchMove::InterSwap(op) => op.apply(problem, solution),
             LocalSearchMove::TwoOptStar(op) => op.apply(problem, solution),
@@ -116,6 +122,7 @@ impl LocalSearchMove {
             LocalSearchMove::Relocate(op) => op.updated_routes(),
             LocalSearchMove::Swap(op) => op.updated_routes(),
             LocalSearchMove::OrOpt(op) => op.updated_routes(),
+            LocalSearchMove::InterOrOpt(op) => op.updated_routes(),
             LocalSearchMove::InterRelocate(op) => op.updated_routes(),
             LocalSearchMove::InterSwap(op) => op.updated_routes(),
             LocalSearchMove::TwoOptStar(op) => op.updated_routes(),

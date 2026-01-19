@@ -426,6 +426,18 @@ impl WorkingSolutionRoute {
         problem.vehicle(self.vehicle_id)
     }
 
+    pub fn breaks_maximum_activities<'a>(
+        &self,
+        problem: &VehicleRoutingProblem,
+        new: usize,
+    ) -> bool {
+        if let Some(max) = self.vehicle(problem).maximum_activities() {
+            self.len() + new > max
+        } else {
+            false
+        }
+    }
+
     pub fn max_load(&self, problem: &VehicleRoutingProblem) -> f64 {
         let vehicle = problem.vehicle(self.vehicle_id);
         let mut max_load = 0.0_f64;

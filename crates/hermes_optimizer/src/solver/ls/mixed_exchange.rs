@@ -1,10 +1,8 @@
 use crate::{
-    problem::{job::ActivityId, vehicle_routing_problem::VehicleRoutingProblem},
+    problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
         ls::r#move::LocalSearchOperator,
-        solution::{
-            route::WorkingSolutionRoute, route_id::RouteIdx, working_solution::WorkingSolution,
-        },
+        solution::{route_id::RouteIdx, working_solution::WorkingSolution},
     },
 };
 
@@ -26,7 +24,7 @@ use crate::{
 /// Effect: Allows asymmetric exchanges between single stops and clusters.
 /// ```
 #[derive(Debug)]
-pub struct MixedExchange {
+pub struct MixedExchangeOperator {
     params: MixedExchangeParams,
 }
 
@@ -38,7 +36,7 @@ pub struct MixedExchangeParams {
     pub segment_length: usize,
 }
 
-impl MixedExchange {
+impl MixedExchangeOperator {
     pub fn new(params: MixedExchangeParams) -> Self {
         if params.segment_length < 2 {
             panic!("MixedExchange: 'segment_length' must be at least 2.");
@@ -50,11 +48,11 @@ impl MixedExchange {
             panic!("MixedExchange: the segment cannot overlap with the single position")
         }
 
-        MixedExchange { params }
+        MixedExchangeOperator { params }
     }
 }
 
-impl LocalSearchOperator for MixedExchange {
+impl LocalSearchOperator for MixedExchangeOperator {
     fn transport_cost_delta(&self, solution: &WorkingSolution) -> f64 {
         todo!()
     }
@@ -79,8 +77,7 @@ mod tests {
     use crate::{
         solver::{
             ls::{
-                inter_or_opt::{InterOrOpt, InterOrOptOperatorParams},
-                mixed_exchange::{MixedExchange, MixedExchangeParams},
+                mixed_exchange::{MixedExchangeOperator, MixedExchangeParams},
                 r#move::LocalSearchOperator,
             },
             solution::route_id::RouteIdx,
@@ -113,7 +110,7 @@ mod tests {
         );
 
         // Move [1, 2, 3] to position after 4
-        let operator = MixedExchange::new(MixedExchangeParams {
+        let operator = MixedExchangeOperator::new(MixedExchangeParams {
             route_id: RouteIdx::new(0),
             position: 1,
             segment_start: 4,
@@ -164,7 +161,7 @@ mod tests {
         );
 
         // Move [1, 2, 3] to position after 4
-        let operator = MixedExchange::new(MixedExchangeParams {
+        let operator = MixedExchangeOperator::new(MixedExchangeParams {
             route_id: RouteIdx::new(0),
             position: 5,
             segment_start: 1,

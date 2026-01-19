@@ -97,8 +97,9 @@ impl LocalSearchOperator for OrOptOperator {
         let end = route.location_id(problem, self.params.from + self.params.segment_length - 1);
         let b = route.next_location_id(problem, self.params.from + self.params.segment_length - 1);
 
-        let x = route.location_id(problem, self.params.to - 1);
-        let y = route.next_location_id(problem, self.params.to - 1);
+        let x = route.previous_location_id(problem, self.params.to);
+
+        let y = route.location_id(problem, self.params.to);
 
         let mut delta = 0.0;
 
@@ -254,6 +255,57 @@ mod tests {
                 .map(|activity| activity.job_id().get())
                 .collect::<Vec<_>>(),
             vec![0, 4, 3, 5, 1, 2, 6, 7],
+        );
+    }
+
+    #[test]
+    fn test_or_opt_to_before_from() {
+        let locations = test_utils::create_location_grid(10, 10);
+
+        let services = test_utils::create_basic_services(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        let vehicles = test_utils::create_basic_vehicles(vec![0, 0]);
+        let problem = Arc::new(test_utils::create_test_problem(
+            locations, services, vehicles,
+        ));
+
+        let mut solution = test_utils::create_test_working_solution(
+            Arc::clone(&problem),
+            vec![
+                TestRoute {
+                    vehicle_id: 0,
+                    service_ids: vec![0, 1, 2, 3, 4, 5, 6, 7],
+                },
+                TestRoute {
+                    vehicle_id: 1,
+                    service_ids: vec![8, 9, 10],
+                },
+            ],
+        );
+
+        // Move [1, 2, 3] to position after 4
+        let operator = OrOptOperator::new(OrOptOperatorParams {
+            route_id: RouteIdx::new(0),
+            from: 4,
+            segment_length: 2,
+            to: 1,
+        });
+
+        let distance = solution.route(RouteIdx::new(0)).distance(&problem);
+        let delta = operator.transport_cost_delta(&solution);
+        operator.apply(&problem, &mut solution);
+        assert_eq!(
+            solution.route(RouteIdx::new(0)).distance(&problem),
+            distance + delta
+        );
+
+        assert_eq!(
+            solution
+                .route(RouteIdx::new(0))
+                .activity_ids()
+                .iter()
+                .map(|activity| activity.job_id().get())
+                .collect::<Vec<_>>(),
+            vec![0, 4, 5, 1, 2, 3, 6, 7],
         );
     }
 

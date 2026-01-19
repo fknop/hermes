@@ -27,12 +27,12 @@ use crate::{
 /// Effect: Transfers a cluster of stops to a better-suited route.
 /// ```
 #[derive(Debug)]
-pub struct InterOrOpt {
-    params: InterOrOptOperatorParams,
+pub struct InterOrOptOperator {
+    params: InterOrOptParams,
 }
 
 #[derive(Debug)]
-pub struct InterOrOptOperatorParams {
+pub struct InterOrOptParams {
     pub from_route_id: RouteIdx,
     pub to_route_id: RouteIdx,
     pub segment_start: usize,
@@ -42,17 +42,17 @@ pub struct InterOrOptOperatorParams {
     pub to: usize,
 }
 
-impl InterOrOpt {
-    pub fn new(params: InterOrOptOperatorParams) -> Self {
+impl InterOrOptOperator {
+    pub fn new(params: InterOrOptParams) -> Self {
         if params.segment_length < 2 {
             panic!("InterOrOpt: 'count' must be at least 2.");
         }
 
-        InterOrOpt { params }
+        InterOrOptOperator { params }
     }
 }
 
-impl LocalSearchOperator for InterOrOpt {
+impl LocalSearchOperator for InterOrOptOperator {
     fn transport_cost_delta(&self, solution: &WorkingSolution) -> f64 {
         let problem = solution.problem();
         let r1 = solution.route(self.params.from_route_id);
@@ -159,7 +159,7 @@ mod tests {
     use crate::{
         solver::{
             ls::{
-                inter_or_opt::{InterOrOpt, InterOrOptOperatorParams},
+                inter_or_opt::{InterOrOptOperator, InterOrOptParams},
                 r#move::LocalSearchOperator,
             },
             solution::route_id::RouteIdx,
@@ -192,7 +192,7 @@ mod tests {
         );
 
         // Move [1, 2, 3] to position after 4
-        let operator = InterOrOpt::new(InterOrOptOperatorParams {
+        let operator = InterOrOptOperator::new(InterOrOptParams {
             from_route_id: RouteIdx::new(0),
             to_route_id: RouteIdx::new(1),
             segment_start: 1,

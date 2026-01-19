@@ -82,7 +82,7 @@ mod tests {
         solver::{
             ls::{
                 inter_mixed_exchange::{InterMixedExchange, InterMixedExchangeParams},
-                mixed_exchange::{MixedExchange, MixedExchangeParams},
+                mixed_exchange::{MixedExchangeOperator, MixedExchangeParams},
                 r#move::LocalSearchOperator,
             },
             solution::route_id::RouteIdx,

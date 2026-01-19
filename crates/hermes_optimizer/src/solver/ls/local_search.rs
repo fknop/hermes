@@ -1,7 +1,6 @@
 use std::f64;
 
 use fxhash::{FxBuildHasher, FxHashMap, FxHashSet};
-use tokio::time::error;
 use tracing::{debug, info, warn};
 
 use crate::{
@@ -11,6 +10,7 @@ use crate::{
         alns_search::AlnsSearch,
         ls::{
             cross_exchange::{CrossExchangeOperator, CrossExchangeOperatorParams},
+            inter_or_opt::{InterOrOptOperator, InterOrOptParams},
             inter_relocate::{InterRelocateOperator, InterRelocateParams},
             inter_swap::{InterSwapOperator, InterSwapOperatorParams},
             inter_two_opt_star::{InterTwoOptStarOperator, InterTwoOptStarOperatorParams},
@@ -20,9 +20,7 @@ use crate::{
             swap::{SwapOperator, SwapOperatorParams},
             two_opt::{TwoOptOperator, TwoOptParams},
         },
-        solution::{
-            route::WorkingSolutionRoute, route_id::RouteIdx, working_solution::WorkingSolution,
-        },
+        solution::{route_id::RouteIdx, working_solution::WorkingSolution},
     },
     utils::enumerate_idx::EnumerateIdx,
 };
@@ -314,6 +312,50 @@ impl LocalSearch {
             }
         }
 
+        // InterOrOpt
+        for &(r1, r2) in &self.pairs {
+            if r1 == r2 {
+                continue;
+            }
+
+            let from_route = solution.route(r1);
+            let to_route = solution.route(r2);
+
+            if to_route.breaks_maximum_activities(problem, 2) {
+                continue;
+            }
+
+            for from_pos in 0..from_route.activity_ids().len() - 1 {
+                let from_activity_id = from_route.activity_id(from_pos);
+
+                if from_activity_id.is_shipment() {
+                    continue; // skip shipments for inter-relocate
+                }
+
+                for to_pos in 0..=to_route.activity_ids().len() {
+                    let op = InterOrOptOperator::new(InterOrOptParams {
+                        from_route_id: r1,
+                        to_route_id: r2,
+                        segment_start: from_pos,
+                        segment_length: 2,
+                        to: to_pos,
+                    });
+
+                    let delta = op.delta(solution);
+
+                    if delta < self.delta(solution, r1, r2) && op.is_valid(solution) {
+                        self.state.update_best(
+                            solution,
+                            r1,
+                            r2,
+                            delta,
+                            LocalSearchMove::InterOrOpt(op),
+                        );
+                    }
+                }
+            }
+        }
+
         // OrOptOperator
         for &(r1, r2) in &self.pairs {
             if r1 != r2 {
@@ -321,31 +363,43 @@ impl LocalSearch {
             }
 
             let route = solution.route(r1);
+
+            if route.len() < 4 {
+                // A, B, C, Moving A, B after C is equivalent to a relocate of C
+                continue;
+            }
+
             let route_length = route.activity_ids().len();
+            let segment_length = 2;
 
-            for from_pos in 0..route_length {
-                for to_pos in from_pos..=route_length {
-                    let max_length = to_pos.abs_diff(from_pos).saturating_sub(1);
+            // A, B, C, D -> C, D, A, B, from_pos = 0, to_pos =
+            for from_pos in 0..route_length - 1 {
+                for to_pos in 0..route_length {
+                    if from_pos == to_pos {
+                        continue;
+                    }
 
-                    // A chain is at least length 2
-                    for chain_length in 2..=max_length {
-                        let op = OrOptOperator::new(OrOptOperatorParams {
-                            route_id: r1,
-                            from: from_pos,
-                            to: to_pos,
-                            segment_length: chain_length,
-                        });
+                    // A, B, C, D, E if from = 0,
+                    // Need at least two position away, otherwise it's equivalent to a relocate
+                    if to_pos > from_pos && to_pos <= from_pos + segment_length + 1 {
+                        continue;
+                    }
 
-                        let delta = op.delta(solution);
-                        if delta < self.delta(solution, r1, r2) && op.is_valid(solution) {
-                            self.state.update_best(
-                                solution,
-                                r1,
-                                r2,
-                                delta,
-                                LocalSearchMove::OrOpt(op),
-                            );
-                        }
+                    if to_pos < from_pos && from_pos < to_pos + segment_length {
+                        continue;
+                    }
+
+                    let op = OrOptOperator::new(OrOptOperatorParams {
+                        route_id: r1,
+                        from: from_pos,
+                        to: to_pos,
+                        segment_length,
+                    });
+
+                    let delta = op.delta(solution);
+                    if delta < self.delta(solution, r1, r2) && op.is_valid(solution) {
+                        self.state
+                            .update_best(solution, r1, r2, delta, LocalSearchMove::OrOpt(op));
                     }
                 }
             }
@@ -461,7 +515,7 @@ impl LocalSearch {
                 .state
                 .best_move(solution, RouteIdx::new(r1), RouteIdx::new(r2))
         {
-            let run_assertions = false;
+            let run_assertions = true;
 
             let score_before = if run_assertions {
                 Some(search.compute_solution_score(solution))
@@ -474,7 +528,15 @@ impl LocalSearch {
                 panic!("Stored operator is not valid")
             }
 
-            debug!("Apply {} ({}, {})", op.operator_name(), r1, r2);
+            info!(
+                "Apply {} ({}, {}) (d={}) {:?}",
+                op.operator_name(),
+                r1,
+                r2,
+                op.delta(solution),
+                op
+            );
+            // debug!("{:?}", solution.route(r1.into()).activity_ids());
             op.apply(problem, solution);
 
             if run_assertions && let Some(score_before) = score_before {
