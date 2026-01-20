@@ -97,16 +97,27 @@ impl LocalSearchOperator for TwoOptOperator {
         }
     }
 
-    fn is_valid(&self, solution: &WorkingSolution) -> bool {
+    fn fixed_route_cost_delta(&self, _solution: &WorkingSolution) -> f64 {
+        0.0
+    }
+
+    fn waiting_cost_delta(&self, solution: &WorkingSolution) -> f64 {
         let route = solution.route(self.params.route_id);
 
-        if self.params.to + 1 > route.len() {
-            println!("{:?}", self);
-        }
+        let delta = route.waiting_duration_change_delta(
+            solution.problem(),
+            route
+                .job_ids_iter(self.params.from, self.params.to + 1)
+                .rev(),
+            self.params.from,
+            self.params.to + 1,
+        );
 
-        if self.params.from >= route.len() {
-            println!("{:?}", self);
-        }
+        solution.problem().waiting_duration_cost(delta)
+    }
+
+    fn is_valid(&self, solution: &WorkingSolution) -> bool {
+        let route = solution.route(self.params.route_id);
 
         route.is_valid_change(
             solution.problem(),

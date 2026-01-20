@@ -89,6 +89,26 @@ impl LocalSearchOperator for InterRelocateOperator {
         r1_change + r2_change
     }
 
+    fn waiting_cost_delta(&self, solution: &WorkingSolution) -> f64 {
+        let source_route = solution.route(self.params.from_route_id);
+        let target_route = solution.route(self.params.to_route_id);
+        let source_job_id = source_route.activity_id(self.params.from);
+
+        solution.problem().waiting_duration_cost(
+            target_route.waiting_duration_change_delta(
+                solution.problem(),
+                std::iter::once(source_job_id),
+                self.params.to,
+                self.params.to,
+            ) + source_route.waiting_duration_change_delta(
+                solution.problem(),
+                [].into_iter(),
+                self.params.from,
+                self.params.from + 1,
+            ),
+        )
+    }
+
     fn is_valid(&self, solution: &WorkingSolution) -> bool {
         let source_route = solution.route(self.params.from_route_id);
         let target_route = solution.route(self.params.to_route_id);

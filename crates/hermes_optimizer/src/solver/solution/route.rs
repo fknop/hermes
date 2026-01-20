@@ -18,7 +18,7 @@ use crate::{
             utils::{
                 compute_activity_arrival_time, compute_departure_time,
                 compute_first_activity_arrival_time, compute_time_slack, compute_vehicle_end,
-                compute_vehicle_start, compute_waiting_duration,
+                compute_vehicle_start, compute_waiting_duration, compute_waiting_time_slack,
             },
         },
     },
@@ -44,6 +44,17 @@ pub struct WorkingSolutionRoute {
 
     /// List of waiting durations at each activity
     pub(super) waiting_durations: Vec<SignedDuration>,
+
+    /// List of cumulative waiting duration computed forward
+    /// fwd_cumulative_waiting_durations[i] is the total waiting duration from activity 0 until activity i
+    pub(super) fwd_cumulative_waiting_durations: Vec<SignedDuration>,
+
+    /// List of cumulative waiting duration computed backward
+    /// bwd_cumulative_waiting_durations[i] is the total waiting duration from activity i to the end of the route
+    pub(super) bwd_cumulative_waiting_durations: Vec<SignedDuration>,
+
+    /// waiting_time_slacks[i] stored the maximum time a task can be moved "backward" in time without causing waiting time, or more waiting time if some already exists.
+    pub(super) waiting_time_slacks: Vec<SignedDuration>,
 
     // bwd_time_slacks[i] stores the maximum time delay that can be absorbed at activity i
     // before violating time windows of subsequent activities
@@ -100,6 +111,9 @@ impl WorkingSolutionRoute {
             arrival_times: Vec::new(),
             departure_times: Vec::new(),
             waiting_durations: Vec::new(),
+            fwd_cumulative_waiting_durations: Vec::new(),
+            bwd_cumulative_waiting_durations: Vec::new(),
+            waiting_time_slacks: Vec::new(),
             fwd_load_peaks: Vec::new(),
             bwd_load_peaks: Vec::new(),
             current_load: Vec::new(),
@@ -640,6 +654,11 @@ impl WorkingSolutionRoute {
         self.waiting_durations
             .resize(self.len(), SignedDuration::ZERO);
 
+        self.bwd_cumulative_waiting_durations
+            .resize(self.len(), SignedDuration::ZERO);
+        self.waiting_time_slacks
+            .resize(self.len(), SignedDuration::MAX);
+
         self.fwd_load_pickups.resize_with(self.len(), || {
             Capacity::with_dimensions(problem.capacity_dimensions())
         });
@@ -657,6 +676,9 @@ impl WorkingSolutionRoute {
         });
 
         let steps = self.len() + 2;
+        self.fwd_cumulative_waiting_durations
+            .resize(steps, SignedDuration::ZERO);
+
         self.bwd_time_slacks.resize(steps, SignedDuration::MAX);
 
         self.fwd_load_peaks.resize_with(steps, || {
@@ -705,6 +727,8 @@ impl WorkingSolutionRoute {
         let mut current_load_deliveries = Capacity::with_dimensions(problem.capacity_dimensions());
         let mut current_load_shipments = Capacity::with_dimensions(problem.capacity_dimensions());
 
+        self.fwd_cumulative_waiting_durations[0] = SignedDuration::ZERO;
+
         for i in 0..len {
             let activity_id = self.activity_ids[i];
             let job = problem.job(activity_id.job_id());
@@ -748,13 +772,19 @@ impl WorkingSolutionRoute {
 
             self.waiting_durations[i] =
                 compute_waiting_duration(problem, activity_id, self.arrival_times[i]);
+
             self.departure_times[i] = compute_departure_time(
                 problem,
                 self.arrival_times[i],
                 self.waiting_durations[i],
                 activity_id,
             );
+
+            self.fwd_cumulative_waiting_durations[i + 1] =
+                self.waiting_durations[i] + self.fwd_cumulative_waiting_durations[i]
         }
+
+        self.fwd_cumulative_waiting_durations[len + 1] = self.fwd_cumulative_waiting_durations[len];
 
         assert!(self.fwd_load_shipments[self.len() - 1].is_empty());
         self.current_load[len + 1].update(&self.fwd_load_pickups[len - 1]);
@@ -835,11 +865,25 @@ impl WorkingSolutionRoute {
 
             for (index, &activity_job_id) in self.activity_ids.iter().enumerate().rev() {
                 assert_ne!(self.arrival_times[index], Timestamp::MAX);
-                let current_time_slack = compute_time_slack(
-                    problem,
-                    activity_job_id,
+                let current_time_slack =
+                    compute_time_slack(problem, activity_job_id, self.arrival_times[index]);
+
+                self.bwd_cumulative_waiting_durations[index] = self.waiting_durations[index]
+                    + self
+                        .bwd_cumulative_waiting_durations
+                        .get(index + 1)
+                        .copied()
+                        .unwrap_or(SignedDuration::ZERO);
+
+                let waiting_time_slack = compute_waiting_time_slack(
+                    problem.job_task(activity_job_id).time_windows(),
                     self.arrival_times[index],
-                    self.waiting_durations[index],
+                );
+                self.waiting_time_slacks[index] = waiting_time_slack.min(
+                    self.waiting_time_slacks
+                        .get(index + 1)
+                        .copied()
+                        .unwrap_or(SignedDuration::MAX),
                 );
 
                 self.bwd_time_slacks[index + 1] = if let Some(next_activity_time_slack) =
@@ -932,11 +976,107 @@ impl WorkingSolutionRoute {
         true
     }
 
+    // TODO: tests
+    pub fn waiting_duration_change_delta(
+        &self,
+        problem: &VehicleRoutingProblem,
+        activity_ids: impl Iterator<Item = ActivityId>,
+        start: usize,
+        end: usize,
+    ) -> SignedDuration {
+        if !problem.has_time_windows() || !problem.has_waiting_duration_cost() {
+            return SignedDuration::ZERO;
+        }
+
+        let mut delta = SignedDuration::ZERO;
+
+        // Compute waiting duration from [start, end)
+        let old_duration_in_range = self.fwd_cumulative_waiting_durations[end]
+            - self.fwd_cumulative_waiting_durations[start];
+        delta -= old_duration_in_range;
+
+        let mut previous_activity_id = if start == 0 {
+            None
+        } else {
+            Some(self.activity_ids[start - 1])
+        };
+
+        let mut previous_departure_time = if start == 0 {
+            None
+        } else {
+            Some(self.departure_times[start - 1])
+        };
+
+        for activity_id in activity_ids {
+            let arrival_time = if let Some(previous_activity_id) = previous_activity_id
+                && let Some(previous_departure_time) = previous_departure_time
+            {
+                compute_activity_arrival_time(
+                    problem,
+                    self.vehicle_id,
+                    previous_activity_id,
+                    previous_departure_time,
+                    activity_id,
+                )
+            } else {
+                compute_first_activity_arrival_time(problem, self.vehicle_id, activity_id)
+            };
+            let waiting_duration = compute_waiting_duration(problem, activity_id, arrival_time);
+            let departure_time =
+                compute_departure_time(problem, arrival_time, waiting_duration, activity_id);
+            previous_departure_time = Some(departure_time);
+            previous_activity_id = Some(activity_id);
+
+            delta += waiting_duration;
+        }
+
+        if end < self.len() {
+            let activity_id = self.activity_ids[end];
+            let arrival_time = if let Some(previous_activity_id) = previous_activity_id
+                && let Some(previous_departure_time) = previous_departure_time
+            {
+                compute_activity_arrival_time(
+                    problem,
+                    self.vehicle_id,
+                    previous_activity_id,
+                    previous_departure_time,
+                    activity_id,
+                )
+            } else {
+                compute_first_activity_arrival_time(problem, self.vehicle_id, activity_id)
+            };
+
+            let shift = arrival_time.duration_since(self.arrival_times[end]);
+            if shift.is_positive() || shift.is_zero() {
+                // Later or equal arrival
+                // This is the waiting that can absorb the shift, recucing total waiting time
+                let bwd_cumulative_waiting_at_end = self.bwd_cumulative_waiting_durations[end];
+
+                delta -= shift.min(bwd_cumulative_waiting_at_end)
+            } else {
+                // Earlier arrival
+                // This is the maximum time that can be added without adding waiting time, excess will become waiting time
+                let slack = self.waiting_time_slacks[end];
+
+                // e.g. you arrive 10 minutes early, you can absorb 20 minutes max
+                // 10 - 20 = -10 added -> zero
+                // e.g. you arrive 30 minutes early, you can absorb 20 minutes max
+                // 30 - 20 = 10 added
+
+                let new_waiting_duration = (-shift - slack).max(SignedDuration::ZERO);
+
+                delta += new_waiting_duration
+            }
+        }
+
+        delta
+    }
+
     /// Checks whether inserting the given job IDs between the given [start, end) indices is valid
     pub fn is_valid_tw_change(
         &self,
         problem: &VehicleRoutingProblem,
-        job_ids: impl Iterator<Item = ActivityId>,
+        activity_ids: impl Iterator<Item = ActivityId>,
         start: usize,
         end: usize,
     ) -> bool {
@@ -975,7 +1115,7 @@ impl WorkingSolutionRoute {
         };
 
         let mut index = start;
-        for activity_id in job_ids.chain(succeeding_activities.iter().copied()) {
+        for activity_id in activity_ids.chain(succeeding_activities.iter().copied()) {
             let arrival_time = if let Some(previous_activity_id) = previous_activity_id
                 && let Some(previous_departure_time) = previous_departure_time
             {
@@ -1457,6 +1597,36 @@ mod tests {
         assert_eq!(route.waiting_durations[0], SignedDuration::ZERO);
         assert_eq!(route.waiting_durations[1], SignedDuration::ZERO);
         assert_eq!(route.waiting_durations[2], SignedDuration::ZERO);
+
+        assert_eq!(
+            route.fwd_cumulative_waiting_durations[0],
+            SignedDuration::ZERO
+        );
+        assert_eq!(
+            route.fwd_cumulative_waiting_durations[1],
+            SignedDuration::ZERO
+        );
+        assert_eq!(
+            route.fwd_cumulative_waiting_durations[2],
+            SignedDuration::ZERO
+        );
+
+        assert_eq!(
+            route.bwd_cumulative_waiting_durations[0],
+            SignedDuration::ZERO
+        );
+        assert_eq!(
+            route.bwd_cumulative_waiting_durations[1],
+            SignedDuration::ZERO
+        );
+        assert_eq!(
+            route.bwd_cumulative_waiting_durations[2],
+            SignedDuration::ZERO
+        );
+
+        assert_eq!(route.waiting_time_slacks[0], SignedDuration::ZERO);
+        assert_eq!(route.waiting_time_slacks[1], SignedDuration::from_mins(40));
+        assert_eq!(route.waiting_time_slacks[2], SignedDuration::from_mins(80));
 
         // Check departure times
         assert_eq!(

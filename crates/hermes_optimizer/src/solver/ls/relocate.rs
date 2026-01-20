@@ -68,6 +68,42 @@ impl LocalSearchOperator for RelocateOperator {
         new_cost - current_cost
     }
 
+    fn fixed_route_cost_delta(&self, _solution: &WorkingSolution) -> f64 {
+        0.0
+    }
+
+    fn waiting_cost_delta(&self, solution: &WorkingSolution) -> f64 {
+        let route = solution.route(self.params.route_id);
+        let job_id = route.activity_ids()[self.params.from];
+
+        let delta = if self.params.from < self.params.to {
+            let in_between_jobs = route.job_ids_iter(self.params.from + 1, self.params.to);
+
+            // Contains C - D - E - B
+            let iterator = in_between_jobs.chain(std::iter::once(job_id));
+            route.waiting_duration_change_delta(
+                solution.problem(),
+                iterator,
+                self.params.from,
+                self.params.to,
+            )
+        } else {
+            // Moving E before B, in_between_jobs will be B - C - D
+            let in_between_jobs = route.job_ids_iter(self.params.to, self.params.from);
+
+            // Contains E - B - C - D
+            let iterator = std::iter::once(job_id).chain(in_between_jobs);
+            route.waiting_duration_change_delta(
+                solution.problem(),
+                iterator,
+                self.params.to,
+                self.params.from + 1,
+            )
+        };
+
+        solution.problem().waiting_duration_cost(delta)
+    }
+
     fn is_valid(&self, solution: &WorkingSolution) -> bool {
         let route = solution.route(self.params.route_id);
         let job_id = route.activity_ids()[self.params.from];

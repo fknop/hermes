@@ -12,17 +12,35 @@ use crate::{
 };
 
 pub trait LocalSearchOperator {
+    fn waiting_cost_delta(&self, solution: &WorkingSolution) -> f64;
     fn transport_cost_delta(&self, solution: &WorkingSolution) -> f64;
-    fn fixed_route_cost_delta(&self, _solution: &WorkingSolution) -> f64 {
-        0.0
-    }
-
+    fn fixed_route_cost_delta(&self, _solution: &WorkingSolution) -> f64;
     fn is_valid(&self, solution: &WorkingSolution) -> bool;
     fn apply(&self, problem: &VehicleRoutingProblem, solution: &mut WorkingSolution);
     fn updated_routes(&self) -> Vec<RouteIdx>;
 
     fn delta(&self, solution: &WorkingSolution) -> f64 {
-        self.transport_cost_delta(solution) + self.fixed_route_cost_delta(solution)
+        self.transport_cost_delta(solution)
+            + self.fixed_route_cost_delta(solution)
+            + self.waiting_cost_delta(solution)
+    }
+
+    fn is_best_delta(&self, best: f64, solution: &WorkingSolution) -> bool {
+        let mut delta = self.fixed_route_cost_delta(solution);
+
+        if delta < best {
+            return true;
+        }
+
+        delta += self.transport_cost_delta(solution);
+
+        if delta < best {
+            return true;
+        }
+
+        delta += self.waiting_cost_delta(solution);
+
+        delta < best
     }
 }
 

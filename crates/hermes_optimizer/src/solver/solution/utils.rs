@@ -139,15 +139,29 @@ pub(crate) fn compute_time_slack(
     problem: &VehicleRoutingProblem,
     job_id: ActivityId,
     arrival_time: Timestamp,
-    _waiting_duration: SignedDuration,
 ) -> SignedDuration {
     let task = problem.job_task(job_id);
 
-    // TODO: we need to take into account waiting duration for time slacks
-    // e.g., if we arrive at 10:00, but have to wait until 12:00 to start service,
-    // // the time slack should be calculated from 12:00, not 10:00.
     if let Some(max_end) = task.time_windows().end() {
         max_end.duration_since(arrival_time)
+    } else {
+        SignedDuration::MAX
+    }
+}
+
+pub(crate) fn compute_waiting_time_slack(
+    time_windows: &TimeWindows,
+    arrival_time: Timestamp,
+) -> SignedDuration {
+    if let Some(start) = time_windows
+        .iter()
+        .filter(|tw| tw.is_satisfied(arrival_time))
+        .filter_map(|tw| tw.start())
+        .min()
+    {
+        arrival_time
+            .duration_since(start)
+            .clamp(SignedDuration::ZERO, SignedDuration::MAX)
     } else {
         SignedDuration::MAX
     }
@@ -188,6 +202,65 @@ mod tests {
 
     use super::*;
     use crate::problem::time_window::TimeWindow;
+
+    #[test]
+    fn test_compute_waiting_time_slack() {
+        let time_windows = TimeWindows::from_vec(vec![TimeWindow::from_iso(
+            Some("2026-01-16T15:00:00+01:00"),
+            None,
+        )]);
+
+        assert_eq!(
+            compute_waiting_time_slack(&time_windows, "2026-01-16T16:00:00+01:00".parse().unwrap()),
+            SignedDuration::from_hours(1)
+        );
+
+        assert_eq!(
+            compute_waiting_time_slack(&time_windows, "2026-01-16T14:00:00+01:00".parse().unwrap()),
+            SignedDuration::ZERO
+        );
+
+        let time_windows = TimeWindows::from_vec(vec![TimeWindow::from_iso(
+            Some("2026-01-16T15:00:00+01:00"),
+            Some("2026-01-16T17:00:00+01:00"),
+        )]);
+
+        assert_eq!(
+            compute_waiting_time_slack(&time_windows, "2026-01-16T16:00:00+01:00".parse().unwrap()),
+            SignedDuration::from_hours(1)
+        );
+
+        assert_eq!(
+            compute_waiting_time_slack(&time_windows, "2026-01-16T14:00:00+01:00".parse().unwrap()),
+            SignedDuration::ZERO
+        );
+
+        let time_windows = TimeWindows::from_vec(vec![
+            TimeWindow::from_iso(
+                Some("2026-01-16T13:00:00+01:00"),
+                Some("2026-01-16T15:00:00+01:00"),
+            ),
+            TimeWindow::from_iso(
+                Some("2026-01-16T17:00:00+01:00"),
+                Some("2026-01-16T19:00:00+01:00"),
+            ),
+        ]);
+
+        assert_eq!(
+            compute_waiting_time_slack(&time_windows, "2026-01-16T16:00:00+01:00".parse().unwrap()),
+            SignedDuration::ZERO
+        );
+
+        assert_eq!(
+            compute_waiting_time_slack(&time_windows, "2026-01-16T14:00:00+01:00".parse().unwrap()),
+            SignedDuration::from_hours(1)
+        );
+
+        assert_eq!(
+            compute_waiting_time_slack(&time_windows, "2026-01-16T20:00:00+01:00".parse().unwrap()),
+            SignedDuration::MAX
+        );
+    }
 
     #[test]
     fn test_compute_initial_arrival_time() {

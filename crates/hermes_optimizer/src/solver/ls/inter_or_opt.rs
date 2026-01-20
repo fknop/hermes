@@ -106,6 +106,28 @@ impl LocalSearchOperator for InterOrOptOperator {
         r1_change + r2_change
     }
 
+    fn waiting_cost_delta(&self, solution: &WorkingSolution) -> f64 {
+        let r1 = solution.route(self.params.from_route_id);
+        let r2 = solution.route(self.params.to_route_id);
+
+        solution.problem().waiting_duration_cost(
+            r1.waiting_duration_change_delta(
+                solution.problem(),
+                [].into_iter(),
+                self.params.segment_start,
+                self.params.segment_start + self.params.segment_length,
+            ) + r2.waiting_duration_change_delta(
+                solution.problem(),
+                r1.job_ids_iter(
+                    self.params.segment_start,
+                    self.params.segment_start + self.params.segment_length,
+                ),
+                self.params.to,
+                self.params.to,
+            ),
+        )
+    }
+
     fn is_valid(&self, solution: &WorkingSolution) -> bool {
         let r1 = solution.route(self.params.from_route_id);
         let r2 = solution.route(self.params.to_route_id);

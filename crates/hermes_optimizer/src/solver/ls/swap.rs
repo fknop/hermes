@@ -115,6 +115,24 @@ impl LocalSearchOperator for SwapOperator {
         new_cost - current_cost
     }
 
+    fn fixed_route_cost_delta(&self, _solution: &WorkingSolution) -> f64 {
+        0.0
+    }
+
+    fn waiting_cost_delta(&self, solution: &WorkingSolution) -> f64 {
+        let route = solution.route(self.params.route_id);
+        let moved_jobs = self.moved_jobs(route);
+
+        let delta = route.waiting_duration_change_delta(
+            solution.problem(),
+            moved_jobs,
+            self.params.first.min(self.params.second),
+            self.params.first.max(self.params.second) + 1,
+        );
+
+        solution.problem().waiting_duration_cost(delta)
+    }
+
     fn is_valid(&self, solution: &WorkingSolution) -> bool {
         let route = solution.route(self.params.route_id);
         let moved_jobs = self.moved_jobs(route);

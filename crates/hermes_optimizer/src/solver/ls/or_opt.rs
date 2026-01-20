@@ -114,6 +114,40 @@ impl LocalSearchOperator for OrOptOperator {
         delta
     }
 
+    fn fixed_route_cost_delta(&self, _solution: &WorkingSolution) -> f64 {
+        0.0
+    }
+
+    fn waiting_cost_delta(&self, solution: &WorkingSolution) -> f64 {
+        if self.params.from < self.params.to {
+            let route = solution.route(self.params.route_id);
+
+            let moved_jobs = self.moved_jobs(route);
+
+            solution
+                .problem()
+                .waiting_duration_cost(route.waiting_duration_change_delta(
+                    solution.problem(),
+                    moved_jobs,
+                    self.params.from,
+                    self.params.to,
+                ))
+        } else {
+            let route = solution.route(self.params.route_id);
+
+            let moved_jobs = self.moved_jobs(route);
+
+            solution
+                .problem()
+                .waiting_duration_cost(route.waiting_duration_change_delta(
+                    solution.problem(),
+                    moved_jobs,
+                    self.params.to,
+                    self.params.from + self.params.segment_length,
+                ))
+        }
+    }
+
     fn is_valid(&self, solution: &WorkingSolution) -> bool {
         if self.params.from < self.params.to {
             let route = solution.route(self.params.route_id);

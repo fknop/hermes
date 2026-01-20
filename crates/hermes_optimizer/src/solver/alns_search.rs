@@ -386,19 +386,24 @@ impl AlnsSearch {
                                 let (
                                     mut working_solution,
                                     current_score,
+                                    current_score_analysis,
                                     best_score,
                                     best_unassigned_count,
                                 ) = {
                                     let solutions_guard = state.best_solutions.read();
                                     if !solutions_guard.is_empty()
                                         && let Some(AcceptedSolution {
-                                            solution, score, ..
+                                            solution,
+                                            score,
+                                            score_analysis,
+                                            ..
                                         }) = best_selector
                                             .select_solution(&solutions_guard, &mut thread_rng)
                                     {
                                         (
                                             solution.clone(),
                                             *score,
+                                            score_analysis.clone(),
                                             solutions_guard[0].score,
                                             solutions_guard[0].solution.unassigned_jobs().len(),
                                         )
@@ -429,6 +434,25 @@ impl AlnsSearch {
                                         .collect::<FxHashMap<_, _>>();
 
                                     warn!("{:?}", analysis);
+                                }
+
+                                if score.0 > current_score {
+                                    warn!(
+                                        "Didn't intensify {:?} > {:?} - {} vs {}",
+                                        score.0,
+                                        current_score,
+                                        current_score_analysis
+                                            .scores
+                                            .get("waiting_duration")
+                                            .map(|s| s.soft_score)
+                                            .unwrap_or(0.0),
+                                        score
+                                            .1
+                                            .scores
+                                            .get("waiting_duration")
+                                            .map(|s| s.soft_score)
+                                            .unwrap_or(0.0)
+                                    );
                                 }
 
                                 assert_eq!(

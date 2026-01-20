@@ -57,6 +57,14 @@ impl LocalSearchOperator for MixedExchangeOperator {
         todo!()
     }
 
+    fn fixed_route_cost_delta(&self, _solution: &WorkingSolution) -> f64 {
+        0.0
+    }
+
+    fn waiting_cost_delta(&self, solution: &WorkingSolution) -> f64 {
+        todo!()
+    }
+
     fn is_valid(&self, solution: &WorkingSolution) -> bool {
         todo!()
     }

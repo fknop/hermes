@@ -108,6 +108,29 @@ impl LocalSearchOperator for CrossExchangeOperator {
         delta
     }
 
+    fn fixed_route_cost_delta(&self, _solution: &WorkingSolution) -> f64 {
+        0.0
+    }
+
+    fn waiting_cost_delta(&self, solution: &WorkingSolution) -> f64 {
+        let first_route = solution.route(self.params.first_route_id);
+        let second_route = solution.route(self.params.second_route_id);
+
+        solution.problem().waiting_duration_cost(
+            first_route.waiting_duration_change_delta(
+                solution.problem(),
+                self.second_route_moved_jobs(solution),
+                self.params.first_start,
+                self.params.first_end + 1,
+            ) + second_route.waiting_duration_change_delta(
+                solution.problem(),
+                self.first_route_moved_jobs(solution),
+                self.params.second_start,
+                self.params.second_end + 1,
+            ),
+        )
+    }
+
     fn is_valid(&self, solution: &WorkingSolution) -> bool {
         let first_route = solution.route(self.params.first_route_id);
         let second_route = solution.route(self.params.second_route_id);
