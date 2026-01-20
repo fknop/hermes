@@ -1,6 +1,7 @@
 use std::f64;
 
 use fxhash::{FxBuildHasher, FxHashMap, FxHashSet};
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use tracing::{debug, info, warn};
 
 use crate::{
@@ -64,28 +65,15 @@ pub struct LocalSearch {
 const MAX_DELTA: f64 = 0.0;
 
 // TODO: Multi-threading
-// TODO: Fix bugs with repeating operations
 
 impl LocalSearch {
     pub fn new(problem: &VehicleRoutingProblem) -> Self {
         let count = problem.vehicles().len();
-        // let mut deltas = Vec::with_capacity(route_count);
-        // let mut best_ops: Vec<Vec<Option<LocalSearchMove>>> = Vec::with_capacity(route_count);
-
-        // for _ in 0..route_count {
-        //     deltas.push(vec![MAX_DELTA; route_count]);
-
-        //     let mut inner = Vec::with_capacity(route_count);
-        //     inner.resize_with(route_count, || None);
-        //     best_ops.push(inner);
-        // }
 
         let pairs = Vec::with_capacity(count * count);
 
         LocalSearch {
             pairs,
-            // deltas,
-            // best_ops,
             state: LocalSearchState::new(),
         }
     }
@@ -142,6 +130,7 @@ impl LocalSearch {
                     });
 
                     let delta = op.delta(solution);
+
                     if delta < self.delta(solution, r1, r2) && op.is_valid(solution) {
                         self.state.update_best(
                             solution,
@@ -327,6 +316,10 @@ impl LocalSearch {
 
             let from_route = solution.route(r1);
             let to_route = solution.route(r2);
+
+            if from_route.is_empty() {
+                continue;
+            }
 
             if to_route.breaks_maximum_activities(problem, 2) {
                 continue;

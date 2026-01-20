@@ -22,7 +22,11 @@ pub trait LocalSearchOperator {
     fn delta(&self, solution: &WorkingSolution) -> f64 {
         self.transport_cost_delta(solution)
             + self.fixed_route_cost_delta(solution)
-            + self.waiting_cost_delta(solution)
+            + if solution.problem().has_time_windows() {
+                self.waiting_cost_delta(solution)
+            } else {
+                0.0
+            }
     }
 
     fn is_best_delta(&self, best: f64, solution: &WorkingSolution) -> bool {
