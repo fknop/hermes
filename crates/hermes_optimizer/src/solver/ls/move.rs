@@ -98,6 +98,21 @@ impl LocalSearchMove {
         }
     }
 
+    pub fn transport_cost_delta(&self, solution: &WorkingSolution) -> f64 {
+        match self {
+            LocalSearchMove::TwoOpt(op) => op.transport_cost_delta(solution),
+            LocalSearchMove::Relocate(op) => op.transport_cost_delta(solution),
+            LocalSearchMove::Swap(op) => op.transport_cost_delta(solution),
+            LocalSearchMove::OrOpt(op) => op.transport_cost_delta(solution),
+            LocalSearchMove::InterOrOpt(op) => op.transport_cost_delta(solution),
+            LocalSearchMove::InterRelocate(op) => op.transport_cost_delta(solution),
+            LocalSearchMove::InterSwap(op) => op.transport_cost_delta(solution),
+            LocalSearchMove::TwoOptStar(op) => op.transport_cost_delta(solution),
+            LocalSearchMove::CrossExchange(op) => op.transport_cost_delta(solution),
+            LocalSearchMove::InterTwoOptStar(op) => op.transport_cost_delta(solution),
+        }
+    }
+
     pub fn is_valid(&self, solution: &WorkingSolution) -> bool {
         match self {
             LocalSearchMove::TwoOpt(op) => op.is_valid(solution),

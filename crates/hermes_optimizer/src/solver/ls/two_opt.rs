@@ -45,20 +45,32 @@ impl TwoOptOperator {
 
 impl TwoOptOperator {
     fn symmetric_delta(&self, solution: &WorkingSolution) -> f64 {
+        /*
+         * ///    ... (prev) --x--> [from] -> ... -> [to] --x--> (next) ...
+        ///          ^             ^               ^            ^
+        ///          A             B               C            D
+        ///
+        /// AFTER (Sequence Reversed):
+        ///    ... (prev) -----> [to] -> ... -> [from] -----> (next) ...
+        ///          ^             ^               ^            ^
+        ///          A             C               B            D
+        ///
+         */
+
         let problem = solution.problem();
         let route = solution.route(self.params.route_id);
 
-        let prev_from = route.previous_location_id(problem, self.params.from);
+        let prev = route.previous_location_id(problem, self.params.from);
         let from = route.location_id(problem, self.params.from);
 
         let to = route.location_id(problem, self.params.to);
-        let next_to = route.next_location_id(problem, self.params.to);
+        let next = route.next_location_id(problem, self.params.to);
 
-        let current_cost = problem.travel_cost_or_zero(route.vehicle(problem), prev_from, from)
-            + problem.travel_cost_or_zero(route.vehicle(problem), to, next_to);
+        let current_cost = problem.travel_cost_or_zero(route.vehicle(problem), prev, from)
+            + problem.travel_cost_or_zero(route.vehicle(problem), to, next);
 
-        let new_cost = problem.travel_cost_or_zero(route.vehicle(problem), prev_from, to)
-            + problem.travel_cost_or_zero(route.vehicle(problem), from, next_to);
+        let new_cost = problem.travel_cost_or_zero(route.vehicle(problem), prev, to)
+            + problem.travel_cost_or_zero(route.vehicle(problem), from, next);
 
         new_cost - current_cost
     }
@@ -244,7 +256,7 @@ mod tests {
 
     #[test]
     fn test_two_opt_end_of_route() {
-        let locations = test_utils::create_location_grid(10, 10);
+        let locations = test_utils::create_location_grid(6, 6);
 
         let services = test_utils::create_basic_services(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
         let vehicles = test_utils::create_basic_vehicles(vec![0, 0]);
@@ -288,6 +300,30 @@ mod tests {
                 .map(|activity| activity.job_id().get())
                 .collect::<Vec<_>>(),
             vec![0, 5, 4, 3, 2, 1]
+        );
+
+        let operator = TwoOptOperator::new(TwoOptParams {
+            route_id: RouteIdx::new(0),
+            from: 1,
+            to: 4,
+        });
+
+        let distance = solution.route(RouteIdx::new(0)).distance(&problem);
+        let delta = operator.transport_cost_delta(&solution);
+        operator.apply(&problem, &mut solution);
+        assert_eq!(
+            solution.route(RouteIdx::new(0)).distance(&problem),
+            distance + delta
+        );
+
+        assert_eq!(
+            solution
+                .route(RouteIdx::new(0))
+                .activity_ids()
+                .iter()
+                .map(|activity| activity.job_id().get())
+                .collect::<Vec<_>>(),
+            vec![0, 2, 3, 4, 5, 1]
         );
     }
 }

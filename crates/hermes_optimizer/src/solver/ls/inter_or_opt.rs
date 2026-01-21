@@ -233,7 +233,7 @@ mod tests {
 
     #[test]
     fn test_inter_or_opt() {
-        let locations = test_utils::create_location_grid(10, 10);
+        let locations = test_utils::create_location_grid(6, 7);
 
         let services = test_utils::create_basic_services(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
         let vehicles = test_utils::create_basic_vehicles(vec![0, 0]);
@@ -292,6 +292,198 @@ mod tests {
                 .map(|activity| activity.job_id().get())
                 .collect::<Vec<_>>(),
             vec![8, 9, 1, 2, 3, 10],
+        );
+    }
+
+    #[test]
+    fn test_inter_or_opt_end_of_route() {
+        let locations = test_utils::create_location_grid(5, 8);
+
+        let services = test_utils::create_basic_services(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        let vehicles = test_utils::create_basic_vehicles(vec![0, 0]);
+        let problem = Arc::new(test_utils::create_test_problem(
+            locations, services, vehicles,
+        ));
+
+        let mut solution = test_utils::create_test_working_solution(
+            Arc::clone(&problem),
+            vec![
+                TestRoute {
+                    vehicle_id: 0,
+                    service_ids: vec![0, 1, 2, 3, 4, 5, 6, 7],
+                },
+                TestRoute {
+                    vehicle_id: 1,
+                    service_ids: vec![8, 9, 10],
+                },
+            ],
+        );
+
+        // Move [1, 2, 3] to position after 4
+        let operator = InterOrOptOperator::new(InterOrOptParams {
+            from_route_id: RouteIdx::new(0),
+            to_route_id: RouteIdx::new(1),
+            segment_start: 1,
+            segment_length: 2,
+            to: 3,
+        });
+
+        let distance0 = solution.route(RouteIdx::new(0)).distance(&problem);
+        let distance1 = solution.route(RouteIdx::new(1)).distance(&problem);
+        let delta = operator.transport_cost_delta(&solution);
+        operator.apply(&problem, &mut solution);
+        assert_eq!(
+            solution.route(RouteIdx::new(0)).distance(&problem)
+                + solution.route(RouteIdx::new(1)).distance(&problem),
+            distance0 + distance1 + delta
+        );
+
+        assert_eq!(
+            solution
+                .route(RouteIdx::new(0))
+                .activity_ids()
+                .iter()
+                .map(|activity| activity.job_id().get())
+                .collect::<Vec<_>>(),
+            vec![0, 3, 4, 5, 6, 7]
+        );
+
+        assert_eq!(
+            solution
+                .route(RouteIdx::new(1))
+                .activity_ids()
+                .iter()
+                .map(|activity| activity.job_id().get())
+                .collect::<Vec<_>>(),
+            vec![8, 9, 10, 1, 2],
+        );
+    }
+
+    #[test]
+    fn test_inter_or_opt_start_of_route() {
+        let locations = test_utils::create_location_grid(5, 5);
+
+        let services = test_utils::create_basic_services(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        let vehicles = test_utils::create_basic_vehicles(vec![0, 0]);
+        let problem = Arc::new(test_utils::create_test_problem(
+            locations, services, vehicles,
+        ));
+
+        let mut solution = test_utils::create_test_working_solution(
+            Arc::clone(&problem),
+            vec![
+                TestRoute {
+                    vehicle_id: 0,
+                    service_ids: vec![0, 1, 2, 3, 4, 5, 6, 7],
+                },
+                TestRoute {
+                    vehicle_id: 1,
+                    service_ids: vec![8, 9, 10],
+                },
+            ],
+        );
+
+        // Move [1, 2, 3] to position after 4
+        let operator = InterOrOptOperator::new(InterOrOptParams {
+            from_route_id: RouteIdx::new(0),
+            to_route_id: RouteIdx::new(1),
+            segment_start: 1,
+            segment_length: 2,
+            to: 0,
+        });
+
+        let distance0 = solution.route(RouteIdx::new(0)).distance(&problem);
+        let distance1 = solution.route(RouteIdx::new(1)).distance(&problem);
+        let delta = operator.transport_cost_delta(&solution);
+        operator.apply(&problem, &mut solution);
+        assert_eq!(
+            solution.route(RouteIdx::new(0)).distance(&problem)
+                + solution.route(RouteIdx::new(1)).distance(&problem),
+            distance0 + distance1 + delta
+        );
+
+        assert_eq!(
+            solution
+                .route(RouteIdx::new(0))
+                .activity_ids()
+                .iter()
+                .map(|activity| activity.job_id().get())
+                .collect::<Vec<_>>(),
+            vec![0, 3, 4, 5, 6, 7]
+        );
+
+        assert_eq!(
+            solution
+                .route(RouteIdx::new(1))
+                .activity_ids()
+                .iter()
+                .map(|activity| activity.job_id().get())
+                .collect::<Vec<_>>(),
+            vec![1, 2, 8, 9, 10],
+        );
+    }
+
+    #[test]
+    fn test_inter_or_opt_end_to_end() {
+        let locations = test_utils::create_location_grid(5, 5);
+
+        let services = test_utils::create_basic_services(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        let vehicles = test_utils::create_basic_vehicles(vec![0, 0]);
+        let problem = Arc::new(test_utils::create_test_problem(
+            locations, services, vehicles,
+        ));
+
+        let mut solution = test_utils::create_test_working_solution(
+            Arc::clone(&problem),
+            vec![
+                TestRoute {
+                    vehicle_id: 0,
+                    service_ids: vec![0, 1, 2, 3, 4, 5, 6, 7],
+                },
+                TestRoute {
+                    vehicle_id: 1,
+                    service_ids: vec![8, 9, 10],
+                },
+            ],
+        );
+
+        // Move [1, 2, 3] to position after 4
+        let operator = InterOrOptOperator::new(InterOrOptParams {
+            from_route_id: RouteIdx::new(0),
+            to_route_id: RouteIdx::new(1),
+            segment_start: 6,
+            segment_length: 2,
+            to: 3,
+        });
+
+        let distance0 = solution.route(RouteIdx::new(0)).distance(&problem);
+        let distance1 = solution.route(RouteIdx::new(1)).distance(&problem);
+        let delta = operator.delta(&solution);
+        operator.apply(&problem, &mut solution);
+        assert_eq!(
+            solution.route(RouteIdx::new(0)).distance(&problem)
+                + solution.route(RouteIdx::new(1)).distance(&problem),
+            distance0 + distance1 + delta
+        );
+
+        assert_eq!(
+            solution
+                .route(RouteIdx::new(0))
+                .activity_ids()
+                .iter()
+                .map(|activity| activity.job_id().get())
+                .collect::<Vec<_>>(),
+            vec![0, 1, 2, 3, 4, 5],
+        );
+
+        assert_eq!(
+            solution
+                .route(RouteIdx::new(1))
+                .activity_ids()
+                .iter()
+                .map(|activity| activity.job_id().get())
+                .collect::<Vec<_>>(),
+            vec![8, 9, 10, 6, 7],
         );
     }
 }

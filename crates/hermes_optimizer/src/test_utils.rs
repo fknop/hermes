@@ -136,7 +136,7 @@ pub fn create_test_problem(
     builder.set_distance_method(DistanceMethod::Euclidean);
     builder.set_vehicle_profiles(vec![VehicleProfile::new(
         "test_profile".to_owned(),
-        TravelMatrices::from_euclidean(&locations, false),
+        TravelMatrices::from_euclidean(&locations, true),
     )]);
     builder.set_services(services);
     builder.set_locations(locations);

@@ -172,23 +172,16 @@ impl LocalSearchOperator for InterRelocateOperator {
     }
 
     fn apply(&self, problem: &VehicleRoutingProblem, solution: &mut WorkingSolution) {
-        if let Some(job_id) = solution
+        let source_job_id = solution
+            .route(self.params.from_route_id)
+            .activity_id(self.params.from);
+        solution
             .route_mut(self.params.from_route_id)
-            .remove(problem, self.params.from)
-        {
-            let route_to = solution.route_mut(self.params.to_route_id);
-            route_to.insert(
-                problem,
-                &Insertion::Service(ServiceInsertion {
-                    route_id: self.params.to_route_id,
-                    position: self.params.to,
-                    job_index: job_id.job_id(),
-                }),
-            );
-        }
+            .replace_activities(problem, &[], self.params.from, self.params.from + 1);
 
-        let from_route = solution.route_mut(self.params.from_route_id);
-        from_route.resync(problem);
+        solution
+            .route_mut(self.params.to_route_id)
+            .replace_activities(problem, &[source_job_id], self.params.to, self.params.to);
     }
 
     fn updated_routes(&self) -> Vec<RouteIdx> {
@@ -300,20 +293,139 @@ mod tests {
             from: 0,
             to: 0,
         });
+        let distances = solution.route(0.into()).distance(&problem)
+            + solution.route(1.into()).distance(&problem);
+        let delta = operator.transport_cost_delta(&solution);
+        operator.apply(&problem, &mut solution);
+        assert_eq!(
+            solution.route(0.into()).distance(&problem)
+                + solution.route(1.into()).distance(&problem),
+            distances + delta,
+        );
+        assert_eq!(
+            solution
+                .route(0.into())
+                .activity_ids()
+                .iter()
+                .map(|job_id| job_id.job_id().get())
+                .collect::<Vec<_>>(),
+            vec![1, 2, 3, 4, 5],
+        );
+
+        assert_eq!(
+            solution
+                .route(1.into())
+                .activity_ids()
+                .iter()
+                .map(|job_id| job_id.job_id().get())
+                .collect::<Vec<_>>(),
+            vec![10, 6, 7, 8, 9],
+        );
+    }
+
+    #[test]
+    fn test_inter_relocate_end() {
+        let locations = test_utils::create_location_grid(5, 5);
+
+        let services = test_utils::create_basic_services(vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+        let vehicles = test_utils::create_basic_vehicles(vec![0, 0]);
+        let problem = Arc::new(test_utils::create_test_problem(
+            locations, services, vehicles,
+        ));
+
+        let mut solution = test_utils::create_test_working_solution(
+            Arc::clone(&problem),
+            vec![
+                TestRoute {
+                    vehicle_id: 0,
+                    service_ids: vec![10, 1, 2, 3, 4, 5],
+                },
+                TestRoute {
+                    vehicle_id: 1,
+                    service_ids: vec![6, 7, 8, 9],
+                },
+            ],
+        );
+
+        let operator = InterRelocateOperator::new(InterRelocateParams {
+            from_route_id: 0.into(),
+            to_route_id: 1.into(),
+            from: 1,
+            to: 4,
+        });
 
         let distances = solution.route(0.into()).distance(&problem)
             + solution.route(1.into()).distance(&problem);
         let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
-        let new_distances = solution.route(0.into()).distance(&problem)
+        assert_eq!(
+            solution.route(0.into()).distance(&problem)
+                + solution.route(1.into()).distance(&problem),
+            distances + delta,
+        );
+
+        assert_eq!(
+            solution
+                .route(0.into())
+                .activity_ids()
+                .iter()
+                .map(|job_id| job_id.job_id().get())
+                .collect::<Vec<_>>(),
+            vec![10, 2, 3, 4, 5],
+        );
+
+        assert_eq!(
+            solution
+                .route(1.into())
+                .activity_ids()
+                .iter()
+                .map(|job_id| job_id.job_id().get())
+                .collect::<Vec<_>>(),
+            vec![6, 7, 8, 9, 1],
+        );
+    }
+
+    #[test]
+    fn test_inter_relocate_with_return() {
+        let locations = test_utils::create_location_grid(7, 7);
+
+        let services = test_utils::create_basic_services(vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+        let mut vehicles = test_utils::create_basic_vehicles(vec![0, 0]);
+        vehicles[0].set_should_return_to_depot(true);
+
+        let problem = Arc::new(test_utils::create_test_problem(
+            locations, services, vehicles,
+        ));
+
+        let mut solution = test_utils::create_test_working_solution(
+            Arc::clone(&problem),
+            vec![
+                TestRoute {
+                    vehicle_id: 0,
+                    service_ids: vec![10, 1, 2, 3, 4, 5],
+                },
+                TestRoute {
+                    vehicle_id: 1,
+                    service_ids: vec![6, 7, 8, 9],
+                },
+            ],
+        );
+
+        let operator = InterRelocateOperator::new(InterRelocateParams {
+            from_route_id: 0.into(),
+            to_route_id: 1.into(),
+            from: 0,
+            to: 4,
+        });
+
+        let distances = solution.route(0.into()).distance(&problem)
             + solution.route(1.into()).distance(&problem);
-        let expected = distances + delta;
-        assert!(
-            (new_distances - expected).abs() < 1e-9,
-            "Distance mismatch: expected {}, got {} (diff: {})",
-            expected,
-            new_distances,
-            (new_distances - expected).abs()
+        let delta = operator.transport_cost_delta(&solution);
+        operator.apply(&problem, &mut solution);
+        assert_eq!(
+            solution.route(0.into()).distance(&problem)
+                + solution.route(1.into()).distance(&problem),
+            distances + delta,
         );
 
         assert_eq!(
@@ -333,7 +445,7 @@ mod tests {
                 .iter()
                 .map(|job_id| job_id.job_id().get())
                 .collect::<Vec<_>>(),
-            vec![10, 6, 7, 8, 9],
+            vec![6, 7, 8, 9, 10],
         );
     }
 

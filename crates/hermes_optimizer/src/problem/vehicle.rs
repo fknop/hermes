@@ -66,6 +66,10 @@ impl Vehicle {
         self.should_return_to_depot
     }
 
+    pub fn set_should_return_to_depot(&mut self, should_return_to_depot: bool) {
+        self.should_return_to_depot = should_return_to_depot;
+    }
+
     pub fn maximum_activities(&self) -> Option<usize> {
         self.maximum_activities
     }

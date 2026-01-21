@@ -186,10 +186,6 @@ impl LocalSearch {
                 });
 
                 (r1, r2, best_delta, best_move)
-                // if let Some(best_move) = best_move {
-                //     self.state
-                //         .update_best(solution, r1, r2, best_delta, best_move);
-                // }
             })
             .collect::<Vec<_>>();
 
@@ -237,11 +233,40 @@ impl LocalSearch {
                 op.operator_name(),
                 r1,
                 r2,
-                op.delta(solution),
+                best_delta,
                 op
             );
-            // debug!("{:?}", solution.route(r1.into()).activity_ids());
-            op.apply(problem, solution);
+
+            if run_assertions {
+                let d1 = solution.route(r1.into()).transport_costs(problem);
+                let d2 = solution.route(r2.into()).transport_costs(problem);
+                let d_before = d1 + d2;
+
+                let t_delta = op.transport_cost_delta(solution);
+
+                // debug!("{:?}", solution.route(r1.into()).activity_ids());
+                // debug!("{:?}", solution.route(r2.into()).activity_ids());
+
+                op.apply(problem, solution);
+
+                // debug!("{:?}", solution.route(r1.into()).activity_ids());
+                // debug!("{:?}", solution.route(r2.into()).activity_ids());
+
+                let d1 = solution.route(r1.into()).transport_costs(problem);
+                let d2 = solution.route(r2.into()).transport_costs(problem);
+                let d_after = d1 + d2;
+
+                assert_eq!(
+                    d_before + if r1 == r2 { t_delta * 2.0 } else { t_delta },
+                    d_after,
+                    "Cost deviation detected, delta does not match the cost after apply. {} {} d={}",
+                    solution.route(r1.into()).len(),
+                    solution.route(r2.into()).len(),
+                    t_delta
+                );
+            } else {
+                op.apply(problem, solution);
+            }
 
             if run_assertions && let Some(score_before) = score_before {
                 let score = search.compute_solution_score(solution);
