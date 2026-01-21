@@ -1,5 +1,5 @@
 use crate::{
-    problem::vehicle_routing_problem::VehicleRoutingProblem,
+    problem::{job::ActivityId, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{
         ls::r#move::LocalSearchOperator,
         solution::{route_id::RouteIdx, working_solution::WorkingSolution},
@@ -46,6 +46,63 @@ impl RelocateOperator {
 }
 
 impl LocalSearchOperator for RelocateOperator {
+    fn generate_moves<C>(
+        _problem: &VehicleRoutingProblem,
+        solution: &WorkingSolution,
+        (r1, r2): (RouteIdx, RouteIdx),
+        mut consumer: C,
+    ) where
+        C: FnMut(Self),
+    {
+        if r1 != r2 {
+            return;
+        }
+
+        let route = solution.route(r1);
+
+        for from_pos in 0..route.activity_ids().len() {
+            let from_id = route.activity_id(from_pos);
+
+            let (to_pos_start, to_pos_end) = match from_id {
+                ActivityId::ShipmentPickup(index) => {
+                    let delivery_position = route
+                        .job_position(ActivityId::ShipmentDelivery(index))
+                        .unwrap_or_else(|| {
+                            panic!("Shipment pickup {from_id} has no delivery in the same route")
+                        });
+                    (from_pos + 1, delivery_position)
+                }
+                ActivityId::ShipmentDelivery(index) => {
+                    let pickup_position = route
+                        .job_position(ActivityId::ShipmentPickup(index))
+                        .unwrap_or_else(|| {
+                            panic!("Shipment delivery {from_id} has no pickup in the same route")
+                        });
+                    (pickup_position + 1, route.len())
+                }
+                ActivityId::Service(_) => (0, route.len()),
+            };
+
+            for to_pos in to_pos_start..=to_pos_end {
+                if from_pos == to_pos {
+                    continue;
+                }
+
+                if from_pos + 1 == to_pos {
+                    continue; // no change in this case
+                }
+
+                let op = RelocateOperator::new(RelocateOperatorParams {
+                    route_id: r1,
+                    from: from_pos,
+                    to: to_pos,
+                });
+
+                consumer(op)
+            }
+        }
+    }
+
     fn transport_cost_delta(&self, solution: &WorkingSolution) -> f64 {
         let problem = solution.problem();
         let route = solution.route(self.params.route_id);

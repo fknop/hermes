@@ -414,12 +414,14 @@ impl AlnsSearch {
 
                                 let unassigned_count = working_solution.unassigned_jobs().len();
 
-                                state.local_search.intensify(
-                                    self,
-                                    &self.problem,
-                                    &mut working_solution,
-                                    1000,
-                                );
+                                state.insertion_thread_pool.install(|| {
+                                    state.local_search.intensify(
+                                        self,
+                                        &self.problem,
+                                        &mut working_solution,
+                                        1000,
+                                    );
+                                });
 
                                 let score = self.compute_solution_score(&working_solution);
 

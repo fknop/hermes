@@ -87,6 +87,57 @@ impl OrOptOperator {
 }
 
 impl LocalSearchOperator for OrOptOperator {
+    fn generate_moves<C>(
+        _problem: &VehicleRoutingProblem,
+        solution: &WorkingSolution,
+        (r1, r2): (RouteIdx, RouteIdx),
+        mut consumer: C,
+    ) where
+        C: FnMut(Self),
+    {
+        if r1 != r2 {
+            return;
+        }
+
+        let route = solution.route(r1);
+
+        if route.len() < 4 {
+            // A, B, C, Moving A, B after C is equivalent to a relocate of C
+            return;
+        }
+
+        let route_length = route.activity_ids().len();
+        let segment_length = 2;
+
+        // A, B, C, D -> C, D, A, B, from_pos = 0, to_pos =
+        for from_pos in 0..route_length - 1 {
+            for to_pos in 0..route_length {
+                if from_pos == to_pos {
+                    continue;
+                }
+
+                // A, B, C, D, E if from = 0,
+                // Need at least two position away, otherwise it's equivalent to a relocate
+                if to_pos > from_pos && to_pos <= from_pos + segment_length + 1 {
+                    continue;
+                }
+
+                if to_pos < from_pos && from_pos < to_pos + segment_length {
+                    continue;
+                }
+
+                let op = OrOptOperator::new(OrOptOperatorParams {
+                    route_id: r1,
+                    from: from_pos,
+                    to: to_pos,
+                    segment_length,
+                });
+
+                consumer(op)
+            }
+        }
+    }
+
     fn transport_cost_delta(&self, solution: &WorkingSolution) -> f64 {
         let problem = solution.problem();
         let route = solution.route(self.params.route_id);

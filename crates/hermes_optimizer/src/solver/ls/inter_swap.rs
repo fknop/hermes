@@ -44,6 +44,35 @@ impl InterSwapOperator {
 }
 
 impl LocalSearchOperator for InterSwapOperator {
+    fn generate_moves<C>(
+        _problem: &VehicleRoutingProblem,
+        solution: &WorkingSolution,
+        (r1, r2): (RouteIdx, RouteIdx),
+        mut consumer: C,
+    ) where
+        C: FnMut(Self),
+    {
+        if r1 <= r2 {
+            return;
+        }
+
+        let from_route = solution.route(r1);
+        let to_route = solution.route(r2);
+
+        for from_pos in 0..from_route.activity_ids().len() {
+            for to_pos in 0..to_route.activity_ids().len() {
+                let op = InterSwapOperator::new(InterSwapOperatorParams {
+                    first_route_id: r1,
+                    second_route_id: r2,
+                    first: from_pos,
+                    second: to_pos,
+                });
+
+                consumer(op)
+            }
+        }
+    }
+
     fn transport_cost_delta(&self, solution: &WorkingSolution) -> f64 {
         let problem = solution.problem();
         let r1 = solution.route(self.params.first_route_id);

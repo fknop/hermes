@@ -71,6 +71,62 @@ impl CrossExchangeOperator {
 }
 
 impl LocalSearchOperator for CrossExchangeOperator {
+    fn generate_moves<C>(
+        problem: &VehicleRoutingProblem,
+        solution: &WorkingSolution,
+        (r1, r2): (RouteIdx, RouteIdx),
+        mut consumer: C,
+    ) where
+        C: FnMut(Self),
+    {
+        if r1 <= r2 {
+            return;
+        }
+
+        let from_route = solution.route(r1);
+        let to_route = solution.route(r2);
+
+        // If the bbox don't intersects, no need to try exchanges
+        if !from_route.bbox_intersects(to_route) {
+            return;
+        }
+
+        let from_route_length = from_route.activity_ids().len();
+        let to_route_length = to_route.activity_ids().len();
+
+        for from_pos in 0..from_route_length - 1 {
+            for to_pos in 0..to_route_length - 1 {
+                let max_from_chain = from_route_length - from_pos - 1;
+                let max_to_chain = to_route_length - to_pos - 1;
+
+                // A chain is at least length 2
+                for from_length in 2..=max_from_chain {
+                    for to_length in 2..=max_to_chain {
+                        if from_route.breaks_maximum_activities(problem, to_length - from_length) {
+                            continue;
+                        }
+
+                        if to_route.breaks_maximum_activities(problem, from_length - to_length) {
+                            continue;
+                        }
+
+                        let op = CrossExchangeOperator::new(CrossExchangeOperatorParams {
+                            first_route_id: r1,
+                            second_route_id: r2,
+
+                            first_start: from_pos,
+                            second_start: to_pos,
+                            first_end: from_pos + from_length - 1,
+                            second_end: to_pos + to_length - 1,
+                        });
+
+                        consumer(op)
+                    }
+                }
+            }
+        }
+    }
+
     fn transport_cost_delta(&self, solution: &WorkingSolution) -> f64 {
         let problem = solution.problem();
 

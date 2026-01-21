@@ -11,7 +11,15 @@ use crate::{
     },
 };
 
-pub trait LocalSearchOperator {
+pub trait LocalSearchOperator: Sized {
+    fn generate_moves<C>(
+        problem: &VehicleRoutingProblem,
+        solution: &WorkingSolution,
+        pair: (RouteIdx, RouteIdx),
+        consumer: C,
+    ) where
+        C: FnMut(Self);
+
     fn waiting_cost_delta(&self, solution: &WorkingSolution) -> f64;
     fn transport_cost_delta(&self, solution: &WorkingSolution) -> f64;
     fn fixed_route_cost_delta(&self, _solution: &WorkingSolution) -> f64;
@@ -27,24 +35,6 @@ pub trait LocalSearchOperator {
             } else {
                 0.0
             }
-    }
-
-    fn is_best_delta(&self, best: f64, solution: &WorkingSolution) -> bool {
-        let mut delta = self.fixed_route_cost_delta(solution);
-
-        if delta < best {
-            return true;
-        }
-
-        delta += self.transport_cost_delta(solution);
-
-        if delta < best {
-            return true;
-        }
-
-        delta += self.waiting_cost_delta(solution);
-
-        delta < best
     }
 }
 

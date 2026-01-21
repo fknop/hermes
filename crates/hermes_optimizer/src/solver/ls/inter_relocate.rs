@@ -45,6 +45,45 @@ impl InterRelocateOperator {
 }
 
 impl LocalSearchOperator for InterRelocateOperator {
+    fn generate_moves<C>(
+        problem: &VehicleRoutingProblem,
+        solution: &WorkingSolution,
+        (r1, r2): (RouteIdx, RouteIdx),
+        mut consumer: C,
+    ) where
+        C: FnMut(Self),
+    {
+        if r1 == r2 {
+            return;
+        }
+
+        let from_route = solution.route(r1);
+        let to_route = solution.route(r2);
+
+        if to_route.breaks_maximum_activities(problem, 1) {
+            return;
+        }
+
+        for from_pos in 0..from_route.activity_ids().len() {
+            let from_activity_id = from_route.activity_id(from_pos);
+
+            if from_activity_id.is_shipment() {
+                continue; // skip shipments for inter-relocate
+            }
+
+            for to_pos in 0..=to_route.activity_ids().len() {
+                let op = InterRelocateOperator::new(InterRelocateParams {
+                    from_route_id: r1,
+                    to_route_id: r2,
+                    from: from_pos,
+                    to: to_pos,
+                });
+
+                consumer(op)
+            }
+        }
+    }
+
     fn transport_cost_delta(&self, solution: &WorkingSolution) -> f64 {
         let problem = solution.problem();
         let r1 = solution.route(self.params.from_route_id);

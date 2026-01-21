@@ -53,6 +53,17 @@ impl MixedExchangeOperator {
 }
 
 impl LocalSearchOperator for MixedExchangeOperator {
+    fn generate_moves<C>(
+        problem: &VehicleRoutingProblem,
+        solution: &WorkingSolution,
+        pair: (RouteIdx, RouteIdx),
+        consumer: C,
+    ) where
+        C: FnMut(Self),
+    {
+        todo!()
+    }
+
     fn transport_cost_delta(&self, solution: &WorkingSolution) -> f64 {
         todo!()
     }

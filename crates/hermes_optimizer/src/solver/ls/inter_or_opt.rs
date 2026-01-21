@@ -1,10 +1,8 @@
 use crate::{
-    problem::{job::ActivityId, vehicle_routing_problem::VehicleRoutingProblem},
+    problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
         ls::r#move::LocalSearchOperator,
-        solution::{
-            route::WorkingSolutionRoute, route_id::RouteIdx, working_solution::WorkingSolution,
-        },
+        solution::{route_id::RouteIdx, working_solution::WorkingSolution},
     },
 };
 
@@ -53,6 +51,50 @@ impl InterOrOptOperator {
 }
 
 impl LocalSearchOperator for InterOrOptOperator {
+    fn generate_moves<C>(
+        problem: &VehicleRoutingProblem,
+        solution: &WorkingSolution,
+        (r1, r2): (RouteIdx, RouteIdx),
+        mut consumer: C,
+    ) where
+        C: FnMut(Self),
+    {
+        if r1 == r2 {
+            return;
+        }
+
+        let from_route = solution.route(r1);
+        let to_route = solution.route(r2);
+
+        if from_route.is_empty() {
+            return;
+        }
+
+        if to_route.breaks_maximum_activities(problem, 2) {
+            return;
+        }
+
+        for from_pos in 0..from_route.activity_ids().len() - 1 {
+            let from_activity_id = from_route.activity_id(from_pos);
+
+            if from_activity_id.is_shipment() {
+                continue; // skip shipments for inter-relocate
+            }
+
+            for to_pos in 0..=to_route.activity_ids().len() {
+                let op = InterOrOptOperator::new(InterOrOptParams {
+                    from_route_id: r1,
+                    to_route_id: r2,
+                    segment_start: from_pos,
+                    segment_length: 2,
+                    to: to_pos,
+                });
+
+                consumer(op)
+            }
+        }
+    }
+
     fn transport_cost_delta(&self, solution: &WorkingSolution) -> f64 {
         let problem = solution.problem();
         let r1 = solution.route(self.params.from_route_id);

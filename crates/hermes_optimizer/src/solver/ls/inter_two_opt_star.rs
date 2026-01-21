@@ -95,6 +95,56 @@ impl InterTwoOptStarOperator {
 }
 
 impl LocalSearchOperator for InterTwoOptStarOperator {
+    fn generate_moves<C>(
+        problem: &VehicleRoutingProblem,
+        solution: &WorkingSolution,
+        (r1, r2): (RouteIdx, RouteIdx),
+        mut consumer: C,
+    ) where
+        C: FnMut(Self),
+    {
+        if r1 <= r2 {
+            return;
+        }
+
+        let from_route = solution.route(r1);
+        let to_route = solution.route(r2);
+
+        // If the bbox don't intersects, no need to try exchanges
+        if !from_route.bbox_intersects(to_route) {
+            return;
+        }
+
+        let from_route_length = from_route.activity_ids().len();
+        let to_route_length = to_route.activity_ids().len();
+
+        for from_pos in 0..from_route_length - 1 {
+            for to_pos in 0..to_route_length - 1 {
+                let from_tail_length = from_route_length - from_pos - 1;
+                let to_tail_length = to_route_length - to_pos - 1;
+
+                if from_route.breaks_maximum_activities(problem, to_tail_length - from_tail_length)
+                {
+                    continue;
+                }
+
+                if to_route.breaks_maximum_activities(problem, from_tail_length - to_tail_length) {
+                    continue;
+                }
+
+                let op = InterTwoOptStarOperator::new(InterTwoOptStarOperatorParams {
+                    first_route_id: r1,
+                    second_route_id: r2,
+
+                    first_from: from_pos,
+                    second_from: to_pos,
+                });
+
+                consumer(op)
+            }
+        }
+    }
+
     fn transport_cost_delta(&self, solution: &WorkingSolution) -> f64 {
         let problem = solution.problem();
         let r1 = solution.route(self.params.first_route_id);

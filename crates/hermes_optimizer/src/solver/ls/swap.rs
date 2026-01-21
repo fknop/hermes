@@ -60,6 +60,33 @@ impl SwapOperator {
 }
 
 impl LocalSearchOperator for SwapOperator {
+    fn generate_moves<C>(
+        _problem: &VehicleRoutingProblem,
+        solution: &WorkingSolution,
+        (r1, r2): (RouteIdx, RouteIdx),
+        mut consumer: C,
+    ) where
+        C: FnMut(Self),
+    {
+        if r1 != r2 {
+            return;
+        }
+
+        let route = solution.route(r1);
+
+        for from_pos in 0..route.activity_ids().len() {
+            for to_pos in from_pos + 1..route.activity_ids().len() {
+                let op = SwapOperator::new(SwapOperatorParams {
+                    route_id: r1,
+                    first: from_pos,
+                    second: to_pos,
+                });
+
+                consumer(op)
+            }
+        }
+    }
+
     fn transport_cost_delta(&self, solution: &WorkingSolution) -> f64 {
         let problem = solution.problem();
         let route = solution.route(self.params.route_id);

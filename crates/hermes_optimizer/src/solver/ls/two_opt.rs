@@ -89,6 +89,37 @@ impl TwoOptOperator {
 }
 
 impl LocalSearchOperator for TwoOptOperator {
+    fn generate_moves<C>(
+        _problem: &VehicleRoutingProblem,
+        solution: &WorkingSolution,
+        (r1, r2): (RouteIdx, RouteIdx),
+        mut consumer: C,
+    ) where
+        C: FnMut(Self),
+    {
+        if r1 != r2 {
+            return;
+        }
+
+        let route = solution.route(r1);
+
+        if route.len() < 4 {
+            return; // need at least 4 activities to perform 2-opt
+        }
+
+        for from in 0..route.activity_ids().len() - 2 {
+            for to in (from + 2)..route.activity_ids().len() {
+                let op = TwoOptOperator::new(TwoOptParams {
+                    route_id: r1,
+                    from,
+                    to,
+                });
+
+                consumer(op)
+            }
+        }
+    }
+
     fn transport_cost_delta(&self, solution: &WorkingSolution) -> f64 {
         if solution.problem().is_symmetric() {
             self.symmetric_delta(solution)

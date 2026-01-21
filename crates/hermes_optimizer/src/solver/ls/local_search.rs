@@ -5,21 +5,21 @@ use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use tracing::{debug, info, warn};
 
 use crate::{
-    problem::{job::ActivityId, vehicle_routing_problem::VehicleRoutingProblem},
+    problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
         accepted_solution::AcceptedSolution,
         alns_search::AlnsSearch,
         ls::{
-            cross_exchange::{CrossExchangeOperator, CrossExchangeOperatorParams},
-            inter_or_opt::{InterOrOptOperator, InterOrOptParams},
-            inter_relocate::{InterRelocateOperator, InterRelocateParams},
-            inter_swap::{InterSwapOperator, InterSwapOperatorParams},
-            inter_two_opt_star::{InterTwoOptStarOperator, InterTwoOptStarOperatorParams},
+            cross_exchange::CrossExchangeOperator,
+            inter_or_opt::InterOrOptOperator,
+            inter_relocate::InterRelocateOperator,
+            inter_swap::InterSwapOperator,
+            inter_two_opt_star::InterTwoOptStarOperator,
             r#move::{LocalSearchMove, LocalSearchOperator},
-            or_opt::{OrOptOperator, OrOptOperatorParams},
-            relocate::{RelocateOperator, RelocateOperatorParams},
-            swap::{SwapOperator, SwapOperatorParams},
-            two_opt::{TwoOptOperator, TwoOptParams},
+            or_opt::OrOptOperator,
+            relocate::RelocateOperator,
+            swap::SwapOperator,
+            two_opt::TwoOptOperator,
         },
         solution::{route_id::RouteIdx, working_solution::WorkingSolution},
     },
@@ -57,14 +57,10 @@ type RoutePair = (RouteIdx, RouteIdx);
 
 pub struct LocalSearch {
     pairs: Vec<RoutePair>,
-    // deltas: Vec<Vec<f64>>,
-    // best_ops: Vec<Vec<Option<LocalSearchMove>>>,
     state: LocalSearchState,
 }
 
 const MAX_DELTA: f64 = 0.0;
-
-// TODO: Multi-threading
 
 impl LocalSearch {
     pub fn new(problem: &VehicleRoutingProblem) -> Self {
@@ -109,416 +105,98 @@ impl LocalSearch {
             assert!(!self.state.contains_key((v1, v2)));
         }
 
-        // TwoOptOperator
-        for &(r1, r2) in &self.pairs {
-            if r1 != r2 {
-                continue;
-            }
+        let results = self
+            .pairs
+            .par_iter()
+            .map(|&(r1, r2)| {
+                // Best delta for the pair
+                let mut best_delta = self.delta(solution, r1, r2);
+                let mut best_move: Option<LocalSearchMove> = None;
 
-            let route = solution.route(r1);
-
-            if route.len() < 4 {
-                continue; // need at least 4 activities to perform 2-opt
-            }
-
-            for from in 0..route.activity_ids().len() - 2 {
-                for to in (from + 2)..route.activity_ids().len() {
-                    let op = TwoOptOperator::new(TwoOptParams {
-                        route_id: r1,
-                        from,
-                        to,
-                    });
-
+                RelocateOperator::generate_moves(problem, solution, (r1, r2), |op| {
                     let delta = op.delta(solution);
-
-                    if delta < self.delta(solution, r1, r2) && op.is_valid(solution) {
-                        self.state.update_best(
-                            solution,
-                            r1,
-                            r2,
-                            delta,
-                            LocalSearchMove::TwoOpt(op),
-                        );
+                    if delta < best_delta && op.is_valid(solution) {
+                        best_delta = delta;
+                        best_move = Some(LocalSearchMove::Relocate(op));
                     }
-                }
-            }
-        }
+                });
 
-        // RelocateOperator
-        for &(r1, r2) in &self.pairs {
-            if r1 != r2 {
-                continue;
-            }
-
-            let route = solution.route(r1);
-
-            for from_pos in 0..route.activity_ids().len() {
-                let from_id = route.activity_id(from_pos);
-
-                let (to_pos_start, to_pos_end) = match from_id {
-                    ActivityId::ShipmentPickup(index) => {
-                        let delivery_position = route
-                            .job_position(ActivityId::ShipmentDelivery(index))
-                            .unwrap_or_else(|| {
-                                panic!(
-                                    "Shipment pickup {from_id} has no delivery in the same route"
-                                )
-                            });
-                        (from_pos + 1, delivery_position)
-                    }
-                    ActivityId::ShipmentDelivery(index) => {
-                        let pickup_position = route
-                            .job_position(ActivityId::ShipmentPickup(index))
-                            .unwrap_or_else(|| {
-                                panic!(
-                                    "Shipment delivery {from_id} has no pickup in the same route"
-                                )
-                            });
-                        (pickup_position + 1, route.len())
-                    }
-                    ActivityId::Service(_) => (0, route.len()),
-                };
-
-                for to_pos in to_pos_start..=to_pos_end {
-                    if from_pos == to_pos {
-                        continue;
-                    }
-
-                    if from_pos + 1 == to_pos {
-                        continue; // no change in this case
-                    }
-
-                    let op = RelocateOperator::new(RelocateOperatorParams {
-                        route_id: r1,
-                        from: from_pos,
-                        to: to_pos,
-                    });
-
+                TwoOptOperator::generate_moves(problem, solution, (r1, r2), |op| {
                     let delta = op.delta(solution);
-                    if delta < self.delta(solution, r1, r2) && op.is_valid(solution) {
-                        self.state.update_best(
-                            solution,
-                            r1,
-                            r2,
-                            delta,
-                            LocalSearchMove::Relocate(op),
-                        );
+                    if delta < best_delta && op.is_valid(solution) {
+                        best_delta = delta;
+                        best_move = Some(LocalSearchMove::TwoOpt(op));
                     }
-                }
-            }
-        }
+                });
 
-        // SwapOperator
-        for &(r1, r2) in &self.pairs {
-            if r1 != r2 {
-                continue;
-            }
-
-            let route = solution.route(r1);
-
-            for from_pos in 0..route.activity_ids().len() {
-                for to_pos in from_pos + 1..route.activity_ids().len() {
-                    let op = SwapOperator::new(SwapOperatorParams {
-                        route_id: r1,
-                        first: from_pos,
-                        second: to_pos,
-                    });
-
+                OrOptOperator::generate_moves(problem, solution, (r1, r2), |op| {
                     let delta = op.delta(solution);
-                    if delta < self.delta(solution, r1, r2) && op.is_valid(solution) {
-                        self.state
-                            .update_best(solution, r1, r2, delta, LocalSearchMove::Swap(op));
+                    if delta < best_delta && op.is_valid(solution) {
+                        best_delta = delta;
+                        best_move = Some(LocalSearchMove::OrOpt(op));
                     }
-                }
-            }
-        }
+                });
 
-        // InterSwapOperator
-        for &(r1, r2) in &self.pairs {
-            if r1 <= r2 {
-                continue;
-            }
-
-            let from_route = solution.route(r1);
-            let to_route = solution.route(r2);
-
-            for from_pos in 0..from_route.activity_ids().len() {
-                for to_pos in 0..to_route.activity_ids().len() {
-                    let op = InterSwapOperator::new(InterSwapOperatorParams {
-                        first_route_id: r1,
-                        second_route_id: r2,
-                        first: from_pos,
-                        second: to_pos,
-                    });
-
+                SwapOperator::generate_moves(problem, solution, (r1, r2), |op| {
                     let delta = op.delta(solution);
-                    if delta < self.delta(solution, r1, r2) && op.is_valid(solution) {
-                        self.state.update_best(
-                            solution,
-                            r1,
-                            r2,
-                            delta,
-                            LocalSearchMove::InterSwap(op),
-                        );
+                    if delta < best_delta && op.is_valid(solution) {
+                        best_delta = delta;
+                        best_move = Some(LocalSearchMove::Swap(op));
                     }
-                }
-            }
-        }
+                });
 
-        // InterRelocateOperator
-        for &(r1, r2) in &self.pairs {
-            if r1 == r2 {
-                continue;
-            }
-
-            let from_route = solution.route(r1);
-            let to_route = solution.route(r2);
-
-            if to_route.breaks_maximum_activities(problem, 1) {
-                continue;
-            }
-
-            for from_pos in 0..from_route.activity_ids().len() {
-                let from_activity_id = from_route.activity_id(from_pos);
-
-                if from_activity_id.is_shipment() {
-                    continue; // skip shipments for inter-relocate
-                }
-
-                for to_pos in 0..=to_route.activity_ids().len() {
-                    let op = InterRelocateOperator::new(InterRelocateParams {
-                        from_route_id: r1,
-                        to_route_id: r2,
-                        from: from_pos,
-                        to: to_pos,
-                    });
-
+                InterSwapOperator::generate_moves(problem, solution, (r1, r2), |op| {
                     let delta = op.delta(solution);
-
-                    if delta < self.delta(solution, r1, r2) && op.is_valid(solution) {
-                        self.state.update_best(
-                            solution,
-                            r1,
-                            r2,
-                            delta,
-                            LocalSearchMove::InterRelocate(op),
-                        );
+                    if delta < best_delta && op.is_valid(solution) {
+                        best_delta = delta;
+                        best_move = Some(LocalSearchMove::InterSwap(op));
                     }
-                }
-            }
-        }
+                });
 
-        // InterOrOpt
-        for &(r1, r2) in &self.pairs {
-            if r1 == r2 {
-                continue;
-            }
-
-            let from_route = solution.route(r1);
-            let to_route = solution.route(r2);
-
-            if from_route.is_empty() {
-                continue;
-            }
-
-            if to_route.breaks_maximum_activities(problem, 2) {
-                continue;
-            }
-
-            for from_pos in 0..from_route.activity_ids().len() - 1 {
-                let from_activity_id = from_route.activity_id(from_pos);
-
-                if from_activity_id.is_shipment() {
-                    continue; // skip shipments for inter-relocate
-                }
-
-                for to_pos in 0..=to_route.activity_ids().len() {
-                    let op = InterOrOptOperator::new(InterOrOptParams {
-                        from_route_id: r1,
-                        to_route_id: r2,
-                        segment_start: from_pos,
-                        segment_length: 2,
-                        to: to_pos,
-                    });
-
+                InterRelocateOperator::generate_moves(problem, solution, (r1, r2), |op| {
                     let delta = op.delta(solution);
-
-                    if delta < self.delta(solution, r1, r2) && op.is_valid(solution) {
-                        self.state.update_best(
-                            solution,
-                            r1,
-                            r2,
-                            delta,
-                            LocalSearchMove::InterOrOpt(op),
-                        );
+                    if delta < best_delta && op.is_valid(solution) {
+                        best_delta = delta;
+                        best_move = Some(LocalSearchMove::InterRelocate(op));
                     }
-                }
-            }
-        }
+                });
 
-        // OrOptOperator
-        for &(r1, r2) in &self.pairs {
-            if r1 != r2 {
-                continue;
-            }
-
-            let route = solution.route(r1);
-
-            if route.len() < 4 {
-                // A, B, C, Moving A, B after C is equivalent to a relocate of C
-                continue;
-            }
-
-            let route_length = route.activity_ids().len();
-            let segment_length = 2;
-
-            // A, B, C, D -> C, D, A, B, from_pos = 0, to_pos =
-            for from_pos in 0..route_length - 1 {
-                for to_pos in 0..route_length {
-                    if from_pos == to_pos {
-                        continue;
-                    }
-
-                    // A, B, C, D, E if from = 0,
-                    // Need at least two position away, otherwise it's equivalent to a relocate
-                    if to_pos > from_pos && to_pos <= from_pos + segment_length + 1 {
-                        continue;
-                    }
-
-                    if to_pos < from_pos && from_pos < to_pos + segment_length {
-                        continue;
-                    }
-
-                    let op = OrOptOperator::new(OrOptOperatorParams {
-                        route_id: r1,
-                        from: from_pos,
-                        to: to_pos,
-                        segment_length,
-                    });
-
+                InterOrOptOperator::generate_moves(problem, solution, (r1, r2), |op| {
                     let delta = op.delta(solution);
-                    if delta < self.delta(solution, r1, r2) && op.is_valid(solution) {
-                        self.state
-                            .update_best(solution, r1, r2, delta, LocalSearchMove::OrOpt(op));
+                    if delta < best_delta && op.is_valid(solution) {
+                        best_delta = delta;
+                        best_move = Some(LocalSearchMove::InterOrOpt(op));
                     }
-                }
-            }
-        }
+                });
 
-        // CrossExchangeOperator
-        for &(r1, r2) in &self.pairs {
-            if r1 <= r2 {
-                continue;
-            }
-
-            let from_route = solution.route(r1);
-            let to_route = solution.route(r2);
-
-            // If the bbox don't intersects, no need to try exchanges
-            if !from_route.bbox_intersects(to_route) {
-                continue;
-            }
-
-            let from_route_length = from_route.activity_ids().len();
-            let to_route_length = to_route.activity_ids().len();
-
-            for from_pos in 0..from_route_length - 1 {
-                for to_pos in 0..to_route_length - 1 {
-                    let max_from_chain = from_route_length - from_pos - 1;
-                    let max_to_chain = to_route_length - to_pos - 1;
-
-                    // A chain is at least length 2
-                    for from_length in 2..=max_from_chain {
-                        for to_length in 2..=max_to_chain {
-                            if from_route
-                                .breaks_maximum_activities(problem, to_length - from_length)
-                            {
-                                continue;
-                            }
-
-                            if to_route.breaks_maximum_activities(problem, from_length - to_length)
-                            {
-                                continue;
-                            }
-
-                            let op = CrossExchangeOperator::new(CrossExchangeOperatorParams {
-                                first_route_id: r1,
-                                second_route_id: r2,
-
-                                first_start: from_pos,
-                                second_start: to_pos,
-                                first_end: from_pos + from_length - 1,
-                                second_end: to_pos + to_length - 1,
-                            });
-                            let delta = op.delta(solution);
-                            if delta < self.delta(solution, r1, r2) && op.is_valid(solution) {
-                                self.state.update_best(
-                                    solution,
-                                    r1,
-                                    r2,
-                                    delta,
-                                    LocalSearchMove::CrossExchange(op),
-                                );
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // InterTwoOptStarOperator
-        for &(r1, r2) in &self.pairs {
-            if r1 <= r2 {
-                continue;
-            }
-
-            let from_route = solution.route(r1);
-            let to_route = solution.route(r2);
-
-            // If the bbox don't intersects, no need to try exchanges
-            if !from_route.bbox_intersects(to_route) {
-                continue;
-            }
-
-            let from_route_length = from_route.activity_ids().len();
-            let to_route_length = to_route.activity_ids().len();
-
-            for from_pos in 0..from_route_length - 1 {
-                for to_pos in 0..to_route_length - 1 {
-                    let from_tail_length = from_route_length - from_pos - 1;
-                    let to_tail_length = to_route_length - to_pos - 1;
-
-                    if from_route
-                        .breaks_maximum_activities(problem, to_tail_length - from_tail_length)
-                    {
-                        continue;
-                    }
-
-                    if to_route
-                        .breaks_maximum_activities(problem, from_tail_length - to_tail_length)
-                    {
-                        continue;
-                    }
-
-                    let op = InterTwoOptStarOperator::new(InterTwoOptStarOperatorParams {
-                        first_route_id: r1,
-                        second_route_id: r2,
-
-                        first_from: from_pos,
-                        second_from: to_pos,
-                    });
-
+                CrossExchangeOperator::generate_moves(problem, solution, (r1, r2), |op| {
                     let delta = op.delta(solution);
-                    if delta < self.delta(solution, r1, r2) && op.is_valid(solution) {
-                        self.state.update_best(
-                            solution,
-                            r1,
-                            r2,
-                            delta,
-                            LocalSearchMove::InterTwoOptStar(op),
-                        );
+                    if delta < best_delta && op.is_valid(solution) {
+                        best_delta = delta;
+                        best_move = Some(LocalSearchMove::CrossExchange(op));
                     }
-                }
+                });
+
+                InterTwoOptStarOperator::generate_moves(problem, solution, (r1, r2), |op| {
+                    let delta = op.delta(solution);
+                    if delta < best_delta && op.is_valid(solution) {
+                        best_delta = delta;
+                        best_move = Some(LocalSearchMove::InterTwoOptStar(op));
+                    }
+                });
+
+                (r1, r2, best_delta, best_move)
+                // if let Some(best_move) = best_move {
+                //     self.state
+                //         .update_best(solution, r1, r2, best_delta, best_move);
+                // }
+            })
+            .collect::<Vec<_>>();
+
+        for (r1, r2, best_delta, best_move) in results {
+            if let Some(best_move) = best_move {
+                self.state
+                    .update_best(solution, r1, r2, best_delta, best_move);
             }
         }
 
@@ -619,6 +297,29 @@ impl LocalSearch {
 
     fn delta(&self, solution: &WorkingSolution, r1: RouteIdx, r2: RouteIdx) -> f64 {
         self.state.delta(solution, r1, r2)
+    }
+
+    fn is_best_delta(
+        &self,
+        solution: &WorkingSolution,
+        operator: &impl LocalSearchOperator,
+        best: f64,
+    ) -> bool {
+        let mut delta = operator.fixed_route_cost_delta(solution);
+
+        if delta < best {
+            return true;
+        }
+
+        delta += operator.transport_cost_delta(solution);
+
+        if delta < best {
+            return true;
+        }
+
+        delta += operator.waiting_cost_delta(solution);
+
+        delta < best
     }
 
     fn build_pairs(&mut self, solution: &WorkingSolution) {
