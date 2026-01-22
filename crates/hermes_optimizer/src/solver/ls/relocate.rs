@@ -112,7 +112,9 @@ impl LocalSearchOperator for RelocateOperator {
         let c = route.next_location_id(problem, self.params.from);
 
         let x = route.previous_location_id(problem, self.params.to);
-        let y = route.location_id(problem, self.params.to);
+        let y = route
+            .location_id(problem, self.params.to)
+            .or_else(|| route.end_location(problem));
 
         let current_cost = problem.travel_cost_or_zero(route.vehicle(problem), a, from)
             + problem.travel_cost_or_zero(route.vehicle(problem), from, c)
@@ -397,6 +399,57 @@ mod tests {
 
         let services = test_utils::create_basic_services(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
         let vehicles = test_utils::create_basic_vehicles(vec![0, 0]);
+        let problem = Arc::new(test_utils::create_test_problem(
+            locations, services, vehicles,
+        ));
+
+        let mut solution = test_utils::create_test_working_solution(
+            Arc::clone(&problem),
+            vec![
+                TestRoute {
+                    vehicle_id: 0,
+                    service_ids: vec![0, 1, 2, 3, 4, 5],
+                },
+                TestRoute {
+                    vehicle_id: 1,
+                    service_ids: vec![6, 7, 8, 9, 10],
+                },
+            ],
+        );
+
+        let operator = RelocateOperator::new(RelocateOperatorParams {
+            route_id: RouteIdx::new(0),
+            from: 1,
+            to: 6,
+        });
+
+        let distance = solution.route(RouteIdx::new(0)).distance(&problem);
+        let delta = operator.transport_cost_delta(&solution);
+        operator.apply(&problem, &mut solution);
+        assert_eq!(
+            solution.route(RouteIdx::new(0)).distance(&problem),
+            distance + delta
+        );
+
+        assert_eq!(
+            solution
+                .route(RouteIdx::new(0))
+                .activity_ids()
+                .iter()
+                .map(|activity| activity.job_id().get())
+                .collect::<Vec<_>>(),
+            vec![0, 2, 3, 4, 5, 1]
+        );
+    }
+
+    #[test]
+    fn test_relocate_end_of_route_with_return() {
+        let locations = test_utils::create_location_grid(10, 10);
+
+        let services = test_utils::create_basic_services(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        let mut vehicles = test_utils::create_basic_vehicles(vec![0, 0]);
+        vehicles[0].set_should_return_to_depot(true);
+        vehicles[1].set_should_return_to_depot(true);
         let problem = Arc::new(test_utils::create_test_problem(
             locations, services, vehicles,
         ));

@@ -520,9 +520,13 @@ impl WorkingSolutionRoute {
         }
     }
 
-    pub fn depot_location(&self, problem: &VehicleRoutingProblem) -> Option<LocationIdx> {
+    pub fn end_location(&self, problem: &VehicleRoutingProblem) -> Option<LocationIdx> {
         let vehicle = self.vehicle(problem);
-        vehicle.depot_location_id()
+        if vehicle.should_return_to_depot() {
+            vehicle.depot_location_id()
+        } else {
+            None
+        }
     }
 
     fn increment_version(&mut self, problem: &VehicleRoutingProblem) {

@@ -98,7 +98,7 @@ impl LocalSearchOperator for InterRelocateOperator {
         // If self.params.to is r2.len(), we need to get the depot location
         let y = r2
             .location_id(problem, self.params.to)
-            .or_else(|| r2.depot_location(problem));
+            .or_else(|| r2.end_location(problem));
 
         let mut delta = 0.0;
 
