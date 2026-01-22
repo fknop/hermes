@@ -70,7 +70,7 @@ impl LocalSearchOperator for InterOrOptOperator {
             return;
         }
 
-        if to_route.breaks_maximum_activities(problem, 2) {
+        if to_route.will_break_maximum_activities(problem, 2) {
             return;
         }
 

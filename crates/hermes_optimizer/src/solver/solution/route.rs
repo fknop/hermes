@@ -440,9 +440,13 @@ impl WorkingSolutionRoute {
         problem.vehicle(self.vehicle_id)
     }
 
-    pub fn breaks_maximum_activities(&self, problem: &VehicleRoutingProblem, new: usize) -> bool {
+    pub fn will_break_maximum_activities(
+        &self,
+        problem: &VehicleRoutingProblem,
+        added: usize,
+    ) -> bool {
         if let Some(max) = self.vehicle(problem).maximum_activities() {
-            self.len() + new > max
+            self.len() + added > max
         } else {
             false
         }
@@ -474,7 +478,7 @@ impl WorkingSolutionRoute {
     ) -> Option<LocationIdx> {
         self.activity_ids
             .get(position)
-            .map(|&job_id| problem.job_task(job_id).location_id())
+            .map(|&activity_id| problem.job_task(activity_id).location_id())
     }
 
     pub fn previous_location_id(
@@ -514,6 +518,11 @@ impl WorkingSolutionRoute {
                 }
             }
         }
+    }
+
+    pub fn depot_location(&self, problem: &VehicleRoutingProblem) -> Option<LocationIdx> {
+        let vehicle = self.vehicle(problem);
+        vehicle.depot_location_id()
     }
 
     fn increment_version(&mut self, problem: &VehicleRoutingProblem) {

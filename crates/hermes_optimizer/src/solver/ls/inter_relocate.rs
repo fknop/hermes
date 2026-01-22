@@ -60,7 +60,7 @@ impl LocalSearchOperator for InterRelocateOperator {
         let from_route = solution.route(r1);
         let to_route = solution.route(r2);
 
-        if to_route.breaks_maximum_activities(problem, 1) {
+        if to_route.will_break_maximum_activities(problem, 1) {
             return;
         }
 
@@ -94,7 +94,11 @@ impl LocalSearchOperator for InterRelocateOperator {
         let b = r1.next_location_id(problem, self.params.from);
 
         let x = r2.previous_location_id(problem, self.params.to);
-        let y = r2.location_id(problem, self.params.to);
+
+        // If self.params.to is r2.len(), we need to get the depot location
+        let y = r2
+            .location_id(problem, self.params.to)
+            .or_else(|| r2.depot_location(problem));
 
         let mut delta = 0.0;
 
@@ -392,6 +396,7 @@ mod tests {
         let services = test_utils::create_basic_services(vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
         let mut vehicles = test_utils::create_basic_vehicles(vec![0, 0]);
         vehicles[0].set_should_return_to_depot(true);
+        vehicles[1].set_should_return_to_depot(true);
 
         let problem = Arc::new(test_utils::create_test_problem(
             locations, services, vehicles,

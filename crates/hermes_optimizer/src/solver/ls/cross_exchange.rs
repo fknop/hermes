@@ -102,11 +102,14 @@ impl LocalSearchOperator for CrossExchangeOperator {
                 // A chain is at least length 2
                 for from_length in 2..=max_from_chain {
                     for to_length in 2..=max_to_chain {
-                        if from_route.breaks_maximum_activities(problem, to_length - from_length) {
+                        if from_route
+                            .will_break_maximum_activities(problem, to_length - from_length)
+                        {
                             continue;
                         }
 
-                        if to_route.breaks_maximum_activities(problem, from_length - to_length) {
+                        if to_route.will_break_maximum_activities(problem, from_length - to_length)
+                        {
                             continue;
                         }
 

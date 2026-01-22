@@ -123,12 +123,15 @@ impl LocalSearchOperator for InterTwoOptStarOperator {
                 let from_tail_length = from_route_length - from_pos - 1;
                 let to_tail_length = to_route_length - to_pos - 1;
 
-                if from_route.breaks_maximum_activities(problem, to_tail_length - from_tail_length)
+                if from_route
+                    .will_break_maximum_activities(problem, to_tail_length - from_tail_length)
                 {
                     continue;
                 }
 
-                if to_route.breaks_maximum_activities(problem, from_tail_length - to_tail_length) {
+                if to_route
+                    .will_break_maximum_activities(problem, from_tail_length - to_tail_length)
+                {
                     continue;
                 }
 
