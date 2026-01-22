@@ -292,6 +292,10 @@ impl WorkingSolutionRoute {
     }
 
     pub fn transport_costs(&self, problem: &VehicleRoutingProblem) -> f64 {
+        if self.is_empty() {
+            return 0.0;
+        }
+
         let vehicle = self.vehicle(problem);
         let mut costs = 0.0;
 
@@ -330,6 +334,10 @@ impl WorkingSolutionRoute {
     }
 
     pub fn distance(&self, problem: &VehicleRoutingProblem) -> f64 {
+        if self.is_empty() {
+            return 0.0;
+        }
+
         let vehicle = self.vehicle(problem);
         let mut distance = 0.0;
 

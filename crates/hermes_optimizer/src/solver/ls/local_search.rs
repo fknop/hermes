@@ -223,11 +223,6 @@ impl LocalSearch {
                 None
             };
 
-            if run_assertions && !op.is_valid(solution) {
-                tracing::error!(?op, "Operator {} is not valid", op.operator_name());
-                panic!("Stored operator is not valid")
-            }
-
             info!(
                 "Apply {} ({}, {}) (d={}) {:?}",
                 op.operator_name(),
@@ -238,9 +233,13 @@ impl LocalSearch {
             );
 
             if run_assertions {
-                let d1 = solution.route(r1.into()).transport_costs(problem);
-                let d2 = solution.route(r2.into()).transport_costs(problem);
-                let d_before = d1 + d2;
+                if !op.is_valid(solution) {
+                    tracing::error!(?op, "Operator {} is not valid", op.operator_name());
+                    panic!("Stored operator is not valid")
+                }
+
+                let d1_before = solution.route(r1.into()).transport_costs(problem);
+                let d2_before = solution.route(r2.into()).transport_costs(problem);
 
                 let t_delta = op.transport_cost_delta(solution);
 
@@ -252,13 +251,21 @@ impl LocalSearch {
                 // debug!("{:?}", solution.route(r1.into()).activity_ids());
                 // debug!("{:?}", solution.route(r2.into()).activity_ids());
 
-                let d1 = solution.route(r1.into()).transport_costs(problem);
-                let d2 = solution.route(r2.into()).transport_costs(problem);
-                let d_after = d1 + d2;
+                let d1_after = solution.route(r1.into()).transport_costs(problem);
+                let d2_after = solution.route(r2.into()).transport_costs(problem);
 
-                assert_eq!(
-                    d_before + if r1 == r2 { t_delta * 2.0 } else { t_delta },
-                    d_after,
+                let (d_before, d_after) = if r1 == r2 {
+                    (d1_before, d1_after)
+                } else {
+                    (d1_before + d2_before, d1_after + d2_after)
+                };
+
+                fn approx_eq(a: f64, b: f64, epsilon: f64) -> bool {
+                    (a - b).abs() < epsilon
+                }
+
+                assert!(
+                    approx_eq(d_before + t_delta, d_after, 1e-9),
                     "Cost deviation detected, delta does not match the cost after apply. {} {} d={}",
                     solution.route(r1.into()).len(),
                     solution.route(r2.into()).len(),
@@ -293,16 +300,9 @@ impl LocalSearch {
             self.pairs.clear();
 
             let updated_routes = op.updated_routes();
-            // for &updated_route in &updated_routes {
-            //     self.deltas[updated_route.get()].fill(MAX_DELTA);
-            //     self.best_ops[updated_route.get()].fill_with(|| None);
-            // }
 
             for i in 0..solution.routes().len() {
                 for &updated_route in &updated_routes {
-                    // self.deltas[i][updated_route.get()] = MAX_DELTA;
-                    // self.best_ops[i][updated_route.get()] = None;
-
                     self.pairs.push((RouteIdx::new(i), updated_route));
                     if i != updated_route.get() {
                         self.pairs.push((updated_route, RouteIdx::new(i)));
@@ -349,6 +349,7 @@ impl LocalSearch {
 
     fn build_pairs(&mut self, solution: &WorkingSolution) {
         self.pairs.clear();
+        let max = solution.routes().len().pow(2);
 
         for (i, r1) in solution.routes().iter().enumerate_idx() {
             for (j, r2) in solution.routes().iter().enumerate_idx() {
@@ -359,6 +360,13 @@ impl LocalSearch {
                 }
             }
         }
+
+        info!(
+            "Local Search: Built {} route pairs (max {}). Cache ratio: {}",
+            self.pairs.len(),
+            max,
+            (max - self.pairs.len()) as f64 / max as f64
+        );
     }
 }
 

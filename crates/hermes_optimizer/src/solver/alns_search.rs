@@ -8,7 +8,7 @@ use fxhash::FxHashMap;
 use jiff::{SignedDuration, Timestamp};
 use parking_lot::{MappedRwLockReadGuard, Mutex, RwLock, RwLockReadGuard};
 use rand::{Rng, SeedableRng, rngs::SmallRng};
-use tracing::{debug, warn};
+use tracing::{debug, info, warn};
 
 use crate::{
     acceptor::{
@@ -382,7 +382,7 @@ impl AlnsSearch {
                                     > 500;
 
                             if should_intensify {
-                                let best_selector = SelectBestSelector;
+                                let best_selector = SelectWeightedSelector;
                                 let (
                                     mut working_solution,
                                     current_score,
@@ -415,12 +415,13 @@ impl AlnsSearch {
                                 let unassigned_count = working_solution.unassigned_jobs().len();
 
                                 state.insertion_thread_pool.install(|| {
-                                    state.local_search.intensify(
+                                    let iterations = state.local_search.intensify(
                                         self,
                                         &self.problem,
                                         &mut working_solution,
                                         1000,
                                     );
+                                    info!("Iterations {iterations}");
                                 });
 
                                 let score = self.compute_solution_score(&working_solution);
@@ -633,11 +634,11 @@ impl AlnsSearch {
         let recreate_duration = Timestamp::now().duration_since(now);
 
         // if rng.random_bool(self.params.intensify_probability) {
-        //     // let mut intensify_search = IntensifySearch::new(&working_solution);
-        //     state
-        //         .local_search
-        //         .intensify(self, &self.problem, &mut working_solution, 1000);
-        //     // intensify_search.intensify(self, &self.problem, &mut working_solution, 1000);
+        //     state.insertion_thread_pool.install(|| {
+        //         state
+        //             .local_search
+        //             .intensify(self, &self.problem, &mut working_solution, 1000);
+        //     });
         // }
 
         self.update_solutions(
@@ -776,11 +777,19 @@ impl AlnsSearch {
                         }
                     }
 
+                    if solution.unassigned_jobs().len() < guard[0].solution.unassigned_jobs().len()
+                    {
+                        guard.retain(|s| {
+                            s.solution.unassigned_jobs().len() <= solution.unassigned_jobs().len()
+                        });
+                    }
+
                     guard.push(AcceptedSolution {
                         solution,
                         score,
                         score_analysis,
                     });
+
                     guard.sort_unstable_by(|a, b| {
                         a.solution
                             .unassigned_jobs()
