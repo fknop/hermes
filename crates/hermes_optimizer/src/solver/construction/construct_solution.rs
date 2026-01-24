@@ -19,7 +19,7 @@ use crate::{
         noise::NoiseParams,
         recreate::{
             construction_best_insertion::ConstructionBestInsertion,
-            recreate_context::RecreateContext,
+            recreate_context::RecreateContext, regret_insertion::RegretInsertion,
         },
         solution::{route_id::RouteIdx, working_solution::WorkingSolution},
         solver_params::SolverParams,
@@ -370,8 +370,11 @@ pub fn construct_solution(
     // }
 
     // solution.resync();
+    //
+    //
+    let regret_insertion = RegretInsertion::new(2);
 
-    ConstructionBestInsertion::insert_services(
+    regret_insertion.insert_services(
         &mut solution,
         RecreateContext {
             rng,
@@ -386,6 +389,22 @@ pub fn construct_solution(
             insert_on_failure: false,
         },
     );
+
+    // ConstructionBestInsertion::insert_services(
+    //     &mut solution,
+    //     RecreateContext {
+    //         rng,
+    //         constraints,
+    //         noise_params: NoiseParams {
+    //             max_cost: problem.max_cost(),
+    //             noise_level: params.noise_level,
+    //             noise_probability: params.noise_probability,
+    //         },
+    //         problem,
+    //         thread_pool,
+    //         insert_on_failure: false,
+    //     },
+    // );
 
     let mut local_search = LocalSearch::new(problem);
 

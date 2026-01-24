@@ -118,7 +118,7 @@ pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
                 search_threads: Threads::Multi(args.sthreads as usize),
                 insertion_threads: Threads::Multi(args.ithreads as usize),
                 debug_options: SolverParamsDebugOptions {
-                    enable_local_search: true,
+                    enable_local_search: false,
                 },
                 ..SolverParams::default()
             },

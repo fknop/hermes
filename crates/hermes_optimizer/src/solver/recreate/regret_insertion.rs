@@ -1,10 +1,13 @@
 use rand::{Rng, RngCore};
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
-use crate::solver::{
-    insertion::{Insertion, for_each_insertion},
-    score::Score,
-    solution::working_solution::WorkingSolution,
+use crate::{
+    problem::job::JobIdx,
+    solver::{
+        insertion::{Insertion, for_each_insertion},
+        score::Score,
+        solution::working_solution::WorkingSolution,
+    },
 };
 
 use super::{recreate_context::RecreateContext, recreate_solution::RecreateSolution};
@@ -63,12 +66,12 @@ impl RegretInsertion {
                     let score = noiser
                         .apply_noise(context.compute_insertion_score(solution, &insertion, None));
 
-                    if let Some(last) = potential_insertions.last()
-                        && !potential_insertions.is_empty()
-                        && score < last.0
-                    {
-                        return;
-                    }
+                    // if let Some(last) = potential_insertions.last()
+                    //     && !potential_insertions.is_empty()
+                    //     && score > last.0
+                    // {
+                    //     return;
+                    // }
 
                     potential_insertions.push((score, insertion));
                     potential_insertions.sort_unstable_by(|a, b| a.0.cmp(&b.0));
@@ -120,6 +123,11 @@ impl RegretInsertion {
     }
 
     pub fn insert_services(&self, solution: &mut WorkingSolution, mut context: RecreateContext) {
+        // let mut unassigned_jobs = solution
+        //     .unassigned_jobs()
+        //     .iter()
+        //     .copied()
+        //     .collect::<Vec<_>>();
         while !solution.unassigned_jobs().is_empty() {
             let best_insertion_for_max_regret = context
                 .thread_pool
@@ -132,6 +140,8 @@ impl RegretInsertion {
                 } else {
                     break;
                 }
+
+                // unassigned_jobs.retain(|u| *u != insertion.job_idx());
             } else {
                 panic!("no insertion possible");
                 // If no service could be inserted (e.g., all remaining are infeasible),

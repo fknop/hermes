@@ -42,6 +42,7 @@ use crate::{
         solver_params::SolverParamsDebugOptions,
         statistics::SearchStatisticsIteration,
     },
+    timer_debug,
     utils::cancellable_barrier::{CancellableBarrier, WaitResult},
 };
 
@@ -72,16 +73,11 @@ pub struct AlnsSearch {
     params: SolverParams,
     best_solutions: Arc<RwLock<Vec<AcceptedSolution>>>,
     tabu: Arc<RwLock<VecDeque<AcceptedSolution>>>,
-    solution_selector: SolutionSelector,
-    solution_acceptor: SolutionAcceptor,
-
     global_alns_ruin_weights: Arc<RwLock<AlnsWeights<RuinStrategy>>>,
     global_alns_recreate_weights: Arc<RwLock<AlnsWeights<RecreateStrategy>>>,
     global_alns_ruin_scores: Arc<RwLock<AlnsScores<RuinStrategy>>>,
     global_alns_recreate_scores: Arc<RwLock<AlnsScores<RecreateStrategy>>>,
-
     on_best_solution_handler: Option<BestSolutionHandler>,
-
     is_stopped: Arc<AtomicBool>,
     statistics: Arc<SearchStatistics>,
 }
@@ -94,7 +90,63 @@ impl AlnsSearch {
             );
         }
 
-        let solution_selector = match params.solver_selector {
+        AlnsSearch {
+            problem: Arc::clone(&problem),
+            constraints: Self::create_constraints(),
+            best_solutions: Arc::new(RwLock::new(Vec::with_capacity(params.max_solutions))),
+            global_alns_ruin_weights: Arc::new(RwLock::new(AlnsWeights::new(
+                params.ruin_strategies().clone(),
+            ))),
+            global_alns_recreate_weights: Arc::new(RwLock::new(AlnsWeights::new(
+                params.recreate_strategies().clone(),
+            ))),
+            global_alns_ruin_scores: Arc::new(RwLock::new(AlnsScores::new(
+                params.ruin_strategies().clone(),
+            ))),
+            global_alns_recreate_scores: Arc::new(RwLock::new(AlnsScores::new(
+                params.recreate_strategies().clone(),
+            ))),
+
+            tabu: Arc::new(RwLock::new(VecDeque::with_capacity(params.tabu_size))),
+            on_best_solution_handler: None,
+
+            is_stopped: Arc::new(AtomicBool::new(false)),
+            statistics: Arc::new(SearchStatistics::new(
+                params.search_threads.number_of_threads(),
+            )),
+            params,
+        }
+    }
+
+    fn set_initial_solution(&self, solution: WorkingSolution) {
+        let (score, score_analysis) = self.compute_solution_score(&solution);
+        self.best_solutions.write().push(AcceptedSolution {
+            solution,
+            score,
+            score_analysis,
+        });
+    }
+
+    fn create_construction_thread_pool(&self) -> rayon::ThreadPool {
+        rayon::ThreadPoolBuilder::new()
+            .num_threads(
+                // No search threads used in construction so we use those
+                self.params.search_threads.number_of_threads()
+                    * self.params.insertion_threads.number_of_threads(),
+            )
+            .build()
+            .unwrap()
+    }
+
+    fn create_insertion_thread_pool(&self) -> rayon::ThreadPool {
+        rayon::ThreadPoolBuilder::new()
+            .num_threads(self.params.insertion_threads.number_of_threads())
+            .build()
+            .unwrap()
+    }
+
+    fn create_solution_selector(&self) -> SolutionSelector {
+        match self.params.solver_selector {
             SolverSelectorStrategy::SelectBest => SolutionSelector::SelectBest(SelectBestSelector),
             SolverSelectorStrategy::SelectRandom => {
                 SolutionSelector::SelectRandom(SelectRandomSelector)
@@ -102,8 +154,11 @@ impl AlnsSearch {
             SolverSelectorStrategy::SelectWeighted => {
                 SolutionSelector::SelectWeighted(SelectWeightedSelector)
             }
-        };
-        let solution_acceptor = match params.solver_acceptor {
+        }
+    }
+
+    fn create_solution_acceptor(&self) -> SolutionAcceptor {
+        match self.params.solver_acceptor {
             SolverAcceptorStrategy::Greedy => SolutionAcceptor::Greedy(GreedySolutionAcceptor),
             SolverAcceptorStrategy::Schrimpf => {
                 let random_walks = 100;
@@ -121,10 +176,15 @@ impl AlnsSearch {
                         tabu_enabled: false,
                         run_intensify_search: false,
                         intensify_probability: 0.0,
-                        ..params.clone()
+                        ..self.params.clone()
                     },
-                    Arc::clone(&problem),
+                    Arc::clone(&self.problem),
                 );
+
+                if let Some(best_solution) = self.best_solution() {
+                    shrimpf_initial_threshold_search
+                        .set_initial_solution(best_solution.solution.clone());
+                }
 
                 shrimpf_initial_threshold_search.run();
 
@@ -167,10 +227,14 @@ impl AlnsSearch {
                         debug_options: SolverParamsDebugOptions {
                             enable_local_search: false,
                         },
-                        ..params.clone()
+                        ..self.params.clone()
                     },
-                    Arc::clone(&problem),
+                    Arc::clone(&self.problem),
                 );
+
+                if let Some(best_solution) = self.best_solution() {
+                    initial_temperature_search.set_initial_solution(best_solution.solution.clone());
+                }
 
                 initial_temperature_search.run();
                 let soft_score = initial_temperature_search
@@ -187,59 +251,23 @@ impl AlnsSearch {
                 ))
             }
             SolverAcceptorStrategy::Any => SolutionAcceptor::Any,
-        };
-
-        AlnsSearch {
-            problem: Arc::clone(&problem),
-            constraints: Self::create_constraints(),
-            best_solutions: Arc::new(RwLock::new(Vec::with_capacity(params.max_solutions))),
-            global_alns_ruin_weights: Arc::new(RwLock::new(AlnsWeights::new(
-                params.ruin_strategies().clone(),
-            ))),
-            global_alns_recreate_weights: Arc::new(RwLock::new(AlnsWeights::new(
-                params.recreate_strategies().clone(),
-            ))),
-            global_alns_ruin_scores: Arc::new(RwLock::new(AlnsScores::new(
-                params.ruin_strategies().clone(),
-            ))),
-            global_alns_recreate_scores: Arc::new(RwLock::new(AlnsScores::new(
-                params.recreate_strategies().clone(),
-            ))),
-
-            tabu: Arc::new(RwLock::new(VecDeque::with_capacity(params.tabu_size))),
-            solution_selector,
-            solution_acceptor,
-            on_best_solution_handler: None,
-
-            is_stopped: Arc::new(AtomicBool::new(false)),
-            statistics: Arc::new(SearchStatistics::new(
-                params.search_threads.number_of_threads(),
-            )),
-            params,
         }
-    }
-
-    fn create_insertion_thread_pool(&self) -> rayon::ThreadPool {
-        rayon::ThreadPoolBuilder::new()
-            .num_threads(self.params.insertion_threads.number_of_threads())
-            .build()
-            .unwrap()
     }
 
     fn create_constraints() -> Vec<Constraint> {
         vec![
             // Hard constraints
-            Constraint::Activity(ActivityConstraintType::TimeWindow(
-                TimeWindowConstraint::default(),
+            Constraint::Route(RouteConstraintType::MaximumJobs(
+                MaximumActivitiesConstraint,
             )),
-            Constraint::Route(RouteConstraintType::Capacity(CapacityConstraint::default())),
             Constraint::Route(RouteConstraintType::Shift(ShiftConstraint)),
             Constraint::Route(RouteConstraintType::MaximumWorkingDuration(
                 MaximumWorkingDurationConstraint,
             )),
-            Constraint::Route(RouteConstraintType::MaximumJobs(
-                MaximumActivitiesConstraint,
+            Constraint::Activity(ActivityConstraintType::TimeWindow(
+                TimeWindowConstraint::default(),
             )),
+            Constraint::Route(RouteConstraintType::Capacity(CapacityConstraint::default())),
             // Soft constraints
             Constraint::Global(GlobalConstraintType::TransportCost(TransportCostConstraint)),
             Constraint::Route(RouteConstraintType::VehicleCost(VehicleCostConstraint)),
@@ -277,17 +305,16 @@ impl AlnsSearch {
             .store(true, std::sync::atomic::Ordering::Relaxed);
     }
 
-    pub fn run(&self) {
-        let mut rng = SmallRng::seed_from_u64(2427121);
-        let start = Timestamp::now();
-        let num_threads = self.params.search_threads.number_of_threads();
-
-        let initial_solution = construct_solution(
-            &self.problem,
-            &self.params,
-            &mut rng,
-            &self.constraints,
-            &self.create_insertion_thread_pool(),
+    fn run_construction(&self, rng: &mut SmallRng) {
+        let initial_solution = timer_debug!(
+            "Construction",
+            construct_solution(
+                &self.problem,
+                &self.params,
+                rng,
+                &self.constraints,
+                &self.create_construction_thread_pool(),
+            )
         );
 
         let (score, score_analysis) = self.compute_solution_score(&initial_solution);
@@ -310,10 +337,22 @@ impl AlnsSearch {
             score,
             score_analysis,
         });
+    }
+
+    pub fn run(&self) {
+        let mut rng = SmallRng::seed_from_u64(2427121);
+        let start = Timestamp::now();
+
+        self.run_construction(&mut rng);
 
         if !self.params.debug_options.enable_local_search {
             return;
         }
+
+        let num_threads = self.params.search_threads.number_of_threads();
+        // Could just clone this instead of storing in an Arc honestly
+        let solution_acceptor = Arc::new(self.create_solution_acceptor());
+        let solution_selector = Arc::new(self.create_solution_selector());
 
         debug!("Running search on {} threads", num_threads);
 
@@ -329,7 +368,8 @@ impl AlnsSearch {
                 let global_statistics = Arc::clone(self.statistics.global_statistics());
                 let thread_statistics = Arc::clone(self.statistics.thread_statistics(thread_index));
 
-                // let on_best_solution_handler = Arc::clone(&self.on_best_solution_handler);
+                let solution_acceptor = Arc::clone(&solution_acceptor);
+                let solution_selector = Arc::clone(&solution_selector);
 
                 let max_iterations = self
                     .params
@@ -374,6 +414,8 @@ impl AlnsSearch {
                             thread_statistics,
                             insertion_thread_pool: self.create_insertion_thread_pool(),
                             local_search: LocalSearch::new(&self.problem),
+                            solution_acceptor,
+                            solution_selector,
                         };
 
                         loop {
@@ -415,12 +457,11 @@ impl AlnsSearch {
                                 let unassigned_count = working_solution.unassigned_jobs().len();
 
                                 state.insertion_thread_pool.install(|| {
-                                    let iterations = state.local_search.intensify(
+                                    state.local_search.intensify(
                                         &self.problem,
                                         &mut working_solution,
                                         1000,
                                     );
-                                    debug!("Iterations {iterations}");
                                 });
 
                                 let score = self.compute_solution_score(&working_solution);
@@ -486,7 +527,6 @@ impl AlnsSearch {
                                 .iteration
                                 .is_multiple_of(self.params.threads_sync_iterations_interval)
                             {
-                                debug!("Accumulating scores");
                                 // Update accumulated global stats from local stats
                                 self.global_alns_ruin_scores
                                     .write()
@@ -519,8 +559,6 @@ impl AlnsSearch {
                                 if wait_result.is_cancelled() {
                                     break;
                                 }
-
-                                debug!("Updating local weights from global weights");
 
                                 // Update local weights from global
                                 state.alns_ruin_weights =
@@ -607,7 +645,7 @@ impl AlnsSearch {
             if !solutions_guard.is_empty()
                 && let Some(AcceptedSolution {
                     solution, score, ..
-                }) = self
+                }) = state
                     .solution_selector
                     .select_solution(&solutions_guard, rng)
             {
@@ -683,7 +721,7 @@ impl AlnsSearch {
             && solution.unassigned_jobs().len() <= iteration_info.best_unassigned_count();
 
         if is_best
-            || self.solution_acceptor.accept(
+            || state.solution_acceptor.accept(
                 &guard,
                 &solution,
                 &score,
@@ -1044,4 +1082,6 @@ struct ThreadedSearchState {
     thread_statistics: Arc<RwLock<ThreadSearchStatistics>>,
     insertion_thread_pool: rayon::ThreadPool,
     local_search: LocalSearch,
+    solution_acceptor: Arc<SolutionAcceptor>,
+    solution_selector: Arc<SolutionSelector>,
 }

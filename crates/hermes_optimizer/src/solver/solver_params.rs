@@ -101,7 +101,7 @@ impl Default for SolverParams {
             tabu_enabled: true,
             tabu_size: 5,
             tabu_iterations: 500,
-            solver_acceptor: SolverAcceptorStrategy::Schrimpf,
+            solver_acceptor: SolverAcceptorStrategy::SimulatedAnnealing,
             solver_selector: SolverSelectorStrategy::SelectWeighted,
             ruin: RuinParams::default(),
             recreate: RecreateParams::default(),
