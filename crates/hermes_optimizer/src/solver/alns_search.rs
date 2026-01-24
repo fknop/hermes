@@ -416,7 +416,6 @@ impl AlnsSearch {
 
                                 state.insertion_thread_pool.install(|| {
                                     let iterations = state.local_search.intensify(
-                                        self,
                                         &self.problem,
                                         &mut working_solution,
                                         1000,

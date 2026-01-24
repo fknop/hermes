@@ -11,6 +11,7 @@ use crate::{
         alns_search::AlnsSearch,
         ls::{
             cross_exchange::CrossExchangeOperator,
+            inter_mixed_exchange::InterMixedExchange,
             inter_or_opt::InterOrOptOperator,
             inter_relocate::InterRelocateOperator,
             inter_swap::InterSwapOperator,
@@ -77,14 +78,13 @@ impl LocalSearch {
 
     pub fn intensify(
         &mut self,
-        search: &AlnsSearch,
         problem: &VehicleRoutingProblem,
         solution: &mut WorkingSolution,
         iterations: usize,
     ) -> usize {
         self.build_pairs(solution);
         for i in 0..iterations {
-            if !self.run_iteration(search, problem, solution, i + 1) {
+            if !self.run_iteration(problem, solution, i + 1) {
                 return i + 1;
             }
         }
@@ -92,9 +92,25 @@ impl LocalSearch {
         iterations
     }
 
+    pub fn intensify_route(
+        &mut self,
+        problem: &VehicleRoutingProblem,
+        solution: &mut WorkingSolution,
+        route: RouteIdx,
+    ) {
+        self.pairs.clear();
+        self.pairs.push((route, route));
+        let mut iteration = 0;
+        loop {
+            iteration += 1;
+            if !self.run_iteration(problem, solution, iteration) {
+                break;
+            }
+        }
+    }
+
     fn run_iteration(
         &mut self,
-        search: &AlnsSearch,
         problem: &VehicleRoutingProblem,
         solution: &mut WorkingSolution,
         iteration: usize,
@@ -159,6 +175,14 @@ impl LocalSearch {
                     if delta < best_delta && op.is_valid(solution) {
                         best_delta = delta;
                         best_move = Some(LocalSearchMove::InterSwap(op));
+                    }
+                });
+
+                InterMixedExchange::generate_moves(problem, solution, (r1, r2), |op| {
+                    let delta = op.delta(solution);
+                    if delta < best_delta && op.is_valid(solution) {
+                        best_delta = delta;
+                        best_move = Some(LocalSearchMove::InterMixedExchange(op));
                     }
                 });
 
@@ -227,12 +251,6 @@ impl LocalSearch {
         {
             let run_assertions = true;
 
-            let score_before = if run_assertions {
-                Some(search.compute_solution_score(solution))
-            } else {
-                None
-            };
-
             debug!(
                 "Apply {} ({}, {}) (d={}) {:?}",
                 op.operator_name(),
@@ -283,28 +301,6 @@ impl LocalSearch {
                 );
             } else {
                 op.apply(problem, solution);
-            }
-
-            if run_assertions && let Some(score_before) = score_before {
-                let score = search.compute_solution_score(solution);
-                if !score_before.0.is_failure() && score.0.is_failure() {
-                    tracing::error!(
-                        "Iteration {}: Operator {} ({}, {}) broke hard constraint {:?}",
-                        iteration,
-                        op.operator_name(),
-                        r1,
-                        r2,
-                        score.1
-                    );
-
-                    tracing::error!("{:?}", op);
-
-                    for (index, route) in solution.routes().iter().enumerate() {
-                        println!("Route {}: {:?}", index, route.activity_ids());
-                    }
-
-                    panic!();
-                }
             }
 
             self.pairs.clear();

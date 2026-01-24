@@ -54,38 +54,175 @@ impl InterMixedExchange {
 
         InterMixedExchange { params }
     }
+
+    fn r1_moved_jobs<'a>(
+        &'a self,
+        solution: &'a WorkingSolution,
+    ) -> impl DoubleEndedIterator<Item = ActivityId> + Clone + 'a {
+        let route = solution.route(self.params.from_route_id);
+        route.activity_ids_iter(self.params.position, self.params.position + 1)
+    }
+
+    fn r2_moved_jobs<'a>(
+        &'a self,
+        solution: &'a WorkingSolution,
+    ) -> impl DoubleEndedIterator<Item = ActivityId> + Clone + 'a {
+        let route = solution.route(self.params.to_route_id);
+        route.activity_ids_iter(
+            self.params.segment_start,
+            self.params.segment_start + self.params.segment_length,
+        )
+    }
 }
 
 impl LocalSearchOperator for InterMixedExchange {
     fn generate_moves<C>(
         problem: &VehicleRoutingProblem,
         solution: &WorkingSolution,
-        pair: (RouteIdx, RouteIdx),
-        consumer: C,
+        (r1, r2): (RouteIdx, RouteIdx),
+        mut consumer: C,
     ) where
         C: FnMut(Self),
     {
-        todo!()
+        if r1 == r2 {
+            return;
+        }
+
+        let route1 = solution.route(r1);
+        let route2 = solution.route(r2);
+
+        if !route1.bbox_intersects(route2) {
+            return;
+        }
+
+        let segment_length = 2;
+        if route1.will_break_maximum_activities(problem, segment_length - 1) {
+            return;
+        }
+
+        for position in 0..route1.len() {
+            for segment_start in 0..route2.len().saturating_sub(segment_length) {
+                let params = InterMixedExchangeParams {
+                    from_route_id: r1,
+                    to_route_id: r2,
+                    position,
+                    segment_start,
+                    segment_length,
+                };
+                let operator = InterMixedExchange::new(params);
+                consumer(operator)
+            }
+        }
     }
 
     fn transport_cost_delta(&self, solution: &WorkingSolution) -> f64 {
-        todo!()
+        let problem = solution.problem();
+        let r1 = solution.route(self.params.from_route_id);
+        let r2 = solution.route(self.params.to_route_id);
+        let v1 = r1.vehicle(problem);
+        let v2 = r2.vehicle(problem);
+
+        let from = r1.location_id(problem, self.params.position);
+        let from_prev = r1.previous_location_id(problem, self.params.position);
+        let from_next = r1.next_location_id(problem, self.params.position);
+
+        let segment_start = r2.location_id(problem, self.params.segment_start);
+        let segment_end = r2.location_id(
+            problem,
+            self.params.segment_start + self.params.segment_length - 1,
+        );
+        let segment_start_prev = r2.previous_location_id(problem, self.params.segment_start);
+        let segment_end_next = r2.next_location_id(
+            problem,
+            self.params.segment_start + self.params.segment_length - 1,
+        );
+
+        let mut delta = 0.0;
+
+        // R1 changes
+        delta -= problem.travel_cost_or_zero(v1, from_prev, from);
+        delta -= problem.travel_cost_or_zero(v1, from, from_next);
+        delta += problem.travel_cost_or_zero(v1, from_prev, segment_start);
+        delta += problem.travel_cost_or_zero(v1, segment_end, from_next);
+
+        // R2 changes
+        delta -= problem.travel_cost_or_zero(v2, segment_start_prev, segment_start);
+        delta -= problem.travel_cost_or_zero(v2, segment_end, segment_end_next);
+        delta += problem.travel_cost_or_zero(v2, segment_start_prev, from);
+        delta += problem.travel_cost_or_zero(v2, from, segment_end_next);
+
+        delta
     }
 
     fn fixed_route_cost_delta(&self, _solution: &WorkingSolution) -> f64 {
         0.0
     }
 
-    fn waiting_cost_delta(&self, _solution: &WorkingSolution) -> f64 {
-        todo!()
+    fn waiting_cost_delta(&self, solution: &WorkingSolution) -> f64 {
+        let problem = solution.problem();
+        let r1 = solution.route(self.params.from_route_id);
+        let r2 = solution.route(self.params.to_route_id);
+
+        let r1_activity_ids = self.r1_moved_jobs(solution);
+        let r2_activity_ids = self.r2_moved_jobs(solution);
+
+        let delta = r1.waiting_duration_change_delta(
+            problem,
+            r2_activity_ids,
+            self.params.position,
+            self.params.position + 1,
+        ) + r2.waiting_duration_change_delta(
+            problem,
+            r1_activity_ids,
+            self.params.segment_start,
+            self.params.segment_start + self.params.segment_length,
+        );
+
+        problem.waiting_duration_cost(delta)
     }
 
     fn is_valid(&self, solution: &WorkingSolution) -> bool {
-        todo!()
+        let problem = solution.problem();
+        let r1 = solution.route(self.params.from_route_id);
+        let r2 = solution.route(self.params.to_route_id);
+
+        let r1_activity_ids = self.r1_moved_jobs(solution);
+        let r2_activity_ids = self.r2_moved_jobs(solution);
+
+        r1.is_valid_change(
+            problem,
+            r2_activity_ids,
+            self.params.position,
+            self.params.position + 1,
+        ) && r2.is_valid_change(
+            problem,
+            r1_activity_ids,
+            self.params.segment_start,
+            self.params.segment_start + self.params.segment_length,
+        )
     }
 
     fn apply(&self, problem: &VehicleRoutingProblem, solution: &mut WorkingSolution) {
-        todo!()
+        let r1_activity_ids = self.r1_moved_jobs(solution).collect::<Vec<_>>();
+        let r2_activity_ids = self.r2_moved_jobs(solution).collect::<Vec<_>>();
+
+        let r1 = solution.route_mut(self.params.from_route_id);
+
+        r1.replace_activities(
+            problem,
+            &r2_activity_ids,
+            self.params.position,
+            self.params.position + 1,
+        );
+
+        let r2 = solution.route_mut(self.params.to_route_id);
+
+        r2.replace_activities(
+            problem,
+            &r1_activity_ids,
+            self.params.segment_start,
+            self.params.segment_start + self.params.segment_length,
+        );
     }
 
     fn updated_routes(&self) -> Vec<RouteIdx> {

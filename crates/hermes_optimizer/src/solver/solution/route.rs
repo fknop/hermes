@@ -999,13 +999,13 @@ impl WorkingSolutionRoute {
     pub fn is_valid_change(
         &self,
         problem: &VehicleRoutingProblem,
-        job_ids: impl Iterator<Item = ActivityId> + Clone,
+        activity_ids: impl Iterator<Item = ActivityId> + Clone,
         start: usize,
         end: usize,
     ) -> bool {
         // self.is_valid_maximum_activities_change(problem, job_ids.clone(), start, end)
-        self.is_valid_tw_change(problem, job_ids.clone(), start, end)
-            && self.is_valid_capacity_change(problem, job_ids, start, end)
+        self.is_valid_tw_change(problem, activity_ids.clone(), start, end)
+            && self.is_valid_capacity_change(problem, activity_ids, start, end)
     }
 
     fn is_valid_maximum_activities_change(

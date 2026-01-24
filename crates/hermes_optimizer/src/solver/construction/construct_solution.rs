@@ -15,6 +15,7 @@ use crate::{
     solver::{
         constraints::constraint::Constraint,
         insertion::{Insertion, ServiceInsertion},
+        ls::local_search::LocalSearch,
         noise::NoiseParams,
         recreate::{
             construction_best_insertion::ConstructionBestInsertion,
@@ -385,6 +386,22 @@ pub fn construct_solution(
             insert_on_failure: false,
         },
     );
+
+    let mut local_search = LocalSearch::new(problem);
+
+    let routes = solution
+        .routes()
+        .iter()
+        .enumerate_idx()
+        .filter(|(_, route)| !route.is_empty())
+        .map(|(route_id, _)| route_id)
+        .collect::<Vec<RouteIdx>>();
+
+    thread_pool.install(|| {
+        for &route_id in &routes {
+            local_search.intensify_route(problem, &mut solution, route_id);
+        }
+    });
 
     solution
 }
