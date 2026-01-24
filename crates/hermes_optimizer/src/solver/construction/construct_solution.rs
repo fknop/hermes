@@ -303,94 +303,9 @@ pub fn construct_solution(
     let mut solution = WorkingSolution::new(Arc::clone(problem));
     create_initial_routes(problem, &mut solution);
 
-    // ConstructionBestInsertion::insert_services(
-    //     &mut solution,
-    //     RecreateContext {
-    //         rng,
-    //         // constraints,
-    //         constraints: &vec![
-    //             Constraint::Global(GlobalConstraintType::TransportCost(TransportCostConstraint)),
-    //             Constraint::Route(RouteConstraintType::VehicleCost(VehicleCostConstraint)),
-    //             Constraint::Route(RouteConstraintType::Capacity(CapacityConstraint::new(
-    //                 ScoreLevel::Soft,
-    //             ))),
-    //             Constraint::Activity(ActivityConstraintType::TimeWindow(
-    //                 TimeWindowConstraint::new(ScoreLevel::Soft),
-    //             )),
-    //             Constraint::Route(RouteConstraintType::WaitingDuration(
-    //                 WaitingDurationConstraint,
-    //             )),
-    //         ],
-    //         noise_generator: None,
-    //         problem,
-    //         thread_pool,
-    //         insert_on_failure: true,
-    //     },
-    // );
+    // let regret_insertion = RegretInsertion::new(2);
 
-    // let mut satisfied = false;
-
-    // while !satisfied {
-    //     let mut job_to_remove = None;
-    //     for route in solution.routes() {
-    //         for (i, _) in route.activity_ids().iter().enumerate() {
-    //             let activity = route.activity(i);
-    //             let time_window_score = TimeWindowConstraint::compute_time_window_score(
-    //                 ScoreLevel::Hard,
-    //                 activity.job_task(problem).time_windows(),
-    //                 activity.arrival_time(),
-    //             );
-
-    //             if time_window_score.hard_score > 0.0 {
-    //                 job_to_remove = Some(activity.job_id());
-    //                 break;
-    //             }
-
-    //             let vehicle = route.vehicle(problem);
-
-    //             let load = route.load_at(i);
-
-    //             if !is_capacity_satisfied(vehicle.capacity(), load) {
-    //                 job_to_remove = Some(activity.job_id());
-    //                 break;
-    //             }
-    //         }
-
-    //         if job_to_remove.is_some() {
-    //             break;
-    //         }
-    //     }
-
-    //     if let Some(service_id) = job_to_remove {
-    //         solution.remove_job(service_id);
-    //         solution.resync();
-    //     } else {
-    //         satisfied = true
-    //     }
-    // }
-
-    // solution.resync();
-    //
-    //
-    let regret_insertion = RegretInsertion::new(2);
-
-    regret_insertion.insert_services(
-        &mut solution,
-        RecreateContext {
-            rng,
-            constraints,
-            noise_params: NoiseParams {
-                max_cost: problem.max_cost(),
-                noise_level: params.noise_level,
-                noise_probability: params.noise_probability,
-            },
-            problem,
-            thread_pool,
-            insert_on_failure: false,
-        },
-    );
-
-    // ConstructionBestInsertion::insert_services(
+    // regret_insertion.insert_services(
     //     &mut solution,
     //     RecreateContext {
     //         rng,
@@ -405,6 +320,22 @@ pub fn construct_solution(
     //         insert_on_failure: false,
     //     },
     // );
+
+    ConstructionBestInsertion::insert_services(
+        &mut solution,
+        RecreateContext {
+            rng,
+            constraints,
+            noise_params: NoiseParams {
+                max_cost: problem.max_cost(),
+                noise_level: params.noise_level,
+                noise_probability: params.noise_probability,
+            },
+            problem,
+            thread_pool,
+            insert_on_failure: false,
+        },
+    );
 
     let mut local_search = LocalSearch::new(problem);
 
