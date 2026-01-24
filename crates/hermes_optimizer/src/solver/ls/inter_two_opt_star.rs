@@ -66,7 +66,7 @@ impl InterTwoOptStarOperator {
         solution: &'a WorkingSolution,
     ) -> impl DoubleEndedIterator<Item = ActivityId> + Clone + 'a {
         let route = solution.route(self.params.first_route_id);
-        route.job_ids_iter(0, self.params.first_from + 1)
+        route.activity_ids_iter(0, self.params.first_from + 1)
     }
 
     pub fn first_route_tail<'a>(
@@ -74,7 +74,7 @@ impl InterTwoOptStarOperator {
         solution: &'a WorkingSolution,
     ) -> impl DoubleEndedIterator<Item = ActivityId> + Clone + 'a {
         let route = solution.route(self.params.first_route_id);
-        route.job_ids_iter(self.params.first_from + 1, route.len())
+        route.activity_ids_iter(self.params.first_from + 1, route.len())
     }
 
     pub fn second_route_head<'a>(
@@ -82,7 +82,7 @@ impl InterTwoOptStarOperator {
         solution: &'a WorkingSolution,
     ) -> impl DoubleEndedIterator<Item = ActivityId> + Clone + 'a {
         let route = solution.route(self.params.second_route_id);
-        route.job_ids_iter(0, self.params.second_from + 1)
+        route.activity_ids_iter(0, self.params.second_from + 1)
     }
 
     pub fn second_route_tail<'a>(
@@ -90,7 +90,7 @@ impl InterTwoOptStarOperator {
         solution: &'a WorkingSolution,
     ) -> impl DoubleEndedIterator<Item = ActivityId> + Clone + 'a {
         let route = solution.route(self.params.second_route_id);
-        route.job_ids_iter(self.params.second_from + 1, route.len())
+        route.activity_ids_iter(self.params.second_from + 1, route.len())
     }
 }
 

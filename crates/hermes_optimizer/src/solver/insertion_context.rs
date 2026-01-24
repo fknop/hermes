@@ -113,7 +113,7 @@ impl<'a> InsertionContext<'a> {
                     self.problem,
                     Box::new(
                         std::iter::once(activity_id)
-                            .chain(route.job_ids_iter(position, route.len())),
+                            .chain(route.activity_ids_iter(position, route.len())),
                     ),
                     position,
                     route.len() + 1,
@@ -128,9 +128,9 @@ impl<'a> InsertionContext<'a> {
                 self.problem,
                 Box::new(
                     std::iter::once(ActivityId::ShipmentPickup(job_index))
-                        .chain(route.job_ids_iter(pickup_position, delivery_position))
+                        .chain(route.activity_ids_iter(pickup_position, delivery_position))
                         .chain(std::iter::once(ActivityId::ShipmentDelivery(job_index)))
-                        .chain(route.job_ids_iter(delivery_position, route.len())),
+                        .chain(route.activity_ids_iter(delivery_position, route.len())),
                 ),
                 pickup_position,
                 route.len() + 2,

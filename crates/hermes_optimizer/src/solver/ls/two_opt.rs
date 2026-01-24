@@ -150,7 +150,7 @@ impl LocalSearchOperator for TwoOptOperator {
         let delta = route.waiting_duration_change_delta(
             solution.problem(),
             route
-                .job_ids_iter(self.params.from, self.params.to + 1)
+                .activity_ids_iter(self.params.from, self.params.to + 1)
                 .rev(),
             self.params.from,
             self.params.to + 1,
@@ -165,7 +165,7 @@ impl LocalSearchOperator for TwoOptOperator {
         route.is_valid_change(
             solution.problem(),
             route
-                .job_ids_iter(self.params.from, self.params.to + 1)
+                .activity_ids_iter(self.params.from, self.params.to + 1)
                 .rev(),
             self.params.from,
             self.params.to + 1,
@@ -175,7 +175,7 @@ impl LocalSearchOperator for TwoOptOperator {
     fn apply(&self, problem: &VehicleRoutingProblem, solution: &mut WorkingSolution) {
         let route = solution.route_mut(self.params.route_id);
         let job_ids = route
-            .job_ids_iter(self.params.from, self.params.to + 1)
+            .activity_ids_iter(self.params.from, self.params.to + 1)
             .rev()
             .collect::<Vec<_>>();
         route.replace_activities(problem, &job_ids, self.params.from, self.params.to + 1);

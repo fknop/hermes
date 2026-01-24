@@ -112,9 +112,10 @@ impl LocalSearchOperator for InterSwapOperator {
         let first_route = solution.route(self.params.first_route_id);
         let second_route = solution.route(self.params.second_route_id);
 
-        let first_route_job = first_route.job_ids_iter(self.params.first, self.params.first + 1);
+        let first_route_job =
+            first_route.activity_ids_iter(self.params.first, self.params.first + 1);
         let second_route_job =
-            second_route.job_ids_iter(self.params.second, self.params.second + 1);
+            second_route.activity_ids_iter(self.params.second, self.params.second + 1);
 
         solution.problem().waiting_duration_cost(
             first_route.waiting_duration_change_delta(
@@ -135,9 +136,10 @@ impl LocalSearchOperator for InterSwapOperator {
         let first_route = solution.route(self.params.first_route_id);
         let second_route = solution.route(self.params.second_route_id);
 
-        let first_route_job = first_route.job_ids_iter(self.params.first, self.params.first + 1);
+        let first_route_job =
+            first_route.activity_ids_iter(self.params.first, self.params.first + 1);
         let second_route_job =
-            second_route.job_ids_iter(self.params.second, self.params.second + 1);
+            second_route.activity_ids_iter(self.params.second, self.params.second + 1);
 
         first_route.is_valid_change(
             solution.problem(),

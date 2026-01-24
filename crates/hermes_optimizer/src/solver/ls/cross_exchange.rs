@@ -57,7 +57,7 @@ impl CrossExchangeOperator {
     ) -> impl DoubleEndedIterator<Item = ActivityId> + Clone + 'a {
         solution
             .route(self.params.first_route_id)
-            .job_ids_iter(self.params.first_start, self.params.first_end + 1)
+            .activity_ids_iter(self.params.first_start, self.params.first_end + 1)
     }
 
     fn second_route_moved_jobs<'a>(
@@ -66,7 +66,7 @@ impl CrossExchangeOperator {
     ) -> impl DoubleEndedIterator<Item = ActivityId> + Clone + 'a {
         solution
             .route(self.params.second_route_id)
-            .job_ids_iter(self.params.second_start, self.params.second_end + 1)
+            .activity_ids_iter(self.params.second_start, self.params.second_end + 1)
     }
 }
 

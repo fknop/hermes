@@ -421,7 +421,7 @@ impl AlnsSearch {
                                         &mut working_solution,
                                         1000,
                                     );
-                                    info!("Iterations {iterations}");
+                                    debug!("Iterations {iterations}");
                                 });
 
                                 let score = self.compute_solution_score(&working_solution);

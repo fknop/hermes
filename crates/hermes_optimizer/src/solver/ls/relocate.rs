@@ -136,7 +136,7 @@ impl LocalSearchOperator for RelocateOperator {
         let job_id = route.activity_ids()[self.params.from];
 
         let delta = if self.params.from < self.params.to {
-            let in_between_jobs = route.job_ids_iter(self.params.from + 1, self.params.to);
+            let in_between_jobs = route.activity_ids_iter(self.params.from + 1, self.params.to);
 
             // Contains C - D - E - B
             let iterator = in_between_jobs.chain(std::iter::once(job_id));
@@ -148,7 +148,7 @@ impl LocalSearchOperator for RelocateOperator {
             )
         } else {
             // Moving E before B, in_between_jobs will be B - C - D
-            let in_between_jobs = route.job_ids_iter(self.params.to, self.params.from);
+            let in_between_jobs = route.activity_ids_iter(self.params.to, self.params.from);
 
             // Contains E - B - C - D
             let iterator = std::iter::once(job_id).chain(in_between_jobs);
@@ -170,7 +170,7 @@ impl LocalSearchOperator for RelocateOperator {
         // A - B - C - D - E - F
         // Moving B after E, in_between_jobs will be C - D - E
         if self.params.from < self.params.to {
-            let in_between_jobs = route.job_ids_iter(self.params.from + 1, self.params.to);
+            let in_between_jobs = route.activity_ids_iter(self.params.from + 1, self.params.to);
 
             // Contains C - D - E - B
             let iterator = in_between_jobs.chain(std::iter::once(job_id));
@@ -182,7 +182,7 @@ impl LocalSearchOperator for RelocateOperator {
             )
         } else {
             // Moving E before B, in_between_jobs will be B - C - D
-            let in_between_jobs = route.job_ids_iter(self.params.to, self.params.from);
+            let in_between_jobs = route.activity_ids_iter(self.params.to, self.params.from);
 
             // Contains E - B - C - D
             let iterator = std::iter::once(job_id).chain(in_between_jobs);
@@ -200,7 +200,7 @@ impl LocalSearchOperator for RelocateOperator {
         let job_id = route.activity_ids()[self.params.from];
 
         if self.params.from < self.params.to {
-            let in_between_jobs = route.job_ids_iter(self.params.from + 1, self.params.to);
+            let in_between_jobs = route.activity_ids_iter(self.params.from + 1, self.params.to);
 
             // Contains C - D - E - B
             let iterator = in_between_jobs.chain(std::iter::once(job_id));
@@ -213,7 +213,7 @@ impl LocalSearchOperator for RelocateOperator {
             );
         } else {
             // Moving E before B, in_between_jobs will be E - B - C - D
-            let in_between_jobs = route.job_ids_iter(self.params.to, self.params.from);
+            let in_between_jobs = route.activity_ids_iter(self.params.to, self.params.from);
 
             // Contains E - B - C - D
             let iterator = std::iter::once(job_id).chain(in_between_jobs);

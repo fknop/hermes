@@ -15,6 +15,7 @@ use crate::{
             inter_relocate::InterRelocateOperator,
             inter_swap::InterSwapOperator,
             inter_two_opt_star::InterTwoOptStarOperator,
+            mixed_exchange::MixedExchangeOperator,
             r#move::{LocalSearchMove, LocalSearchOperator},
             or_opt::OrOptOperator,
             relocate::RelocateOperator,
@@ -145,6 +146,14 @@ impl LocalSearch {
                     }
                 });
 
+                MixedExchangeOperator::generate_moves(problem, solution, (r1, r2), |op| {
+                    let delta = op.delta(solution);
+                    if delta < best_delta && op.is_valid(solution) {
+                        best_delta = delta;
+                        best_move = Some(LocalSearchMove::MixedExchange(op));
+                    }
+                });
+
                 InterSwapOperator::generate_moves(problem, solution, (r1, r2), |op| {
                     let delta = op.delta(solution);
                     if delta < best_delta && op.is_valid(solution) {
@@ -214,6 +223,7 @@ impl LocalSearch {
             && let Some(op) = self
                 .state
                 .best_move(solution, RouteIdx::new(r1), RouteIdx::new(r2))
+            && best_delta <= -1e-6
         {
             let run_assertions = true;
 
@@ -223,7 +233,7 @@ impl LocalSearch {
                 None
             };
 
-            info!(
+            debug!(
                 "Apply {} ({}, {}) (d={}) {:?}",
                 op.operator_name(),
                 r1,
@@ -361,7 +371,7 @@ impl LocalSearch {
             }
         }
 
-        info!(
+        debug!(
             "Local Search: Built {} route pairs (max {}). Cache ratio: {}",
             self.pairs.len(),
             max,

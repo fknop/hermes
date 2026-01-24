@@ -7,8 +7,7 @@ use super::global_constraint::GlobalConstraint;
 
 pub struct TransportCostConstraint;
 
-// TODO: update this weight
-pub const TRANSPORT_COST_WEIGHT: f64 = 1.0; //70.0;
+pub const TRANSPORT_COST_WEIGHT: f64 = 1.0;
 
 const SCORE_LEVEL: ScoreLevel = ScoreLevel::Soft;
 
@@ -21,38 +20,8 @@ impl GlobalConstraint for TransportCostConstraint {
         let problem = solution.problem();
 
         let mut cost = 0.0;
-        for route in solution.non_empty_routes_iter() {
-            let vehicle = route.vehicle(problem);
-
-            if let Some(depot_location_id) = vehicle.depot_location_id() {
-                cost += problem.travel_cost(
-                    vehicle,
-                    depot_location_id,
-                    route.first().job_task(problem).location_id(),
-                );
-
-                if vehicle.should_return_to_depot() {
-                    cost += problem.travel_cost(
-                        vehicle,
-                        route.last().job_task(problem).location_id(),
-                        depot_location_id,
-                    )
-                }
-            }
-
-            for (index, &job_id) in route.activity_ids().iter().enumerate() {
-                if index == 0 {
-                    // Skip the first activity, as it is already counted with the depot
-                    continue;
-                }
-
-                let previous_activity_job_id = route.activity_ids()[index - 1];
-                cost += problem.travel_cost(
-                    vehicle,
-                    problem.job_task(previous_activity_job_id).location_id(),
-                    problem.job_task(job_id).location_id(),
-                )
-            }
+        for route in solution.routes() {
+            cost += route.transport_costs(problem);
         }
 
         Score::of(self.score_level(), cost * TRANSPORT_COST_WEIGHT)

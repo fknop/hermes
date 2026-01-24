@@ -162,7 +162,7 @@ impl LocalSearchOperator for InterOrOptOperator {
                 self.params.segment_start + self.params.segment_length,
             ) + r2.waiting_duration_change_delta(
                 solution.problem(),
-                r1.job_ids_iter(
+                r1.activity_ids_iter(
                     self.params.segment_start,
                     self.params.segment_start + self.params.segment_length,
                 ),
@@ -183,7 +183,7 @@ impl LocalSearchOperator for InterOrOptOperator {
             self.params.segment_start + self.params.segment_length,
         ) && r2.is_valid_change(
             solution.problem(),
-            r1.job_ids_iter(
+            r1.activity_ids_iter(
                 self.params.segment_start,
                 self.params.segment_start + self.params.segment_length,
             ),
@@ -196,7 +196,7 @@ impl LocalSearchOperator for InterOrOptOperator {
         let r1 = solution.route_mut(self.params.from_route_id);
 
         let moved_jobs = r1
-            .job_ids_iter(
+            .activity_ids_iter(
                 self.params.segment_start,
                 self.params.segment_start + self.params.segment_length,
             )

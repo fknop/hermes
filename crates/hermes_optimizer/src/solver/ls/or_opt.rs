@@ -62,24 +62,24 @@ impl OrOptOperator {
         route: &'a WorkingSolutionRoute,
     ) -> impl Iterator<Item = ActivityId> + Clone + 'a {
         if self.params.from < self.params.to {
-            let moved_jobs = route.job_ids_iter(
+            let moved_jobs = route.activity_ids_iter(
                 self.params.from,
                 self.params.from + self.params.segment_length,
             );
 
-            let in_between_jobs = route.job_ids_iter(
+            let in_between_jobs = route.activity_ids_iter(
                 self.params.from + self.params.segment_length,
                 self.params.to,
             );
 
             in_between_jobs.chain(moved_jobs)
         } else {
-            let moved_jobs = route.job_ids_iter(
+            let moved_jobs = route.activity_ids_iter(
                 self.params.from,
                 self.params.from + self.params.segment_length,
             );
 
-            let in_between_jobs = route.job_ids_iter(self.params.to, self.params.from);
+            let in_between_jobs = route.activity_ids_iter(self.params.to, self.params.from);
 
             moved_jobs.chain(in_between_jobs)
         }

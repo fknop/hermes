@@ -101,7 +101,6 @@ mod tests {
         solver::{
             ls::{
                 inter_mixed_exchange::{InterMixedExchange, InterMixedExchangeParams},
-                mixed_exchange::{MixedExchangeOperator, MixedExchangeParams},
                 r#move::LocalSearchOperator,
             },
             solution::route_id::RouteIdx,
@@ -110,7 +109,7 @@ mod tests {
     };
 
     #[test]
-    fn test_mixed_exchange() {
+    fn test_inter_mixed_exchange() {
         let locations = test_utils::create_location_grid(10, 10);
 
         let services = test_utils::create_basic_services(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);

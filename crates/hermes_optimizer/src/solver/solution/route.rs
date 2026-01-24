@@ -33,6 +33,8 @@ pub struct WorkingSolutionRoute {
     // Map of ActivityId to index in activities vector
     pub(super) jobs: FxHashMap<ActivityId, usize>,
 
+    total_transport_cost: f64,
+
     /// List of activity job IDs in the route order
     pub(super) activity_ids: Vec<ActivityId>,
 
@@ -107,6 +109,7 @@ impl WorkingSolutionRoute {
             jobs: FxHashMap::default(),
             bbox: BBox::default(),
             updated_in_iteration: false,
+            total_transport_cost: 0.0,
             activity_ids: Vec::new(),
             arrival_times: Vec::new(),
             departure_times: Vec::new(),
@@ -292,45 +295,51 @@ impl WorkingSolutionRoute {
     }
 
     pub fn transport_costs(&self, problem: &VehicleRoutingProblem) -> f64 {
-        if self.is_empty() {
-            return 0.0;
-        }
+        assert!(
+            (self.is_empty() && self.total_transport_cost == 0.0)
+                || (!self.is_empty() && self.total_transport_cost > 0.0)
+        );
 
-        let vehicle = self.vehicle(problem);
-        let mut costs = 0.0;
+        self.total_transport_cost
+        // if self.is_empty() {
+        //     return 0.0;
+        // }
 
-        if let Some(depot_location_id) = vehicle.depot_location_id() {
-            if self.has_start(problem) {
-                costs += problem.travel_cost(
-                    vehicle,
-                    depot_location_id,
-                    self.first().job_task(problem).location_id(),
-                );
-            }
+        // let vehicle = self.vehicle(problem);
+        // let mut costs = 0.0;
 
-            if self.has_end(problem) {
-                costs += problem.travel_cost(
-                    vehicle,
-                    self.last().job_task(problem).location_id(),
-                    depot_location_id,
-                );
-            }
-        }
+        // if let Some(depot_location_id) = vehicle.depot_location_id() {
+        //     if self.has_start(problem) {
+        //         costs += problem.travel_cost(
+        //             vehicle,
+        //             depot_location_id,
+        //             self.first().job_task(problem).location_id(),
+        //         );
+        //     }
 
-        for (index, &activity) in self.activity_ids.iter().enumerate() {
-            if index == 0 {
-                // Skip the first activity, as it is already counted with the depot
-                continue;
-            }
+        //     if self.has_end(problem) {
+        //         costs += problem.travel_cost(
+        //             vehicle,
+        //             self.last().job_task(problem).location_id(),
+        //             depot_location_id,
+        //         );
+        //     }
+        // }
 
-            costs += problem.travel_cost(
-                vehicle,
-                problem.job_task(self.activity_ids[index - 1]).location_id(),
-                problem.job_task(activity).location_id(),
-            );
-        }
+        // for (index, &activity) in self.activity_ids.iter().enumerate() {
+        //     if index == 0 {
+        //         // Skip the first activity, as it is already counted with the depot
+        //         continue;
+        //     }
 
-        costs
+        //     costs += problem.travel_cost(
+        //         vehicle,
+        //         problem.job_task(self.activity_ids[index - 1]).location_id(),
+        //         problem.job_task(activity).location_id(),
+        //     );
+        // }
+
+        // costs
     }
 
     pub fn distance(&self, problem: &VehicleRoutingProblem) -> f64 {
@@ -734,11 +743,13 @@ impl WorkingSolutionRoute {
         self.update_bbox(problem);
         self.resize_data(problem);
 
+        let vehicle = self.vehicle(problem);
+
+        self.total_transport_cost = 0.0;
+
         if self.is_empty() {
-            self.delivery_load_slack
-                .update(self.vehicle(problem).capacity());
-            self.pickup_load_slack
-                .update(self.vehicle(problem).capacity());
+            self.delivery_load_slack.update(vehicle.capacity());
+            self.pickup_load_slack.update(vehicle.capacity());
             return;
         }
 
@@ -802,7 +813,25 @@ impl WorkingSolutionRoute {
             );
 
             self.fwd_cumulative_waiting_durations[i + 1] =
-                self.waiting_durations[i] + self.fwd_cumulative_waiting_durations[i]
+                self.waiting_durations[i] + self.fwd_cumulative_waiting_durations[i];
+
+            if let Some(previous_location_id) = self.previous_location_id(problem, i) {
+                self.total_transport_cost += problem.travel_cost(
+                    vehicle,
+                    previous_location_id,
+                    problem.job_task(activity_id).location_id(),
+                );
+            }
+
+            if i == len - 1
+                && let Some(end_location) = self.end_location(problem)
+            {
+                self.total_transport_cost += problem.travel_cost(
+                    vehicle,
+                    problem.job_task(activity_id).location_id(),
+                    end_location,
+                );
+            }
         }
 
         self.fwd_cumulative_waiting_durations[len + 1] = self.fwd_cumulative_waiting_durations[len];
@@ -942,7 +971,7 @@ impl WorkingSolutionRoute {
     }
 
     /// Returns an iterator over the job IDs in the route between the given [start, end) indices
-    pub fn job_ids_iter(
+    pub fn activity_ids_iter(
         &self,
         start: usize,
         end: usize,
@@ -1684,7 +1713,7 @@ mod tests {
         route.insert_service(&problem, 1, JobIdx::new(2));
         route.insert_service(&problem, 2, JobIdx::new(1));
 
-        let job_ids: Vec<ActivityId> = route.job_ids_iter(0, 3).collect();
+        let job_ids: Vec<ActivityId> = route.activity_ids_iter(0, 3).collect();
 
         assert_eq!(
             job_ids,
@@ -1696,7 +1725,7 @@ mod tests {
         );
 
         // Same value returns empty iterator
-        let job_ids: Vec<ActivityId> = route.job_ids_iter(0, 0).collect();
+        let job_ids: Vec<ActivityId> = route.activity_ids_iter(0, 0).collect();
         assert_eq!(job_ids, vec![]);
     }
 
@@ -1711,7 +1740,7 @@ mod tests {
         route.insert_service(&problem, 2, JobIdx::new(1));
 
         let mut iterator =
-            route.updated_activities_iter(&problem, route.job_ids_iter(1, 3).rev(), 1, 3);
+            route.updated_activities_iter(&problem, route.activity_ids_iter(1, 3).rev(), 1, 3);
 
         assert_eq!(
             iterator.next(),
