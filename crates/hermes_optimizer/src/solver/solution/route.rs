@@ -5,7 +5,7 @@ use crate::{
     problem::{
         amount::AmountExpression,
         capacity::{Capacity, is_capacity_satisfied},
-        job::{ActivityId, Job, JobIdx, JobTask},
+        job::{ActivityId, Job, JobActivity, JobIdx},
         location::LocationIdx,
         meters::Meters,
         service::{Service, ServiceType},
@@ -219,7 +219,7 @@ impl WorkingSolutionRoute {
         }
 
         for &job_id in &self.activity_ids {
-            location_ids.push(problem.job_task(job_id).location_id());
+            location_ids.push(problem.job_activity(job_id).location_id());
         }
 
         if self.has_end(problem)
@@ -295,8 +295,10 @@ impl WorkingSolutionRoute {
 
             transport_duration += problem.travel_time(
                 vehicle,
-                problem.job_task(self.activity_ids[index - 1]).location_id(),
-                problem.job_task(job_id).location_id(),
+                problem
+                    .job_activity(self.activity_ids[index - 1])
+                    .location_id(),
+                problem.job_activity(job_id).location_id(),
             );
         }
 
@@ -346,8 +348,10 @@ impl WorkingSolutionRoute {
 
             distance += problem.travel_distance(
                 vehicle,
-                problem.job_task(self.activity_ids[index - 1]).location_id(),
-                problem.job_task(job_id).location_id(),
+                problem
+                    .job_activity(self.activity_ids[index - 1])
+                    .location_id(),
+                problem.job_activity(job_id).location_id(),
             );
         }
 
@@ -465,7 +469,7 @@ impl WorkingSolutionRoute {
     ) -> Option<LocationIdx> {
         self.activity_ids
             .get(position)
-            .map(|&activity_id| problem.job_task(activity_id).location_id())
+            .map(|&activity_id| problem.job_activity(activity_id).location_id())
     }
 
     pub fn previous_location_id(
@@ -479,7 +483,7 @@ impl WorkingSolutionRoute {
         } else if position <= self.activity_ids.len() {
             Some(
                 problem
-                    .job_task(self.activity_ids[position - 1])
+                    .job_activity(self.activity_ids[position - 1])
                     .location_id(),
             )
         } else {
@@ -495,7 +499,7 @@ impl WorkingSolutionRoute {
         let next_job_id = self.activity_ids.get(position + 1);
 
         match next_job_id {
-            Some(&job_id) => Some(problem.job_task(job_id).location_id()),
+            Some(&job_id) => Some(problem.job_activity(job_id).location_id()),
             None => {
                 let vehicle = self.vehicle(problem);
                 if vehicle.should_return_to_depot() {
@@ -640,7 +644,7 @@ impl WorkingSolutionRoute {
         let mut bbox = BBox::default();
 
         for &job_id in &self.activity_ids {
-            let location_id = problem.job_task(job_id).location_id();
+            let location_id = problem.job_activity(job_id).location_id();
             let location = problem.location(location_id);
             bbox.extend(location);
         }
@@ -800,14 +804,14 @@ impl WorkingSolutionRoute {
                     self.fwd_transport_cost[profile_id][i] = self.fwd_transport_cost[profile_id]
                         [i - 1]
                         + profile.travel_cost(
-                            problem.job_task(self.activity_ids[i - 1]).location_id(),
-                            problem.job_task(activity_id).location_id(),
+                            problem.job_activity(self.activity_ids[i - 1]).location_id(),
+                            problem.job_activity(activity_id).location_id(),
                         );
                     self.bwd_transport_cost[profile_id][i] = self.bwd_transport_cost[profile_id]
                         [i - 1]
                         + profile.travel_cost(
-                            problem.job_task(activity_id).location_id(),
-                            problem.job_task(self.activity_ids[i - 1]).location_id(),
+                            problem.job_activity(activity_id).location_id(),
+                            problem.job_activity(self.activity_ids[i - 1]).location_id(),
                         );
                 }
             }
@@ -816,7 +820,7 @@ impl WorkingSolutionRoute {
                 self.total_transport_cost += problem.travel_cost(
                     vehicle,
                     previous_location_id,
-                    problem.job_task(activity_id).location_id(),
+                    problem.job_activity(activity_id).location_id(),
                 );
             }
 
@@ -825,7 +829,7 @@ impl WorkingSolutionRoute {
             {
                 self.total_transport_cost += problem.travel_cost(
                     vehicle,
-                    problem.job_task(activity_id).location_id(),
+                    problem.job_activity(activity_id).location_id(),
                     end_location,
                 );
             }
@@ -923,7 +927,7 @@ impl WorkingSolutionRoute {
                         .unwrap_or(SignedDuration::ZERO);
 
                 let waiting_time_slack = compute_waiting_time_slack(
-                    problem.job_task(activity_job_id).time_windows(),
+                    problem.job_activity(activity_job_id).time_windows(),
                     self.arrival_times[index],
                 );
                 self.waiting_time_slacks[index] = waiting_time_slack.min(
@@ -1056,13 +1060,17 @@ impl WorkingSolutionRoute {
             fwd_cost += problem.travel_cost(
                 v1,
                 r1_start_previous,
-                problem.job_task(r2.activity_ids[r2_start]).location_id(),
+                problem
+                    .job_activity(r2.activity_ids[r2_start])
+                    .location_id(),
             );
 
             bwd_cost += problem.travel_cost(
                 v1,
                 r1_start_previous,
-                problem.job_task(r2.activity_ids[r2_end - 1]).location_id(),
+                problem
+                    .job_activity(r2.activity_ids[r2_end - 1])
+                    .location_id(),
             );
         }
 
@@ -1076,12 +1084,16 @@ impl WorkingSolutionRoute {
         if let Some(r1_end_next) = r1_next {
             fwd_cost += problem.travel_cost(
                 v1,
-                problem.job_task(r2.activity_ids[r2_end - 1]).location_id(),
+                problem
+                    .job_activity(r2.activity_ids[r2_end - 1])
+                    .location_id(),
                 r1_end_next,
             );
             bwd_cost += problem.travel_cost(
                 v1,
-                problem.job_task(r2.activity_ids[r2_start]).location_id(),
+                problem
+                    .job_activity(r2.activity_ids[r2_start])
+                    .location_id(),
                 r1_end_next,
             );
         }
@@ -1290,7 +1302,7 @@ impl WorkingSolutionRoute {
             }
 
             if !problem
-                .job_task(activity_id)
+                .job_activity(activity_id)
                 .time_windows()
                 .is_satisfied(arrival_time)
             {
@@ -1467,8 +1479,8 @@ impl RouteActivityInfo {
         problem.job(self.activity_id.job_id())
     }
 
-    pub fn job_task<'a>(&self, problem: &'a VehicleRoutingProblem) -> JobTask<'a> {
-        problem.job_task(self.activity_id)
+    pub fn job_task<'a>(&self, problem: &'a VehicleRoutingProblem) -> JobActivity<'a> {
+        problem.job_activity(self.activity_id)
     }
 }
 

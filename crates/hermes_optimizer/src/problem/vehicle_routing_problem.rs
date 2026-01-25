@@ -7,7 +7,7 @@ use crate::{
         amount::AmountExpression,
         capacity::Capacity,
         fleet::Fleet,
-        job::{ActivityId, Job, JobIdx, JobTask},
+        job::{ActivityId, Job, JobActivity, JobIdx},
         meters::Meters,
         service::Service,
         shipment::Shipment,
@@ -205,22 +205,22 @@ impl VehicleRoutingProblem {
         &self.locations[location_id]
     }
 
-    pub fn job_task<'a>(&'a self, job_id: ActivityId) -> JobTask<'a> {
+    pub fn job_activity<'a>(&'a self, activity_id: ActivityId) -> JobActivity<'a> {
         // Can't use match here because if let bindings are experimental
-        if let ActivityId::Service(service_id) = job_id
+        if let ActivityId::Service(service_id) = activity_id
             && let Job::Service(service) = &self.jobs[service_id]
         {
-            JobTask::Service(service)
-        } else if let ActivityId::ShipmentPickup(shipment_id) = job_id
+            JobActivity::Service(service)
+        } else if let ActivityId::ShipmentPickup(shipment_id) = activity_id
             && let Job::Shipment(shipment) = &self.jobs[shipment_id]
         {
-            JobTask::ShipmentPickup(shipment)
-        } else if let ActivityId::ShipmentDelivery(shipment_id) = job_id
+            JobActivity::ShipmentPickup(shipment)
+        } else if let ActivityId::ShipmentDelivery(shipment_id) = activity_id
             && let Job::Shipment(shipment) = &self.jobs[shipment_id]
         {
-            JobTask::ShipmentDelivery(shipment)
+            JobActivity::ShipmentDelivery(shipment)
         } else {
-            panic!("Job {job_id} is not valid");
+            panic!("Job {activity_id} is not valid");
         }
     }
 
@@ -241,11 +241,6 @@ impl VehicleRoutingProblem {
             .map(|location_id| &self.locations[location_id])
     }
 
-    pub fn travel_distance(&self, vehicle: &Vehicle, from: LocationIdx, to: LocationIdx) -> Meters {
-        let profile_id = vehicle.profile_id();
-        self.vehicle_profiles[profile_id].travel_distance(from, to)
-    }
-
     pub fn max_cost(&self) -> Cost {
         self.vehicle_profiles
             .iter()
@@ -253,6 +248,13 @@ impl VehicleRoutingProblem {
             .fold(0.0_f64, |a, b| a.max(b))
     }
 
+    #[inline(always)]
+    pub fn travel_distance(&self, vehicle: &Vehicle, from: LocationIdx, to: LocationIdx) -> Meters {
+        let profile_id = vehicle.profile_id();
+        self.vehicle_profiles[profile_id].travel_distance(from, to)
+    }
+
+    #[inline(always)]
     pub fn travel_time(
         &self,
         vehicle: &Vehicle,
@@ -263,11 +265,13 @@ impl VehicleRoutingProblem {
         self.vehicle_profiles[profile_id].travel_time(from, to)
     }
 
+    #[inline(always)]
     pub fn travel_cost(&self, vehicle: &Vehicle, from: LocationIdx, to: LocationIdx) -> Cost {
         let profile_id = vehicle.profile_id();
         self.vehicle_profiles[profile_id].travel_cost(from, to)
     }
 
+    #[inline(always)]
     pub fn travel_cost_or_zero(
         &self,
         vehicle: &Vehicle,
@@ -309,7 +313,7 @@ impl VehicleRoutingProblem {
     }
 
     pub fn nearest_jobs(&self, job_id: ActivityId) -> impl Iterator<Item = ActivityId> {
-        let job_location_id = self.job_task(job_id).location_id();
+        let job_location_id = self.job_activity(job_id).location_id();
         self.nearest_jobs_of_location(job_location_id)
     }
 

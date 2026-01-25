@@ -8,7 +8,6 @@ use crate::problem::{kmh::Kmh, location::LocationIdx, meters::Meters};
 
 use super::location::Location;
 
-pub type Distance = f64;
 pub type Time = f64;
 pub type Cost = f64;
 
@@ -36,11 +35,7 @@ fn is_flat_matrix_symmetric(matrix: &[Meters], num_locations: usize) -> bool {
 }
 
 impl TravelMatrices {
-    pub fn new(
-        distances: Vec<Vec<Distance>>,
-        times: Vec<Vec<Time>>,
-        costs: Vec<Vec<Cost>>,
-    ) -> Self {
+    pub fn new(distances: Vec<Vec<f64>>, times: Vec<Vec<Time>>, costs: Vec<Vec<Cost>>) -> Self {
         let num_locations = distances.len();
 
         let is_symmetric = distances.iter().enumerate().all(|(i, row)| {

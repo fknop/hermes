@@ -65,42 +65,42 @@ impl From<ActivityId> for JobIdx {
     }
 }
 
-pub enum JobTask<'a> {
+pub enum JobActivity<'a> {
     Service(&'a Service),
     ShipmentPickup(&'a Shipment),
     ShipmentDelivery(&'a Shipment),
 }
 
-impl JobTask<'_> {
+impl JobActivity<'_> {
     pub fn time_windows(&self) -> &TimeWindows {
         match self {
-            JobTask::Service(service) => service.time_windows(),
-            JobTask::ShipmentPickup(shipment) => shipment.pickup().time_windows(),
-            JobTask::ShipmentDelivery(shipment) => shipment.delivery().time_windows(),
+            JobActivity::Service(service) => service.time_windows(),
+            JobActivity::ShipmentPickup(shipment) => shipment.pickup().time_windows(),
+            JobActivity::ShipmentDelivery(shipment) => shipment.delivery().time_windows(),
         }
     }
 
     pub fn location_id(&self) -> LocationIdx {
         match self {
-            JobTask::Service(service) => service.location_id(),
-            JobTask::ShipmentPickup(shipment) => shipment.pickup().location_id(),
-            JobTask::ShipmentDelivery(shipment) => shipment.delivery().location_id(),
+            JobActivity::Service(service) => service.location_id(),
+            JobActivity::ShipmentPickup(shipment) => shipment.pickup().location_id(),
+            JobActivity::ShipmentDelivery(shipment) => shipment.delivery().location_id(),
         }
     }
 
     pub fn duration(&self) -> SignedDuration {
         match self {
-            JobTask::Service(service) => service.duration(),
-            JobTask::ShipmentPickup(shipment) => shipment.pickup().duration(),
-            JobTask::ShipmentDelivery(shipment) => shipment.delivery().duration(),
+            JobActivity::Service(service) => service.duration(),
+            JobActivity::ShipmentPickup(shipment) => shipment.pickup().duration(),
+            JobActivity::ShipmentDelivery(shipment) => shipment.delivery().duration(),
         }
     }
 
     pub fn has_time_windows(&self) -> bool {
         match self {
-            JobTask::Service(service) => service.has_time_windows(),
-            JobTask::ShipmentPickup(shipment) => shipment.pickup().has_time_windows(),
-            JobTask::ShipmentDelivery(shipment) => shipment.delivery().has_time_windows(),
+            JobActivity::Service(service) => service.has_time_windows(),
+            JobActivity::ShipmentPickup(shipment) => shipment.pickup().has_time_windows(),
+            JobActivity::ShipmentDelivery(shipment) => shipment.delivery().has_time_windows(),
         }
     }
 }

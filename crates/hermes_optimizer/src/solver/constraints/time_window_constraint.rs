@@ -88,7 +88,7 @@ impl ActivityConstraint for TimeWindowConstraint {
 
         for data in context.updated_activities_iter() {
             let job_id = data.job_id;
-            let service = problem.job_task(job_id);
+            let service = problem.job_activity(job_id);
             total_score += TimeWindowConstraint::compute_time_window_score(
                 self.score_level(),
                 service.time_windows(),
