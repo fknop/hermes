@@ -10,7 +10,7 @@ use crate::{
         job::{ActivityId, Job, JobIdx, JobTask},
         service::Service,
         shipment::Shipment,
-        vehicle_profile::VehicleProfile,
+        vehicle_profile::{VehicleProfile, VehicleProfileIdx},
     },
     solver::constraints::transport_cost_constraint::TRANSPORT_COST_WEIGHT,
     utils::{enumerate_idx::EnumerateIdx, zip_longest::zip_longest},
@@ -61,7 +61,7 @@ struct VehicleRoutingProblemParams {
 impl VehicleRoutingProblem {
     fn new(params: VehicleRoutingProblemParams) -> Self {
         for vehicle in params.fleet.vehicles() {
-            if vehicle.profile_id() >= params.vehicle_profiles.len() {
+            if vehicle.profile_id().get() >= params.vehicle_profiles.len() {
                 panic!("Vehicle profile ID out of bounds")
             }
         }
@@ -188,6 +188,14 @@ impl VehicleRoutingProblem {
         self.fleet.vehicles()
     }
 
+    pub fn vehicle_profiles(&self) -> &[VehicleProfile] {
+        &self.vehicle_profiles
+    }
+
+    pub fn vehicle_profile(&self, profile_id: VehicleProfileIdx) -> &VehicleProfile {
+        &self.vehicle_profiles[profile_id]
+    }
+
     pub fn locations(&self) -> &[Location] {
         &self.locations
     }
@@ -270,17 +278,15 @@ impl VehicleRoutingProblem {
         from: Option<LocationIdx>,
         to: Option<LocationIdx>,
     ) -> Cost {
-        if let (Some(from), Some(to)) = (from, to) {
-            self.travel_cost(vehicle, from, to)
-        } else {
-            0.0
-        }
+        self.vehicle_profiles[vehicle.profile_id()].travel_cost_or_zero(from, to)
     }
 
-    pub fn acceptable_service_waiting_duration_secs(&self) -> i64 {
-        0
+    #[inline(always)]
+    pub fn acceptable_service_waiting_duration(&self) -> SignedDuration {
+        SignedDuration::ZERO
     }
 
+    #[inline(always)]
     pub fn waiting_duration_weight(&self) -> f64 {
         self.waiting_duration_weight
     }
@@ -290,7 +296,8 @@ impl VehicleRoutingProblem {
     }
 
     pub fn waiting_duration_cost(&self, waiting_duration: SignedDuration) -> Cost {
-        waiting_duration.as_secs_f64() * self.waiting_duration_weight()
+        (waiting_duration - self.acceptable_service_waiting_duration()).as_secs_f64()
+            * self.waiting_duration_weight()
     }
 
     pub fn fixed_vehicle_costs(&self) -> f64 {
@@ -314,6 +321,10 @@ impl VehicleRoutingProblem {
         self.vehicle_profiles
             .iter()
             .all(|profile| profile.travel_costs().is_symmetric())
+    }
+
+    pub fn is_homogeneous_fleet(&self) -> bool {
+        self.vehicle_profiles.len() == 1
     }
 
     pub fn has_time_windows(&self) -> bool {

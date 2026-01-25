@@ -1,4 +1,7 @@
-pub struct IndexedIter<I, Idx> {
+pub struct IndexedIter<I, Idx>
+where
+    I: Iterator,
+{
     inner: std::iter::Enumerate<I>,
     _marker: std::marker::PhantomData<Idx>,
 }
@@ -14,7 +17,10 @@ pub trait EnumerateIdx<Idx>: Iterator + Sized {
 
 impl<I: Iterator, Idx> EnumerateIdx<Idx> for I {}
 
-impl<I: Iterator, Idx: From<usize>> Iterator for IndexedIter<I, Idx> {
+impl<I: Iterator, Idx> Iterator for IndexedIter<I, Idx>
+where
+    Idx: From<usize>,
+{
     type Item = (Idx, I::Item);
 
     fn next(&mut self) -> Option<Self::Item> {

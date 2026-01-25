@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use jiff::SignedDuration;
+use rand::{Rng, rngs::SmallRng};
 use serde::Deserialize;
 
 use crate::problem::location::LocationIdx;
@@ -140,6 +141,30 @@ impl TravelMatrices {
             costs,
             num_locations,
             is_symmetric: true,
+        }
+    }
+
+    pub fn from_rand(locations: &[Location]) -> Self {
+        let num_locations = locations.len();
+        let mut distances: Vec<Distance> = vec![0.0; num_locations * num_locations];
+
+        for (i, _) in locations.iter().enumerate() {
+            for (j, _) in locations.iter().enumerate() {
+                distances[i * num_locations + j] =
+                    rand::rng().random_range(0.0_f64..100.0_f64).round();
+            }
+        }
+
+        let distances = Arc::new(distances);
+        let costs = Arc::clone(&distances);
+        let times = Arc::clone(&distances);
+
+        TravelMatrices {
+            distances,
+            times,
+            costs,
+            num_locations,
+            is_symmetric: false,
         }
     }
 

@@ -47,5 +47,12 @@ macro_rules! define_index_newtype {
                 &self[index.0]
             }
         }
+
+        impl std::ops::Index<$name> for [&$t] {
+            type Output = $t;
+            fn index(&self, index: $name) -> &Self::Output {
+                &self[index.0]
+            }
+        }
     };
 }

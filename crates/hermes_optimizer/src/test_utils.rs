@@ -145,6 +145,25 @@ pub fn create_test_problem(
     builder.build()
 }
 
+pub fn create_asymmetric_test_problem(
+    locations: Vec<Location>,
+    services: Vec<Service>,
+    vehicles: Vec<Vehicle>,
+) -> VehicleRoutingProblem {
+    let mut builder = VehicleRoutingProblemBuilder::default();
+
+    builder.set_distance_method(DistanceMethod::Euclidean);
+    builder.set_vehicle_profiles(vec![VehicleProfile::new(
+        "test_profile".to_owned(),
+        TravelMatrices::from_rand(&locations),
+    )]);
+    builder.set_services(services);
+    builder.set_locations(locations);
+    builder.set_fleet(Fleet::Finite(vehicles));
+
+    builder.build()
+}
+
 pub struct TestRoute {
     pub vehicle_id: usize,
     pub service_ids: Vec<usize>,

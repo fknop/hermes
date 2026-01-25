@@ -9,6 +9,7 @@ use crate::{
         location::LocationIdx,
         service::{Service, ServiceType},
         vehicle::{Vehicle, VehicleIdx},
+        vehicle_profile::{VehicleProfile, VehicleProfileIdx},
         vehicle_routing_problem::VehicleRoutingProblem,
     },
     solver::{
@@ -22,7 +23,7 @@ use crate::{
             },
         },
     },
-    utils::bbox::BBox,
+    utils::{bbox::BBox, enumerate_idx::EnumerateIdx},
 };
 
 #[derive(Clone)]
@@ -34,6 +35,12 @@ pub struct WorkingSolutionRoute {
     pub(super) jobs: FxHashMap<ActivityId, usize>,
 
     total_transport_cost: f64,
+
+    /// fwd_transport_cost[profile_id][i] is the transport cost from activity 0 to activity i for vehicle profile 'profile_id'
+    pub(super) fwd_transport_cost: Vec<Vec<f64>>,
+
+    /// bwd_transport_cost[profile_id][i] is the transport cost from activity i to activity 0 for vehicle profile 'profile_id', useful for quickly computing segment reversals
+    pub(super) bwd_transport_cost: Vec<Vec<f64>>,
 
     /// List of activity job IDs in the route order
     pub(super) activity_ids: Vec<ActivityId>,
@@ -110,6 +117,8 @@ impl WorkingSolutionRoute {
             bbox: BBox::default(),
             updated_in_iteration: false,
             total_transport_cost: 0.0,
+            fwd_transport_cost: vec![vec![]; problem.vehicle_profiles().len()],
+            bwd_transport_cost: vec![vec![]; problem.vehicle_profiles().len()],
             activity_ids: Vec::new(),
             arrival_times: Vec::new(),
             departure_times: Vec::new(),
@@ -301,45 +310,6 @@ impl WorkingSolutionRoute {
         );
 
         self.total_transport_cost
-        // if self.is_empty() {
-        //     return 0.0;
-        // }
-
-        // let vehicle = self.vehicle(problem);
-        // let mut costs = 0.0;
-
-        // if let Some(depot_location_id) = vehicle.depot_location_id() {
-        //     if self.has_start(problem) {
-        //         costs += problem.travel_cost(
-        //             vehicle,
-        //             depot_location_id,
-        //             self.first().job_task(problem).location_id(),
-        //         );
-        //     }
-
-        //     if self.has_end(problem) {
-        //         costs += problem.travel_cost(
-        //             vehicle,
-        //             self.last().job_task(problem).location_id(),
-        //             depot_location_id,
-        //         );
-        //     }
-        // }
-
-        // for (index, &activity) in self.activity_ids.iter().enumerate() {
-        //     if index == 0 {
-        //         // Skip the first activity, as it is already counted with the depot
-        //         continue;
-        //     }
-
-        //     costs += problem.travel_cost(
-        //         vehicle,
-        //         problem.job_task(self.activity_ids[index - 1]).location_id(),
-        //         problem.job_task(activity).location_id(),
-        //     );
-        // }
-
-        // costs
     }
 
     pub fn distance(&self, problem: &VehicleRoutingProblem) -> f64 {
@@ -679,33 +649,40 @@ impl WorkingSolutionRoute {
     }
 
     fn resize_data(&mut self, problem: &VehicleRoutingProblem) {
-        self.arrival_times.resize(self.len(), Timestamp::MAX);
-        self.departure_times.resize(self.len(), Timestamp::MAX);
-        self.waiting_durations
-            .resize(self.len(), SignedDuration::ZERO);
+        let len = self.len();
+
+        self.fwd_transport_cost
+            .iter_mut()
+            .for_each(|ftc| ftc.resize(len, 0.0));
+        self.bwd_transport_cost
+            .iter_mut()
+            .for_each(|ftc| ftc.resize(len, 0.0));
+
+        self.arrival_times.resize(len, Timestamp::MAX);
+        self.departure_times.resize(len, Timestamp::MAX);
+        self.waiting_durations.resize(len, SignedDuration::ZERO);
 
         self.bwd_cumulative_waiting_durations
-            .resize(self.len(), SignedDuration::ZERO);
-        self.waiting_time_slacks
-            .resize(self.len(), SignedDuration::MAX);
+            .resize(len, SignedDuration::ZERO);
+        self.waiting_time_slacks.resize(len, SignedDuration::MAX);
 
-        self.fwd_load_pickups.resize_with(self.len(), || {
+        self.fwd_load_pickups.resize_with(len, || {
             Capacity::with_dimensions(problem.capacity_dimensions())
         });
-        self.fwd_load_deliveries.resize_with(self.len(), || {
+        self.fwd_load_deliveries.resize_with(len, || {
             Capacity::with_dimensions(problem.capacity_dimensions())
         });
-        self.bwd_load_deliveries.resize_with(self.len(), || {
+        self.bwd_load_deliveries.resize_with(len, || {
             Capacity::with_dimensions(problem.capacity_dimensions())
         });
-        self.bwd_load_pickups.resize_with(self.len(), || {
+        self.bwd_load_pickups.resize_with(len, || {
             Capacity::with_dimensions(problem.capacity_dimensions())
         });
-        self.fwd_load_shipments.resize_with(self.len(), || {
+        self.fwd_load_shipments.resize_with(len, || {
             Capacity::with_dimensions(problem.capacity_dimensions())
         });
 
-        let steps = self.len() + 2;
+        let steps = len + 2;
         self.fwd_cumulative_waiting_durations
             .resize(steps, SignedDuration::ZERO);
 
@@ -814,6 +791,26 @@ impl WorkingSolutionRoute {
 
             self.fwd_cumulative_waiting_durations[i + 1] =
                 self.waiting_durations[i] + self.fwd_cumulative_waiting_durations[i];
+
+            for (profile_id, profile) in problem.vehicle_profiles().iter().enumerate() {
+                if i == 0 {
+                    self.fwd_transport_cost[profile_id][i] = 0.0;
+                    self.bwd_transport_cost[profile_id][i] = 0.0;
+                } else {
+                    self.fwd_transport_cost[profile_id][i] = self.fwd_transport_cost[profile_id]
+                        [i - 1]
+                        + profile.travel_cost(
+                            problem.job_task(self.activity_ids[i - 1]).location_id(),
+                            problem.job_task(activity_id).location_id(),
+                        );
+                    self.bwd_transport_cost[profile_id][i] = self.bwd_transport_cost[profile_id]
+                        [i - 1]
+                        + profile.travel_cost(
+                            problem.job_task(activity_id).location_id(),
+                            problem.job_task(self.activity_ids[i - 1]).location_id(),
+                        );
+                }
+            }
 
             if let Some(previous_location_id) = self.previous_location_id(problem, i) {
                 self.total_transport_cost += problem.travel_cost(
@@ -1003,27 +1000,93 @@ impl WorkingSolutionRoute {
         start: usize,
         end: usize,
     ) -> bool {
-        // self.is_valid_maximum_activities_change(problem, job_ids.clone(), start, end)
         self.is_valid_tw_change(problem, activity_ids.clone(), start, end)
             && self.is_valid_capacity_change(problem, activity_ids, start, end)
     }
 
-    fn is_valid_maximum_activities_change(
+    /// Return the transport cost delta of inserting [r2_start, r2_end) of r2 into [r1_start, r1_end) of r1
+    /// It does not return any delta related to r2 itself
+    pub fn transport_cost_delta_update(
         &self,
         problem: &VehicleRoutingProblem,
-        job_ids: impl Iterator<Item = ActivityId>,
-        start: usize,
-        end: usize,
-    ) -> bool {
-        let vehicle = self.vehicle(problem);
-        if let Some(maximum_activities) = vehicle.maximum_activities() {
-            let new_len = start + job_ids.count() + (self.len() - end);
-            if new_len > maximum_activities {
-                return false;
-            }
+        r1_start: usize,
+        r1_end: usize,
+        r2: &Self,
+        r2_start: usize,
+        r2_end: usize,
+    ) -> (f64, f64) {
+        assert!(r1_start <= r1_end);
+        assert!(r2_start < r2_end);
+
+        let r1 = self;
+
+        let v1 = r1.vehicle(problem);
+        let p1 = v1.profile_id().get();
+
+        // Removed cost of r1
+        let r1_removed_cost = if r1_end > r1_start {
+            let mut removed_cost =
+                r1.fwd_transport_cost[p1][r1_end - 1] - r1.fwd_transport_cost[p1][r1_start];
+            removed_cost += problem.travel_cost_or_zero(
+                v1,
+                r1.previous_location_id(problem, r1_start),
+                r1.location_id(problem, r1_start),
+            );
+            removed_cost += problem.travel_cost_or_zero(
+                v1,
+                r1.location_id(problem, r1_end - 1),
+                r1.next_location_id(problem, r1_end - 1),
+            );
+            removed_cost
+        } else {
+            0.0
+        };
+
+        // Removed segment of r2
+        let mut fwd_cost = 0.0;
+
+        fwd_cost += r2.fwd_transport_cost[p1][r2_end - 1] - r2.fwd_transport_cost[p1][r2_start];
+
+        let mut bwd_cost = 0.0;
+
+        bwd_cost += r2.bwd_transport_cost[p1][r2_end - 1] - r2.bwd_transport_cost[p1][r2_start];
+
+        // Compute the cost from the previous location in r1 to the start of the segment in r2
+        if let Some(r1_start_previous) = r1.previous_location_id(problem, r1_start) {
+            fwd_cost += problem.travel_cost(
+                v1,
+                r1_start_previous,
+                problem.job_task(r2.activity_ids[r2_start]).location_id(),
+            );
+
+            bwd_cost += problem.travel_cost(
+                v1,
+                r1_start_previous,
+                problem.job_task(r2.activity_ids[r2_end - 1]).location_id(),
+            );
         }
 
-        true
+        let r1_next = if r1_end > r1_start {
+            r1.next_location_id(problem, r1_end - 1)
+        } else {
+            r1.location_id(problem, r1_start)
+        };
+
+        // Compute the cost from the end of the segment in r2 to the next location in r1
+        if let Some(r1_end_next) = r1_next {
+            fwd_cost += problem.travel_cost(
+                v1,
+                problem.job_task(r2.activity_ids[r2_end - 1]).location_id(),
+                r1_end_next,
+            );
+            bwd_cost += problem.travel_cost(
+                v1,
+                problem.job_task(r2.activity_ids[r2_start]).location_id(),
+                r1_end_next,
+            );
+        }
+
+        (fwd_cost - r1_removed_cost, bwd_cost - r1_removed_cost)
     }
 
     // TODO: tests
@@ -2133,89 +2196,6 @@ mod tests {
         builder.set_services(services);
 
         builder.build()
-    }
-
-    #[test]
-    fn test_is_valid_maximum_activities_change() {
-        let problem = create_problem_for_maximum_activities(10, 5);
-
-        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
-        // Route: 0 -> 1 -> 2 (arrival times: 08:30, 09:10, 09:50)
-        route.insert_service(&problem, 0, JobIdx::new(0));
-        route.insert_service(&problem, 1, JobIdx::new(1));
-        route.insert_service(&problem, 2, JobIdx::new(2));
-
-        let is_valid = route.is_valid_maximum_activities_change(
-            &problem,
-            std::iter::once(ActivityId::service(5)),
-            1,
-            1,
-        );
-        assert!(is_valid);
-
-        let is_valid = route.is_valid_maximum_activities_change(
-            &problem,
-            [ActivityId::service(5), ActivityId::service(6)].into_iter(),
-            1,
-            1,
-        );
-        assert!(is_valid);
-
-        let is_valid = route.is_valid_maximum_activities_change(
-            &problem,
-            [
-                ActivityId::service(5),
-                ActivityId::service(6),
-                ActivityId::service(7),
-            ]
-            .into_iter(),
-            1,
-            1,
-        );
-        assert!(!is_valid);
-
-        let is_valid = route.is_valid_maximum_activities_change(
-            &problem,
-            [
-                ActivityId::service(5),
-                ActivityId::service(6),
-                ActivityId::service(7),
-            ]
-            .into_iter(),
-            1,
-            2,
-        );
-        assert!(is_valid);
-
-        let is_valid = route.is_valid_maximum_activities_change(
-            &problem,
-            [
-                ActivityId::service(5),
-                ActivityId::service(6),
-                ActivityId::service(7),
-                ActivityId::service(8),
-                ActivityId::service(9),
-            ]
-            .into_iter(),
-            0,
-            2,
-        );
-        assert!(!is_valid);
-
-        let is_valid = route.is_valid_maximum_activities_change(
-            &problem,
-            [
-                ActivityId::service(5),
-                ActivityId::service(6),
-                ActivityId::service(7),
-                ActivityId::service(8),
-                ActivityId::service(9),
-            ]
-            .into_iter(),
-            0,
-            3,
-        );
-        assert!(is_valid);
     }
 
     #[test]

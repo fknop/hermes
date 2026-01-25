@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     define_index_newtype,
-    problem::{job::Job, skill::Skill},
+    problem::{job::Job, skill::Skill, vehicle_profile::VehicleProfileIdx},
 };
 
 use super::{capacity::Capacity, location::LocationIdx};
@@ -14,7 +14,7 @@ define_index_newtype!(VehicleIdx, Vehicle);
 #[derive(Serialize, Debug, Clone)]
 pub struct Vehicle {
     external_id: String,
-    vehicle_profile_id: usize,
+    vehicle_profile_id: VehicleProfileIdx,
     shift: Option<VehicleShift>,
     capacity: Capacity,
     depot_location_id: Option<LocationIdx>,
@@ -26,7 +26,7 @@ pub struct Vehicle {
 }
 
 impl Vehicle {
-    pub fn profile_id(&self) -> usize {
+    pub fn profile_id(&self) -> VehicleProfileIdx {
         self.vehicle_profile_id
     }
 
@@ -249,7 +249,8 @@ impl VehicleBuilder {
             external_id: self.external_id.expect("External ID is required"),
             vehicle_profile_id: self
                 .vehicle_profile_id
-                .expect("Vehicle profile ID is required"),
+                .expect("Vehicle profile ID is required")
+                .into(),
             shift: self.shift,
             capacity: self.capacity.unwrap_or(Capacity::EMPTY),
             depot_location_id: self.depot_location_id.map(|id| id.into()),

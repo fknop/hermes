@@ -1,9 +1,14 @@
 use jiff::SignedDuration;
 
-use crate::problem::{
-    location::LocationIdx,
-    travel_cost_matrix::{Cost, Distance, TravelMatrices},
+use crate::{
+    define_index_newtype,
+    problem::{
+        location::LocationIdx,
+        travel_cost_matrix::{Cost, Distance, TravelMatrices},
+    },
 };
+
+define_index_newtype!(VehicleProfileIdx, VehicleProfile);
 
 pub struct VehicleProfile {
     external_id: String,
@@ -31,6 +36,15 @@ impl VehicleProfile {
     #[inline(always)]
     pub fn travel_cost(&self, from: LocationIdx, to: LocationIdx) -> Cost {
         self.travel_costs.travel_cost(from, to)
+    }
+
+    #[inline]
+    pub fn travel_cost_or_zero(&self, from: Option<LocationIdx>, to: Option<LocationIdx>) -> Cost {
+        if let (Some(from), Some(to)) = (from, to) {
+            self.travel_cost(from, to)
+        } else {
+            0.0
+        }
     }
 
     pub fn travel_costs(&self) -> &TravelMatrices {

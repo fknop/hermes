@@ -39,6 +39,10 @@ pub struct TwoOptParams {
 
 impl TwoOptOperator {
     pub fn new(params: TwoOptParams) -> Self {
+        if params.from >= params.to {
+            panic!("TwoOpt: cannot have from >= to")
+        }
+
         TwoOptOperator { params }
     }
 }
@@ -79,24 +83,16 @@ impl TwoOptOperator {
         let problem = solution.problem();
         let route = solution.route(self.params.route_id);
 
-        if self.params.from >= self.params.to {
-            panic!("TwoOpt: cannot have from >= to")
-        }
+        let (_, bwd_delta) = route.transport_cost_delta_update(
+            problem,
+            self.params.from,
+            self.params.to + 1,
+            route,
+            self.params.from,
+            self.params.to + 1,
+        );
 
-        let mut delta = self.symmetric_delta(solution);
-
-        // Chain reversal
-        for i in self.params.from..self.params.to {
-            let u = route.location_id(problem, i);
-            let v = route.location_id(problem, i + 1);
-
-            // Subtract cost of U -> V
-            delta -= problem.travel_cost_or_zero(route.vehicle(problem), u, v);
-            // Add cost of V -> U
-            delta += problem.travel_cost_or_zero(route.vehicle(problem), v, u);
-        }
-
-        delta
+        bwd_delta
     }
 }
 
@@ -255,6 +251,55 @@ mod tests {
     }
 
     #[test]
+    fn test_two_opt_asymmetric() {
+        let locations = test_utils::create_location_grid(10, 10);
+
+        let services = test_utils::create_basic_services(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        let vehicles = test_utils::create_basic_vehicles(vec![0, 0]);
+        let problem = Arc::new(test_utils::create_asymmetric_test_problem(
+            locations, services, vehicles,
+        ));
+
+        let mut solution = test_utils::create_test_working_solution(
+            Arc::clone(&problem),
+            vec![
+                TestRoute {
+                    vehicle_id: 0,
+                    service_ids: vec![0, 1, 2, 3, 4, 5],
+                },
+                TestRoute {
+                    vehicle_id: 1,
+                    service_ids: vec![6, 7, 8, 9, 10],
+                },
+            ],
+        );
+
+        let operator = TwoOptOperator::new(TwoOptParams {
+            route_id: RouteIdx::new(0),
+            from: 1,
+            to: 4,
+        });
+
+        let distance = solution.route(RouteIdx::new(0)).distance(&problem);
+        let delta = operator.transport_cost_delta(&solution);
+        operator.apply(&problem, &mut solution);
+        assert_eq!(
+            solution.route(RouteIdx::new(0)).distance(&problem),
+            distance + delta
+        );
+
+        assert_eq!(
+            solution
+                .route(RouteIdx::new(0))
+                .activity_ids()
+                .iter()
+                .map(|activity| activity.job_id().get())
+                .collect::<Vec<_>>(),
+            vec![0, 4, 3, 2, 1, 5]
+        );
+    }
+
+    #[test]
     fn test_two_opt_end_of_route() {
         let locations = test_utils::create_location_grid(6, 6);
 
@@ -324,6 +369,55 @@ mod tests {
                 .map(|activity| activity.job_id().get())
                 .collect::<Vec<_>>(),
             vec![0, 2, 3, 4, 5, 1]
+        );
+    }
+
+    #[test]
+    fn test_two_opt_asymmetric_end_of_route() {
+        let locations = test_utils::create_location_grid(10, 10);
+
+        let services = test_utils::create_basic_services(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        let vehicles = test_utils::create_basic_vehicles(vec![0, 0]);
+        let problem = Arc::new(test_utils::create_asymmetric_test_problem(
+            locations, services, vehicles,
+        ));
+
+        let mut solution = test_utils::create_test_working_solution(
+            Arc::clone(&problem),
+            vec![
+                TestRoute {
+                    vehicle_id: 0,
+                    service_ids: vec![0, 1, 2, 3, 4, 5],
+                },
+                TestRoute {
+                    vehicle_id: 1,
+                    service_ids: vec![6, 7, 8, 9, 10],
+                },
+            ],
+        );
+
+        let operator = TwoOptOperator::new(TwoOptParams {
+            route_id: RouteIdx::new(0),
+            from: 1,
+            to: 5,
+        });
+
+        let distance = solution.route(RouteIdx::new(0)).distance(&problem);
+        let delta = operator.transport_cost_delta(&solution);
+        operator.apply(&problem, &mut solution);
+        assert_eq!(
+            solution.route(RouteIdx::new(0)).distance(&problem),
+            distance + delta
+        );
+
+        assert_eq!(
+            solution
+                .route(RouteIdx::new(0))
+                .activity_ids()
+                .iter()
+                .map(|activity| activity.job_id().get())
+                .collect::<Vec<_>>(),
+            vec![0, 5, 4, 3, 2, 1]
         );
     }
 }
