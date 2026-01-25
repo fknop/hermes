@@ -278,13 +278,13 @@ mod tests {
             segment_length: 3, // 2, 3, 4
         });
 
-        let distance0 = solution.route(RouteIdx::new(0)).distance(&problem);
-        let distance1 = solution.route(RouteIdx::new(1)).distance(&problem);
+        let distance0 = solution.route(RouteIdx::new(0)).transport_costs(&problem);
+        let distance1 = solution.route(RouteIdx::new(1)).transport_costs(&problem);
         let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
         assert_eq!(
-            solution.route(RouteIdx::new(0)).distance(&problem)
-                + solution.route(RouteIdx::new(1)).distance(&problem),
+            solution.route(RouteIdx::new(0)).transport_costs(&problem)
+                + solution.route(RouteIdx::new(1)).transport_costs(&problem),
             distance0 + distance1 + delta
         );
 

@@ -6,6 +6,7 @@ use rand::seq::IteratorRandom;
 use crate::{
     problem::{
         job::{ActivityId, Job, JobIdx},
+        meters::Meters,
         vehicle::{Vehicle, VehicleIdx},
         vehicle_routing_problem::VehicleRoutingProblem,
     },
@@ -330,7 +331,7 @@ impl WorkingSolution {
         removed
     }
 
-    pub fn distance(&self) -> f64 {
+    pub fn distance(&self) -> Meters {
         self.routes
             .iter()
             .map(|route| route.distance(&self.problem))

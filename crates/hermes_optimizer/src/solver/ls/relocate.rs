@@ -276,11 +276,11 @@ mod tests {
             to: 4,
         });
 
-        let distance = solution.route(RouteIdx::new(0)).distance(&problem);
+        let distance = solution.route(RouteIdx::new(0)).transport_costs(&problem);
         let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
         assert_eq!(
-            solution.route(RouteIdx::new(0)).distance(&problem),
+            solution.route(RouteIdx::new(0)).transport_costs(&problem),
             distance + delta
         );
 
@@ -325,11 +325,11 @@ mod tests {
             to: 3,
         });
 
-        let distance = solution.route(RouteIdx::new(0)).distance(&problem);
+        let distance = solution.route(RouteIdx::new(0)).transport_costs(&problem);
         let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
         assert_eq!(
-            solution.route(RouteIdx::new(0)).distance(&problem),
+            solution.route(RouteIdx::new(0)).transport_costs(&problem),
             distance + delta
         );
 
@@ -374,11 +374,11 @@ mod tests {
             to: 3,
         });
 
-        let distance = solution.route(RouteIdx::new(0)).distance(&problem);
+        let distance = solution.route(RouteIdx::new(0)).transport_costs(&problem);
         let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
         assert_eq!(
-            solution.route(RouteIdx::new(0)).distance(&problem),
+            solution.route(RouteIdx::new(0)).transport_costs(&problem),
             distance + delta
         );
 
@@ -423,11 +423,11 @@ mod tests {
             to: 6,
         });
 
-        let distance = solution.route(RouteIdx::new(0)).distance(&problem);
+        let distance = solution.route(RouteIdx::new(0)).transport_costs(&problem);
         let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
         assert_eq!(
-            solution.route(RouteIdx::new(0)).distance(&problem),
+            solution.route(RouteIdx::new(0)).transport_costs(&problem),
             distance + delta
         );
 
@@ -474,11 +474,11 @@ mod tests {
             to: 6,
         });
 
-        let distance = solution.route(RouteIdx::new(0)).distance(&problem);
+        let distance = solution.route(RouteIdx::new(0)).transport_costs(&problem);
         let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
         assert_eq!(
-            solution.route(RouteIdx::new(0)).distance(&problem),
+            solution.route(RouteIdx::new(0)).transport_costs(&problem),
             distance + delta
         );
 
@@ -523,11 +523,11 @@ mod tests {
             to: 0,
         });
 
-        let distance = solution.route(RouteIdx::new(0)).distance(&problem);
+        let distance = solution.route(RouteIdx::new(0)).transport_costs(&problem);
         let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
         assert_eq!(
-            solution.route(RouteIdx::new(0)).distance(&problem),
+            solution.route(RouteIdx::new(0)).transport_costs(&problem),
             distance + delta
         );
 
@@ -572,11 +572,11 @@ mod tests {
             to: 5,
         });
 
-        let distance = solution.route(RouteIdx::new(0)).distance(&problem);
+        let distance = solution.route(RouteIdx::new(0)).transport_costs(&problem);
         let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
         assert_eq!(
-            solution.route(RouteIdx::new(0)).distance(&problem),
+            solution.route(RouteIdx::new(0)).transport_costs(&problem),
             distance + delta
         );
 

@@ -1,7 +1,7 @@
 use jiff::SignedDuration;
 
 use crate::{
-    problem::{amount::AmountExpression, job::JobIdx, travel_cost_matrix::Distance},
+    problem::{amount::AmountExpression, job::JobIdx, meters::Meters},
     solver::solution::{route_id::RouteIdx, working_solution::WorkingSolution},
 };
 
@@ -29,7 +29,7 @@ const DEMAND_RELATEDNESS_WEIGHT: f64 = 2.0;
 impl RuinTimeRelated {
     fn relatedness(
         activity: &RelatednessToTargetActivity,
-        max_distance: Distance,
+        max_distance: Meters,
         max_time: SignedDuration,
     ) -> f64 {
         let time_relatedness = if max_time.is_zero() {
@@ -38,7 +38,7 @@ impl RuinTimeRelated {
             activity.time.as_secs_f64() / max_time.as_secs_f64()
         };
 
-        let distance_relatedness = if max_distance == 0.0 {
+        let distance_relatedness = if max_distance.is_zero() {
             0.0
         } else {
             activity.distance / max_distance
@@ -65,7 +65,7 @@ impl RuinSolution for RuinTimeRelated {
 
         let target_activity = &routes[target_route_id].activity(target_activity_id);
 
-        let mut max_distance: Distance = 0.0;
+        let mut max_distance: Meters = Meters::ZERO;
         let mut max_time: SignedDuration = SignedDuration::ZERO;
 
         let mut related_activities: Vec<RelatednessToTargetActivity> = Vec::new();
@@ -143,6 +143,6 @@ impl RuinSolution for RuinTimeRelated {
 struct RelatednessToTargetActivity {
     job_idx: JobIdx,
     time: SignedDuration,
-    distance: Distance,
+    distance: Meters,
     normalized_demand: f64,
 }

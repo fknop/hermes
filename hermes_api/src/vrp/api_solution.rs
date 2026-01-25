@@ -1,6 +1,6 @@
 use geojson::Feature;
 use hermes_optimizer::{
-    problem::{capacity::Capacity, job::JobIdx, vehicle::VehicleIdx},
+    problem::{capacity::Capacity, job::JobIdx, meters::Meters, vehicle::VehicleIdx},
     solver::score::{Score, ScoreAnalysis},
 };
 use jiff::{SignedDuration, Timestamp};
@@ -39,7 +39,7 @@ pub struct ApiSolutionRoute {
     pub duration: SignedDuration,
     pub transport_duration: SignedDuration,
     pub activities: Vec<ApiSolutionActivity>,
-    pub distance: f64,
+    pub distance: Meters,
     pub total_demand: Capacity,
     pub vehicle_id: VehicleIdx,
     pub waiting_duration: SignedDuration,

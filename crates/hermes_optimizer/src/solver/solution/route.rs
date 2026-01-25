@@ -7,9 +7,9 @@ use crate::{
         capacity::{Capacity, is_capacity_satisfied},
         job::{ActivityId, Job, JobIdx, JobTask},
         location::LocationIdx,
+        meters::Meters,
         service::{Service, ServiceType},
         vehicle::{Vehicle, VehicleIdx},
-        vehicle_profile::{VehicleProfile, VehicleProfileIdx},
         vehicle_routing_problem::VehicleRoutingProblem,
     },
     solver::{
@@ -23,7 +23,7 @@ use crate::{
             },
         },
     },
-    utils::{bbox::BBox, enumerate_idx::EnumerateIdx},
+    utils::bbox::BBox,
 };
 
 #[derive(Clone)]
@@ -312,13 +312,13 @@ impl WorkingSolutionRoute {
         self.total_transport_cost
     }
 
-    pub fn distance(&self, problem: &VehicleRoutingProblem) -> f64 {
+    pub fn distance(&self, problem: &VehicleRoutingProblem) -> Meters {
         if self.is_empty() {
-            return 0.0;
+            return Meters::ZERO;
         }
 
         let vehicle = self.vehicle(problem);
-        let mut distance = 0.0;
+        let mut distance = Meters::ZERO;
 
         if let Some(depot_location_id) = vehicle.depot_location_id() {
             if self.has_start(problem) {

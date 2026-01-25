@@ -281,13 +281,13 @@ mod tests {
             second_end: 2,
         });
 
-        let distances = solution.route(0.into()).distance(&problem)
-            + solution.route(1.into()).distance(&problem);
+        let distances = solution.route(0.into()).transport_costs(&problem)
+            + solution.route(1.into()).transport_costs(&problem);
         let delta = operator.transport_cost_delta(&solution);
         operator.apply(&problem, &mut solution);
         assert_eq!(
-            solution.route(0.into()).distance(&problem)
-                + solution.route(1.into()).distance(&problem),
+            solution.route(0.into()).transport_costs(&problem)
+                + solution.route(1.into()).transport_costs(&problem),
             distances + delta,
         );
         assert_eq!(

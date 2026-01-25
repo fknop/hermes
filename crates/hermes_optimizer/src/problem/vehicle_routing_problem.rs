@@ -8,6 +8,7 @@ use crate::{
         capacity::Capacity,
         fleet::Fleet,
         job::{ActivityId, Job, JobIdx, JobTask},
+        meters::Meters,
         service::Service,
         shipment::Shipment,
         vehicle_profile::{VehicleProfile, VehicleProfileIdx},
@@ -20,7 +21,7 @@ use super::{
     distance_method::DistanceMethod,
     location::{Location, LocationIdx},
     service_location_index::ServiceLocationIndex,
-    travel_cost_matrix::{Cost, Distance},
+    travel_cost_matrix::Cost,
     vehicle::{Vehicle, VehicleIdx},
 };
 
@@ -240,12 +241,7 @@ impl VehicleRoutingProblem {
             .map(|location_id| &self.locations[location_id])
     }
 
-    pub fn travel_distance(
-        &self,
-        vehicle: &Vehicle,
-        from: LocationIdx,
-        to: LocationIdx,
-    ) -> Distance {
+    pub fn travel_distance(&self, vehicle: &Vehicle, from: LocationIdx, to: LocationIdx) -> Meters {
         let profile_id = vehicle.profile_id();
         self.vehicle_profiles[profile_id].travel_distance(from, to)
     }
@@ -335,7 +331,7 @@ impl VehicleRoutingProblem {
         self.has_capacity
     }
 
-    pub fn average_cost_from_depot(&self, location_id: LocationIdx) -> Distance {
+    pub fn average_cost_from_depot(&self, location_id: LocationIdx) -> f64 {
         self.precomputed_average_cost_from_depot[location_id.get()]
     }
 
@@ -447,8 +443,8 @@ impl VehicleRoutingProblem {
                                 .travel_cost(depot_location_id, location_id)
                         })
                     })
-                    .sum::<Distance>()
-                    / vehicles.len() as Distance
+                    .sum::<f64>()
+                    / vehicles.len() as f64
             },
         ));
 

@@ -4,8 +4,11 @@ use axum::{
     extract::{Path, State},
     response::IntoResponse,
 };
-use hermes_optimizer::solver::{
-    accepted_solution::AcceptedSolution, solver::SolverStatus, statistics::AggregatedStatistics,
+use hermes_optimizer::{
+    problem::meters::Meters,
+    solver::{
+        accepted_solution::AcceptedSolution, solver::SolverStatus, statistics::AggregatedStatistics,
+    },
 };
 use serde::Serialize;
 use uuid::Uuid;
@@ -64,7 +67,9 @@ fn transform_solution(accepted_solution: &AcceptedSolution) -> BenchmarkSolution
     BenchmarkSolution {
         score: accepted_solution.score,
         score_analysis: accepted_solution.score_analysis.clone(),
-        distance: routes.iter().fold(0.0, |acc, route| acc + route.distance),
+        distance: routes
+            .iter()
+            .fold(Meters::ZERO, |acc, route| acc + route.distance),
         routes,
     }
 }

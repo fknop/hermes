@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
 use jiff::SignedDuration;
-use rand::{Rng, rngs::SmallRng};
+use rand::Rng;
 use serde::Deserialize;
 
-use crate::problem::location::LocationIdx;
+use crate::problem::{kmh::Kmh, location::LocationIdx, meters::Meters};
 
 use super::location::Location;
 
@@ -17,14 +17,14 @@ pub type Cost = f64;
 /// `index = from * num_locations + to`, where `num_locations` is the total
 #[derive(Deserialize)]
 pub struct TravelMatrices {
-    distances: Arc<Vec<Distance>>,
+    distances: Arc<Vec<Meters>>,
     times: Arc<Vec<Time>>,
     costs: Arc<Vec<Cost>>,
     num_locations: usize,
     is_symmetric: bool,
 }
 
-fn is_flat_matrix_symmetric(matrix: &[f64], num_locations: usize) -> bool {
+fn is_flat_matrix_symmetric(matrix: &[Meters], num_locations: usize) -> bool {
     for i in 0..num_locations {
         for j in 0..num_locations {
             if matrix[i * num_locations + j] != matrix[j * num_locations + i] {
@@ -50,7 +50,7 @@ impl TravelMatrices {
         });
 
         TravelMatrices {
-            distances: Arc::new(distances.into_iter().flatten().collect()),
+            distances: Arc::new(distances.into_iter().flatten().map(Meters::from).collect()),
             times: Arc::new(times.into_iter().flatten().collect()),
             costs: Arc::new(costs.into_iter().flatten().collect()),
             num_locations,
@@ -62,7 +62,13 @@ impl TravelMatrices {
     pub fn from_travel_matrices(
         matrices: hermes_matrix_providers::travel_matrices::TravelMatrices,
     ) -> Self {
-        let distances = Arc::new(matrices.distances);
+        let distances = Arc::new(
+            matrices
+                .distances
+                .into_iter()
+                .map(Meters::from)
+                .collect::<Vec<_>>(),
+        );
         let times = Arc::new(matrices.times);
         let costs = if let Some(costs) = matrices.costs {
             Arc::new(costs)
@@ -90,22 +96,23 @@ impl TravelMatrices {
 
     pub fn from_haversine(locations: &[Location]) -> Self {
         let num_locations = locations.len();
-        let mut distances: Vec<Distance> = vec![0.0; num_locations * num_locations];
+        let mut distances: Vec<Meters> = vec![Meters::ZERO; num_locations * num_locations];
         let mut times: Vec<Time> = vec![0.0; num_locations * num_locations];
-        // let mut costs: Vec<Cost> = vec![0.0; num_locations * num_locations];
+        let mut costs: Vec<Cost> = vec![0.0; num_locations * num_locations];
 
         for (i, from) in locations.iter().enumerate() {
             for (j, to) in locations.iter().enumerate() {
-                distances[i * num_locations + j] = from.haversine_distance(to);
+                distances[i * num_locations + j] = from.haversine_distance(to).into();
                 // Assume average speed of 50km/h
-                let speed = 50.0 / 3.6;
-                times[i * num_locations + j] = (distances[i * num_locations + j]) / speed;
-                // costs[i * num_locations + j] = distances[i * num_locations + j]
+                let speed = Kmh::new(50.0);
+                times[i * num_locations + j] =
+                    ((distances[i * num_locations + j]) / speed).as_secs_f64();
+                costs[i * num_locations + j] = distances[i * num_locations + j].value();
             }
         }
 
         let distances = Arc::new(distances);
-        let costs = Arc::clone(&distances);
+        let costs = Arc::new(costs);
         let times = Arc::new(times);
 
         TravelMatrices {
@@ -119,21 +126,33 @@ impl TravelMatrices {
 
     pub fn from_euclidean(locations: &[Location], round: bool) -> Self {
         let num_locations = locations.len();
-        let mut distances: Vec<Distance> = vec![0.0; num_locations * num_locations];
+        let mut distances: Vec<Meters> = vec![Meters::ZERO; num_locations * num_locations];
 
         for (i, from) in locations.iter().enumerate() {
             for (j, to) in locations.iter().enumerate() {
                 distances[i * num_locations + j] = if round {
-                    from.euclidean_distance(to).round()
+                    from.euclidean_distance(to).round().into()
                 } else {
-                    from.euclidean_distance(to)
+                    from.euclidean_distance(to).into()
                 }
             }
         }
 
         let distances = Arc::new(distances);
-        let costs = Arc::clone(&distances);
-        let times = Arc::clone(&distances);
+        let costs = Arc::new(
+            distances
+                .iter()
+                .copied()
+                .map(|d| d.value())
+                .collect::<Vec<_>>(),
+        );
+        let times = Arc::new(
+            distances
+                .iter()
+                .copied()
+                .map(|d| d.value())
+                .collect::<Vec<_>>(),
+        );
 
         TravelMatrices {
             distances,
@@ -146,18 +165,30 @@ impl TravelMatrices {
 
     pub fn from_rand(locations: &[Location]) -> Self {
         let num_locations = locations.len();
-        let mut distances: Vec<Distance> = vec![0.0; num_locations * num_locations];
+        let mut distances: Vec<Meters> = vec![Meters::ZERO; num_locations * num_locations];
 
         for (i, _) in locations.iter().enumerate() {
             for (j, _) in locations.iter().enumerate() {
                 distances[i * num_locations + j] =
-                    rand::rng().random_range(0.0_f64..100.0_f64).round();
+                    rand::rng().random_range(0.0_f64..100.0_f64).round().into();
             }
         }
 
         let distances = Arc::new(distances);
-        let costs = Arc::clone(&distances);
-        let times = Arc::clone(&distances);
+        let costs = Arc::new(
+            distances
+                .iter()
+                .copied()
+                .map(|d| d.value())
+                .collect::<Vec<_>>(),
+        );
+        let times = Arc::new(
+            distances
+                .iter()
+                .copied()
+                .map(|d| d.value())
+                .collect::<Vec<_>>(),
+        );
 
         TravelMatrices {
             distances,
@@ -171,7 +202,7 @@ impl TravelMatrices {
     #[cfg(test)]
     pub fn from_constant(locations: &[Location], time: f64, distance: f64, cost: f64) -> Self {
         let num_locations = locations.len();
-        let distances = Arc::new(vec![distance; num_locations * num_locations]);
+        let distances = Arc::new(vec![Meters::new(distance); num_locations * num_locations]);
         let times = Arc::new(vec![time; num_locations * num_locations]);
         let costs = Arc::new(vec![cost; num_locations * num_locations]);
         TravelMatrices {
@@ -184,9 +215,9 @@ impl TravelMatrices {
     }
 
     #[inline(always)]
-    pub fn travel_distance(&self, from: LocationIdx, to: LocationIdx) -> Distance {
+    pub fn travel_distance(&self, from: LocationIdx, to: LocationIdx) -> Meters {
         if from == to {
-            return 0.0;
+            return Meters::ZERO;
         }
 
         self.distances[self.index(from, to)]
@@ -226,7 +257,7 @@ impl TravelMatrices {
         &self.times
     }
 
-    pub(super) fn distances(&self) -> &[Distance] {
+    pub(super) fn distances(&self) -> &[Meters] {
         &self.distances
     }
 

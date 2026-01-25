@@ -4,13 +4,15 @@ use crate::{
     define_index_newtype,
     problem::{
         location::LocationIdx,
-        travel_cost_matrix::{Cost, Distance, TravelMatrices},
+        meters::Meters,
+        travel_cost_matrix::{Cost, TravelMatrices},
     },
 };
 
 define_index_newtype!(VehicleProfileIdx, VehicleProfile);
 
 pub struct VehicleProfile {
+    #[allow(dead_code)]
     external_id: String,
     travel_costs: TravelMatrices,
 }
@@ -24,7 +26,7 @@ impl VehicleProfile {
     }
 
     #[inline(always)]
-    pub fn travel_distance(&self, from: LocationIdx, to: LocationIdx) -> Distance {
+    pub fn travel_distance(&self, from: LocationIdx, to: LocationIdx) -> Meters {
         self.travel_costs.travel_distance(from, to)
     }
 
@@ -38,7 +40,7 @@ impl VehicleProfile {
         self.travel_costs.travel_cost(from, to)
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn travel_cost_or_zero(&self, from: Option<LocationIdx>, to: Option<LocationIdx>) -> Cost {
         if let (Some(from), Some(to)) = (from, to) {
             self.travel_cost(from, to)
