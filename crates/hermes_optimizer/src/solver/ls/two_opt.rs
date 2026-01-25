@@ -47,55 +47,6 @@ impl TwoOptOperator {
     }
 }
 
-impl TwoOptOperator {
-    fn symmetric_delta(&self, solution: &WorkingSolution) -> f64 {
-        /*
-         * ///    ... (prev) --x--> [from] -> ... -> [to] --x--> (next) ...
-        ///          ^             ^               ^            ^
-        ///          A             B               C            D
-        ///
-        /// AFTER (Sequence Reversed):
-        ///    ... (prev) -----> [to] -> ... -> [from] -----> (next) ...
-        ///          ^             ^               ^            ^
-        ///          A             C               B            D
-        ///
-         */
-
-        let problem = solution.problem();
-        let route = solution.route(self.params.route_id);
-
-        let prev = route.previous_location_id(problem, self.params.from);
-        let from = route.location_id(problem, self.params.from);
-
-        let to = route.location_id(problem, self.params.to);
-        let next = route.next_location_id(problem, self.params.to);
-
-        let current_cost = problem.travel_cost_or_zero(route.vehicle(problem), prev, from)
-            + problem.travel_cost_or_zero(route.vehicle(problem), to, next);
-
-        let new_cost = problem.travel_cost_or_zero(route.vehicle(problem), prev, to)
-            + problem.travel_cost_or_zero(route.vehicle(problem), from, next);
-
-        new_cost - current_cost
-    }
-
-    fn asymmetric_delta(&self, solution: &WorkingSolution) -> f64 {
-        let problem = solution.problem();
-        let route = solution.route(self.params.route_id);
-
-        let (_, bwd_delta) = route.transport_cost_delta_update(
-            problem,
-            self.params.from,
-            self.params.to + 1,
-            route,
-            self.params.from,
-            self.params.to + 1,
-        );
-
-        bwd_delta
-    }
-}
-
 impl LocalSearchOperator for TwoOptOperator {
     fn generate_moves<C>(
         _problem: &VehicleRoutingProblem,
@@ -129,11 +80,19 @@ impl LocalSearchOperator for TwoOptOperator {
     }
 
     fn transport_cost_delta(&self, solution: &WorkingSolution) -> f64 {
-        if solution.problem().is_symmetric() {
-            self.symmetric_delta(solution)
-        } else {
-            self.asymmetric_delta(solution)
-        }
+        let problem = solution.problem();
+        let route = solution.route(self.params.route_id);
+
+        let (_, bwd_delta) = route.transport_cost_delta_update(
+            problem,
+            self.params.from,
+            self.params.to + 1,
+            route,
+            self.params.from,
+            self.params.to + 1,
+        );
+
+        bwd_delta
     }
 
     fn fixed_route_cost_delta(&self, _solution: &WorkingSolution) -> f64 {
