@@ -2,6 +2,7 @@ pub mod cross_exchange;
 pub mod inter_mixed_exchange;
 pub mod inter_or_opt;
 pub mod inter_relocate;
+pub mod inter_reverse_two_opt;
 pub mod inter_swap;
 pub mod inter_two_opt_star;
 pub mod local_search;

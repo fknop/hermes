@@ -11,14 +11,12 @@ use hermes_optimizer::{
         solomon::SolomonParser,
     },
     solver::{
-        recreate::recreate_params::RecreateParams,
         solution::working_solution::WorkingSolution,
         solver::Solver,
         solver_params::{SolverParams, SolverParamsDebugOptions, Termination, Threads},
     },
 };
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
-use tracing::info;
 
 use crate::{file_utils::read_folder, parsers};
 

@@ -1019,8 +1019,8 @@ impl WorkingSolutionRoute {
         r2_start: usize,
         r2_end: usize,
     ) -> (f64, f64) {
-        assert!(r1_start <= r1_end);
-        assert!(r2_start < r2_end);
+        assert!(r1_start <= r1_end, "{r1_start} <= {r1_end}");
+        assert!(r2_start < r2_end, "{r2_start} < {r2_end}");
 
         let r1 = self;
 

@@ -8,12 +8,12 @@ use crate::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
         accepted_solution::AcceptedSolution,
-        alns_search::AlnsSearch,
         ls::{
             cross_exchange::CrossExchangeOperator,
             inter_mixed_exchange::InterMixedExchange,
             inter_or_opt::InterOrOptOperator,
             inter_relocate::InterRelocateOperator,
+            inter_reverse_two_opt::InterReverseTwoOptOperator,
             inter_swap::InterSwapOperator,
             inter_two_opt_star::InterTwoOptStarOperator,
             mixed_exchange::MixedExchangeOperator,
@@ -215,6 +215,14 @@ impl LocalSearch {
                     if delta < best_delta && op.is_valid(solution) {
                         best_delta = delta;
                         best_move = Some(LocalSearchMove::InterTwoOptStar(op));
+                    }
+                });
+
+                InterReverseTwoOptOperator::generate_moves(problem, solution, (r1, r2), |op| {
+                    let delta = op.delta(solution);
+                    if delta < best_delta && op.is_valid(solution) {
+                        best_delta = delta;
+                        best_move = Some(LocalSearchMove::ReverseTwoOpt(op));
                     }
                 });
 
