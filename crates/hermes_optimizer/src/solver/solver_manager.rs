@@ -28,6 +28,14 @@ impl SolverManager {
         });
     }
 
+    pub async fn list_solvers(&self) -> Vec<(String, Arc<Solver>)> {
+        let solvers = self.solvers.read().await;
+        solvers
+            .iter()
+            .map(|(job_id, solver)| (job_id.clone(), Arc::clone(solver)))
+            .collect()
+    }
+
     pub async fn job_status(&self, job_id: &str) -> Option<SolverStatus> {
         self.solvers
             .read()
@@ -43,7 +51,7 @@ impl SolverManager {
         job_id
     }
 
-    pub async fn start(&self, job_id: &str) {
+    pub async fn start(&self, job_id: &str) -> bool {
         if let Some(solver) = self.solvers.read().await.get(job_id) {
             tokio::spawn({
                 let solver = solver.clone();
@@ -51,12 +59,18 @@ impl SolverManager {
                     solver.solve();
                 }
             });
+            true
+        } else {
+            false
         }
     }
 
-    pub async fn stop(&self, job_id: &str) {
+    pub async fn stop(&self, job_id: &str) -> bool {
         if let Some(solver) = self.solvers.write().await.remove(job_id) {
             solver.stop();
+            true
+        } else {
+            false
         }
     }
 

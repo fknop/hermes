@@ -1,5 +1,6 @@
 mod error;
 mod landmarks;
+mod pagination;
 mod route;
 mod state;
 mod vrp;
@@ -46,8 +47,11 @@ async fn main() {
         .route("/route", post(route_handler))
         .route("/landmarks", get(get_landmarks))
         .route("/vrp/ws", any(vrp::ws::handler))
-        .route("/vrp", post(vrp::post::post_handler))
-        .route("/vrp/poll/{job_id}", get(vrp::poll::poll_handler))
+        .route("/vrp/jobs", post(vrp::post::post_handler))
+        .route("/vrp/jobs", get(vrp::jobs::jobs_handler))
+        .route("/vrp/jobs/{job_id}/poll", get(vrp::job::poll_handler))
+        .route("/vrp/jobs/{job_id}/start", post(vrp::job::start_handler))
+        .route("/vrp/jobs/{job_id}/stop", post(vrp::job::stop_handler))
         .route(
             "/vrp/benchmark",
             post(vrp::benchmark::post_benchmark::post_benchmark_handler),

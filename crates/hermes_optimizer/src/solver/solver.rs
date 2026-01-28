@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
+use jiff::Timestamp;
 use parking_lot::{MappedRwLockReadGuard, RwLock};
+use serde::Serialize;
 
 use crate::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
@@ -15,7 +17,7 @@ use super::{
     statistics::SearchStatistics,
 };
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Serialize)]
 pub enum SolverStatus {
     Pending,
     Running,
@@ -25,6 +27,7 @@ pub enum SolverStatus {
 pub struct Solver {
     search: AlnsSearch,
     status: RwLock<SolverStatus>,
+    created_at: Timestamp,
 }
 
 impl Solver {
@@ -34,6 +37,7 @@ impl Solver {
         Solver {
             status: RwLock::new(SolverStatus::Pending),
             search,
+            created_at: Timestamp::now(),
         }
     }
 
@@ -57,6 +61,10 @@ impl Solver {
 
     pub fn status(&self) -> SolverStatus {
         *self.status.read()
+    }
+
+    pub fn created_at(&self) -> Timestamp {
+        self.created_at
     }
 
     pub fn current_best_solution(&self) -> Option<MappedRwLockReadGuard<'_, AcceptedSolution>> {

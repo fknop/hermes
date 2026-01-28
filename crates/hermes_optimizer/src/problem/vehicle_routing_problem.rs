@@ -317,6 +317,12 @@ impl VehicleRoutingProblem {
         self.nearest_jobs_of_location(job_location_id)
     }
 
+    pub fn in_nearest_neighborhood_of(&self, of: ActivityId, activity_id: ActivityId) -> bool {
+        let location = &self.locations[self.job_activity(activity_id).location_id()];
+        self.service_location_index
+            .in_nearest_neighborhood_of(of, location)
+    }
+
     pub fn is_symmetric(&self) -> bool {
         self.vehicle_profiles
             .iter()

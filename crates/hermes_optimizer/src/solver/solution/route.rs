@@ -385,6 +385,10 @@ impl WorkingSolutionRoute {
             .map(move |(index, _)| self.activity(index))
     }
 
+    pub fn get(&self, index: usize) -> Option<ActivityId> {
+        self.activity_ids.get(index).copied()
+    }
+
     pub fn activity(&self, index: usize) -> RouteActivityInfo {
         assert!(
             !self.is_empty(),

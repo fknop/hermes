@@ -72,6 +72,21 @@ impl LocalSearchOperator for InterRelocateOperator {
             }
 
             for to_pos in 0..=to_route.activity_ids().len() {
+                let activity_before = to_route.get(to_pos.saturating_sub(1));
+                let activity_after = to_route.get(to_pos);
+
+                // if let Some(activity_before) = activity_before
+                //     && !problem.in_nearest_neighborhood_of(from_activity_id, activity_before)
+                // {
+                //     continue;
+                // }
+
+                // if let Some(activity_after) = activity_after
+                //     && !problem.in_nearest_neighborhood_of(from_activity_id, activity_after)
+                // {
+                //     continue;
+                // }
+
                 let op = InterRelocateOperator::new(InterRelocateParams {
                     from_route_id: r1,
                     to_route_id: r2,

@@ -9,7 +9,7 @@ use super::distance_method::DistanceMethod;
 use super::location::Location;
 
 pub struct IndexedData {
-    job_id: ActivityId,
+    activity_id: ActivityId,
 }
 
 pub enum IndexedPoint {
@@ -95,7 +95,7 @@ impl ServiceLocationIndex {
         let tree: RTree<ServiceLocationIndexObject> = RTree::bulk_load(
             location_ids
                 .iter()
-                .map(|&(job_id, location_id)| {
+                .map(|&(activity_id, location_id)| {
                     let location = &locations[location_id];
 
                     ServiceLocationIndexObject::new(
@@ -109,7 +109,7 @@ impl ServiceLocationIndex {
                                 y: location.y(),
                             },
                         },
-                        IndexedData { job_id },
+                        IndexedData { activity_id },
                     )
                 })
                 .collect(),
@@ -125,7 +125,18 @@ impl ServiceLocationIndex {
         let point: geo::Point = point.into();
         self.tree
             .nearest_neighbor_iter(&[point.x(), point.y()])
-            .map(|geom_with_data| geom_with_data.data.job_id)
+            .map(|geom_with_data| geom_with_data.data.activity_id)
+    }
+
+    pub fn in_nearest_neighborhood_of<P>(&self, of: ActivityId, point: P) -> bool
+    where
+        P: Into<geo::Point>,
+    {
+        let point: geo::Point = point.into();
+        self.tree
+            .nearest_neighbor_iter(&[point.x(), point.y()])
+            .take(100)
+            .any(|geom_with_data| geom_with_data.data.activity_id == of)
     }
 }
 

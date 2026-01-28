@@ -15,7 +15,7 @@ export function usePollRouting({ jobId }: { jobId: string | null }) {
 
     async function run() {
       try {
-        const response = await fetch(`${API_URL}/vrp/poll/${jobId}`)
+        const response = await fetch(`${API_URL}/vrp/jobs/${jobId}/poll`)
         if (response.status >= 400) {
           setError(`Failed ${response.status}`)
           return

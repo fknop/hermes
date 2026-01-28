@@ -3,7 +3,7 @@ import { useFetch } from '../../hooks/useFetch'
 import { VehicleRoutingProblem } from './input'
 
 export const usePostRouting = () => {
-  const [fetch, { data, loading }] = useFetch<{ job_id: string }>('/vrp')
+  const [fetch, { data, loading }] = useFetch<{ job_id: string }>('/vrp/jobs')
 
   return [
     useCallback(

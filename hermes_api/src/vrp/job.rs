@@ -210,3 +210,29 @@ pub async fn poll_handler(
         }
     }
 }
+
+pub async fn start_handler(
+    Path(job_id): Path<Uuid>,
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<bool>, ApiError> {
+    let result = state.solver_manager.start(&job_id.to_string()).await;
+
+    if result {
+        Ok(Json(true))
+    } else {
+        Err(ApiError::NotFound(job_id.to_string()))
+    }
+}
+
+pub async fn stop_handler(
+    Path(job_id): Path<Uuid>,
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<bool>, ApiError> {
+    let result = state.solver_manager.stop(&job_id.to_string()).await;
+
+    if result {
+        Ok(Json(true))
+    } else {
+        Err(ApiError::NotFound(job_id.to_string()))
+    }
+}

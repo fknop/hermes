@@ -211,6 +211,16 @@ impl WorkingSolution {
             .map(|(index, _)| RouteIdx::new(index))
     }
 
+    pub fn route_and_position(&self, activity_id: ActivityId) -> Option<(RouteIdx, usize)> {
+        for (route_id, route) in self.routes.iter().enumerate_idx() {
+            if let Some(position) = route.job_position(activity_id) {
+                return Some((route_id, position));
+            }
+        }
+
+        None
+    }
+
     pub fn route_of_job(&self, job_id: JobIdx) -> Option<RouteIdx> {
         let job = self.problem().job(job_id);
         self.routes
