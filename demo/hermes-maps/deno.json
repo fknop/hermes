@@ -1,0 +1,6 @@
+{
+  "allowScripts": {
+    "allow": ["npm:@tailwindcss/oxide@4.1.11", "npm:msw@2.12.7"],
+    "deny": ["npm:esbuild@0.25.8", "npm:fsevents@2.3.3"]
+  }
+}

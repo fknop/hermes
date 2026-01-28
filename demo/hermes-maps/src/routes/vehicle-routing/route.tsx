@@ -1,5 +1,4 @@
 import { Source } from 'react-map-gl/mapbox'
-import { Button } from '../../components/Button.tsx'
 import { MapSidePanel } from '../../components/MapSidePanel.tsx'
 import { Map } from '../../Map.tsx'
 import { transformSolutionToGeoJson, getGeoJSONFromProblem } from './geojson.ts'
@@ -18,6 +17,7 @@ import { WeightsPanel } from './WeightsPanel.tsx'
 import { RoutesPanel } from './components/RoutesPanel.tsx'
 import { UnassignedJobsPanel } from './components/UnassignedJobsPanel.tsx'
 import { ActivitiesPanel } from './components/ActivitiesPanel.tsx'
+import { Button } from '@/components/ui/button.tsx'
 
 export default function VehicleRoutingScreen() {
   const [input, setInput] = useState<VehicleRoutingProblem | null>(null)
@@ -67,7 +67,7 @@ export default function VehicleRoutingScreen() {
                   />
 
                   <Button
-                    variant="primary"
+                    variant="default"
                     disabled={loading || polling || isNil(input)}
                     onClick={() => {
                       if (!isNil(input)) {

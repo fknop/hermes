@@ -1,8 +1,19 @@
 import { useCallback } from 'react'
+import { Temporal } from 'temporal-polyfill'
 
 export function useDurationFormatter() {
   return useCallback(
-    (seconds: number, options?: { style: 'long' | 'short' | 'narrow' }) => {
+    (
+      duration: number | string | Temporal.Duration,
+      options?: { style: 'long' | 'short' | 'narrow' }
+    ) => {
+      let temporal =
+        duration instanceof Temporal.Duration
+          ? duration
+          : typeof duration === 'number'
+            ? Temporal.Duration.from({ seconds: duration })
+            : Temporal.Duration.from(duration)
+
       const style = options?.style ?? 'long'
       // @ts-ignore
       const formatter = new Intl.DurationFormat('en-GB', {
@@ -10,27 +21,7 @@ export function useDurationFormatter() {
         numeric: 'auto',
       })
 
-      const minutes = Math.floor(seconds / 60)
-      const hours = Math.floor(minutes / 60)
-      const remainingMinutes = Math.floor(minutes % 60)
-      const remainingSeconds = Math.floor(seconds % 60)
-
-      if (hours === 0 && remainingMinutes === 0) {
-        if (remainingSeconds == 0) {
-          return formatter.format({
-            milliseconds: Math.round(seconds * 1000),
-          })
-        }
-
-        return formatter.format({
-          seconds: remainingSeconds,
-        })
-      }
-
-      return formatter.format({
-        hours,
-        minutes: remainingMinutes,
-      })
+      return formatter.format(temporal)
     },
     []
   )

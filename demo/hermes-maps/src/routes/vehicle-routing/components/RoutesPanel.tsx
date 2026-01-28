@@ -4,6 +4,18 @@ import { Solution } from '../solution'
 import { VRP_COLORS } from '../colors'
 import { RouteCard } from './RouteCard'
 import { VehicleRoutingProblem } from '../input'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
+import { useDurationFormatter } from '@/hooks/useDurationFormatter'
+import { PropsWithChildren } from 'react'
+import { Separator } from '@/components/ui/separator'
+import { DescriptionItem } from '@/components/ui/description-item'
 
 interface RoutesPanelProps {
   problem: VehicleRoutingProblem
@@ -18,6 +30,7 @@ export function RoutesPanel({
   selectedRouteIndex,
   onRouteSelect,
 }: RoutesPanelProps) {
+  const formatDuration = useDurationFormatter()
   const formatDistance = useDistanceFormatter()
 
   const totalDistance = solution.routes.reduce(
@@ -32,63 +45,41 @@ export function RoutesPanel({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1 px-3">
-        <h2 className="text-lg font-semibold text-zinc-900">
-          Solution summary
-        </h2>
-        <div className="grid grid-cols-3 gap-3 p-3 bg-neutral-100 rounded-lg">
-          <div className="flex flex-col">
-            <span className="text-zinc-400 text-xs uppercase tracking-wide">
-              Duration
-            </span>
-            <span className="text-zinc-800 font-semibold">
-              {Temporal.Duration.from(solution.duration).toLocaleString()}
-            </span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-zinc-400 text-xs uppercase tracking-wide">
-              Distance
-            </span>
-            <span className="text-zinc-800 font-semibold">
-              {formatDistance(totalDistance)}
-            </span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-zinc-400 text-xs uppercase tracking-wide">
-              Transport
-            </span>
-            <span className="text-zinc-800 font-semibold">
-              {totalTransportDuration.toLocaleString()}
-            </span>
-          </div>
+      <div className="p-3">
+        <Card size="sm">
+          <CardHeader>
+            <CardTitle>Summary</CardTitle>
+          </CardHeader>{' '}
+          <CardContent>
+            <div className="grid grid-cols-3 gap-2">
+              <DescriptionItem
+                label="Duration"
+                value={formatDuration(solution.duration, { style: 'narrow' })}
+              />
 
-          <div className="flex flex-col">
-            <span className="text-zinc-400 text-xs uppercase tracking-wide">
-              Jobs
-            </span>
-            <span className="text-zinc-800 font-semibold">
-              {problem.services.length}
-            </span>
-          </div>
+              <DescriptionItem
+                label="Distance"
+                value={formatDistance(totalDistance)}
+              />
 
-          <div className="flex flex-col">
-            <span className="text-zinc-400 text-xs uppercase tracking-wide">
-              Routes
-            </span>
-            <span className="text-zinc-800 font-semibold">
-              {solution.routes.length}
-            </span>
-          </div>
+              <DescriptionItem
+                label="Transport"
+                value={formatDuration(totalTransportDuration, {
+                  style: 'narrow',
+                })}
+              />
 
-          <div className="flex flex-col">
-            <span className="text-zinc-400 text-xs uppercase tracking-wide">
-              Unassigned
-            </span>
-            <span className="text-zinc-800 font-semibold">
-              {solution.unassigned_jobs.length}
-            </span>
-          </div>
-        </div>
+              <DescriptionItem label="Jobs" value={problem.services.length} />
+
+              <DescriptionItem label="Routes" value={solution.routes.length} />
+
+              <DescriptionItem
+                label="Unassigned"
+                value={solution.unassigned_jobs.length}
+              />
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="flex flex-col gap-2">
