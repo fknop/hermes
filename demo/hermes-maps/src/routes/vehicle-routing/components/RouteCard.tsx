@@ -5,6 +5,7 @@ import clsx from 'clsx'
 import { DescriptionItem } from '@/components/ui/description-item'
 import { useDurationFormatter } from '@/hooks/useDurationFormatter'
 import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
 
 type Route = Solution['routes'][number]
 
@@ -50,21 +51,23 @@ export function RouteCard({
       onClick={onClick}
       className={clsx(
         'group flex flex-col gap-2 p-4 text-left transition-all duration-200 w-full cursor-pointer',
-        isSelected ? '' : 'hover:bg-neutral-50'
+        isSelected ? 'bg-secondary' : 'bg-card hover:bg-muted'
         // isSelected
         //   ? 'border-slate-800 bg-slate-50 shadow-md'
         //   : 'border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50/50 hover:shadow-sm'
       )}
     >
       <div className="flex items-center justify-between">
-        <span className="inline-flex items-center gap-2.5">
+        <span className="inline-flex items-center gap-2">
           <div
-            className="h-4 w-4 rounded-full ring-2 ring-white shadow-sm"
+            className="h-4 w-4 rounded-full"
             style={{ backgroundColor: color }}
           />
-          <span className="font-semibold text-zinc-900">Route {index + 1}</span>
+          <span className="font-medium text-muted-foreground">
+            Route {index + 1}
+          </span>
         </span>
-        <Badge variant="secondary">Vehicle {route.vehicle_id + 1}</Badge>
+        <Badge variant="outline">Vehicle {route.vehicle_id + 1}</Badge>
       </div>
 
       <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm mt-1">

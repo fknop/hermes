@@ -18,6 +18,11 @@ import { RoutesPanel } from './components/RoutesPanel.tsx'
 import { UnassignedJobsPanel } from './components/UnassignedJobsPanel.tsx'
 import { ActivitiesPanel } from './components/ActivitiesPanel.tsx'
 import { Button } from '@/components/ui/button.tsx'
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from '@/components/ui/resizable.tsx'
 
 export default function VehicleRoutingScreen() {
   const [input, setInput] = useState<VehicleRoutingProblem | null>(null)
@@ -53,12 +58,12 @@ export default function VehicleRoutingScreen() {
 
   return (
     <div className="h-screen w-screen">
-      <Map>
-        <div className="z-10 absolute top-0 bottom-0 left-0 flex">
+      <ResizablePanelGroup orientation="horizontal">
+        <ResizablePanel defaultSize={84 * 4} minSize={84 * 4}>
           <MapSidePanel side="left">
             <div className="flex flex-row h-full">
               <div className="flex flex-col h-full overflow-hidden w-full flex-shrink-0">
-                <div className="flex flex-col gap-4 px-6 py-6 flex-shrink-0">
+                <div className="flex flex-col gap-4 mt-3 p-3 flex-shrink-0">
                   <JsonFileUpload
                     onFileUpload={async (file) => {
                       const data = await file.text()
@@ -106,59 +111,69 @@ export default function VehicleRoutingScreen() {
               )}
             </div>
           </MapSidePanel>
-        </div>
+        </ResizablePanel>
+        <ResizablePanel>
+          <Map>
+            <div></div>
 
-        {response?.statistics && response?.weights && (
-          <MapSidePanel side="right">
-            <div className="p-4">
-              <StatisticsPanel statistics={response.statistics} />
-              <WeightsPanel weights={response.weights} />
-            </div>
-          </MapSidePanel>
-        )}
+            {response && (
+              <>
+                {response.solution?.routes.map((route, index) => {
+                  return (
+                    <Source
+                      key={index}
+                      type="geojson"
+                      data={route.polyline}
+                      id={`polyline-${index}`}
+                    >
+                      <PolylineLayer
+                        id={`polyline-${index}`}
+                        color={VRP_COLORS[index % VRP_COLORS.length]}
+                        sourceId={`polyline-${index}`}
+                        lineWidth={3}
+                      />
+                    </Source>
+                  )
+                })}
+              </>
+            )}
 
-        {response && (
-          <>
-            {response.solution?.routes.map((route, index) => {
-              return (
+            {solutionGeoJson && (
+              <>
                 <Source
-                  key={index}
                   type="geojson"
-                  data={route.polyline}
-                  id={`polyline-${index}`}
+                  data={solutionGeoJson.points}
+                  id="geojson"
                 >
-                  <PolylineLayer
-                    id={`polyline-${index}`}
-                    color={VRP_COLORS[index % VRP_COLORS.length]}
-                    sourceId={`polyline-${index}`}
-                    lineWidth={3}
-                  />
+                  <ActivitiesLayer id="activities" sourceId="geojson" />
                 </Source>
-              )
-            })}
-          </>
-        )}
+              </>
+            )}
 
-        {solutionGeoJson && (
-          <>
-            <Source type="geojson" data={solutionGeoJson.points} id="geojson">
-              <ActivitiesLayer id="activities" sourceId="geojson" />
-            </Source>
-          </>
+            {problemGeoJson && (
+              <>
+                <Source
+                  type="geojson"
+                  data={problemGeoJson.points}
+                  id="locations-geojson"
+                >
+                  <LocationsLayer id="locations" sourceId="locations-geojson" />
+                </Source>
+              </>
+            )}
+          </Map>
+        </ResizablePanel>
+        {response?.statistics && response?.weights && (
+          <ResizablePanel>
+            <MapSidePanel side="right">
+              <div className="p-4">
+                <StatisticsPanel statistics={response.statistics} />
+                <WeightsPanel weights={response.weights} />
+              </div>
+            </MapSidePanel>
+          </ResizablePanel>
         )}
-
-        {problemGeoJson && (
-          <>
-            <Source
-              type="geojson"
-              data={problemGeoJson.points}
-              id="locations-geojson"
-            >
-              <LocationsLayer id="locations" sourceId="locations-geojson" />
-            </Source>
-          </>
-        )}
-      </Map>
+      </ResizablePanelGroup>
     </div>
   )
 }

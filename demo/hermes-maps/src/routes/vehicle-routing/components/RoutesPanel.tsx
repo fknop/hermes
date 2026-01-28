@@ -82,11 +82,8 @@ export function RoutesPanel({
         </Card>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <h3 className="text-sm font-semibold text-zinc-700 uppercase tracking-wide px-3">
-          Routes ({solution.routes.length})
-        </h3>
-        <div className="flex flex-col divide-y divide-gray-900/10">
+      <div className="flex flex-col gap-2 px-3">
+        <div className="flex flex-col divide-y divide-border  rounded-lg border border-border">
           {solution.routes.map((route, index) => (
             <RouteCard
               key={index}

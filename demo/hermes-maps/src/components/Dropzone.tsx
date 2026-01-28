@@ -6,13 +6,13 @@ import { motion, MotionProps } from 'motion/react'
 const getDropzoneClassNames = ({ disabled }: { disabled?: boolean }) => {
   return clsx(
     'h-full w-full outline-hidden',
-    'border border-dashed border-zinc-400 rounded-md',
+    'border border-dashed border-border rounded-md',
     'cursor-pointer',
     'flex flex-row items-center justify-between',
     'px-4 py-2',
     {
-      'bg-neutral-50 border-zinc-200 cursor-not-allowed': disabled,
-      'bg-neutral-100': !disabled,
+      'bg-input/50 border-zinc-200 cursor-not-allowed': disabled,
+      'bg-input': !disabled,
     }
   )
 }
@@ -115,7 +115,7 @@ export const Dropzone = ({
           />
         </svg>
         <div className="flex flex-col items-center gap-2 text-center">
-          <span className="text-xs text-neutral-700">{description}</span>
+          <span className="text-xs text-muted-foreground">{description}</span>
         </div>
       </motion.div>
     </div>

@@ -7,13 +7,7 @@ export function MapSidePanel({
 }: PropsWithChildren<{ side?: 'left' | 'right' }>) {
   return (
     <div
-      className={clsx(
-        'z-10 absolute top-0 bottom-0 bg-white drop-shadow-xs border-zinc-900/20 min-w-96',
-        {
-          'left-0 border-r-2': side === 'left',
-          'right-0 border-l-2': side === 'right',
-        }
-      )}
+      className={clsx('h-full bg-background drop-shadow-xs border-sidebar', {})}
     >
       <div className="flex flex-col h-full">{children}</div>
     </div>

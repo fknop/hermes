@@ -2,12 +2,16 @@ import { PropsWithChildren, ReactNode } from 'react'
 import { Label } from './label'
 
 const DescriptionValue = ({ children }: PropsWithChildren) => {
-  return <span className="text-zinc-800 font-medium">{children}</span>
+  return (
+    <span className="text-secondary-foreground font-medium">{children}</span>
+  )
 }
 
 const DescriptionLabel = ({ children }: PropsWithChildren) => {
   return (
-    <Label className="text-neutral-500 font-normal text-xs">{children}</Label>
+    <Label className="text-muted-foreground font-normal text-xs">
+      {children}
+    </Label>
   )
 }
 
