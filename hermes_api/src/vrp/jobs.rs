@@ -3,11 +3,12 @@ use std::sync::Arc;
 use axum::{Json, extract::State};
 use hermes_optimizer::solver::solver::SolverStatus;
 use jiff::Timestamp;
+use schemars::JsonSchema;
 use serde::Serialize;
 
 use crate::{error::ApiError, pagination::PaginatedResponse, state::AppState};
 
-#[derive(Serialize)]
+#[derive(Serialize, JsonSchema)]
 pub struct VehicleRoutingJob {
     pub job_id: String,
     pub status: SolverStatus,

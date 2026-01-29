@@ -67,7 +67,7 @@ export function RouteCard({
             Route {index + 1}
           </span>
         </span>
-        <Badge variant="outline">Vehicle {route.vehicle_id + 1}</Badge>
+        <Badge variant="outline">Vehicle {route.vehicle_id}</Badge>
       </div>
 
       <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm mt-1">
@@ -84,7 +84,22 @@ export function RouteCard({
               .length
           }
         />
-        <DescriptionItem label="Waiting" value={formattedWaitingDuration} />
+        <DescriptionItem
+          label="Waiting"
+          value={
+            <span
+              className={
+                route.waiting_duration === 'PT0S'
+                  ? 'text-muted-foreground'
+                  : 'text-amber-300'
+              }
+            >
+              {formatDuration(route.waiting_duration, {
+                style: 'narrow',
+              })}
+            </span>
+          }
+        />
         <DescriptionItem
           label="Load"
           value={percentFormatter.format(route.vehicle_max_load)}

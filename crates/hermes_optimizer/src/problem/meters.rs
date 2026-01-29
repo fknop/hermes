@@ -4,11 +4,12 @@ use std::{
 };
 
 use jiff::SignedDuration;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::problem::kmh::Kmh;
 
-#[derive(Debug, Clone, Copy, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Deserialize, Serialize, JsonSchema)]
 pub struct Meters(f64);
 
 impl Meters {

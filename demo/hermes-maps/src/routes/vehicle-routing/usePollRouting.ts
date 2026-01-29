@@ -27,7 +27,7 @@ export function usePollRouting({ jobId }: { jobId: string | null }) {
       }
     }
 
-    const interval = setInterval(run, 1000) // Poll every 5 seconds
+    const interval = setInterval(run, 600)
 
     void run()
 

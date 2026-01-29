@@ -7,8 +7,11 @@ export function transformSolutionToGeoJson(
   problem: VehicleRoutingProblem,
   solution: Solution
 ): { points: GeoJSON.FeatureCollection<GeoJSON.Point> } {
-  const getLocationForServiceId = (serviceId: number): [number, number] => {
-    const locationId = problem.services[serviceId].location_id
+  const getLocationForServiceId = (serviceId: string): [number, number] => {
+    const service = problem.services.find(
+      (service) => service.id === serviceId
+    )!
+    const locationId = service.location_id
     return [
       problem.locations[locationId].coordinates[0],
       problem.locations[locationId].coordinates[1],
@@ -23,7 +26,7 @@ export function transformSolutionToGeoJson(
           return {
             geometry: {
               type: 'Point',
-              coordinates: getLocationForServiceId(activity.service_id),
+              coordinates: getLocationForServiceId(activity.id),
             },
             type: 'Feature',
             properties: {

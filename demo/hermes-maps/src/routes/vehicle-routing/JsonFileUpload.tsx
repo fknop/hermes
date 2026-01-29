@@ -5,13 +5,18 @@ const FILE_TYPES = { 'application/json': [] as string[] } as const
 
 export type JsonFileUploadProps = {
   onFileUpload: (file: File) => void
+  disabled?: boolean
 }
 
-export function JsonFileUpload({ onFileUpload }: JsonFileUploadProps) {
+export function JsonFileUpload({
+  onFileUpload,
+  disabled,
+}: JsonFileUploadProps) {
   return (
     <Dropzone
+      disabled={disabled}
       accept={FILE_TYPES}
-      description="Upload a JSON file"
+      description="Upload JSON"
       multiple={false}
       onDropAccepted={(files) => {
         const file = files[0]

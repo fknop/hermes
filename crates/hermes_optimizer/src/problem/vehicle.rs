@@ -26,6 +26,9 @@ pub struct Vehicle {
 }
 
 impl Vehicle {
+    pub fn external_id(&self) -> &str {
+        &self.external_id
+    }
     pub fn profile_id(&self) -> VehicleProfileIdx {
         self.vehicle_profile_id
     }

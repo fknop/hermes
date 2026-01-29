@@ -23,3 +23,13 @@ mimalloc = "0.1.47"
 hermes_matrix_providers = { version = "0.1.0", path = "../crates/hermes_matrix_providers" }
 anyhow = {workspace = true}
 dotenvy.workspace = true
+aide = { version = "0.16.0-alpha.2", features = [
+        "axum",
+        "axum-json",
+        "axum-matched-path",
+        "axum-query",
+        "macros",
+        "scalar",
+        "swagger"
+] }
+schemars.workspace = true

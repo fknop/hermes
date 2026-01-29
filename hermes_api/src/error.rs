@@ -1,6 +1,8 @@
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
+use schemars::JsonSchema;
 
+#[derive(JsonSchema)]
 pub enum ApiError {
     BadRequest(String),
     InternalServerError(String),
@@ -11,6 +13,10 @@ impl From<anyhow::Error> for ApiError {
     fn from(error: anyhow::Error) -> Self {
         ApiError::InternalServerError(error.to_string())
     }
+}
+
+impl aide::OperationOutput for ApiError {
+    type Inner = Self;
 }
 
 impl IntoResponse for ApiError {

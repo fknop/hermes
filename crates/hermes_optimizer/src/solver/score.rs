@@ -5,11 +5,12 @@ use std::{
 };
 
 use fxhash::FxHashMap;
+use schemars::{JsonSchema, JsonSchema_repr};
 use serde::Serialize;
 
 use super::score_level::ScoreLevel;
 
-#[derive(Debug, Copy, Clone, PartialEq, Serialize)]
+#[derive(Debug, Copy, Clone, PartialEq, Serialize, JsonSchema)]
 pub struct Score {
     pub hard_score: f64,
     pub soft_score: f64,
@@ -161,7 +162,7 @@ impl SubAssign<Score> for Score {
     }
 }
 
-#[derive(Default, Clone, Debug, Serialize)]
+#[derive(Default, Clone, Debug, Serialize, JsonSchema)]
 pub struct ScoreAnalysis {
     pub scores: FxHashMap<&'static str, Score>,
 }

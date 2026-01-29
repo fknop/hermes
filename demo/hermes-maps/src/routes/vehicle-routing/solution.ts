@@ -11,7 +11,7 @@ export type Activity =
     }
   | {
       type: 'Service'
-      service_id: number
+      id: string
       arrival_time: string
       departure_time: string
       waiting_duration: string
@@ -27,7 +27,7 @@ export type Solution = {
     transport_duration: string
     total_demand: number[]
     waiting_duration: string
-    vehicle_id: number
+    vehicle_id: string
     activities: Activity[]
     polyline: GeoJSON.Feature<GeoJSON.LineString>
   }[]

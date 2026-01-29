@@ -16,7 +16,7 @@ geo-types = "0.7.18"
 thiserror = "2.0.17"
 anyhow = "1.0.100"
 dotenvy = "0.15.7"
-schemars = { version = "1.2.0", features = ["derive", "jiff02"] }
+schemars = { version = "1.2.0", features = ["derive", "jiff02", "uuid1", "smallvec1"] }
 
 [profile.release]
 debug = false

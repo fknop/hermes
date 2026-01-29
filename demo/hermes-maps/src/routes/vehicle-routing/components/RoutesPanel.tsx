@@ -1,21 +1,12 @@
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { DescriptionItem } from '@/components/ui/description-item'
+import { useDurationFormatter } from '@/hooks/useDurationFormatter'
 import { Temporal } from 'temporal-polyfill'
 import { useDistanceFormatter } from '../../../hooks/useDistanceFormatter'
-import { Solution } from '../solution'
 import { VRP_COLORS } from '../colors'
-import { RouteCard } from './RouteCard'
 import { VehicleRoutingProblem } from '../input'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { Label } from '@/components/ui/label'
-import { useDurationFormatter } from '@/hooks/useDurationFormatter'
-import { PropsWithChildren } from 'react'
-import { Separator } from '@/components/ui/separator'
-import { DescriptionItem } from '@/components/ui/description-item'
+import { Solution } from '../solution'
+import { RouteCard } from './RouteCard'
 
 interface RoutesPanelProps {
   problem: VehicleRoutingProblem
@@ -44,12 +35,12 @@ export function RoutesPanel({
   )
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="p-3">
+    <div className="flex flex-col gap-4 mt-3">
+      <div className="px-3">
         <Card size="sm">
           <CardHeader>
             <CardTitle>Summary</CardTitle>
-          </CardHeader>{' '}
+          </CardHeader>
           <CardContent>
             <div className="grid grid-cols-3 gap-2">
               <DescriptionItem

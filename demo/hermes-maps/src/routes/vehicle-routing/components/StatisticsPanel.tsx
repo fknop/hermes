@@ -1,5 +1,5 @@
 import { PropsWithChildren, useMemo } from 'react'
-import { OperatorStatistics, SolutionStatistics } from './solution'
+import { OperatorStatistics, SolutionStatistics } from '../solution'
 import { Temporal } from 'temporal-polyfill'
 
 function RowValue({ children }: PropsWithChildren) {

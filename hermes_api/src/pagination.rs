@@ -1,3 +1,4 @@
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize)]
@@ -21,7 +22,7 @@ impl Pagination {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, JsonSchema)]
 pub struct PaginatedResponse<T> {
     pub data: Vec<T>,
     pub page: usize,

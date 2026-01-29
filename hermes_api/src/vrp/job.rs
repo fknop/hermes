@@ -21,6 +21,7 @@ use hermes_routing::{
     routing::routing_request::{RoutingAlgorithm, RoutingRequest, RoutingRequestOptions},
 };
 use jiff::SignedDuration;
+use schemars::JsonSchema;
 use serde::Serialize;
 use uuid::Uuid;
 
@@ -37,21 +38,25 @@ struct OperatorWeights {
     recreate: AlnsWeights<RecreateStrategy>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, JsonSchema)]
 pub struct PollSolverRunning {
     solution: Option<ApiSolution>,
+    #[schemars(skip)]
     statistics: AggregatedStatistics,
+    #[schemars(skip)]
     weights: OperatorWeights,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, JsonSchema)]
 pub struct PollSolverCompleted {
     solution: Option<ApiSolution>,
+    #[schemars(skip)]
     statistics: AggregatedStatistics,
+    #[schemars(skip)]
     weights: OperatorWeights,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, JsonSchema)]
 #[serde(tag = "status")]
 pub enum PollResponse {
     Pending,
@@ -122,7 +127,10 @@ fn transform_solution(accepted_solution: &AcceptedSolution, hermes: &Hermes) -> 
 
             activities.extend(route.activities_iter().map(|activity| {
                 ApiSolutionActivity::Service(ApiServiceActivity {
-                    service_id: activity.activity_id().job_id(),
+                    id: problem
+                        .job(activity.activity_id().job_id())
+                        .external_id()
+                        .to_owned(),
                     arrival_time: activity.arrival_time(),
                     departure_time: activity.departure_time(),
                     waiting_duration: activity.waiting_duration(),
@@ -141,7 +149,7 @@ fn transform_solution(accepted_solution: &AcceptedSolution, hermes: &Hermes) -> 
                 duration: route.duration(problem),
                 transport_duration: route.transport_duration(problem),
                 total_demand: route.total_initial_load().clone(),
-                vehicle_id: route.vehicle_id(),
+                vehicle_id: route.vehicle(problem).external_id().to_owned(),
                 waiting_duration: route.total_waiting_duration(),
                 activities,
                 polyline: compute_polyline(problem, route, hermes),
@@ -161,7 +169,7 @@ fn transform_solution(accepted_solution: &AcceptedSolution, hermes: &Hermes) -> 
             .solution
             .unassigned_jobs()
             .iter()
-            .copied()
+            .map(|job_id| problem.job(*job_id).external_id().to_owned())
             .collect::<Vec<_>>(),
     }
 }

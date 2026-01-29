@@ -1,11 +1,5 @@
 import { PropsWithChildren, useMemo } from 'react'
-import {
-  AlnsWeights,
-  OperatorStatistics,
-  OperatorWeights,
-  SolutionStatistics,
-} from './solution'
-import { Temporal } from 'temporal-polyfill'
+import { AlnsWeights, OperatorWeights } from '../solution'
 
 function RowValue({ children }: PropsWithChildren) {
   return <td className="px-1 truncate">{children}</td>

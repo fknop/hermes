@@ -19,6 +19,7 @@ export function useDurationFormatter() {
       const formatter = new Intl.DurationFormat('en-GB', {
         style,
         numeric: 'auto',
+        minutesDisplay: 'always',
       })
 
       return formatter.format(temporal)

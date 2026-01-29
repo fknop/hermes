@@ -66,7 +66,7 @@ impl SolverManager {
     }
 
     pub async fn stop(&self, job_id: &str) -> bool {
-        if let Some(solver) = self.solvers.write().await.remove(job_id) {
+        if let Some(solver) = self.solvers.write().await.get(job_id) {
             solver.stop();
             true
         } else {

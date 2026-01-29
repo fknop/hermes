@@ -3,6 +3,7 @@ use std::{
     ops::{Add, AddAssign, Index, IndexMut, Sub, SubAssign},
 };
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 
@@ -38,7 +39,7 @@ impl<T: AmountExpression + Sized> AmountExpression for &T {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Amount(Vector);
 
 impl Amount {

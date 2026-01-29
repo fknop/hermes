@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use jiff::Timestamp;
 use parking_lot::{MappedRwLockReadGuard, RwLock};
+use schemars::JsonSchema;
 use serde::Serialize;
 
 use crate::{
@@ -17,7 +18,7 @@ use super::{
     statistics::SearchStatistics,
 };
 
-#[derive(Copy, Clone, Debug, Serialize)]
+#[derive(Copy, Clone, Debug, Serialize, JsonSchema)]
 pub enum SolverStatus {
     Pending,
     Running,
