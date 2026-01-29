@@ -19,8 +19,8 @@ import {
 import { VRP_COLORS } from '../vehicle-routing/colors'
 import { useFetch } from '../../hooks/useFetch'
 import { isNil } from '../../utils/isNil'
-import { Button } from '../../components/Button'
 import { useDurationFormatter } from '../../hooks/useDurationFormatter'
+import { Button } from '@/components/ui/button'
 
 type ProblemData = {
   locations: { x: number; y: number }[]
@@ -179,7 +179,7 @@ export default function SolomonRoute() {
       </select>
 
       <Button
-        variant="primary"
+        variant="default"
         disabled={!dataset || isRunning}
         onClick={() => {
           startBenchmark(dataset!)
@@ -189,7 +189,7 @@ export default function SolomonRoute() {
       </Button>
 
       <Button
-        variant="primary"
+        variant="default"
         disabled={!isRunning}
         onClick={() => {
           stopBenchmark()

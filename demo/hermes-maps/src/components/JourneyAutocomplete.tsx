@@ -6,8 +6,8 @@ import { Address } from '../types/Address'
 import { AddressAutocomplete } from './AddressAutocomplete'
 import { HTMLAttributes, Ref } from 'react'
 import clsx from 'clsx'
-import { Button } from './Button'
 import { MagnifyingGlassIcon } from '@heroicons/react/24/solid'
+import { Button } from './ui/button'
 
 export function AddressInput({
   ref,
@@ -75,8 +75,8 @@ export function JourneyAutocomplete({
           />
         </div>
         <Button
-          icon={ArrowsUpDownIcon}
-          variant="primary"
+          // icon={ArrowsUpDownIcon}
+          variant="default"
           className="size-8 rounded-full z-10 absolute right-3 top-1/2 transform -translate-y-1/2"
           type="button"
           onClick={() => {
@@ -86,9 +86,9 @@ export function JourneyAutocomplete({
       </div>
       <Button
         className="!rounded-t-none"
-        variant="primary"
-        size="normal"
-        icon={MagnifyingGlassIcon}
+        variant="default"
+        size="default"
+        // icon={MagnifyingGlassIcon}
         onClick={onSearch}
       >
         Search
