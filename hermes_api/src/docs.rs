@@ -17,25 +17,17 @@ pub fn docs_routes(state: Arc<AppState>) -> ApiRouter {
     aide::generate::infer_responses(true);
 
     let router = ApiRouter::new()
-        .api_route_with(
+        .route(
             "/",
-            get_with(
-                Scalar::new("/docs/private/api.json")
-                    .with_title("Aide Axum")
-                    .axum_handler(),
-                |op| op.description("This documentation page."),
-            ),
-            |p| p.security_requirement("ApiKey"),
+            get(Scalar::new("/docs/private/api.json")
+                .with_title("Aide Axum")
+                .axum_handler()),
         )
-        .api_route_with(
+        .route(
             "/swagger",
-            get_with(
-                Swagger::new("/docs/private/api.json")
-                    .with_title("Aide Axum")
-                    .axum_handler(),
-                |op| op.description("This documentation page."),
-            ),
-            |p| p.security_requirement("ApiKey"),
+            get(Swagger::new("/docs/private/api.json")
+                .with_title("Aide Axum")
+                .axum_handler()),
         )
         .route("/private/api.json", get(serve_docs))
         .with_state(state);

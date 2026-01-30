@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { useDurationFormatter } from '@/hooks/useDurationFormatter'
 import { useRoutingJobContext } from './RoutingJobContext'
+import { WaitingDuration } from './WaitingDuration'
 
 interface ActivityCardProps {
   activity: Activity
@@ -75,10 +76,10 @@ export function ActivityCard({
   }
 
   return (
-    <div className="flex gap-3">
+    <div className="flex px-3 py-2 gap-3">
       <div className="flex flex-col items-center">
         {getActivityIcon()}
-        {!isLast && <div className="w-0.5 flex-1 bg-zinc-200 my-1" />}
+        {!isLast && <div className="w-0.5 flex-1 bg-zinc-200 -mb-3 mt-1" />}
       </div>
       <div className="flex-1 pb-5 mt-1.5">
         <div className="flex items-center justify-between">
@@ -102,19 +103,7 @@ export function ActivityCard({
             <DescriptionItem
               icon={PauseIcon}
               label="Waiting"
-              value={
-                <span
-                  className={
-                    activity.waiting_duration === 'PT0S'
-                      ? 'text-muted-foreground'
-                      : 'text-amber-300'
-                  }
-                >
-                  {formatDuration(activity.waiting_duration, {
-                    style: 'narrow',
-                  })}
-                </span>
-              }
+              value={<WaitingDuration duration={activity.waiting_duration} />}
             />
           )}
         </div>

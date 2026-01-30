@@ -1,18 +1,11 @@
-import { PropsWithChildren, useMemo } from 'react'
+import { DataTable } from '@/components/ui/data-table'
+import { useDurationFormatter } from '@/hooks/useDurationFormatter'
+import { usePercentageFormatter } from '@/hooks/usePercentageFormatter'
+import { ColumnDef } from '@tanstack/react-table'
+import { useMemo } from 'react'
 import { OperatorStatistics, SolutionStatistics } from '../solution'
-import { Temporal } from 'temporal-polyfill'
 
-function RowValue({ children }: PropsWithChildren) {
-  return <td className="px-1 truncate">{children}</td>
-}
-
-function Header({ children }: PropsWithChildren) {
-  return (
-    <th className="px-1 text-left font-medium text-neutral-600">{children}</th>
-  )
-}
-
-function OperatorStatisticsPanel({
+function StatisticsDataTable({
   statistics,
 }: {
   statistics: { [name: string]: OperatorStatistics }
@@ -24,30 +17,47 @@ function OperatorStatisticsPanel({
       ...stats,
     }))
   }, [statistics])
+  const formatPercentage = usePercentageFormatter()
+  const formatDuration = useDurationFormatter()
 
-  return (
-    <>
-      {operatorStatistics.map((stats) => {
-        return (
-          <tr key={stats.name}>
-            <RowValue>{stats.name}</RowValue>
-            <RowValue>{stats.total_invocations}</RowValue>
-            <RowValue>{stats.total_best}</RowValue>
-            <RowValue>{stats.total_improvements}</RowValue>
-            <RowValue>
-              {Temporal.Duration.from(stats.avg_duration).toLocaleString()}
-            </RowValue>
-            <RowValue>
-              {Math.round(stats.avg_score_percentage_improvement * 100) / 100}%
-            </RowValue>
-            <RowValue>
-              {Math.round(stats.total_score_improvement * 100) / 100}
-            </RowValue>
-          </tr>
-        )
-      })}
-    </>
-  )
+  const columns: ColumnDef<OperatorStatistics & { name: string }>[] =
+    useMemo(() => {
+      const columns: ColumnDef<OperatorStatistics & { name: string }>[] = [
+        {
+          accessorKey: 'name',
+          header: 'Name',
+        },
+        {
+          accessorKey: 'total_invocations',
+          header: 'Invocations',
+        },
+        {
+          accessorKey: 'total_best',
+          header: 'Total Best',
+        },
+        {
+          accessorKey: 'total_improvements',
+          header: 'Total Improved',
+        },
+        {
+          accessorKey: 'avg_duration',
+          header: 'Avg Duration',
+          cell: (info) => formatDuration(info.row.original.avg_duration),
+        },
+        {
+          accessorKey: 'avg_score_percentage_improvement',
+          header: 'Avg %',
+          cell: (info) =>
+            formatPercentage(
+              info.row.original.avg_score_percentage_improvement
+            ),
+        },
+      ]
+
+      return columns
+    }, [formatPercentage])
+
+  return <DataTable data={operatorStatistics} columns={columns} />
 }
 
 export function StatisticsPanel({
@@ -56,38 +66,11 @@ export function StatisticsPanel({
   statistics: SolutionStatistics
 }) {
   return (
-    <div className="flex flex-col max-w-3xl overflow-auto">
-      <table className="table w-full table-auto">
-        <thead>
-          <tr>
-            <Header>Name</Header>
-            <Header>Total Invocations</Header>
-            <Header>Total Best</Header>
-            <Header>Total improved</Header>
-            <Header>Avg duration</Header>
-            <Header>Avg %</Header>
-            <Header>Score improvement</Header>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td colSpan={5} className="px-1 font-semibold">
-              Ruin statistics
-            </td>
-          </tr>
-          <OperatorStatisticsPanel
-            statistics={statistics.aggregated_ruin_statistics}
-          />
-          <tr>
-            <td colSpan={5} className="px-1 pt-4 font-semibold">
-              Recreate statistics
-            </td>
-          </tr>
-          <OperatorStatisticsPanel
-            statistics={statistics.aggregated_recreate_statistics}
-          />
-        </tbody>
-      </table>
+    <div className="flex flex-col gap-4">
+      <StatisticsDataTable statistics={statistics.aggregated_ruin_statistics} />
+      <StatisticsDataTable
+        statistics={statistics.aggregated_recreate_statistics}
+      />
     </div>
   )
 }

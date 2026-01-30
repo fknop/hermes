@@ -7,13 +7,18 @@ import {
   CardAction,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
 import { DescriptionItem } from '@/components/ui/description-item'
 import { useDurationFormatter } from '@/hooks/useDurationFormatter'
 import { Button } from '@/components/ui/button'
-import { XIcon } from 'lucide-react'
+import { EyeIcon, EyeOffIcon, ScanEyeIcon, XIcon } from 'lucide-react'
+import { WaitingDuration } from './WaitingDuration'
+import { ButtonGroup } from '@/components/ui/button-group'
+import { Separator } from '@/components/ui/separator'
+import { useRoutingJobContext } from './RoutingJobContext'
 
 type Route = Solution['routes'][number]
 
@@ -35,8 +40,11 @@ export function ActivitiesPanel({
   color,
   onClose,
 }: ActivitiesPanelProps) {
+  const { toggleRoute, hideOtherRoutes, showAllRoutes, hiddenRoutes } =
+    useRoutingJobContext()
   const formatDistance = useDistanceFormatter()
   const formatDuration = useDurationFormatter()
+  const isHidden = hiddenRoutes.has(routeIndex)
 
   return (
     <div className="flex flex-col h-full bg-background min-w-80">
@@ -75,32 +83,49 @@ export function ActivitiesPanel({
             />
             <DescriptionItem
               label="Waiting"
-              value={
-                <span
-                  className={
-                    route.waiting_duration === 'PT0S'
-                      ? 'text-muted-foreground'
-                      : 'text-amber-300'
-                  }
-                >
-                  {formatDuration(route.waiting_duration, {
-                    style: 'narrow',
-                  })}
-                </span>
-              }
+              value={<WaitingDuration duration={route.waiting_duration} />}
             />
             <DescriptionItem
               label="Load"
               value={percentFormatter.format(route.vehicle_max_load)}
             />
           </CardContent>
+          <Separator />
+          <CardFooter>
+            <CardAction>
+              <ButtonGroup>
+                <Button
+                  variant="outline"
+                  onClick={() => toggleRoute(routeIndex)}
+                >
+                  {isHidden ? (
+                    <EyeIcon data-icon="inline-start" />
+                  ) : (
+                    <EyeOffIcon data-icon="inline-start" />
+                  )}
+                  {isHidden ? 'Show' : 'Hide'}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => hideOtherRoutes(routeIndex)}
+                >
+                  <ScanEyeIcon data-icon="inline-start" />
+                  Hide others
+                </Button>
+                <Button variant="outline" onClick={() => showAllRoutes()}>
+                  <EyeIcon data-icon="inline-start" />
+                  Show all
+                </Button>
+              </ButtonGroup>
+            </CardAction>
+          </CardFooter>
         </Card>
       </div>
-      <div className="bg-card flex-1 overflow-auto p-4 mt-2">
-        <h3 className="text-xs font-semibold text-muted-foreground mb-4">
+      <div className="bg-card flex-1 overflow-auto mt-2">
+        <h3 className="text-xs font-semibold text-muted-foreground mb-4 p-3">
           Activities ({route.activities.length})
         </h3>
-        <div className="flex flex-col">
+        <div className="flex flex-col divide-y divide-border">
           {route.activities.map((activity, index) => (
             <ActivityCard
               key={index}

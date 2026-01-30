@@ -6,6 +6,7 @@ import { DescriptionItem } from '@/components/ui/description-item'
 import { useDurationFormatter } from '@/hooks/useDurationFormatter'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import { WaitingDuration } from './WaitingDuration'
 
 type Route = Solution['routes'][number]
 
@@ -86,19 +87,7 @@ export function RouteCard({
         />
         <DescriptionItem
           label="Waiting"
-          value={
-            <span
-              className={
-                route.waiting_duration === 'PT0S'
-                  ? 'text-muted-foreground'
-                  : 'text-amber-300'
-              }
-            >
-              {formatDuration(route.waiting_duration, {
-                style: 'narrow',
-              })}
-            </span>
-          }
+          value={<WaitingDuration duration={route.waiting_duration} />}
         />
         <DescriptionItem
           label="Load"

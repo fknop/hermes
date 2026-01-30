@@ -49,9 +49,10 @@ export function MapMenuItem({
     <button
       {...props}
       className={clsx(
+        'text-popover-foreground',
         'px-2 py-0.5 rounded text-sm',
         'flex flex-row justify-start',
-        'focus:bg-slate-100 focus:outline-primary-active focus-visible:outline-primary-active'
+        'focus:bg-accent focus:text-accent-foreground focus:outline-primary-active focus-visible:outline-primary-active'
       )}
       ref={ref}
       role="menuitem"
@@ -182,7 +183,7 @@ export const MapContextMenu = ({
                 'p-1 rounded-md shadow-md',
                 'border border-slate-900/25',
                 'flex flex-col justify-start',
-                'bg-white',
+                'bg-popover',
                 'outline:none focus:outline-none',
                 'min-w-36'
               )}

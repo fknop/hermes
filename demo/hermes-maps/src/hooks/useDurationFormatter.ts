@@ -1,28 +1,23 @@
+import { DurationLike, toTemporalDuration } from '@/lib/DurationLike'
 import { useCallback } from 'react'
-import { Temporal } from 'temporal-polyfill'
 
 export function useDurationFormatter() {
   return useCallback(
     (
-      duration: number | string | Temporal.Duration,
+      duration: DurationLike,
       options?: { style: 'long' | 'short' | 'narrow' }
     ) => {
-      let temporal =
-        duration instanceof Temporal.Duration
-          ? duration
-          : typeof duration === 'number'
-            ? Temporal.Duration.from({ seconds: duration })
-            : Temporal.Duration.from(duration)
+      let temporal = toTemporalDuration(duration)
 
       const style = options?.style ?? 'long'
       // @ts-ignore
       const formatter = new Intl.DurationFormat('en-GB', {
         style,
         numeric: 'auto',
-        minutesDisplay: 'always',
+        minutesDisplay: temporal.total('seconds') === 0 ? 'always' : 'auto',
       })
 
-      return formatter.format(temporal)
+      return formatter.format(temporal.round({ largestUnit: 'hours' }))
     },
     []
   )

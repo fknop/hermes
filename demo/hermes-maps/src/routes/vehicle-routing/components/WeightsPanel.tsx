@@ -1,64 +1,32 @@
-import { PropsWithChildren, useMemo } from 'react'
+import { DataTable } from '@/components/ui/data-table'
+import { ColumnDef } from '@tanstack/react-table'
+import { useMemo } from 'react'
 import { AlnsWeights, OperatorWeights } from '../solution'
 
-function RowValue({ children }: PropsWithChildren) {
-  return <td className="px-1 truncate">{children}</td>
-}
+function WeightsDataTable({ weights }: { weights: AlnsWeights['weights'] }) {
+  const columns: ColumnDef<AlnsWeights['weights'][number]>[] = useMemo(() => {
+    const columns: ColumnDef<AlnsWeights['weights'][number]>[] = [
+      {
+        accessorKey: 'strategy',
+        header: 'Strategy',
+      },
+      {
+        accessorKey: 'weight',
+        header: 'Weight',
+      },
+    ]
 
-function Header({ children }: PropsWithChildren) {
-  return (
-    <th className="px-1 text-left font-medium text-neutral-600">{children}</th>
-  )
-}
+    return columns
+  }, [])
 
-function OperatorWeightsPanel({
-  weights,
-}: {
-  weights: AlnsWeights['weights']
-}) {
-  const sortedWeights = useMemo(() => {
-    return weights.toSorted((a, b) => a.weight - b.weight)
-  }, [weights])
-
-  return (
-    <>
-      {sortedWeights.map((weight) => {
-        return (
-          <tr key={weight.strategy}>
-            <RowValue>{weight.strategy}</RowValue>
-            <RowValue>{weight.weight}</RowValue>
-          </tr>
-        )
-      })}
-    </>
-  )
+  return <DataTable data={weights} columns={columns} />
 }
 
 export function WeightsPanel({ weights }: { weights: OperatorWeights }) {
   return (
-    <div className="flex flex-col max-w-3xl overflow-auto">
-      <table className="table w-full table-auto">
-        <thead>
-          <tr>
-            <Header>Name</Header>
-            <Header>Weight</Header>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td colSpan={2} className="px-1 font-semibold">
-              Ruin weights
-            </td>
-          </tr>
-          <OperatorWeightsPanel weights={weights.ruin.weights} />
-          <tr>
-            <td colSpan={2} className="px-1 pt-4 font-semibold">
-              Recreate weights
-            </td>
-          </tr>
-          <OperatorWeightsPanel weights={weights.recreate.weights} />
-        </tbody>
-      </table>
+    <div className="flex flex-row gap-4">
+      <WeightsDataTable weights={weights.ruin.weights} />
+      <WeightsDataTable weights={weights.recreate.weights} />
     </div>
   )
 }

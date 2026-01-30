@@ -17,8 +17,9 @@ export function DebugPanel({
     <Sheet modal={false} disablePointerDismissal>
       <SheetTrigger
         render={
-          <Button variant="outline" size="icon">
+          <Button variant="ghost">
             <ChartPieIcon />
+            Debug
           </Button>
         }
       />

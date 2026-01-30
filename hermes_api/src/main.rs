@@ -34,7 +34,7 @@ static GLOBAL: MiMalloc = MiMalloc;
 async fn main() {
     dotenvy::from_filename("./.env.local").ok();
     tracing_subscriber::fmt().with_max_level(Level::INFO).init();
-
+    aide::generate::on_error(|error| tracing::error!("{}", error));
     aide::generate::extract_schemas(true);
 
     let hermes = Hermes::from_directory("./data/be");

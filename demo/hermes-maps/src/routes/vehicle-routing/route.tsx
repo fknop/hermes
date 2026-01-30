@@ -24,6 +24,7 @@ import { usePostRouting } from './usePostRouting.ts'
 import { useStopRouting } from './useStopRouting.ts'
 
 export default function VehicleRoutingScreen() {
+  const [showUnassigned, setShowUnassigned] = useState(false)
   const [input, setInput] = useState<VehicleRoutingProblem | null>(null)
   const [postRouting, { loading, data }] = usePostRouting()
   const stopRouting = useStopRouting()
@@ -31,6 +32,36 @@ export default function VehicleRoutingScreen() {
   const [selectedRouteIndex, setSelectedRouteIndex] = useState<number | null>(
     null
   )
+  const [hiddenRoutes, setHiddenRoutes] = useState<Set<number>>(new Set())
+  const toggleRoute = useCallback((route: number) => {
+    setHiddenRoutes((prev) => {
+      const newSet = new Set(prev)
+      if (newSet.has(route)) {
+        newSet.delete(route)
+      } else {
+        newSet.add(route)
+      }
+      return newSet
+    })
+  }, [])
+
+  const hideOtherRoutes = useCallback(
+    (route: number) => {
+      setHiddenRoutes(
+        new Set(
+          Array.from(
+            { length: response?.solution?.routes.length ?? 0 },
+            (_, i) => i
+          ).filter((i) => i !== route)
+        )
+      )
+    },
+    [response]
+  )
+
+  const showAllRoutes = useCallback(() => {
+    setHiddenRoutes(new Set())
+  }, [])
 
   const startRouting = useCallback(async () => {
     if (!isNil(input)) {
@@ -50,10 +81,10 @@ export default function VehicleRoutingScreen() {
   const unassignedServices = useMemo(() => {
     if (!input || !response?.solution) return []
 
-    const unassignedServiceIds = response.solution.unassigned_jobs
+    const unassignedServiceIds = new Set(response.solution.unassigned_jobs)
 
-    return input.services.filter((_, index) =>
-      unassignedServiceIds.includes(index)
+    return input.services.filter((service) =>
+      unassignedServiceIds.has(service.id)
     )
   }, [input, response?.solution])
 
@@ -90,6 +121,12 @@ export default function VehicleRoutingScreen() {
         }, [data?.job_id]),
         onInputChange: setInput,
         isRunning: polling,
+        showUnassigned,
+        setShowUnassigned,
+        showAllRoutes,
+        hideOtherRoutes,
+        toggleRoute,
+        hiddenRoutes,
       }}
     >
       <div className="h-screen w-screen">
@@ -107,9 +144,6 @@ export default function VehicleRoutingScreen() {
                             selectedRouteIndex={selectedRouteIndex}
                             onRouteSelect={setSelectedRouteIndex}
                             problem={input}
-                          />
-                          <UnassignedJobsPanel
-                            unassignedServices={unassignedServices}
                           />
                         </>
                       )}
@@ -131,6 +165,13 @@ export default function VehicleRoutingScreen() {
               </MapSidePanel>
             </ResizablePanel>
           )}
+          {showUnassigned && (
+            <ResizablePanel defaultSize={72 * 4} minSize={72 * 4}>
+              <MapSidePanel side="left">
+                <UnassignedJobsPanel unassignedServices={unassignedServices} />
+              </MapSidePanel>
+            </ResizablePanel>
+          )}
           <ResizablePanel>
             <div className="flex flex-col flex-1 h-full">
               <VehicleRoutingMenu />
@@ -138,6 +179,12 @@ export default function VehicleRoutingScreen() {
                 {response && (
                   <>
                     {response.solution?.routes.map((route, index) => {
+                      const isHidden = hiddenRoutes.has(index)
+
+                      if (isHidden) {
+                        return null
+                      }
+
                       return (
                         <Source
                           key={index}
@@ -164,7 +211,11 @@ export default function VehicleRoutingScreen() {
                       data={solutionGeoJson.points}
                       id="geojson"
                     >
-                      <ActivitiesLayer id="activities" sourceId="geojson" />
+                      <ActivitiesLayer
+                        id="activities"
+                        sourceId="geojson"
+                        hiddenRoutes={hiddenRoutes}
+                      />
                     </Source>
                   </>
                 )}

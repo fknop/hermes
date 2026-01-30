@@ -31,7 +31,7 @@ export type Solution = {
     activities: Activity[]
     polyline: GeoJSON.Feature<GeoJSON.LineString>
   }[]
-  unassigned_jobs: number[]
+  unassigned_jobs: string[]
 }
 
 export type OperatorStatistics = {

@@ -4,7 +4,9 @@ import { SvgIcon } from '../SvgIcon'
 
 const DescriptionValue = ({ children }: PropsWithChildren) => {
   return (
-    <span className="text-secondary-foreground font-light">{children}</span>
+    <span className="whitespace-nowrap text-secondary-foreground font-light">
+      {children}
+    </span>
   )
 }
 

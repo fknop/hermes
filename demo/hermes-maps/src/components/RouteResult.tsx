@@ -18,19 +18,19 @@ export function RouteResult({
   return (
     <div className="px-6 flex flex-row justify-between">
       <div className="flex flex-col">
-        <span className="font-semibold text-gray-900">
+        <span className="font-semibold text-foreground">
           {formatDuration(time / 1000)}
         </span>
-        <span className="text-sm text-gray-500">
+        <span className="text-sm text-muted-foreground">
           {formatDistance(distance)}
         </span>
       </div>
 
       <div className="flex flex-col items-end self-end">
-        <span className="text-xs text-gray-500">
+        <span className="text-xs text-muted-foreground">
           Nodes visited: <span className="font-semibold">{nodesVisited}</span>
         </span>
-        <span className="text-xs text-gray-500">
+        <span className="text-xs text-muted-foreground">
           Duration:{' '}
           <span className="font-semibold">
             {formatDuration(duration / 1000, { style: 'narrow' })}

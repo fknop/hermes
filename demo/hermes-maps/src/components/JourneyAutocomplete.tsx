@@ -8,6 +8,8 @@ import { HTMLAttributes, Ref } from 'react'
 import clsx from 'clsx'
 import { MagnifyingGlassIcon } from '@heroicons/react/24/solid'
 import { Button } from './ui/button'
+import { ArrowDownUpIcon, ArrowsUpFromLine } from 'lucide-react'
+import { Input } from './ui/input'
 
 export function AddressInput({
   ref,
@@ -20,11 +22,10 @@ export function AddressInput({
       {...props}
       ref={ref}
       className={clsx(
-        'bg-white border not-first-of-type:-my-px border-slate-900/15 ring-0',
-        'w-full first-of-type:rounded-t-lg last-of-type:border-b-0 px-3 py-1.5 text-base text-gray-900',
-        'focus:bg-slate-50',
-        'placeholder:text-gray-400 focus:outline-none',
-        'focus:border-slate-600 focus-visible:outline-slate-600',
+        'bg-input border not-first-of-type:-my-px border-input ring-0',
+        'w-full first-of-type:rounded-t-lg last-of-type:border-b-0 px-3 py-1.5 text-base text-foreground',
+        'focus:bg-secondary',
+        'placeholder:text-muted-foreground focus:outline-none',
         'sm:text-sm/6 not-first:z-5 focus:z-6'
       )}
     />
@@ -45,7 +46,7 @@ export function JourneyAutocomplete({
   return (
     <div className="flex flex-col">
       <div className="relative">
-        <div className="flex flex-col divide-y divide-gray-300 flex-1">
+        <div className="flex flex-col divide-y divide-border flex-1">
           <AddressAutocomplete
             placeholder="From"
             InputComponent={AddressInput}
@@ -75,14 +76,16 @@ export function JourneyAutocomplete({
           />
         </div>
         <Button
-          // icon={ArrowsUpDownIcon}
           variant="default"
           className="size-8 rounded-full z-10 absolute right-3 top-1/2 transform -translate-y-1/2"
           type="button"
+          size="icon"
           onClick={() => {
             onChange(end, start)
           }}
-        />
+        >
+          <ArrowDownUpIcon />
+        </Button>
       </div>
       <Button
         className="!rounded-t-none"

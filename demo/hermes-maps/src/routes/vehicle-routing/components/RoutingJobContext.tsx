@@ -10,6 +10,12 @@ type RoutingJobContextType = {
   startRouting: () => Promise<void>
   stopRouting: () => Promise<void>
   isRunning: boolean
+  showUnassigned: boolean
+  setShowUnassigned: (show: boolean) => void
+  showAllRoutes: () => void
+  toggleRoute: (route: number) => void
+  hideOtherRoutes: (route: number) => void
+  hiddenRoutes: Set<number>
 }
 
 const RoutingJobContext = createContext<RoutingJobContextType | null>(null)

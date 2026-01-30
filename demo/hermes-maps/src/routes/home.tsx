@@ -5,20 +5,28 @@ import { Source } from 'react-map-gl/mapbox'
 import { Map } from '../components/ui/maps/Map.tsx'
 import { MultiPointLayer } from '../MultiPointLayer.tsx'
 import { PolylineLayer } from '../PolylineLayer.tsx'
-import { Checkbox } from '../components/Checkbox.tsx'
 import { JourneyAutocomplete } from '../components/JourneyAutocomplete.tsx'
-import { Label } from '../components/Label.tsx'
 import { MapContextMenu, MapMenuItem } from '../components/MapContextMenu.tsx'
 import { MapMarker } from '../components/ui/maps/MapMarker.tsx'
-import { RadioButton } from '../components/RadioButton.tsx'
 import { RouteResult } from '../components/RouteResult.tsx'
-import { Slider } from '../components/Slider.tsx'
 import { useFetch } from '../hooks/useFetch.ts'
 import { Address } from '../types/Address.ts'
 import { GeoPoint } from '../types/GeoPoint.ts'
 import { isNil } from '../utils/isNil.ts'
 import { LandmarkMarker } from '../components/LandmarkMarker.tsx'
 import { MapSidePanel } from '../components/ui/maps/MapSidePanel.tsx'
+import { Slider } from '@/components/ui/slider.tsx'
+import { Checkbox } from '@/components/ui/checkbox.tsx'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group.tsx'
+import { Label } from '@/components/ui/label.tsx'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card.tsx'
+import { Separator } from '@/components/ui/separator.tsx'
+import { useTheme } from '@/components/ui/theme-provider.tsx'
 
 enum RoutingAlgorithm {
   Dijkstra = 'Dijkstra',
@@ -29,6 +37,7 @@ enum RoutingAlgorithm {
 }
 
 export default function HomeScreen() {
+  const { currentTheme } = useTheme()
   const [routeRequest, { data: routeData }] = useFetch<
     GeoJSON.FeatureCollection,
     {},
@@ -92,7 +101,79 @@ export default function HomeScreen() {
   const duration = routeFeature?.properties?.['duration']
 
   return (
-    <div className="h-screen w-screen">
+    <div className="h-screen w-screen flex flex-row">
+      <MapSidePanel>
+        <div className="flex flex-col p-3 min-w-96 gap-4">
+          <JourneyAutocomplete
+            start={start}
+            end={end}
+            onChange={(start, end) => {
+              setStart(start)
+              setEnd(end)
+            }}
+            onSearch={() => {
+              if (start && end) {
+                computeRoute({ start, end })
+              }
+            }}
+          />
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Algorithm</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <RadioGroup
+                name="algorithm"
+                value={selectedAlgorithm}
+                onValueChange={(algorithm) => setSelectedAlgorithm(algorithm)}
+              >
+                {Object.values(RoutingAlgorithm).map((algorithm) => {
+                  return (
+                    <div className="inline-flex flex-row items-center gap-3">
+                      <RadioGroupItem value={algorithm} />
+                      <Label>{algorithm}</Label>
+                    </div>
+                  )
+                })}
+              </RadioGroup>
+            </CardContent>
+          </Card>
+
+          <Label>
+            <Checkbox
+              checked={includeDebugInfo}
+              onCheckedChange={(checked) => {
+                setIncludeDebugInfo(checked)
+              }}
+            />
+            Include debug info
+          </Label>
+
+          <Slider
+            min={1}
+            max={10}
+            value={radiusMultiplier}
+            onValueChange={(value) => {
+              setRadiusMultiplier(value as number)
+            }}
+            defaultValue={1}
+          />
+
+          {!isNil(time) &&
+            !isNil(distance) &&
+            !isNil(nodesVisited) &&
+            !isNil(duration) && (
+              <RouteResult
+                time={time}
+                distance={distance}
+                nodesVisited={nodesVisited}
+                duration={duration}
+              />
+            )}
+        </div>
+      </MapSidePanel>
+
       <Map>
         {routeData && (
           <Source type="geojson" data={routeData} id="geojson">
@@ -114,7 +195,7 @@ export default function HomeScreen() {
             <PolylineLayer
               id="route"
               featureId="route"
-              color="#1d293d"
+              color={currentTheme === 'dark' ? 'white' : '#ff6600'}
               sourceId="geojson"
             />
           </Source>
@@ -196,70 +277,6 @@ export default function HomeScreen() {
           </MapMenuItem>
         </MapContextMenu>
       </Map>
-
-      <MapSidePanel>
-        <JourneyAutocomplete
-          start={start}
-          end={end}
-          onChange={(start, end) => {
-            setStart(start)
-            setEnd(end)
-          }}
-          onSearch={() => {
-            if (start && end) {
-              computeRoute({ start, end })
-            }
-          }}
-        />
-
-        {Object.values(RoutingAlgorithm).map((algorithm) => {
-          return (
-            <Label>
-              <RadioButton
-                checked={selectedAlgorithm == algorithm}
-                name="algorithm"
-                value={algorithm}
-                onChange={(event) => {
-                  setSelectedAlgorithm(event.target.value as RoutingAlgorithm)
-                }}
-              />
-              {algorithm}
-            </Label>
-          )
-        })}
-
-        <Label>
-          <Checkbox
-            checked={includeDebugInfo}
-            onChange={(event) => {
-              setIncludeDebugInfo(event.target.checked)
-            }}
-          />
-          Include debug info
-        </Label>
-
-        <Slider
-          min={1}
-          max={10}
-          value={radiusMultiplier}
-          onChange={(value) => {
-            setRadiusMultiplier(value)
-          }}
-          defaultValue={1}
-        />
-
-        {!isNil(time) &&
-          !isNil(distance) &&
-          !isNil(nodesVisited) &&
-          !isNil(duration) && (
-            <RouteResult
-              time={time}
-              distance={distance}
-              nodesVisited={nodesVisited}
-              duration={duration}
-            />
-          )}
-      </MapSidePanel>
     </div>
   )
 }
