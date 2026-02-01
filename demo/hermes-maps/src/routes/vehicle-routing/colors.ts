@@ -1,22 +1,26 @@
-export const VRP_COLORS = [
-  '#a6cee3',
-  '#1f78b4',
-  '#b2df8a',
-  '#33a02c',
-  '#fb9a99',
-  '#e31a1c',
-  '#fdbf6f',
-  '#ff7f00',
-  '#cab2d6',
-  '#6a3d9a',
-  '#ffff99',
-  '#b15928',
-  '#8B4513', // Saddle Brown (Earthy Brown)
-  '#556B2F', // Dark Olive Green (Muted Green-Brown)
-  '#CD5C5C', // Indian Red (Softer Red)
-  '#4682B4', // Steel Blue (Medium Blue)
-  '#7B68EE', // Medium Slate Blue (Slightly more vibrant purple)
-  '#2E8B57', // Sea Green (Deep Green)
-  '#8A2BE2', // Blue Violet (Purple with Blue undertone)
-  '#FF8C00', // Dark Orange (Pumpkin-like, good for a distinct pop)
+const ROUTE_COLORS = [
+  '#f59e0b',
+  '#ea580c',
+  '#4d7c0f',
+  '#0f766e',
+  '#1e3a8a',
+  '#10b981',
+  '#93c5fd',
+  '#7e22ce',
+  '#a21caf',
+  '#be185d',
+  '#b91c1c',
+  '#bef264',
+  '#a78bfa',
+  '#fcd34d',
+  '#fca5a5',
+  '#365314',
+  '#7f1d1d',
+  '#134e4a',
+  '#0c4a6e',
+  '#4c1d95',
+  '#881337',
 ]
+export function getRouteColor(index: number) {
+  return ROUTE_COLORS[index % ROUTE_COLORS.length]
+}

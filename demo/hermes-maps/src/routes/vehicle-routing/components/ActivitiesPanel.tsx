@@ -19,13 +19,13 @@ import { WaitingDuration } from './WaitingDuration'
 import { ButtonGroup } from '@/components/ui/button-group'
 import { Separator } from '@/components/ui/separator'
 import { useRoutingJobContext } from './RoutingJobContext'
+import { getRouteColor } from '../colors'
 
 type Route = Solution['routes'][number]
 
 interface ActivitiesPanelProps {
   route: Route
   routeIndex: number
-  color: string
   onClose: () => void
 }
 
@@ -37,7 +37,6 @@ const percentFormatter = new Intl.NumberFormat('en-GB', {
 export function ActivitiesPanel({
   route,
   routeIndex,
-  color,
   onClose,
 }: ActivitiesPanelProps) {
   const { toggleRoute, hideOtherRoutes, showAllRoutes, hiddenRoutes } =
@@ -55,7 +54,7 @@ export function ActivitiesPanel({
               <div className="flex items-center gap-2">
                 <div
                   className="w-4 h-4 rounded-full shadow-sm"
-                  style={{ backgroundColor: color }}
+                  style={{ backgroundColor: getRouteColor(routeIndex) }}
                 />
                 <h2>Route {routeIndex + 1}</h2>
               </div>

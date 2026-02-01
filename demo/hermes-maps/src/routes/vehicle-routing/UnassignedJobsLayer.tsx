@@ -1,27 +1,23 @@
-import { useMemo } from 'react'
 import { Layer } from 'react-map-gl/mapbox'
 
-export function ActivitiesLayer({
+export function UnassignedJobsLayer({
   id,
   sourceId,
   radiusMultiplier = 1,
-  hiddenRoutes,
+  beforeId,
 }: {
   id: string
   sourceId: string
   radiusMultiplier?: number
-  hiddenRoutes: Set<number>
+  beforeId?: string
 }) {
-  const hidden = useMemo(() => {
-    return Array.from(hiddenRoutes).map((routeId) => routeId.toString())
-  }, [hiddenRoutes])
-
   return (
     <>
       <Layer
         id={id}
         source={sourceId}
         type="circle"
+        beforeId={beforeId}
         paint={{
           'circle-radius': [
             'interpolate',
@@ -36,21 +32,21 @@ export function ActivitiesLayer({
           ],
           'circle-color': ['get', 'color'],
         }}
-        filter={['!', ['in', ['get', 'routeId'], ['literal', hidden]]]}
       />
       <Layer
         id={`${id}-text`}
+        beforeId={beforeId}
         source={sourceId}
         type="symbol"
         layout={{
-          'text-field': ['get', 'activityId'],
+          'text-field': ['get', 'jobId'],
           'text-allow-overlap': false,
           'text-size': [
             'interpolate',
             ['linear'],
             ['zoom'],
             5,
-            8 * radiusMultiplier,
+            6 * radiusMultiplier,
             10,
             12 * radiusMultiplier,
             15,
@@ -61,7 +57,6 @@ export function ActivitiesLayer({
         paint={{
           'text-color': ['get', 'textColor'],
         }}
-        filter={['!', ['in', ['get', 'routeId'], ['literal', hidden]]]}
       />
     </>
   )

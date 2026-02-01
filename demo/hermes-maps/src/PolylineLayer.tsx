@@ -16,12 +16,14 @@ export function PolylineLayer({
   featureId,
   sourceId,
   lineWidth,
+  beforeId,
 }: {
   color: string
   id: string
   featureId?: string
   sourceId: string
   lineWidth?: number
+  beforeId?: string
 }) {
   const additionalProps: Pick<LayerProps, 'filter'> = useMemo(() => {
     const props: Partial<LayerProps> = {}
@@ -37,6 +39,7 @@ export function PolylineLayer({
     <Layer
       id={id}
       source={sourceId}
+      beforeId={beforeId}
       type="line"
       {...layerStyle}
       {...additionalProps}

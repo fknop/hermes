@@ -17,20 +17,22 @@ export type Activity =
       waiting_duration: string
     }
 
+export type SolutionRoute = {
+  distance: number
+  vehicle_max_load: number
+  duration: string
+  transport_duration: string
+  total_demand: number[]
+  waiting_duration: string
+  vehicle_id: string
+  activities: Activity[]
+  polyline: GeoJSON.Feature<GeoJSON.LineString>
+}
+
 export type Solution = {
   score: { soft_score: number; hard_score: number }
   duration: string
-  routes: {
-    distance: number
-    vehicle_max_load: number
-    duration: string
-    transport_duration: string
-    total_demand: number[]
-    waiting_duration: string
-    vehicle_id: string
-    activities: Activity[]
-    polyline: GeoJSON.Feature<GeoJSON.LineString>
-  }[]
+  routes: SolutionRoute[]
   unassigned_jobs: string[]
 }
 

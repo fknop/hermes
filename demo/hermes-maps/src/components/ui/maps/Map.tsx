@@ -1,21 +1,10 @@
-import Mapbox, {
-  LngLatBoundsLike,
-  LngLatLike,
-  useMap,
-} from 'react-map-gl/mapbox'
 import { PropsWithChildren, useEffect } from 'react'
-import { MAPBOX_ACCESS_TOKEN } from '../../../constants.ts'
-import { MAPBOX_STYLE } from '../../../constants.ts'
-import { MapProps } from 'react-map-gl/mapbox'
+import Mapbox, { LngLatBoundsLike, MapProps, useMap } from 'react-map-gl/mapbox'
+import { MAPBOX_ACCESS_TOKEN, MAPBOX_STYLE } from '../../../constants.ts'
 
 const BRUSSELS_COORDINATES = {
   latitude: 50.85045,
   longitude: 4.34878,
-}
-
-const PARIS_COORDINATES = {
-  latitude: 48.864716,
-  longitude: 2.349014,
 }
 
 const initialViewState = {
@@ -55,7 +44,6 @@ export function Map({
 
 function AnimateBounds({ bounds }: { bounds?: LngLatBoundsLike }) {
   const mapRef = useMap()
-  console.log(bounds)
 
   useEffect(() => {
     if (bounds && mapRef.current) {

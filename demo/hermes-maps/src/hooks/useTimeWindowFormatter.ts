@@ -5,7 +5,7 @@ import { isNil } from '@/utils/isNil'
 export function useTimeWindowFormatter() {
   const { formatTimeRange, formatTime } = useTimeFormatter()
   return useCallback(
-    (start: string | null, end: string | null) => {
+    (start: string | null | undefined, end: string | null | undefined) => {
       if (!isNil(start) && !isNil(end)) {
         return formatTimeRange(start, end)
       }

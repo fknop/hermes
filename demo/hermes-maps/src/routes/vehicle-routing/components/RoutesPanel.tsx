@@ -5,12 +5,12 @@ import { useDurationFormatter } from '@/hooks/useDurationFormatter'
 import { SquareArrowUpRightIcon } from 'lucide-react'
 import { Temporal } from 'temporal-polyfill'
 import { useDistanceFormatter } from '../../../hooks/useDistanceFormatter'
-import { VRP_COLORS } from '../colors'
 import { VehicleRoutingProblem } from '../input'
 import { Solution } from '../solution'
 import { RouteCard } from './RouteCard'
 import { WaitingDuration } from './WaitingDuration'
 import { useRoutingJobContext } from './RoutingJobContext'
+import { getRouteColor } from '../colors'
 
 interface RoutesPanelProps {
   problem: VehicleRoutingProblem
@@ -85,7 +85,7 @@ export function RoutesPanel({
                   solution.unassigned_jobs.length > 0 ? (
                     <Button
                       size="sm"
-                      variant="destructive"
+                      variant="secondary"
                       className="mt-0.5"
                       onClick={() => {
                         setShowUnassigned(!showUnassigned)
@@ -111,7 +111,7 @@ export function RoutesPanel({
               key={index}
               route={route}
               index={index}
-              color={VRP_COLORS[index % VRP_COLORS.length]}
+              color={getRouteColor(index)}
               isSelected={selectedRouteIndex === index}
               onClick={() =>
                 onRouteSelect(selectedRouteIndex === index ? null : index)

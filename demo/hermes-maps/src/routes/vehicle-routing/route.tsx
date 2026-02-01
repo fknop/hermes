@@ -10,18 +10,19 @@ import { MapSidePanel } from '../../components/ui/maps/MapSidePanel.tsx'
 import { PolylineLayer } from '../../PolylineLayer.tsx'
 import { isNil } from '../../utils/isNil.ts'
 import { ActivitiesLayer } from './ActivityLayer.tsx'
-import { VRP_COLORS } from './colors.ts'
+import { getRouteColor } from './colors.ts'
 import { ActivitiesPanel } from './components/ActivitiesPanel.tsx'
 import { RoutesPanel } from './components/RoutesPanel.tsx'
 import { RoutingJobContextProvider } from './components/RoutingJobContext.tsx'
 import { UnassignedJobsPanel } from './components/UnassignedJobsPanel.tsx'
-import { VehicleRoutingMenu } from './components/VehicleRoutingMenu.tsx'
+import { VehicleRoutingToolbar } from './components/VehicleRoutingToolbar.tsx'
 import { getGeoJSONFromProblem, transformSolutionToGeoJson } from './geojson.ts'
 import { VehicleRoutingProblem } from './input.ts'
 import { LocationsLayer } from './LocationsLayer.tsx'
 import { usePollRouting } from './usePollRouting.ts'
 import { usePostRouting } from './usePostRouting.ts'
 import { useStopRouting } from './useStopRouting.ts'
+import { UnassignedJobsLayer } from './UnassignedJobsLayer.tsx'
 
 export default function VehicleRoutingScreen() {
   const [showUnassigned, setShowUnassigned] = useState(false)
@@ -159,7 +160,6 @@ export default function VehicleRoutingScreen() {
                 <ActivitiesPanel
                   route={selectedRoute}
                   routeIndex={selectedRouteIndex}
-                  color={VRP_COLORS[selectedRouteIndex % VRP_COLORS.length]}
                   onClose={() => setSelectedRouteIndex(null)}
                 />
               </MapSidePanel>
@@ -174,8 +174,36 @@ export default function VehicleRoutingScreen() {
           )}
           <ResizablePanel>
             <div className="flex flex-col flex-1 h-full">
-              <VehicleRoutingMenu />
+              <VehicleRoutingToolbar />
               <Map bounds={bounds}>
+                {solutionGeoJson && (
+                  <>
+                    <Source
+                      type="geojson"
+                      data={solutionGeoJson.assignedLocations}
+                      id="assigned-locations"
+                    >
+                      <ActivitiesLayer
+                        id="activities"
+                        sourceId="assigned-locations"
+                        hiddenRoutes={hiddenRoutes}
+                      />
+                    </Source>
+
+                    <Source
+                      type="geojson"
+                      data={solutionGeoJson.unassignedLocations}
+                      id="unassigned-locations"
+                    >
+                      <UnassignedJobsLayer
+                        beforeId="activities"
+                        id="unassigned-locations"
+                        sourceId="unassigned-locations"
+                      />
+                    </Source>
+                  </>
+                )}
+
                 {response && (
                   <>
                     {response.solution?.routes.map((route, index) => {
@@ -194,7 +222,8 @@ export default function VehicleRoutingScreen() {
                         >
                           <PolylineLayer
                             id={`polyline-${index}`}
-                            color={VRP_COLORS[index % VRP_COLORS.length]}
+                            beforeId="activities"
+                            color={getRouteColor(index)}
                             sourceId={`polyline-${index}`}
                             lineWidth={3}
                           />
@@ -204,23 +233,7 @@ export default function VehicleRoutingScreen() {
                   </>
                 )}
 
-                {solutionGeoJson && (
-                  <>
-                    <Source
-                      type="geojson"
-                      data={solutionGeoJson.points}
-                      id="geojson"
-                    >
-                      <ActivitiesLayer
-                        id="activities"
-                        sourceId="geojson"
-                        hiddenRoutes={hiddenRoutes}
-                      />
-                    </Source>
-                  </>
-                )}
-
-                {problemGeoJson && (
+                {problemGeoJson && isNil(solutionGeoJson) && (
                   <>
                     <Source
                       type="geojson"
