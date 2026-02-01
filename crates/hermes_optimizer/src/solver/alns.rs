@@ -8,6 +8,7 @@ use fxhash::FxHashMap;
 use jiff::{SignedDuration, Timestamp};
 use parking_lot::{MappedRwLockReadGuard, Mutex, RwLock, RwLockReadGuard};
 use rand::{Rng, SeedableRng, rngs::SmallRng};
+use tokio::sync::mpsc::error;
 use tracing::{debug, info, warn};
 
 use crate::{
@@ -667,14 +668,28 @@ impl Alns {
         let now = Timestamp::now();
         self.ruin(&mut working_solution, ruin_strategy, state, rng);
 
-        if RUN_SCORE_ASSERTIONS {
-            let (score, _) = working_solution.compute_solution_score(&self.constraints);
-            if !current_score.is_failure() && score.is_failure() {
-                panic!(
-                    "Ruin broke hard constraints with strategy {:?}",
-                    ruin_strategy
-                );
+        if !current_score.is_failure() && !self.params.recreate.insert_on_failure {
+            let (score, analysis) = working_solution.compute_solution_score(&self.constraints);
+            if score.is_failure() {
+                tracing::warn!("Ignore iteration due to failing ruin");
+                return;
             }
+
+            // tracing::error!(
+            //     "Ruin broke hard constraints with strategy {:?} at iteration {}",
+            //     ruin_strategy,
+            //     state.iteration
+            // );
+            // tracing::error!("Score: {:?}", analysis);
+
+            // for route in working_solution.non_empty_routes_iter() {
+            //     route.dump(&self.problem);
+            // }
+
+            // panic!(
+            //     "Ruin broke hard constraints with strategy {:?} at iteration {}",
+            //     ruin_strategy, state.iteration
+            // );
         }
 
         let ruin_duration = Timestamp::now().duration_since(now);

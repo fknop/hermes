@@ -642,6 +642,7 @@ impl WorkingSolutionRoute {
         }
 
         self.update_data(problem);
+        self.updated_in_iteration = false;
     }
 
     fn update_bbox(&mut self, problem: &VehicleRoutingProblem) {
@@ -1462,7 +1463,7 @@ impl WorkingSolutionRoute {
         );
         println!(
             "Route duration {:?}",
-            self.end(problem).since(self.start(problem))
+            self.end(problem).duration_since(self.start(problem))
         );
         println!("Route start {}", self.start(problem));
 
@@ -1524,6 +1525,7 @@ mod tests {
 
     use std::sync::Arc;
 
+    use fxhash::FxHashMap;
     use jiff::{SignedDuration, Timestamp};
 
     use crate::{
@@ -2199,10 +2201,7 @@ mod tests {
         assert!(!is_valid);
     }
 
-    fn create_problem_for_maximum_activities(
-        services: usize,
-        maximum_activities: usize,
-    ) -> VehicleRoutingProblem {
+    fn create_problem_with_n_services(services: usize) -> VehicleRoutingProblem {
         // 10 locations from (0, 0) to (9, 0)
         let locations = test_utils::create_location_grid(1, services + 1);
 
@@ -2211,7 +2210,6 @@ mod tests {
         vehicle_builder.set_capacity(Capacity::from_vec(vec![100.0]));
         vehicle_builder.set_vehicle_id(String::from("vehicle"));
         vehicle_builder.set_profile_id(0);
-        vehicle_builder.set_maximum_activities(maximum_activities);
         let vehicle = vehicle_builder.build();
         let vehicles = vec![vehicle];
 
@@ -2243,6 +2241,58 @@ mod tests {
         builder.set_services(services);
 
         builder.build()
+    }
+
+    #[test]
+    fn test_remove() {
+        let problem = create_problem_with_n_services(10);
+
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        route.insert_service(&problem, 1, JobIdx::new(1));
+        route.insert_service(&problem, 2, JobIdx::new(2));
+        route.insert_service(&problem, 3, JobIdx::new(3));
+        route.insert_service(&problem, 4, JobIdx::new(4));
+        route.insert_service(&problem, 5, JobIdx::new(5));
+        route.insert_service(&problem, 6, JobIdx::new(6));
+        route.insert_service(&problem, 7, JobIdx::new(7));
+
+        let activity_id = route.remove(&problem, 3);
+        assert_eq!(activity_id, Some(ActivityId::Service(JobIdx::new(3))));
+
+        let mapping = vec![(0, 0), (1, 1), (2, 2), (4, 3), (5, 4), (6, 5), (7, 6)];
+        for (id, position) in mapping.into_iter() {
+            assert_eq!(
+                route.jobs.get(&ActivityId::Service(JobIdx::new(id))),
+                Some(&position)
+            );
+        }
+    }
+
+    #[test]
+    fn test_remove_activity() {
+        let problem = create_problem_with_n_services(10);
+
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        route.insert_service(&problem, 1, JobIdx::new(1));
+        route.insert_service(&problem, 2, JobIdx::new(2));
+        route.insert_service(&problem, 3, JobIdx::new(3));
+        route.insert_service(&problem, 4, JobIdx::new(4));
+        route.insert_service(&problem, 5, JobIdx::new(5));
+        route.insert_service(&problem, 6, JobIdx::new(6));
+        route.insert_service(&problem, 7, JobIdx::new(7));
+
+        let removed = route.remove_activity(&problem, ActivityId::Service(JobIdx::new(3)));
+        assert!(removed);
+
+        let mapping = vec![(0, 0), (1, 1), (2, 2), (4, 3), (5, 4), (6, 5), (7, 6)];
+        for (id, position) in mapping.into_iter() {
+            assert_eq!(
+                route.jobs.get(&ActivityId::Service(JobIdx::new(id))),
+                Some(&position)
+            );
+        }
     }
 
     #[test]
