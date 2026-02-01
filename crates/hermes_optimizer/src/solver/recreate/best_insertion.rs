@@ -12,7 +12,8 @@ use crate::{
     },
     solver::{
         insertion::{Insertion, for_each_insertion},
-        score::Score,
+        recreate::recreate_strategy::RecreateStrategy,
+        score::{RUN_SCORE_ASSERTIONS, Score},
         solution::working_solution::WorkingSolution,
     },
 };
@@ -169,7 +170,15 @@ impl BestInsertion {
 
             if context.should_insert(&best_score) {
                 if let Some(insertion) = best_insertion {
-                    solution.insert(&insertion);
+                    if RUN_SCORE_ASSERTIONS {
+                        context.insert_with_score_assertions(
+                            solution,
+                            insertion.clone(),
+                            RecreateStrategy::BestInsertion(self.sort_method),
+                        );
+                    } else {
+                        solution.insert(&insertion);
+                    }
                 } else {
                     panic!("No insertion possible")
                 }

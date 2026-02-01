@@ -1,8 +1,8 @@
 use crate::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
-        insertion_context::InsertionContext, score::Score, score_level::ScoreLevel,
-        solution::route::WorkingSolutionRoute,
+        constraints::maximum_working_duration_constraint, insertion_context::InsertionContext,
+        score::Score, score_level::ScoreLevel, solution::route::WorkingSolutionRoute,
     },
 };
 
@@ -45,14 +45,13 @@ impl RouteConstraint for MaximumWorkingDurationConstraint {
             return Score::zero();
         }
 
+        let maximum_working_duration = vehicle.maximum_working_duration().unwrap(); // Checked just above
         let new_start = context.compute_vehicle_start();
         let new_end = context.compute_vehicle_end();
         let new_working_duration = new_end.duration_since(new_start);
 
         if route.is_empty() {
-            if let Some(maximum_working_duration) = vehicle.maximum_working_duration()
-                && new_working_duration > maximum_working_duration
-            {
+            if new_working_duration > maximum_working_duration {
                 return Score::of(
                     self.score_level(),
                     new_working_duration.as_secs_f64() - maximum_working_duration.as_secs_f64(),
@@ -60,38 +59,35 @@ impl RouteConstraint for MaximumWorkingDurationConstraint {
             }
         } else {
             // && working_duration > maximum_working_duration
-            if let Some(maximum_working_duration) = vehicle.maximum_working_duration() {
-                let current_working_duration =
-                    route.end(problem).duration_since(route.start(problem));
+            let current_working_duration = route.end(problem).duration_since(route.start(problem));
 
-                // New violation, old route was not violating the constraint
-                if new_working_duration > maximum_working_duration
-                    && current_working_duration <= maximum_working_duration
-                {
-                    return Score::of(
-                        self.score_level(),
-                        new_working_duration.as_secs_f64() - maximum_working_duration.as_secs_f64(),
-                    );
+            // New violation, old route was not violating the constraint
+            if new_working_duration > maximum_working_duration
+                && current_working_duration <= maximum_working_duration
+            {
+                return Score::of(
+                    self.score_level(),
+                    new_working_duration.as_secs_f64() - maximum_working_duration.as_secs_f64(),
+                );
 
-                    // Both are violating the constraint, we compute the delta between the two
-                } else if current_working_duration > maximum_working_duration
-                    && new_working_duration > maximum_working_duration
-                {
-                    return Score::of(
-                        self.score_level(),
-                        (new_working_duration - current_working_duration).as_secs_f64(),
-                    );
-                    // Current duration is violating, new one is not
-                } else if current_working_duration > maximum_working_duration
-                    && new_working_duration <= maximum_working_duration
-                {
-                    return Score::of(
-                        self.score_level(),
-                        (maximum_working_duration - current_working_duration).as_secs_f64(),
-                    );
-                } else {
-                    return Score::zero();
-                }
+                // Both are violating the constraint, we compute the delta between the two
+            } else if current_working_duration > maximum_working_duration
+                && new_working_duration > maximum_working_duration
+            {
+                return Score::of(
+                    self.score_level(),
+                    (new_working_duration - current_working_duration).as_secs_f64(),
+                );
+                // Current duration is violating, new one is not
+            } else if current_working_duration > maximum_working_duration
+                && new_working_duration <= maximum_working_duration
+            {
+                return Score::of(
+                    self.score_level(),
+                    (maximum_working_duration - current_working_duration).as_secs_f64(),
+                );
+            } else {
+                return Score::zero();
             }
         }
 

@@ -53,11 +53,21 @@ impl ActivityConstraint for TimeWindowConstraint {
         _route: &WorkingSolutionRoute,
         activity: &RouteActivityInfo,
     ) -> Score {
-        TimeWindowConstraint::compute_time_window_score(
+        let score = TimeWindowConstraint::compute_time_window_score(
             self.score_level(),
             activity.job_task(problem).time_windows(),
             activity.arrival_time(),
-        )
+        );
+
+        if score.is_failure() {
+            println!(
+                "Activity {} breaks time windows {:?}",
+                activity.activity_id(),
+                activity.job_task(problem).time_windows()
+            )
+        }
+
+        score
     }
 
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score {

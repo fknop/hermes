@@ -347,9 +347,28 @@ pub fn construct_solution(
         .map(|(route_id, _)| route_id)
         .collect::<Vec<RouteIdx>>();
 
+    let (score, score_analysis) = solution.compute_solution_score(constraints);
+
+    if score.is_failure() {
+        tracing::error!(
+            "Construction ALNS: solution rejected due to failure score: {:?}",
+            score_analysis,
+        );
+        panic!("Bug: score should never fail when insert_on_failure is false")
+    }
+
     thread_pool.install(|| {
         for &route_id in &routes {
             local_search.intensify_route(problem, &mut solution, route_id);
+            let (score, score_analysis) = solution.compute_solution_score(constraints);
+
+            if score.is_failure() {
+                tracing::error!(
+                    "Construction LS: solution rejected due to failure score: {:?}",
+                    score_analysis,
+                );
+                panic!("Bug: score should never fail when insert_on_failure is false")
+            }
         }
     });
 

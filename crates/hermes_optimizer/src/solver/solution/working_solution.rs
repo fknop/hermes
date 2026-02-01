@@ -11,7 +11,9 @@ use crate::{
         vehicle_routing_problem::VehicleRoutingProblem,
     },
     solver::{
+        constraints::constraint::Constraint,
         insertion::Insertion,
+        score::{Score, ScoreAnalysis},
         solution::{route::WorkingSolutionRoute, route_id::RouteIdx},
     },
     utils::enumerate_idx::EnumerateIdx,
@@ -346,5 +348,18 @@ impl WorkingSolution {
             .iter()
             .map(|route| route.distance(&self.problem))
             .sum()
+    }
+
+    pub fn compute_solution_score(&self, constraints: &[Constraint]) -> (Score, ScoreAnalysis) {
+        let mut score_analysis = ScoreAnalysis::default();
+
+        for constraint in constraints.iter() {
+            let score = constraint.compute_score(&self.problem, self);
+            score_analysis
+                .scores
+                .insert(constraint.constraint_name(), score);
+        }
+
+        (score_analysis.total_score(), score_analysis)
     }
 }

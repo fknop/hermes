@@ -21,9 +21,9 @@ pub fn compute_insertion_score(
     {
         score += constraint.compute_insertion_score(context);
 
-        if score.is_failure() && skip_on_failure {
-            return score;
-        }
+        // if score.is_failure() && skip_on_failure {
+        //     return score;
+        // }
     }
 
     for constraint in constraints

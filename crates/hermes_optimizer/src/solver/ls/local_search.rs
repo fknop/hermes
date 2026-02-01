@@ -23,6 +23,7 @@ use crate::{
             swap::SwapOperator,
             two_opt::TwoOptOperator,
         },
+        score::RUN_SCORE_ASSERTIONS,
         solution::{route_id::RouteIdx, working_solution::WorkingSolution},
     },
     utils::enumerate_idx::EnumerateIdx,
@@ -257,8 +258,6 @@ impl LocalSearch {
                 .best_move(solution, RouteIdx::new(r1), RouteIdx::new(r2))
             && best_delta <= -1e-6
         {
-            let run_assertions = true;
-
             debug!(
                 "Apply {} ({}, {}) (d={}) {:?}",
                 op.operator_name(),
@@ -268,7 +267,7 @@ impl LocalSearch {
                 op
             );
 
-            if run_assertions {
+            if RUN_SCORE_ASSERTIONS {
                 if !op.is_valid(solution) {
                     tracing::error!(?op, "Operator {} is not valid", op.operator_name());
                     panic!("Stored operator is not valid")

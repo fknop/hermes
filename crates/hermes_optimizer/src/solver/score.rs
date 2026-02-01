@@ -5,10 +5,12 @@ use std::{
 };
 
 use fxhash::FxHashMap;
-use schemars::{JsonSchema, JsonSchema_repr};
+use schemars::JsonSchema;
 use serde::Serialize;
 
 use super::score_level::ScoreLevel;
+
+pub const RUN_SCORE_ASSERTIONS: bool = false;
 
 #[derive(Debug, Copy, Clone, PartialEq, Serialize, JsonSchema)]
 pub struct Score {

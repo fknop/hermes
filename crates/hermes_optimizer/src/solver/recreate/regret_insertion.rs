@@ -1,13 +1,13 @@
 use rand::{Rng, RngCore};
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
-use crate::{
-    problem::job::JobIdx,
-    solver::{
-        insertion::{Insertion, for_each_insertion},
-        score::Score,
-        solution::working_solution::WorkingSolution,
-    },
+use crate::solver::{
+    constraints,
+    insertion::{Insertion, for_each_insertion},
+    insertion_context::InsertionContext,
+    recreate::recreate_strategy::RecreateStrategy,
+    score::{RUN_SCORE_ASSERTIONS, Score},
+    solution::working_solution::WorkingSolution,
 };
 
 use super::{recreate_context::RecreateContext, recreate_solution::RecreateSolution};
@@ -115,7 +115,7 @@ impl RegretInsertion {
             {
                 max_regret = regret_value;
                 best_insertion_for_max_regret = Some(insertion);
-                best_score = best_score.min(best_score_for_insertion)
+                best_score = best_score_for_insertion; //best_score.min(best_score_for_insertion)
             }
         }
 
@@ -123,11 +123,6 @@ impl RegretInsertion {
     }
 
     pub fn insert_services(&self, solution: &mut WorkingSolution, mut context: RecreateContext) {
-        // let mut unassigned_jobs = solution
-        //     .unassigned_jobs()
-        //     .iter()
-        //     .copied()
-        //     .collect::<Vec<_>>();
         while !solution.unassigned_jobs().is_empty() {
             let best_insertion_for_max_regret = context
                 .thread_pool
@@ -136,7 +131,15 @@ impl RegretInsertion {
             // 4. Perform the insertion of the service with the highest regret
             if let Some((best_score, insertion)) = best_insertion_for_max_regret {
                 if context.should_insert(&best_score) {
-                    solution.insert(&insertion);
+                    if RUN_SCORE_ASSERTIONS {
+                        context.insert_with_score_assertions(
+                            solution,
+                            insertion.clone(),
+                            RecreateStrategy::RegretInsertion(self.k),
+                        );
+                    } else {
+                        solution.insert(&insertion);
+                    }
                 } else {
                     break;
                 }

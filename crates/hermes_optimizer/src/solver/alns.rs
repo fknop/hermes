@@ -39,6 +39,7 @@ use crate::{
         },
         ls::local_search::LocalSearch,
         noise::NoiseParams,
+        score::RUN_SCORE_ASSERTIONS,
         solver_params::SolverParamsDebugOptions,
         statistics::SearchStatisticsIteration,
     },
@@ -67,7 +68,7 @@ use super::statistics::{SearchStatistics, ThreadSearchStatistics};
 
 type BestSolutionHandler = Arc<Mutex<dyn FnMut(&AcceptedSolution) + Send + Sync + 'static>>;
 
-pub struct AlnsSearch {
+pub struct Alns {
     problem: Arc<VehicleRoutingProblem>,
     constraints: Vec<Constraint>,
     params: SolverParams,
@@ -82,7 +83,7 @@ pub struct AlnsSearch {
     statistics: Arc<SearchStatistics>,
 }
 
-impl AlnsSearch {
+impl Alns {
     pub fn new(params: SolverParams, problem: Arc<VehicleRoutingProblem>) -> Self {
         if params.terminations.is_empty() {
             panic!(
@@ -90,7 +91,7 @@ impl AlnsSearch {
             );
         }
 
-        AlnsSearch {
+        Alns {
             problem: Arc::clone(&problem),
             constraints: Self::create_constraints(),
             best_solutions: Arc::new(RwLock::new(Vec::with_capacity(params.max_solutions))),
@@ -119,7 +120,7 @@ impl AlnsSearch {
     }
 
     fn set_initial_solution(&self, solution: WorkingSolution) {
-        let (score, score_analysis) = self.compute_solution_score(&solution);
+        let (score, score_analysis) = solution.compute_solution_score(&self.constraints);
         self.best_solutions.write().push(AcceptedSolution {
             solution,
             score,
@@ -317,7 +318,7 @@ impl AlnsSearch {
             )
         );
 
-        let (score, score_analysis) = self.compute_solution_score(&initial_solution);
+        let (score, score_analysis) = initial_solution.compute_solution_score(&self.constraints);
 
         #[cfg(feature = "statistics")]
         {
@@ -464,7 +465,8 @@ impl AlnsSearch {
                                     );
                                 });
 
-                                let score = self.compute_solution_score(&working_solution);
+                                let score =
+                                    working_solution.compute_solution_score(&self.constraints);
 
                                 if score.0.is_failure() {
                                     warn!("LocalSearch broke hard constraints");
@@ -664,6 +666,17 @@ impl AlnsSearch {
 
         let now = Timestamp::now();
         self.ruin(&mut working_solution, ruin_strategy, state, rng);
+
+        if RUN_SCORE_ASSERTIONS {
+            let (score, _) = working_solution.compute_solution_score(&self.constraints);
+            if !current_score.is_failure() && score.is_failure() {
+                panic!(
+                    "Ruin broke hard constraints with strategy {:?}",
+                    ruin_strategy
+                );
+            }
+        }
+
         let ruin_duration = Timestamp::now().duration_since(now);
 
         let now = Timestamp::now();
@@ -709,7 +722,16 @@ impl AlnsSearch {
             state.tabu.write().clear();
         }
 
-        let (score, score_analysis) = self.compute_solution_score(&solution);
+        let (score, score_analysis) = solution.compute_solution_score(&self.constraints);
+
+        if RUN_SCORE_ASSERTIONS && !self.params.recreate.insert_on_failure && score.is_failure() {
+            tracing::error!(
+                "Solution rejected due to failure score: {:?} {:?}",
+                score_analysis,
+                iteration_info
+            );
+            panic!("Bug: score should never fail when insert_on_failure is false")
+        }
 
         let mut guard = state.best_solutions.upgradable_read();
 
@@ -991,21 +1013,9 @@ impl AlnsSearch {
         let recreate_strategy = state.alns_recreate_weights.select_strategy(rng);
         (ruin_strategy, recreate_strategy)
     }
-
-    pub fn compute_solution_score(&self, solution: &WorkingSolution) -> (Score, ScoreAnalysis) {
-        let mut score_analysis = ScoreAnalysis::default();
-
-        for constraint in self.constraints.iter() {
-            let score = constraint.compute_score(&self.problem, solution);
-            score_analysis
-                .scores
-                .insert(constraint.constraint_name(), score);
-        }
-
-        (score_analysis.total_score(), score_analysis)
-    }
 }
 
+#[derive(Debug)]
 pub enum IterationInfo {
     RuinRecreate {
         iteration: usize,

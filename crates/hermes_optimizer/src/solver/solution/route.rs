@@ -1271,7 +1271,6 @@ impl WorkingSolutionRoute {
 
             let waiting_duration = compute_waiting_duration(problem, activity_id, arrival_time);
 
-            previous_activity_id = Some(activity_id);
             let new_departure_time =
                 compute_departure_time(problem, arrival_time, waiting_duration, activity_id);
             vehicle_end = Some(compute_vehicle_end(
@@ -1280,7 +1279,6 @@ impl WorkingSolutionRoute {
                 activity_id,
                 new_departure_time,
             ));
-            previous_departure_time = Some(new_departure_time);
 
             // TODO: tests
             if let Some(&current_activity_index) = self.jobs.get(&activity_id)
@@ -1313,6 +1311,8 @@ impl WorkingSolutionRoute {
                 return false;
             }
 
+            previous_activity_id = Some(activity_id);
+            previous_departure_time = Some(new_departure_time);
             index += 1;
         }
 
@@ -1447,6 +1447,37 @@ impl WorkingSolutionRoute {
         }
 
         true
+    }
+
+    pub fn dump(&self, problem: &VehicleRoutingProblem) {
+        println!("Route for vehicle_id: {}", self.vehicle_id);
+        if self.is_empty() {
+            println!("  (empty route)");
+            return;
+        }
+
+        println!(
+            "Maximum duration {:?}",
+            self.vehicle(problem).maximum_working_duration()
+        );
+        println!(
+            "Route duration {:?}",
+            self.end(problem).since(self.start(problem))
+        );
+        println!("Route start {}", self.start(problem));
+
+        for (i, &activity_id) in self.activity_ids.iter().enumerate() {
+            println!(
+                "  Activity {}: {:?}, Arrival: {}, Departure: {}, Waiting: {} {:?}",
+                i,
+                activity_id,
+                self.arrival_times[i],
+                self.departure_times[i],
+                self.waiting_durations[i],
+                problem.job_activity(activity_id).time_windows()
+            );
+        }
+        println!("Route end {}", self.end(problem));
     }
 }
 

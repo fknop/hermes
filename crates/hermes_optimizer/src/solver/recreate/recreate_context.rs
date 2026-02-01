@@ -10,6 +10,7 @@ use crate::{
         insertion::Insertion,
         insertion_context::InsertionContext,
         noise::{JobNoiser, NoiseParams},
+        recreate::recreate_strategy::RecreateStrategy,
         score::Score,
         solution::working_solution::WorkingSolution,
     },
@@ -62,6 +63,54 @@ impl<'a> RecreateContext<'a> {
             true
         } else {
             !score.is_failure()
+        }
+    }
+
+    pub fn insert_with_score_assertions(
+        &self,
+        solution: &mut WorkingSolution,
+        insertion: Insertion,
+        strategy: RecreateStrategy,
+    ) {
+        let cloned_solution = solution.clone();
+
+        solution.insert(&insertion);
+
+        if !self.insert_on_failure {
+            let (current_score, current_score_analysis) =
+                cloned_solution.compute_solution_score(self.constraints);
+            let (score, analysis) = solution.compute_solution_score(self.constraints);
+            if score.is_failure() {
+                tracing::error!(
+                    "({}) Insertion {:?} resulted in a score failure",
+                    strategy,
+                    insertion
+                );
+                tracing::error!("New score {:?}", analysis);
+
+                tracing::error!("Current score {:?}", current_score_analysis);
+
+                for constraint in self.constraints {
+                    let score = constraint.compute_insertion_score(&InsertionContext::new(
+                        self.problem,
+                        &cloned_solution,
+                        &insertion,
+                        self.insert_on_failure,
+                    ));
+
+                    tracing::error!(
+                        "Constraint {} obtained score {:?}",
+                        constraint.constraint_name(),
+                        score
+                    )
+                }
+
+                insertion.route(&cloned_solution).dump(self.problem);
+                // Dump new one
+                insertion.route(solution).dump(self.problem);
+
+                panic!("Bug: Insertion failure");
+            }
         }
     }
 }

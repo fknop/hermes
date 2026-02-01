@@ -1,10 +1,10 @@
 use jiff::SignedDuration;
 
 use crate::{
-    problem::vehicle_routing_problem::VehicleRoutingProblem,
+    problem::{self, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{
-        insertion_context::InsertionContext, score::Score, score_level::ScoreLevel,
-        solution::route::WorkingSolutionRoute,
+        insertion::Insertion, insertion_context::InsertionContext, score::Score,
+        score_level::ScoreLevel, solution::route::WorkingSolutionRoute,
     },
 };
 
@@ -50,6 +50,24 @@ impl RouteConstraint for WaitingDurationConstraint {
         }
 
         let mut delta = SignedDuration::ZERO;
+
+        let route = context.route();
+
+        match context.insertion {
+            Insertion::Service(i) => {
+                return Score::soft(context.problem().waiting_duration_cost(
+                    route.waiting_duration_change_delta(
+                        context.problem(),
+                        std::iter::once(problem::job::ActivityId::Service(
+                            context.insertion.job_idx(),
+                        )),
+                        i.position,
+                        i.position,
+                    ),
+                ));
+            }
+            _ => todo!(),
+        }
 
         for activity_info in context.updated_activities_iter() {
             let new_waiting_duration = activity_info.waiting_duration;

@@ -6,14 +6,14 @@ use crate::{
     utils::enumerate_idx::EnumerateIdx,
 };
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ServiceInsertion {
     pub route_id: RouteIdx,
     pub job_index: JobIdx,
     pub position: usize,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ShipmentInsertion {
     pub route_id: RouteIdx,
     pub job_index: JobIdx,
@@ -25,7 +25,7 @@ pub struct ShipmentInsertion {
     pub delivery_position: usize,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Insertion {
     Service(ServiceInsertion),
     Shipment(ShipmentInsertion),
