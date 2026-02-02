@@ -1,5 +1,4 @@
 import { Temporal } from 'temporal-polyfill'
-import { Activity } from '../solution'
 import { DescriptionItem } from '@/components/ui/description-item'
 import {
   ClockArrowDownIcon,
@@ -11,9 +10,10 @@ import {
 import { useDurationFormatter } from '@/hooks/useDurationFormatter'
 import { useRoutingJobContext } from './RoutingJobContext'
 import { WaitingDuration } from './WaitingDuration'
+import { ApiSolutionActivity } from '@/api/generated/schemas'
 
 interface ActivityCardProps {
-  activity: Activity
+  activity: ApiSolutionActivity
   index: number
   isFirst: boolean
   isLast: boolean

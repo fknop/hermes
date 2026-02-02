@@ -1,10 +1,10 @@
-use geojson::Feature;
+use geojson::{Feature, Geometry};
 use hermes_optimizer::{
     problem::{capacity::Capacity, job::JobIdx, meters::Meters, vehicle::VehicleIdx},
     solver::score::{Score, ScoreAnalysis},
 };
 use jiff::{SignedDuration, Timestamp};
-use schemars::{JsonSchema, Schema, SchemaGenerator};
+use schemars::{JsonSchema, Schema, SchemaGenerator, json_schema};
 use serde::Serialize;
 
 #[derive(Serialize, JsonSchema)]
@@ -36,7 +36,37 @@ pub enum ApiSolutionActivity {
 }
 
 fn feature_schema(_gen: &mut SchemaGenerator) -> Schema {
-    schemars::schema_for_value!(Feature::default())
+    json_schema!({
+        "type": "object",
+        "required": ["type", "geometry", "properties"],
+        "properties": {
+            "type": { "type": "string", "enum": ["Feature"] },
+            "geometry": {
+                "oneOf": [
+                    {
+                        "type": "object",
+                        "required": ["type", "coordinates"],
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "enum": [
+                                    "Point"
+                                ]
+                            },
+                            "coordinates": {
+                                "type": "array",
+                                "minItems": 2,
+                                "items":{
+                                    "type": "number"
+                                }
+                            }
+                        }
+                    }
+                ]
+            },
+            "properties": { "oneOf": [{ "type": "null" }, { "type": "object" }] }
+        }
+    })
 }
 
 #[derive(Serialize, JsonSchema)]

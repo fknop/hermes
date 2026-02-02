@@ -1,40 +1,48 @@
-import { useEffect, useState } from 'react'
+import { usePollJob } from '@/api/generated/hermes'
 import { isNil } from '../../utils/isNil'
-import { API_URL } from '../../constants'
-import { SolutionResponse } from './solution'
+import { PollResponse } from '@/api/generated/schemas'
 
-export function usePollRouting({ jobId }: { jobId: string | null }) {
-  const [response, setResponse] = useState<SolutionResponse | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const isCompleted = response?.status === 'Completed'
+export function usePollRouting({ jobId }: { jobId: string | null }): {
+  response: PollResponse | null
+} {
+  const { data } = usePollJob(jobId, {
+    query: {
+      enabled: !isNil(jobId),
+      refetchInterval: 600,
+    },
+  })
 
-  useEffect(() => {
-    if (isCompleted || isNil(jobId)) {
-      return
-    }
+  // const [response, setResponse] = useState<SolutionResponse | null>(null)
+  // const [error, setError] = useState<string | null>(null)
+  const isCompleted = data?.data.status === 'Completed'
 
-    async function run() {
-      try {
-        const response = await fetch(`${API_URL}/vrp/jobs/${jobId}/poll`)
-        if (response.status >= 400) {
-          setError(`Failed ${response.status}`)
-          return
-        }
-        const data: SolutionResponse = await response.json()
-        setResponse(data)
-      } catch (error) {
-        console.error('Error fetching routing solution:', error)
-      }
-    }
+  // useEffect(() => {
+  //   if (isCompleted || isNil(jobId)) {
+  //     return
+  //   }
 
-    const interval = setInterval(run, 600)
+  //   async function run() {
+  //     try {
+  //       const response = await fetch(`${API_URL}/vrp/jobs/${jobId}/poll`)
+  //       if (response.status >= 400) {
+  //         setError(`Failed ${response.status}`)
+  //         return
+  //       }
+  //       const data: SolutionResponse = await response.json()
+  //       setResponse(data)
+  //     } catch (error) {
+  //       console.error('Error fetching routing solution:', error)
+  //     }
+  //   }
 
-    void run()
+  //   const interval = setInterval(run, 600)
 
-    return () => {
-      clearInterval(interval)
-    }
-  }, [isCompleted, jobId])
+  //   void run()
 
-  return { response }
+  //   return () => {
+  //     clearInterval(interval)
+  //   }
+  // }, [isCompleted, jobId])
+
+  return { response: data?.data ?? null }
 }

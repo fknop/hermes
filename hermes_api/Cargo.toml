@@ -33,3 +33,4 @@ aide = { version = "0.16.0-alpha.2", features = [
         "swagger"
 ] }
 schemars.workspace = true
+serde_with.workspace = true

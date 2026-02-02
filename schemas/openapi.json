@@ -1,0 +1,1163 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Hermes Open API",
+    "version": ""
+  },
+  "paths": {
+    "/vrp/jobs": {
+      "get": {
+        "operationId": "listJobs",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createJob",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VehicleRoutingProblem"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vrp/jobs/{job_id}/poll": {
+      "get": {
+        "description": "Poll a job that is currently running",
+        "operationId": "pollJob",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PollResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vrp/jobs/{job_id}/start": {
+      "post": {
+        "description": "Start a job that was previously created",
+        "operationId": "startJob",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vrp/jobs/{job_id}/stop": {
+      "post": {
+        "operationId": "stopJob",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AggregatedOperatorStatistics": {
+        "type": "object",
+        "properties": {
+          "avg_duration": {
+            "type": "string",
+            "format": "duration"
+          },
+          "avg_score_improvement": {
+            "type": "number",
+            "format": "double"
+          },
+          "avg_score_percentage_improvement": {
+            "type": "number",
+            "format": "double"
+          },
+          "total_best": {
+            "type": "integer",
+            "format": "uint",
+            "minimum": 0
+          },
+          "total_duration": {
+            "type": "string",
+            "format": "duration"
+          },
+          "total_improvements": {
+            "type": "integer",
+            "format": "uint",
+            "minimum": 0
+          },
+          "total_invocations": {
+            "type": "integer",
+            "format": "uint",
+            "minimum": 0
+          },
+          "total_score_improvement": {
+            "type": "number",
+            "format": "double"
+          },
+          "total_score_percentage_improvement": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "required": [
+          "total_invocations",
+          "total_improvements",
+          "total_best",
+          "total_duration",
+          "total_score_improvement",
+          "total_score_percentage_improvement",
+          "avg_duration",
+          "avg_score_improvement",
+          "avg_score_percentage_improvement"
+        ]
+      },
+      "AggregatedStatistics": {
+        "type": "object",
+        "properties": {
+          "aggregated_recreate_statistics": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/AggregatedOperatorStatistics"
+            }
+          },
+          "aggregated_ruin_statistics": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/AggregatedOperatorStatistics"
+            }
+          }
+        },
+        "required": [
+          "aggregated_ruin_statistics",
+          "aggregated_recreate_statistics"
+        ]
+      },
+      "AlnsWeights": {
+        "type": "object",
+        "properties": {
+          "weights": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Operator"
+            }
+          }
+        },
+        "required": [
+          "weights"
+        ]
+      },
+      "AlnsWeights2": {
+        "type": "object",
+        "properties": {
+          "weights": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Operator"
+            }
+          }
+        },
+        "required": [
+          "weights"
+        ]
+      },
+      "Amount": {
+        "type": "array",
+        "items": {
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "ApiEndActivity": {
+        "type": "object",
+        "properties": {
+          "arrival_time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "departure_time": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "arrival_time",
+          "departure_time"
+        ]
+      },
+      "ApiServiceActivity": {
+        "type": "object",
+        "properties": {
+          "arrival_time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "departure_time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string"
+          },
+          "waiting_duration": {
+            "type": "string",
+            "format": "duration"
+          }
+        },
+        "required": [
+          "id",
+          "arrival_time",
+          "departure_time",
+          "waiting_duration"
+        ]
+      },
+      "ApiSolution": {
+        "type": "object",
+        "properties": {
+          "duration": {
+            "type": "string",
+            "format": "duration"
+          },
+          "routes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiSolutionRoute"
+            }
+          },
+          "score": {
+            "$ref": "#/components/schemas/Score"
+          },
+          "score_analysis": {
+            "$ref": "#/components/schemas/ScoreAnalysis"
+          },
+          "unassigned_jobs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "routes",
+          "duration",
+          "score",
+          "score_analysis",
+          "unassigned_jobs"
+        ]
+      },
+      "ApiSolutionActivity": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "Start"
+              }
+            },
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ApiStartActivity"
+              }
+            ],
+            "required": [
+              "type"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "Service"
+              }
+            },
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ApiServiceActivity"
+              }
+            ],
+            "required": [
+              "type"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "End"
+              }
+            },
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ApiEndActivity"
+              }
+            ],
+            "required": [
+              "type"
+            ]
+          }
+        ]
+      },
+      "ApiSolutionRoute": {
+        "type": "object",
+        "properties": {
+          "activities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiSolutionActivity"
+            }
+          },
+          "distance": {
+            "$ref": "#/components/schemas/Meters"
+          },
+          "duration": {
+            "type": "string",
+            "format": "duration"
+          },
+          "polyline": {
+            "type": "object",
+            "properties": {
+              "geometry": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "coordinates": {
+                        "type": "array",
+                        "items": {
+                          "type": "number"
+                        },
+                        "minItems": 2
+                      },
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "Point"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "coordinates"
+                    ]
+                  }
+                ]
+              },
+              "properties": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "object"
+                  }
+                ]
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "Feature"
+                ]
+              }
+            },
+            "required": [
+              "type",
+              "geometry",
+              "properties"
+            ]
+          },
+          "total_demand": {
+            "$ref": "#/components/schemas/Amount"
+          },
+          "transport_duration": {
+            "type": "string",
+            "format": "duration"
+          },
+          "vehicle_id": {
+            "type": "string"
+          },
+          "vehicle_max_load": {
+            "type": "number",
+            "format": "double"
+          },
+          "waiting_duration": {
+            "type": "string",
+            "format": "duration"
+          }
+        },
+        "required": [
+          "duration",
+          "transport_duration",
+          "activities",
+          "distance",
+          "total_demand",
+          "vehicle_id",
+          "waiting_duration",
+          "polyline",
+          "vehicle_max_load"
+        ]
+      },
+      "ApiStartActivity": {
+        "type": "object",
+        "properties": {
+          "arrival_time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "departure_time": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "arrival_time",
+          "departure_time"
+        ]
+      },
+      "CustomMatrices": {
+        "type": "object",
+        "properties": {
+          "costs": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "format": "double"
+              }
+            }
+          },
+          "distances": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "format": "double"
+              }
+            }
+          },
+          "times": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "format": "double"
+              }
+            }
+          }
+        },
+        "required": [
+          "times",
+          "distances",
+          "costs"
+        ]
+      },
+      "GraphHopperProfile": {
+        "type": "string",
+        "enum": [
+          "car",
+          "bike",
+          "foot",
+          "small_truck",
+          "truck"
+        ]
+      },
+      "JobPath": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "job_id"
+        ]
+      },
+      "Location": {
+        "type": "object",
+        "properties": {
+          "coordinates": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "double"
+            },
+            "maxItems": 2,
+            "minItems": 2
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "coordinates"
+        ]
+      },
+      "Meters": {
+        "type": "number",
+        "format": "double"
+      },
+      "Operator": {
+        "type": "object",
+        "properties": {
+          "strategy": {
+            "type": "string"
+          },
+          "weight": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "required": [
+          "strategy",
+          "weight"
+        ]
+      },
+      "OperatorWeights": {
+        "type": "object",
+        "properties": {
+          "recreate": {
+            "$ref": "#/components/schemas/AlnsWeights2"
+          },
+          "ruin": {
+            "$ref": "#/components/schemas/AlnsWeights"
+          }
+        },
+        "required": [
+          "ruin",
+          "recreate"
+        ]
+      },
+      "PaginatedResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VehicleRoutingJob"
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "uint",
+            "minimum": 0
+          },
+          "per_page": {
+            "type": "integer",
+            "format": "uint",
+            "minimum": 0
+          },
+          "total": {
+            "type": "integer",
+            "format": "uint",
+            "minimum": 0
+          },
+          "total_pages": {
+            "type": "integer",
+            "format": "uint",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "data",
+          "page",
+          "per_page",
+          "total",
+          "total_pages"
+        ]
+      },
+      "PollResponse": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "const": "Pending"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "const": "Running"
+              }
+            },
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PollSolverRunning"
+              }
+            ],
+            "required": [
+              "status"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "const": "Completed"
+              }
+            },
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PollSolverCompleted"
+              }
+            ],
+            "required": [
+              "status"
+            ]
+          }
+        ]
+      },
+      "PollSolverCompleted": {
+        "type": "object",
+        "properties": {
+          "solution": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiSolution"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "PollSolverRunning": {
+        "type": "object",
+        "properties": {
+          "solution": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiSolution"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "statistics": {
+            "$ref": "#/components/schemas/AggregatedStatistics"
+          },
+          "weights": {
+            "$ref": "#/components/schemas/OperatorWeights"
+          }
+        },
+        "required": [
+          "statistics",
+          "weights"
+        ]
+      },
+      "PostResponse": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id"
+        ]
+      },
+      "Score": {
+        "type": "object",
+        "properties": {
+          "hard_score": {
+            "type": "number",
+            "format": "double"
+          },
+          "soft_score": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "required": [
+          "hard_score",
+          "soft_score"
+        ]
+      },
+      "ScoreAnalysis": {
+        "type": "object",
+        "properties": {
+          "scores": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Score"
+            }
+          }
+        },
+        "required": [
+          "scores"
+        ]
+      },
+      "Service": {
+        "type": "object",
+        "properties": {
+          "demand": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "number",
+              "format": "double"
+            }
+          },
+          "duration": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "duration"
+          },
+          "id": {
+            "type": "string"
+          },
+          "location_id": {
+            "type": "integer",
+            "format": "uint",
+            "minimum": 0
+          },
+          "skills": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "time_windows": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/TimeWindow"
+            }
+          },
+          "type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ServiceType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "location_id"
+        ]
+      },
+      "ServiceType": {
+        "type": "string",
+        "enum": [
+          "pickup",
+          "delivery"
+        ]
+      },
+      "SolverStatus": {
+        "type": "string",
+        "enum": [
+          "Pending",
+          "Running",
+          "Completed"
+        ]
+      },
+      "TimeWindow": {
+        "type": "object",
+        "properties": {
+          "end": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "start": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "TravelMatrixProvider": {
+        "oneOf": [
+          {
+            "description": "https://docs.graphhopper.com/openapi/map-data-and-routing-profiles/openstreetmap/standard-routing-profiles",
+            "type": "object",
+            "properties": {
+              "config": {
+                "type": "object",
+                "properties": {
+                  "gh_profile": {
+                    "$ref": "#/components/schemas/GraphHopperProfile"
+                  }
+                },
+                "required": [
+                  "gh_profile"
+                ]
+              },
+              "type": {
+                "type": "string",
+                "const": "graph_hopper_api"
+              }
+            },
+            "required": [
+              "type",
+              "config"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "config": {
+                "type": "object",
+                "properties": {
+                  "speed_kmh": {
+                    "type": "number",
+                    "format": "double"
+                  }
+                },
+                "required": [
+                  "speed_kmh"
+                ]
+              },
+              "type": {
+                "type": "string",
+                "const": "as_the_crow_flies"
+              }
+            },
+            "required": [
+              "type",
+              "config"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "config": {
+                "type": "object",
+                "properties": {
+                  "matrices": {
+                    "$ref": "#/components/schemas/CustomMatrices"
+                  }
+                },
+                "required": [
+                  "matrices"
+                ]
+              },
+              "type": {
+                "type": "string",
+                "const": "custom"
+              }
+            },
+            "required": [
+              "type",
+              "config"
+            ]
+          }
+        ]
+      },
+      "Vehicle": {
+        "type": "object",
+        "properties": {
+          "capacity": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "number",
+              "format": "double"
+            }
+          },
+          "depot_duration": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "duration"
+          },
+          "depot_location_id": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint",
+            "minimum": 0
+          },
+          "id": {
+            "type": "string"
+          },
+          "maximum_activities": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint",
+            "minimum": 0
+          },
+          "profile": {
+            "type": "string"
+          },
+          "return_depot_duration": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "duration"
+          },
+          "shift": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VehicleShift"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "should_return_to_depot": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "skills": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "profile"
+        ]
+      },
+      "VehicleProfile": {
+        "type": "object",
+        "properties": {
+          "cost_provider": {
+            "$ref": "#/components/schemas/TravelMatrixProvider"
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "cost_provider"
+        ]
+      },
+      "VehicleRoutingJob": {
+        "type": "object",
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "job_id": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SolverStatus"
+          }
+        },
+        "required": [
+          "job_id",
+          "status",
+          "created_at"
+        ]
+      },
+      "VehicleRoutingProblem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "locations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Location"
+            }
+          },
+          "services": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Service"
+            }
+          },
+          "vehicle_profiles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VehicleProfile"
+            }
+          },
+          "vehicles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Vehicle"
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "locations",
+          "services",
+          "vehicle_profiles",
+          "vehicles"
+        ]
+      },
+      "VehicleShift": {
+        "type": "object",
+        "properties": {
+          "earliest_start": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "latest_end": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "latest_start": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "maximum_transport_duration": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "duration"
+          },
+          "maximum_working_duration": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "duration"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}

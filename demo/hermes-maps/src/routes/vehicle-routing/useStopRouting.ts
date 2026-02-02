@@ -1,16 +1,21 @@
+import { useStopJob } from '@/api/generated/hermes'
 import { useCallback } from 'react'
-import { API_URL } from '../../constants'
 
 export function useStopRouting() {
-  return useCallback(async ({ jobId }: { jobId: string }) => {
-    const response = await fetch(`${API_URL}/vrp/jobs/${jobId}/stop`, {
-      method: 'POST',
-    })
+  const { mutateAsync: stop } = useStopJob()
 
-    if (response.status >= 400) {
-      throw new Error(`Failed to stop routing job ${jobId}: ${response.status}`)
-    }
+  return useCallback(
+    async ({ jobId }: { jobId: string }) => {
+      const response = await stop({ jobId })
 
-    return true
-  }, [])
+      if (response.status >= 400) {
+        throw new Error(
+          `Failed to stop routing job ${jobId}: ${response.status}`
+        )
+      }
+
+      return true
+    },
+    [stop]
+  )
 }

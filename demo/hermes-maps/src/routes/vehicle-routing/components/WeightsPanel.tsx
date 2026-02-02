@@ -1,7 +1,7 @@
+import { AlnsWeights, OperatorWeights } from '@/api/generated/schemas'
 import { DataTable } from '@/components/ui/data-table'
 import { ColumnDef } from '@tanstack/react-table'
 import { useMemo } from 'react'
-import { AlnsWeights, OperatorWeights } from '../solution'
 
 function WeightsDataTable({ weights }: { weights: AlnsWeights['weights'] }) {
   const columns: ColumnDef<AlnsWeights['weights'][number]>[] = useMemo(() => {

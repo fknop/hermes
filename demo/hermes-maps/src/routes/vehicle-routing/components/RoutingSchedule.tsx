@@ -5,7 +5,6 @@ import {
 } from '@/components/ui/schedule/schedule'
 import { useRoutingJobContext } from './RoutingJobContext'
 import { PropsWithChildren, ReactElement, useCallback, useMemo } from 'react'
-import { Activity, SolutionRoute } from '../solution'
 import { Temporal } from 'temporal-polyfill'
 import {
   HoverCard,
@@ -29,13 +28,18 @@ import {
   TruckIcon,
 } from 'lucide-react'
 import clsx from 'clsx'
+import { ApiSolutionActivity, ApiSolutionRoute } from '@/api/generated/schemas'
+import { getSolution } from '../solution'
 
 type SegmentData =
-  | { type: 'activity'; activity: Activity }
-  | { type: 'waiting'; activity: Extract<Activity, { type: 'Service' }> }
-  | { type: 'driving'; from: Activity; to: Activity }
+  | { type: 'activity'; activity: ApiSolutionActivity }
+  | {
+      type: 'waiting'
+      activity: Extract<ApiSolutionActivity, { type: 'Service' }>
+    }
+  | { type: 'driving'; from: ApiSolutionActivity; to: ApiSolutionActivity }
 type Segment = ScheduleSegmentData<SegmentData>
-type Schedule = { route: SolutionRoute; index: number }
+type Schedule = { route: ApiSolutionRoute; index: number }
 
 const startBgClassName = 'bg-emerald-700'
 const returnBgClassName = 'bg-red-800'
@@ -80,7 +84,7 @@ function StartHoverCardContent({
   activity,
   segment,
 }: {
-  activity: Extract<Activity, { type: 'Start' }>
+  activity: Extract<ApiSolutionActivity, { type: 'Start' }>
   segment: Segment
 }) {
   return (
@@ -102,7 +106,7 @@ function ServiceHoverCardContent({
   service,
   segment,
 }: {
-  activity: Activity
+  activity: ApiSolutionActivity
   service: Service
   segment: Segment
 }) {
@@ -141,7 +145,7 @@ function EndHoverCardContent({
   activity,
   segment,
 }: {
-  activity: Activity
+  activity: ApiSolutionActivity
   segment: Segment
 }) {
   return (
@@ -163,8 +167,8 @@ function DrivingHoverCardContent({
   to,
   segment,
 }: {
-  from: Activity
-  to: Activity
+  from: ApiSolutionActivity
+  to: ApiSolutionActivity
   segment: Segment
 }) {
   return (
@@ -187,7 +191,7 @@ function WaitingHoverCardContent({
   segment,
 }: {
   service: Service
-  activity: Extract<Activity, { type: 'Service' }>
+  activity: Extract<ApiSolutionActivity, { type: 'Service' }>
   segment: Segment
 }) {
   const formatTimeWindows = useTimeWindowFormatter()
@@ -319,11 +323,12 @@ export function RoutingSchedule() {
 
   const schedules: ScheduleProps<Schedule, SegmentData>['schedules'] =
     useMemo(() => {
-      if (!response?.solution) {
+      const solution = getSolution(response)
+      if (!solution) {
         return []
       }
 
-      return response.solution.routes.map((route, index) => {
+      return solution.routes.map((route, index) => {
         const segments: Segment[] = route.activities.flatMap(
           (activity, index) => {
             const segments: Segment[] = []
@@ -484,7 +489,7 @@ export function RoutingSchedule() {
     []
   )
 
-  if (!response?.solution) {
+  if (!getSolution(response)) {
     return null
   }
 

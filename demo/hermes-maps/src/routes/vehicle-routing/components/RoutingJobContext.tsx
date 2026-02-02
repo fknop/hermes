@@ -1,11 +1,11 @@
 import { createContext, use } from 'react'
 import { VehicleRoutingProblem } from '../input'
-import { SolutionResponse } from '../solution'
+import { PollResponse } from '@/api/generated/schemas'
 
 type RoutingJobContextType = {
   jobId: string | null
   input: VehicleRoutingProblem | null
-  response: SolutionResponse | null
+  response: PollResponse | null
   onInputChange: (input: VehicleRoutingProblem) => void
   startRouting: () => Promise<void>
   stopRouting: () => Promise<void>

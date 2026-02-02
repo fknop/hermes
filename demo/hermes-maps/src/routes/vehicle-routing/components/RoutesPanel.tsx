@@ -6,15 +6,15 @@ import { SquareArrowUpRightIcon } from 'lucide-react'
 import { Temporal } from 'temporal-polyfill'
 import { useDistanceFormatter } from '../../../hooks/useDistanceFormatter'
 import { VehicleRoutingProblem } from '../input'
-import { Solution } from '../solution'
 import { RouteCard } from './RouteCard'
 import { WaitingDuration } from './WaitingDuration'
 import { useRoutingJobContext } from './RoutingJobContext'
 import { getRouteColor } from '../colors'
+import { ApiSolution } from '@/api/generated/schemas'
 
 interface RoutesPanelProps {
   problem: VehicleRoutingProblem
-  solution: Solution
+  solution: ApiSolution
   selectedRouteIndex: number | null
   onRouteSelect: (index: number | null) => void
 }

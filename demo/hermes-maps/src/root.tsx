@@ -1,6 +1,8 @@
 import { Links, Meta, Outlet, Scripts, ScrollRestoration } from 'react-router'
 import './index.css'
 import { ThemeProvider } from './components/ui/theme-provider'
+import { QueryClientProvider } from '@tanstack/react-query'
+import { queryClient } from './api/client'
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -18,7 +20,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider>{children}</ThemeProvider>
+        </QueryClientProvider>
         <ScrollRestoration />
         <Scripts />
       </body>

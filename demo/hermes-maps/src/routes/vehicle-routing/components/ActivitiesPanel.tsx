@@ -1,6 +1,4 @@
-import { Temporal } from 'temporal-polyfill'
 import { useDistanceFormatter } from '../../../hooks/useDistanceFormatter'
-import { Solution } from '../solution'
 import { ActivityCard } from './ActivityCard'
 import {
   Card,
@@ -20,8 +18,9 @@ import { ButtonGroup } from '@/components/ui/button-group'
 import { Separator } from '@/components/ui/separator'
 import { useRoutingJobContext } from './RoutingJobContext'
 import { getRouteColor } from '../colors'
+import { ApiSolution } from '@/api/generated/schemas'
 
-type Route = Solution['routes'][number]
+type Route = ApiSolution['routes'][number]
 
 interface ActivitiesPanelProps {
   route: Route

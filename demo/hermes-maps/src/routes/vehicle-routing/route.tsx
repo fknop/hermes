@@ -1,3 +1,4 @@
+import { useCreateJob } from '@/api/generated/hermes.ts'
 import {
   ResizablePanel,
   ResizablePanelGroup,
@@ -19,17 +20,21 @@ import { VehicleRoutingToolbar } from './components/VehicleRoutingToolbar.tsx'
 import { getGeoJSONFromProblem, transformSolutionToGeoJson } from './geojson.ts'
 import { VehicleRoutingProblem } from './input.ts'
 import { LocationsLayer } from './LocationsLayer.tsx'
-import { usePollRouting } from './usePollRouting.ts'
-import { usePostRouting } from './usePostRouting.ts'
-import { useStopRouting } from './useStopRouting.ts'
 import { UnassignedJobsLayer } from './UnassignedJobsLayer.tsx'
+import { usePollRouting } from './usePollRouting.ts'
+import { useStopRouting } from './useStopRouting.ts'
+import { getSolution } from './solution.ts'
 
 export default function VehicleRoutingScreen() {
   const [showUnassigned, setShowUnassigned] = useState(false)
   const [input, setInput] = useState<VehicleRoutingProblem | null>(null)
-  const [postRouting, { loading, data }] = usePostRouting()
+
+  const { mutateAsync: createJob, isPending: isCreating, data } = useCreateJob()
+
+  const jobId = data?.data.job_id ?? null
   const stopRouting = useStopRouting()
-  const { response } = usePollRouting({ jobId: data?.job_id ?? null })
+  const { response } = usePollRouting({ jobId })
+  const solution = getSolution(response)
   const [selectedRouteIndex, setSelectedRouteIndex] = useState<number | null>(
     null
   )
@@ -51,7 +56,7 @@ export default function VehicleRoutingScreen() {
       setHiddenRoutes(
         new Set(
           Array.from(
-            { length: response?.solution?.routes.length ?? 0 },
+            { length: solution?.routes.length ?? 0 },
             (_, i) => i
           ).filter((i) => i !== route)
         )
@@ -64,35 +69,27 @@ export default function VehicleRoutingScreen() {
     setHiddenRoutes(new Set())
   }, [])
 
-  const startRouting = useCallback(async () => {
-    if (!isNil(input)) {
-      await postRouting(input)
-    }
-  }, [postRouting, input])
-
   const polling = response?.status === 'Running'
 
   const solutionGeoJson =
-    response?.solution && !isNil(input)
-      ? transformSolutionToGeoJson(input, response.solution)
+    !isNil(solution) && !isNil(input)
+      ? transformSolutionToGeoJson(input, solution)
       : null
 
   const problemGeoJson = !isNil(input) ? getGeoJSONFromProblem(input) : null
 
   const unassignedServices = useMemo(() => {
-    if (!input || !response?.solution) return []
+    if (!input || !solution) return []
 
-    const unassignedServiceIds = new Set(response.solution.unassigned_jobs)
+    const unassignedServiceIds = new Set(solution.unassigned_jobs)
 
     return input.services.filter((service) =>
       unassignedServiceIds.has(service.id)
     )
-  }, [input, response?.solution])
+  }, [input, solution])
 
   const selectedRoute =
-    selectedRouteIndex !== null
-      ? response?.solution?.routes[selectedRouteIndex]
-      : null
+    selectedRouteIndex !== null ? solution?.routes[selectedRouteIndex] : null
 
   const bounds = useMapboxBounds(
     useMemo(() => {
@@ -111,15 +108,19 @@ export default function VehicleRoutingScreen() {
   return (
     <RoutingJobContextProvider
       value={{
-        jobId: data?.job_id ?? null,
+        jobId,
         response,
         input: input,
-        startRouting,
-        stopRouting: useCallback(async () => {
-          if (!isNil(data?.job_id)) {
-            await stopRouting({ jobId: data.job_id })
+        startRouting: useCallback(async () => {
+          if (!isNil(input)) {
+            await createJob({ data: input })
           }
-        }, [data?.job_id]),
+        }, [createJob, input]),
+        stopRouting: useCallback(async () => {
+          if (!isNil(jobId)) {
+            await stopRouting({ jobId })
+          }
+        }, [jobId]),
         onInputChange: setInput,
         isRunning: polling,
         showUnassigned,
@@ -138,10 +139,10 @@ export default function VehicleRoutingScreen() {
                 <div className="flex flex-row h-full">
                   <div className="flex-1 overflow-auto pb-6">
                     <div className="flex flex-col gap-4">
-                      {response?.solution && input && (
+                      {solution && input && (
                         <>
                           <RoutesPanel
-                            solution={response.solution}
+                            solution={solution}
                             selectedRouteIndex={selectedRouteIndex}
                             onRouteSelect={setSelectedRouteIndex}
                             problem={input}
@@ -204,9 +205,9 @@ export default function VehicleRoutingScreen() {
                   </>
                 )}
 
-                {response && (
+                {solution && (
                   <>
-                    {response.solution?.routes.map((route, index) => {
+                    {solution.routes.map((route, index) => {
                       const isHidden = hiddenRoutes.has(index)
 
                       if (isHidden) {

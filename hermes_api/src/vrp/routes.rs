@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use aide::axum::{
     ApiRouter,
-    routing::{get, post},
+    routing::{get, get_with, post, post_with},
 };
 
 use crate::{
@@ -17,10 +17,29 @@ use crate::{
 pub fn vrp_routes(state: Arc<AppState>) -> ApiRouter {
     aide::generate::infer_responses(true);
     let router = ApiRouter::new()
-        .api_route("/jobs", get(jobs_handler).post(post_handler))
-        .api_route("/jobs/{job_id}/poll", get(job::poll_handler))
-        .api_route("/jobs/{job_id}/start", post(job::start_handler))
-        .api_route("/jobs/{job_id}/stop", post(stop_handler))
+        .api_route(
+            "/jobs",
+            get_with(jobs_handler, |op| op.id("listJobs"))
+                .post_with(post_handler, |op| op.id("createJob")),
+        )
+        .api_route(
+            "/jobs/{job_id}/poll",
+            get_with(job::poll_handler, |op| {
+                op.description("Poll a job that is currently running")
+                    .id("pollJob")
+            }),
+        )
+        .api_route(
+            "/jobs/{job_id}/start",
+            post_with(job::start_handler, |op| {
+                op.description("Start a job that was previously created")
+                    .id("startJob")
+            }),
+        )
+        .api_route(
+            "/jobs/{job_id}/stop",
+            post_with(stop_handler, |op| op.id("stopJob")),
+        )
         .with_state(state);
 
     aide::generate::infer_responses(false);

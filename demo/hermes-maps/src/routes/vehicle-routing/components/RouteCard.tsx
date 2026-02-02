@@ -1,14 +1,14 @@
 import { Temporal } from 'temporal-polyfill'
 import { useDistanceFormatter } from '../../../hooks/useDistanceFormatter'
-import { Solution } from '../solution'
 import clsx from 'clsx'
 import { DescriptionItem } from '@/components/ui/description-item'
 import { useDurationFormatter } from '@/hooks/useDurationFormatter'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { WaitingDuration } from './WaitingDuration'
+import { ApiSolution } from '@/api/generated/schemas'
 
-type Route = Solution['routes'][number]
+type Route = ApiSolution['routes'][number]
 
 interface RouteCardProps {
   route: Route

@@ -207,7 +207,7 @@ impl ThreadSearchStatistics {
 }
 
 #[serde_as]
-#[derive(Serialize, Default)]
+#[derive(Serialize, Default, JsonSchema)]
 pub struct AggregatedStatistics {
     #[serde_as(as = "FxHashMap<DisplayFromStr, _>")]
     aggregated_ruin_statistics: FxHashMap<RuinStrategy, AggregatedOperatorStatistics>,
@@ -215,7 +215,7 @@ pub struct AggregatedStatistics {
     aggregated_recreate_statistics: FxHashMap<RecreateStrategy, AggregatedOperatorStatistics>,
 }
 
-#[derive(Serialize, Default)]
+#[derive(Serialize, Default, JsonSchema)]
 pub struct AggregatedOperatorStatistics {
     pub total_invocations: usize,
     pub total_improvements: usize,

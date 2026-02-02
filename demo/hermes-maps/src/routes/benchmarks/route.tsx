@@ -16,11 +16,11 @@ import {
   Line,
   LineChart,
 } from 'recharts'
-import { VRP_COLORS } from '../vehicle-routing/colors'
 import { useFetch } from '../../hooks/useFetch'
 import { isNil } from '../../utils/isNil'
 import { useDurationFormatter } from '../../hooks/useDurationFormatter'
 import { Button } from '@/components/ui/button'
+import { getRouteColor } from '../vehicle-routing/colors'
 
 type ProblemData = {
   locations: { x: number; y: number }[]
@@ -304,7 +304,7 @@ function SolutionChart({
             key={index}
             name={`Route ${index + 1}`}
             data={points}
-            fill={VRP_COLORS[index % VRP_COLORS.length]}
+            fill={getRouteColor(index)}
             line
           />
         ))}

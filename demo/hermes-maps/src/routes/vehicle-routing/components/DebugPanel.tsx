@@ -1,16 +1,16 @@
+import { AggregatedStatistics, OperatorWeights } from '@/api/generated/schemas'
+import { Button } from '@/components/ui/button'
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { OperatorWeights, SolutionStatistics } from '../solution'
+import { ChartPieIcon } from 'lucide-react'
 import { StatisticsPanel } from './StatisticsPanel'
 import { WeightsPanel } from './WeightsPanel'
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
-import { Button } from '@/components/ui/button'
-import { ChartPieIcon } from 'lucide-react'
 
 export function DebugPanel({
   statistics,
   weights,
 }: {
-  statistics: SolutionStatistics
+  statistics: AggregatedStatistics
   weights: OperatorWeights
 }) {
   return (

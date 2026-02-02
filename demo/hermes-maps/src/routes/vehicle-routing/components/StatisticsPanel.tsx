@@ -1,14 +1,17 @@
+import {
+  AggregatedOperatorStatistics,
+  AggregatedStatistics,
+} from '@/api/generated/schemas'
 import { DataTable } from '@/components/ui/data-table'
 import { useDurationFormatter } from '@/hooks/useDurationFormatter'
 import { usePercentageFormatter } from '@/hooks/usePercentageFormatter'
 import { ColumnDef } from '@tanstack/react-table'
 import { useMemo } from 'react'
-import { OperatorStatistics, SolutionStatistics } from '../solution'
 
 function StatisticsDataTable({
   statistics,
 }: {
-  statistics: { [name: string]: OperatorStatistics }
+  statistics: { [name: string]: AggregatedOperatorStatistics }
 }) {
   const operatorStatistics = useMemo(() => {
     const entries = Object.entries(statistics)
@@ -20,9 +23,11 @@ function StatisticsDataTable({
   const formatPercentage = usePercentageFormatter()
   const formatDuration = useDurationFormatter()
 
-  const columns: ColumnDef<OperatorStatistics & { name: string }>[] =
+  const columns: ColumnDef<AggregatedOperatorStatistics & { name: string }>[] =
     useMemo(() => {
-      const columns: ColumnDef<OperatorStatistics & { name: string }>[] = [
+      const columns: ColumnDef<
+        AggregatedOperatorStatistics & { name: string }
+      >[] = [
         {
           accessorKey: 'name',
           header: 'Name',
@@ -63,7 +68,7 @@ function StatisticsDataTable({
 export function StatisticsPanel({
   statistics,
 }: {
-  statistics: SolutionStatistics
+  statistics: AggregatedStatistics
 }) {
   return (
     <div className="flex flex-col gap-4">

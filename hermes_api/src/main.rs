@@ -23,7 +23,7 @@ use landmarks::get_landmarks;
 use std::sync::Arc;
 use tower::ServiceBuilder;
 use tower_http::cors::{Any, CorsLayer};
-use tracing::Level;
+use tracing::{Level, info};
 
 use mimalloc::MiMalloc;
 
@@ -73,7 +73,20 @@ async fn main() {
             "/vrp/benchmark/stop/{job_id}",
             post(vrp::benchmark::stop_benchmark::stop_benchmark_handler),
         )
-        .finish_api_with(&mut api, api_docs)
+        .finish_api_with(&mut api, api_docs);
+
+    if std::env::args().any(|a| a == "--generate-openapi") {
+        use std::fs::File;
+        use std::io::Write;
+
+        let mut file = File::create("schemas/openapi.json").unwrap();
+        let spec = serde_json::to_string_pretty(&api).unwrap();
+        file.write_all(spec.as_bytes()).unwrap();
+        info!("OpenAPI specification has been written to openapi.json");
+        return;
+    }
+
+    let app = app
         .layer(ServiceBuilder::new().layer(cors_layer))
         .layer(Extension(Arc::new(api)))
         .with_state(state);

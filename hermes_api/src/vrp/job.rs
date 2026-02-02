@@ -22,7 +22,7 @@ use hermes_routing::{
 };
 use jiff::SignedDuration;
 use schemars::JsonSchema;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{error::ApiError, state::AppState};
@@ -32,7 +32,7 @@ use super::api_solution::{
     ApiStartActivity,
 };
 
-#[derive(Serialize)]
+#[derive(Serialize, JsonSchema)]
 struct OperatorWeights {
     ruin: AlnsWeights<RuinStrategy>,
     recreate: AlnsWeights<RecreateStrategy>,
@@ -41,9 +41,7 @@ struct OperatorWeights {
 #[derive(Serialize, JsonSchema)]
 pub struct PollSolverRunning {
     solution: Option<ApiSolution>,
-    #[schemars(skip)]
     statistics: AggregatedStatistics,
-    #[schemars(skip)]
     weights: OperatorWeights,
 }
 
@@ -62,6 +60,11 @@ pub enum PollResponse {
     Pending,
     Running(PollSolverRunning),
     Completed(PollSolverCompleted),
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct JobPath {
+    pub job_id: Uuid,
 }
 
 fn compute_polyline(
@@ -175,14 +178,14 @@ fn transform_solution(accepted_solution: &AcceptedSolution, hermes: &Hermes) -> 
 }
 
 pub async fn poll_handler(
-    Path(job_id): Path<Uuid>,
+    Path(path): Path<JobPath>,
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<PollResponse>, ApiError> {
     let solver = state
         .solver_manager
-        .solver(&job_id.to_string())
+        .solver(&path.job_id.to_string())
         .await
-        .ok_or(ApiError::NotFound(job_id.to_string()))?;
+        .ok_or(ApiError::NotFound(path.job_id.to_string()))?;
 
     match solver.status() {
         SolverStatus::Pending => Ok(Json(PollResponse::Pending)),
@@ -220,27 +223,27 @@ pub async fn poll_handler(
 }
 
 pub async fn start_handler(
-    Path(job_id): Path<Uuid>,
+    Path(path): Path<JobPath>,
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<bool>, ApiError> {
-    let result = state.solver_manager.start(&job_id.to_string()).await;
+    let result = state.solver_manager.start(&path.job_id.to_string()).await;
 
     if result {
         Ok(Json(true))
     } else {
-        Err(ApiError::NotFound(job_id.to_string()))
+        Err(ApiError::NotFound(path.job_id.to_string()))
     }
 }
 
 pub async fn stop_handler(
-    Path(job_id): Path<Uuid>,
+    Path(path): Path<JobPath>,
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<bool>, ApiError> {
-    let result = state.solver_manager.stop(&job_id.to_string()).await;
+    let result = state.solver_manager.stop(&path.job_id.to_string()).await;
 
     if result {
         Ok(Json(true))
     } else {
-        Err(ApiError::NotFound(job_id.to_string()))
+        Err(ApiError::NotFound(path.job_id.to_string()))
     }
 }

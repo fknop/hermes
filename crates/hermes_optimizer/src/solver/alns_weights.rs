@@ -1,15 +1,18 @@
-use std::hash::Hash;
+use std::{fmt::Display, hash::Hash};
 
 use fxhash::FxHashMap;
 use rand::seq::IndexedRandom;
+use schemars::JsonSchema;
 use serde::Serialize;
+use serde_with::{DisplayFromStr, serde_as};
 
 use crate::solver::solver_params::SolverParams;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, JsonSchema)]
+#[schemars(bound = "")]
 pub struct AlnsWeights<S>
 where
-    S: Copy + Eq + Hash,
+    S: Copy + Eq + Hash + Display,
 {
     weights: Vec<Operator<S>>,
 }
@@ -18,6 +21,7 @@ impl<S> std::fmt::Display for AlnsWeights<S>
 where
     S: std::fmt::Debug,
     S: Copy + Eq + Hash,
+    S: std::fmt::Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f)?;
@@ -32,7 +36,7 @@ where
 
 impl<S> AlnsWeights<S>
 where
-    S: Copy + Eq + Hash,
+    S: Copy + Eq + Hash + Display,
 {
     pub fn new(strategies: Vec<S>) -> Self {
         let weights = strategies
@@ -104,15 +108,24 @@ impl ScoreEntry {
     }
 }
 
-#[derive(Debug, Clone, Serialize)]
-pub struct Operator<S> {
+#[serde_as]
+#[derive(Debug, Clone, Serialize, JsonSchema)]
+pub struct Operator<S>
+where
+    S: Display,
+{
+    #[serde_as(as = "DisplayFromStr")]
+    #[schemars(with = "String")]
     pub strategy: S,
     pub weight: f64,
 }
 
 const MIN_WEIGHT: f64 = 0.1;
 
-impl<T> Operator<T> {
+impl<S> Operator<S>
+where
+    S: Display,
+{
     fn update_weight(&mut self, entry: &ScoreEntry, reaction_factor: f64) {
         let new_weight = if entry.iterations == 0 {
             (1.0 - reaction_factor) * self.weight
