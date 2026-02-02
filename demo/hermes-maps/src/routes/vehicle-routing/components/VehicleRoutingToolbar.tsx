@@ -51,6 +51,7 @@ export function VehicleRoutingToolbar() {
     isRunning,
     onInputChange,
     input,
+    isStarting,
     startRouting,
     stopRouting,
     response,
@@ -116,14 +117,14 @@ export function VehicleRoutingToolbar() {
         <ButtonGroup>
           <Button
             variant={isRunning ? 'secondary' : 'default'}
-            disabled={isRunning || isNil(input)}
+            disabled={isRunning || isNil(input) || isStarting}
             onClick={() => {
               startRouting()
             }}
-            loading={isRunning}
+            loading={isRunning || isStarting}
             icon={PlayIcon}
           >
-            {isRunning ? 'Running...' : 'Start'}
+            {isRunning ? 'Running...' : isStarting ? 'Starting...' : 'Start'}
           </Button>
           {isRunning && (
             <Button

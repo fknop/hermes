@@ -308,6 +308,11 @@ impl Alns {
     }
 
     fn run_construction(&self, rng: &mut SmallRng) {
+        // Solutions already exist, no need to run construction heuristic
+        if !self.best_solutions.read().is_empty() {
+            return;
+        }
+
         let initial_solution = timer_debug!(
             "Construction",
             construct_solution(
@@ -342,6 +347,9 @@ impl Alns {
     }
 
     pub fn run(&self) {
+        self.is_stopped
+            .store(false, std::sync::atomic::Ordering::Relaxed);
+
         let mut rng = SmallRng::seed_from_u64(2427121);
         let start = Timestamp::now();
 

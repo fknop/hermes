@@ -7,6 +7,7 @@ type RoutingJobContextType = {
   input: VehicleRoutingProblem | null
   response: PollResponse | null
   onInputChange: (input: VehicleRoutingProblem) => void
+  isStarting: boolean
   startRouting: () => Promise<void>
   stopRouting: () => Promise<void>
   isRunning: boolean

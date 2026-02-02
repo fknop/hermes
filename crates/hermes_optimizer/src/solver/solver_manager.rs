@@ -45,7 +45,7 @@ impl SolverManager {
 
     pub async fn start(&self, job_id: &str) -> bool {
         if let Some(solver) = self.solvers.read().await.get(job_id).cloned() {
-            tokio::task::spawn_blocking(move || {
+            std::thread::spawn(move || {
                 solver.solve();
             });
             true

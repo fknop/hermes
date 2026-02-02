@@ -4,18 +4,20 @@ import { PollResponse } from '@/api/generated/schemas'
 
 export function usePollRouting({ jobId }: { jobId: string | null }): {
   response: PollResponse | null
+  restartPolling: () => void
 } {
-  console.log({ jobId })
-  const { data } = usePollJob(jobId, {
+  const { data, refetch } = usePollJob(jobId, {
     query: {
       enabled: !isNil(jobId),
-      refetchInterval: 600,
+      refetchInterval: (query) => {
+        const isCompleted = query.state.data?.data.status === 'Completed'
+        return isCompleted ? false : 600
+      },
     },
   })
 
   // const [response, setResponse] = useState<SolutionResponse | null>(null)
   // const [error, setError] = useState<string | null>(null)
-  const isCompleted = data?.data.status === 'Completed'
 
   // useEffect(() => {
   //   if (isCompleted || isNil(jobId)) {
@@ -45,5 +47,5 @@ export function usePollRouting({ jobId }: { jobId: string | null }): {
   //   }
   // }, [isCompleted, jobId])
 
-  return { response: data?.data ?? null }
+  return { response: data?.data ?? null, restartPolling: refetch }
 }

@@ -60,6 +60,7 @@ function Button({
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
+      disabled={loading || props.disabled}
     >
       {Icon && !loading && <Icon data-icon="inline-start" />}
       {loading && <Spinner data-icon="inline-start" />}
