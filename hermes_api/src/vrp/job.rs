@@ -226,9 +226,9 @@ pub async fn start_handler(
     Path(path): Path<JobPath>,
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<bool>, ApiError> {
-    let result = state.solver_manager.start(&path.job_id.to_string()).await;
+    state.solver_manager.start(&path.job_id.to_string()).await;
 
-    if result {
+    if true {
         Ok(Json(true))
     } else {
         Err(ApiError::NotFound(path.job_id.to_string()))

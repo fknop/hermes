@@ -16,7 +16,7 @@ export function JsonFileUpload({
     <Dropzone
       disabled={disabled}
       accept={FILE_TYPES}
-      description="Upload JSON"
+      description="Create job"
       multiple={false}
       onDropAccepted={(files) => {
         const file = files[0]

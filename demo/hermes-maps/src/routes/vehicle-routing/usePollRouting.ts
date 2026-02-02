@@ -5,6 +5,7 @@ import { PollResponse } from '@/api/generated/schemas'
 export function usePollRouting({ jobId }: { jobId: string | null }): {
   response: PollResponse | null
 } {
+  console.log({ jobId })
   const { data } = usePollJob(jobId, {
     query: {
       enabled: !isNil(jobId),

@@ -14,8 +14,8 @@ use crate::vrp::routes::vrp_routes;
 use aide::openapi::OpenApi;
 use aide::transform::TransformOpenApi;
 use axum::http::Method;
-use axum::routing::{any, get, post};
-use axum::{Extension, Router, serve};
+use axum::routing::{get, post};
+use axum::{Extension, serve};
 use hermes_matrix_providers::travel_matrix_client::TravelMatrixClient;
 use hermes_optimizer::solver::solver_manager::SolverManager;
 use hermes_routing::hermes::Hermes;
@@ -32,6 +32,7 @@ static GLOBAL: MiMalloc = MiMalloc;
 
 #[tokio::main]
 async fn main() {
+    // console_subscriber::init();
     dotenvy::from_filename("./.env.local").ok();
     tracing_subscriber::fmt().with_max_level(Level::INFO).init();
     aide::generate::on_error(|error| tracing::error!("{}", error));

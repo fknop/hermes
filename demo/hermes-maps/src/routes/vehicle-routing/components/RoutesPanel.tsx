@@ -105,7 +105,7 @@ export function RoutesPanel({
       </div>
 
       <div className="flex flex-col gap-2 px-3">
-        <div className="flex flex-col divide-y divide-border  rounded-lg border border-border">
+        <div className="flex flex-col divide-y divide-border overflow-hidden rounded-lg border border-border">
           {solution.routes.map((route, index) => (
             <RouteCard
               key={index}

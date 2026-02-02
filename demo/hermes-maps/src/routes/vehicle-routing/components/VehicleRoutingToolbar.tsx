@@ -21,6 +21,7 @@ import { DebugPanel } from './DebugPanel'
 import { useRoutingJobContext } from './RoutingJobContext'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { RoutingSchedule } from './RoutingSchedule'
+import { getSolution } from '../solution'
 
 function RoutesVisibilityMenu() {
   const { input, response } = useRoutingJobContext()
@@ -56,7 +57,7 @@ export function VehicleRoutingToolbar() {
   } = useRoutingJobContext()
 
   return (
-    <div className="p-1.5 bg-background border-b border-b-sidebar-border flex items-center justify-between">
+    <div className="p-1.5 bg-sidebar border-b border-b-sidebar-border flex items-center justify-between">
       <div className="flex flex-row items-center">
         <Toolbar>
           <RoutesVisibilityMenu />
@@ -70,7 +71,7 @@ export function VehicleRoutingToolbar() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      disabled={isNil(response?.solution)}
+                      disabled={isNil(getSolution(response))}
                     >
                       <ChartGanttIcon />
                     </Button>

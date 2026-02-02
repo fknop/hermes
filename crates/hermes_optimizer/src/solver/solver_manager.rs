@@ -36,14 +36,6 @@ impl SolverManager {
             .collect()
     }
 
-    pub async fn job_status(&self, job_id: &str) -> Option<SolverStatus> {
-        self.solvers
-            .read()
-            .await
-            .get(job_id)
-            .map(|solver| solver.status())
-    }
-
     pub async fn create_job(&self, problem: VehicleRoutingProblem) -> String {
         let job_id = Uuid::new_v4().to_string();
         let solver = Arc::new(Solver::new(problem, SolverParams::default()));
@@ -52,12 +44,9 @@ impl SolverManager {
     }
 
     pub async fn start(&self, job_id: &str) -> bool {
-        if let Some(solver) = self.solvers.read().await.get(job_id) {
-            tokio::spawn({
-                let solver = solver.clone();
-                async move {
-                    solver.solve();
-                }
+        if let Some(solver) = self.solvers.read().await.get(job_id).cloned() {
+            tokio::task::spawn_blocking(move || {
+                solver.solve();
             });
             true
         } else {
@@ -66,7 +55,7 @@ impl SolverManager {
     }
 
     pub async fn stop(&self, job_id: &str) -> bool {
-        if let Some(solver) = self.solvers.write().await.get(job_id) {
+        if let Some(solver) = self.solvers.read().await.get(job_id).cloned() {
             solver.stop();
             true
         } else {

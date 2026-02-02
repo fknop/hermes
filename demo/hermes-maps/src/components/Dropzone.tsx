@@ -34,7 +34,7 @@ export const Dropzone = ({
       <div data-testid={dataTestId} {...getRootProps()}>
         <input {...getInputProps()} name={name} />
 
-        <Button variant="secondary" icon={FileUpIcon} disabled={disabled}>
+        <Button variant="outline" icon={FileUpIcon} disabled={disabled}>
           {description}
         </Button>
       </div>

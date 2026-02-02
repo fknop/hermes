@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 axum = { version = "0.8.1", features = ["ws", "macros"] }
 serde = { version = "1.0.219", features = ["derive"] }
-tokio = { version = "1.44.1", features = ["full"] }
+tokio = { version = "1.44.1", features = ["full", "tracing"] }
 hermes_routing = { version = "0.1.0", path = "../crates/hermes_routing" }
 hermes_optimizer = { version = "0.1.0", path = "../crates/hermes_optimizer", features = ["statistics"] }
 tower = { version = "0.5.2" }
@@ -34,3 +34,4 @@ aide = { version = "0.16.0-alpha.2", features = [
 ] }
 schemars.workspace = true
 serde_with.workspace = true
+console-subscriber = "0.5.0"

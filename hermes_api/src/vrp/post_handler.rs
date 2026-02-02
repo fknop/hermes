@@ -21,7 +21,5 @@ pub async fn post_handler(
     let problem = body.build_problem(&state.matrix_client).await?;
     let job_id = solver_manager.create_job(problem).await;
 
-    // solver_manager.start(&job_id).await;
-
     Ok(Json(PostResponse { job_id }))
 }

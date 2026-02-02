@@ -1,4 +1,4 @@
-import { useCreateJob } from '@/api/generated/hermes.ts'
+import { useCreateJob, useStartJob } from '@/api/generated/hermes.ts'
 import {
   ResizablePanel,
   ResizablePanelGroup,
@@ -30,6 +30,7 @@ export default function VehicleRoutingScreen() {
   const [input, setInput] = useState<VehicleRoutingProblem | null>(null)
 
   const { mutateAsync: createJob, isPending: isCreating, data } = useCreateJob()
+  const { mutateAsync: startJob, isPending: starting } = useStartJob()
 
   const jobId = data?.data.job_id ?? null
   const stopRouting = useStopRouting()
@@ -113,9 +114,11 @@ export default function VehicleRoutingScreen() {
         input: input,
         startRouting: useCallback(async () => {
           if (!isNil(input)) {
-            await createJob({ data: input })
+            const response = await createJob({ data: input })
+            const jobId = response.data.job_id
+            await startJob({ jobId })
           }
-        }, [createJob, input]),
+        }, [createJob, startJob, input]),
         stopRouting: useCallback(async () => {
           if (!isNil(jobId)) {
             await stopRouting({ jobId })
