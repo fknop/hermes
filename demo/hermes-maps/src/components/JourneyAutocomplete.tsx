@@ -1,15 +1,9 @@
-import {
-  ArrowsUpDownIcon,
-  ArrowTurnDownRightIcon,
-} from '@heroicons/react/16/solid'
+import clsx from 'clsx'
+import { ArrowDownUpIcon } from 'lucide-react'
+import { HTMLAttributes, Ref } from 'react'
 import { Address } from '../types/Address'
 import { AddressAutocomplete } from './AddressAutocomplete'
-import { HTMLAttributes, Ref } from 'react'
-import clsx from 'clsx'
-import { MagnifyingGlassIcon } from '@heroicons/react/24/solid'
 import { Button } from './ui/button'
-import { ArrowDownUpIcon, ArrowsUpFromLine } from 'lucide-react'
-import { Input } from './ui/input'
 
 export function AddressInput({
   ref,

@@ -1,5 +1,3 @@
-import { MagnifyingGlassIcon, MapPinIcon } from '@heroicons/react/16/solid'
-import { BuildingOfficeIcon } from '@heroicons/react/24/solid'
 import { useCallback, useEffect, useState } from 'react'
 import { Source } from 'react-map-gl/mapbox'
 import { Map } from '../components/ui/maps/Map.tsx'
@@ -25,8 +23,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card.tsx'
-import { Separator } from '@/components/ui/separator.tsx'
 import { useTheme } from '@/components/ui/theme-provider.tsx'
+import { BuildingIcon, MapPinIcon, SearchIcon } from 'lucide-react'
 
 enum RoutingAlgorithm {
   Dijkstra = 'Dijkstra',
@@ -257,7 +255,7 @@ export default function HomeScreen() {
           </MapMenuItem>
           <MapMenuItem>
             <span className="inline-flex items-center gap-1 whitespace-nowrap">
-              <MagnifyingGlassIcon className="size-5" />
+              <SearchIcon className="size-5" />
               <span>Query graph</span>
             </span>
           </MapMenuItem>
@@ -271,7 +269,7 @@ export default function HomeScreen() {
             }}
           >
             <span className="inline-flex items-center gap-1 whitespace-nowrap">
-              <BuildingOfficeIcon className="size-5" />
+              <BuildingIcon className="size-5" />
               {showLandmarks ? 'Hide landmarks' : 'Show landmarks'}
             </span>
           </MapMenuItem>

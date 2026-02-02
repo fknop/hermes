@@ -1,11 +1,6 @@
 use std::sync::Arc;
 
-use axum::{
-    Json,
-    extract::State,
-    http::StatusCode,
-    response::{IntoResponse, Response},
-};
+use axum::{Json, extract::State};
 use hermes_optimizer::json::types::JsonVehicleRoutingProblem;
 use schemars::JsonSchema;
 use serde::Serialize;
@@ -26,7 +21,7 @@ pub async fn post_handler(
     let problem = body.build_problem(&state.matrix_client).await?;
     let job_id = solver_manager.create_job(problem).await;
 
-    solver_manager.start(&job_id).await;
+    // solver_manager.start(&job_id).await;
 
     Ok(Json(PostResponse { job_id }))
 }
