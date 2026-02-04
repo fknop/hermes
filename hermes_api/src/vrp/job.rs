@@ -7,7 +7,8 @@ use axum::{
 use geo::{Coord, Simplify};
 use geojson::{Feature, Geometry};
 use hermes_optimizer::{
-    problem::vehicle_routing_problem::VehicleRoutingProblem,
+    json::types::{FromProblem as _, JsonLocation, JsonService, JsonVehicle},
+    problem::{job::Job, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{
         accepted_solution::AcceptedSolution, alns_weights::AlnsWeights,
         recreate::recreate_strategy::RecreateStrategy, ruin::ruin_strategy::RuinStrategy,
@@ -25,7 +26,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{error::ApiError, state::AppState};
+use crate::{error::ApiError, state::AppState, vrp::jobs::VehicleRoutingJob};
 
 use super::api_solution::{
     ApiEndActivity, ApiServiceActivity, ApiSolution, ApiSolutionActivity, ApiSolutionRoute,
@@ -48,9 +49,7 @@ pub struct PollSolverRunning {
 #[derive(Serialize, JsonSchema)]
 pub struct PollSolverCompleted {
     solution: Option<ApiSolution>,
-    #[schemars(skip)]
     statistics: AggregatedStatistics,
-    #[schemars(skip)]
     weights: OperatorWeights,
 }
 
@@ -246,4 +245,47 @@ pub async fn stop_handler(
     } else {
         Err(ApiError::NotFound(path.job_id.to_string()))
     }
+}
+
+#[derive(Serialize, JsonSchema)]
+pub struct VehicleRoutingJobInput {
+    pub id: String,
+    pub locations: Vec<JsonLocation>,
+    pub vehicles: Vec<JsonVehicle>,
+    pub services: Vec<JsonService>,
+}
+
+pub async fn job_handler(
+    Path(path): Path<JobPath>,
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<VehicleRoutingJobInput>, ApiError> {
+    let solver = state
+        .solver_manager
+        .solver(&path.job_id.to_string())
+        .await
+        .ok_or(ApiError::NotFound(path.job_id.to_string()))?;
+
+    let problem = solver.problem();
+
+    Ok(Json(VehicleRoutingJobInput {
+        id: problem.id().to_owned(),
+        locations: problem
+            .locations()
+            .iter()
+            .map(|location| JsonLocation::from_problem(location, problem))
+            .collect(),
+        vehicles: problem
+            .vehicles()
+            .iter()
+            .map(|vehicle| JsonVehicle::from_problem(vehicle, problem))
+            .collect(),
+        services: problem
+            .jobs()
+            .iter()
+            .filter_map(|job| match job {
+                Job::Service(service) => Some(JsonService::from_problem(service, problem)),
+                _ => None,
+            })
+            .collect(),
+    }))
 }

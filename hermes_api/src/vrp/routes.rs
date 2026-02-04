@@ -23,6 +23,12 @@ pub fn vrp_routes(state: Arc<AppState>) -> ApiRouter {
                 .post_with(post_handler, |op| op.id("createJob")),
         )
         .api_route(
+            "/jobs/{job_id}",
+            get_with(job::job_handler, |op| {
+                op.description("Get the job input").id("getJob")
+            }),
+        )
+        .api_route(
             "/jobs/{job_id}/poll",
             get_with(job::poll_handler, |op| {
                 op.description("Poll a job that is currently running")

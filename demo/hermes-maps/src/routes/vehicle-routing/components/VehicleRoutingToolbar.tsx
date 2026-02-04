@@ -21,7 +21,8 @@ import { DebugPanel } from './DebugPanel'
 import { useRoutingJobContext } from './RoutingJobContext'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { RoutingSchedule } from './RoutingSchedule'
-import { getSolution } from '../solution'
+import { getOperatorWeights, getSolution, getStatistics } from '../solution'
+import { g } from 'node_modules/@react-router/dev/dist/routes-CZR-bKRt'
 
 function RoutesVisibilityMenu() {
   const { input, response } = useRoutingJobContext()
@@ -57,6 +58,9 @@ export function VehicleRoutingToolbar() {
     response,
   } = useRoutingJobContext()
 
+  const statistics = getStatistics(response)
+  const weights = getOperatorWeights(response)
+
   return (
     <div className="p-1.5 bg-sidebar border-b border-b-sidebar-border flex items-center justify-between">
       <div className="flex flex-row items-center">
@@ -90,15 +94,12 @@ export function VehicleRoutingToolbar() {
             </SheetContent>
           </Sheet>
 
-          {response?.statistics && response?.weights && (
+          {statistics && weights && (
             <>
               <ToolbarSeparator />
               <ToolbarButton
                 render={
-                  <DebugPanel
-                    statistics={response.statistics}
-                    weights={response.weights}
-                  />
+                  <DebugPanel statistics={statistics} weights={weights} />
                 }
               />
             </>
@@ -107,6 +108,7 @@ export function VehicleRoutingToolbar() {
       </div>
       <div className="flex flex-row items-center gap-2">
         <JsonFileUpload
+          variant="outline"
           onFileUpload={async (file) => {
             const data = await file.text()
             onInputChange(JSON.parse(data))

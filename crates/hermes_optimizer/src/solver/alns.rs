@@ -120,6 +120,10 @@ impl Alns {
         }
     }
 
+    pub fn problem(&self) -> &VehicleRoutingProblem {
+        &self.problem
+    }
+
     fn set_initial_solution(&self, solution: WorkingSolution) {
         let (score, score_analysis) = solution.compute_solution_score(&self.constraints);
         self.best_solutions.write().push(AcceptedSolution {

@@ -4,19 +4,23 @@ use hermes_matrix_providers::{
 };
 use jiff::{SignedDuration, Timestamp};
 use schemars::JsonSchema;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::problem::{
     capacity::Capacity,
     fleet::Fleet,
     location::Location,
-    service::{ServiceBuilder, ServiceType},
+    service::{Service, ServiceBuilder, ServiceType},
     time_window::TimeWindow,
     travel_cost_matrix::TravelMatrices,
-    vehicle::{VehicleBuilder, VehicleShift},
+    vehicle::{Vehicle, VehicleBuilder, VehicleShift},
     vehicle_profile::VehicleProfile,
     vehicle_routing_problem::{VehicleRoutingProblem, VehicleRoutingProblemBuilder},
 };
+
+pub trait FromProblem<T> {
+    fn from_problem(value: T, problem: &VehicleRoutingProblem) -> Self;
+}
 
 #[derive(Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields, rename = "VehicleRoutingProblem")]
@@ -28,7 +32,7 @@ pub struct JsonVehicleRoutingProblem {
     pub vehicles: Vec<JsonVehicle>,
 }
 
-#[derive(Deserialize, JsonSchema)]
+#[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields, rename = "Service")]
 pub struct JsonService {
     pub id: String,
@@ -42,10 +46,38 @@ pub struct JsonService {
     pub service_type: Option<ServiceType>,
 }
 
-#[derive(Deserialize, JsonSchema)]
+impl FromProblem<&Service> for JsonService {
+    fn from_problem(value: &Service, _problem: &VehicleRoutingProblem) -> Self {
+        JsonService {
+            id: value.external_id().to_owned(),
+            location_id: value.location_id().get(),
+            duration: value.duration().into(),
+            demand: Some(value.demand().to_vec()),
+            skills: Some(
+                value
+                    .skills()
+                    .iter()
+                    .map(|skill| skill.to_string())
+                    .collect::<Vec<_>>(),
+            ),
+            time_windows: Some(value.time_windows().to_vec()),
+            service_type: value.service_type().into(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields, rename = "Location")]
 pub struct JsonLocation {
     pub coordinates: [f64; 2],
+}
+
+impl FromProblem<&Location> for JsonLocation {
+    fn from_problem(value: &Location, _problem: &VehicleRoutingProblem) -> Self {
+        JsonLocation {
+            coordinates: [value.x(), value.y()],
+        }
+    }
 }
 
 impl From<&JsonLocation> for geo::Point {
@@ -61,7 +93,7 @@ pub struct JsonVehicleProfile {
     pub cost_provider: TravelMatrixProvider,
 }
 
-#[derive(Deserialize, JsonSchema)]
+#[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields, rename = "Vehicle")]
 pub struct JsonVehicle {
     pub id: String,
@@ -76,7 +108,33 @@ pub struct JsonVehicle {
     pub maximum_activities: Option<usize>,
 }
 
-#[derive(Deserialize, JsonSchema)]
+impl FromProblem<&Vehicle> for JsonVehicle {
+    fn from_problem(value: &Vehicle, problem: &VehicleRoutingProblem) -> Self {
+        JsonVehicle {
+            id: value.external_id().to_owned(),
+            profile: problem
+                .vehicle_profile(value.profile_id())
+                .external_id()
+                .to_owned(),
+            shift: value.shift().map(JsonVehicleShift::from),
+            capacity: Some(value.capacity().to_vec()),
+            depot_location_id: value.depot_location_id().map(|l| l.get()),
+            depot_duration: value.depot_duration().into(),
+            should_return_to_depot: value.should_return_to_depot().into(),
+            return_depot_duration: value.end_depot_duration().into(),
+            skills: Some(
+                value
+                    .skills()
+                    .iter()
+                    .map(|skill| skill.to_string())
+                    .collect::<Vec<_>>(),
+            ),
+            maximum_activities: value.maximum_activities(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields, rename = "VehicleShift")]
 pub struct JsonVehicleShift {
     pub earliest_start: Option<Timestamp>,
@@ -84,6 +142,18 @@ pub struct JsonVehicleShift {
     pub latest_end: Option<Timestamp>,
     pub maximum_transport_duration: Option<SignedDuration>,
     pub maximum_working_duration: Option<SignedDuration>,
+}
+
+impl From<&VehicleShift> for JsonVehicleShift {
+    fn from(value: &VehicleShift) -> Self {
+        JsonVehicleShift {
+            earliest_start: value.earliest_start,
+            latest_start: value.latest_start,
+            latest_end: value.latest_end,
+            maximum_transport_duration: value.maximum_transport_duration,
+            maximum_working_duration: value.maximum_working_duration,
+        }
+    }
 }
 
 impl From<JsonVehicleShift> for VehicleShift {
@@ -104,6 +174,10 @@ impl JsonVehicleRoutingProblem {
         client: &TravelMatrixClient<impl MatricesCache>,
     ) -> Result<VehicleRoutingProblem, anyhow::Error> {
         let mut builder = VehicleRoutingProblemBuilder::default();
+
+        if let Some(id) = self.id {
+            builder.set_id(id);
+        }
 
         let locations = self
             .locations

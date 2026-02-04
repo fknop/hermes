@@ -82,6 +82,10 @@ impl TimeWindows {
         TimeWindows::new(SmallVec::from_vec(time_windows))
     }
 
+    pub fn to_vec(&self) -> Vec<TimeWindow> {
+        self.0.to_vec()
+    }
+
     pub fn is_empty(&self) -> bool {
         self.0.is_empty() || self.0.iter().all(|tw| tw.is_empty())
     }

@@ -79,6 +79,10 @@ impl Amount {
             self.0[i] = self.get(i).max(other.get(i));
         }
     }
+
+    pub fn to_vec(&self) -> Vec<f64> {
+        self.0.to_vec()
+    }
 }
 
 impl Default for Amount {

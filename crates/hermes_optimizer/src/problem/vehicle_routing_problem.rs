@@ -1,6 +1,7 @@
 use std::sync::atomic::AtomicUsize;
 
 use jiff::SignedDuration;
+use uuid::Uuid;
 
 use crate::{
     problem::{
@@ -29,6 +30,7 @@ type PrecomputedAverageCostFromDepot = Vec<Cost>;
 type PrecomputedNormalizedDemands = Vec<Capacity>;
 
 pub struct VehicleRoutingProblem {
+    id: String,
     locations: Vec<Location>,
     fleet: Fleet,
     vehicle_profiles: Vec<VehicleProfile>,
@@ -50,6 +52,7 @@ pub struct VehicleRoutingProblem {
 }
 
 struct VehicleRoutingProblemParams {
+    id: String,
     locations: Vec<Location>,
     fleet: Fleet,
     vehicle_profiles: Vec<VehicleProfile>,
@@ -108,6 +111,7 @@ impl VehicleRoutingProblem {
             );
 
         Self {
+            id: params.id,
             has_time_windows: params.jobs.iter().any(|job| job.has_time_windows()),
             has_capacity: params.jobs.iter().any(|job| !job.demand().is_empty()),
             locations: params.locations,
@@ -123,6 +127,10 @@ impl VehicleRoutingProblem {
             waiting_duration_weight,
             version_counter: AtomicUsize::new(0),
         }
+    }
+
+    pub fn id(&self) -> &str {
+        &self.id
     }
 
     pub(crate) fn next_route_version(&self) -> usize {
@@ -464,6 +472,7 @@ impl VehicleRoutingProblem {
 
 #[derive(Default)]
 pub struct VehicleRoutingProblemBuilder {
+    id: Option<String>,
     services: Option<Vec<Service>>,
     locations: Option<Vec<Location>>,
     fleet: Option<Fleet>,
@@ -535,6 +544,11 @@ impl VehicleRoutingProblemBuilder {
         self
     }
 
+    pub fn set_id(&mut self, id: String) -> &mut VehicleRoutingProblemBuilder {
+        self.id = Some(id);
+        self
+    }
+
     pub fn build(self) -> VehicleRoutingProblem {
         let locations = self.locations.expect("Expected list of locations");
         let services = self.services.expect("Expected list of services");
@@ -560,6 +574,7 @@ impl VehicleRoutingProblemBuilder {
             .expect("Expected list of vehicle profiles");
 
         VehicleRoutingProblem::new(VehicleRoutingProblemParams {
+            id: self.id.unwrap_or_else(|| Uuid::new_v4().to_string()),
             locations,
             fleet: self.fleet.expect("Expected fleet"),
             vehicle_profiles,

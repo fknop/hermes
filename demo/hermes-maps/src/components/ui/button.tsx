@@ -3,7 +3,6 @@ import { cva, type VariantProps } from 'class-variance-authority'
 
 import { cn } from '@/lib/utils'
 import { SvgIcon } from '../SvgIcon'
-import { b } from 'node_modules/@react-router/dev/dist/routes-CZR-bKRt'
 import { Spinner } from './spinner'
 
 const buttonVariants = cva(
@@ -41,7 +40,7 @@ const buttonVariants = cva(
   }
 )
 
-type ButtonProps = ButtonPrimitive.Props &
+export type ButtonProps = ButtonPrimitive.Props &
   VariantProps<typeof buttonVariants> & {
     icon?: SvgIcon
     loading?: boolean

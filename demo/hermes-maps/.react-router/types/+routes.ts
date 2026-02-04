@@ -14,6 +14,9 @@ type Pages = {
   "/": {
     params: {};
   };
+  "/jobs": {
+    params: {};
+  };
   "/vehicle-routing": {
     params: {};
   };
@@ -25,11 +28,15 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/vehicle-routing" | "/benchmarks";
+    page: "/" | "/jobs" | "/vehicle-routing" | "/benchmarks";
   };
   "./routes/home.tsx": {
     id: "routes/home";
     page: "/";
+  };
+  "./routes/jobs/route.tsx": {
+    id: "routes/jobs/route";
+    page: "/jobs";
   };
   "./routes/vehicle-routing/route.tsx": {
     id: "routes/vehicle-routing/route";
@@ -44,6 +51,7 @@ type RouteFiles = {
 type RouteModules = {
   "root": typeof import("./src/root.tsx");
   "routes/home": typeof import("./src/./routes/home.tsx");
+  "routes/jobs/route": typeof import("./src/./routes/jobs/route.tsx");
   "routes/vehicle-routing/route": typeof import("./src/./routes/vehicle-routing/route.tsx");
   "routes/benchmarks/route": typeof import("./src/./routes/benchmarks/route.tsx");
 };

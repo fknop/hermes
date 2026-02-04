@@ -60,6 +60,10 @@ impl Solver {
         *self.status.write() = SolverStatus::Completed;
     }
 
+    pub fn problem(&self) -> &VehicleRoutingProblem {
+        self.search.problem()
+    }
+
     pub fn status(&self) -> SolverStatus {
         *self.status.read()
     }

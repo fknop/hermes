@@ -12,7 +12,6 @@ use crate::{
 define_index_newtype!(VehicleProfileIdx, VehicleProfile);
 
 pub struct VehicleProfile {
-    #[allow(dead_code)]
     external_id: String,
     travel_costs: TravelMatrices,
 }
@@ -23,6 +22,10 @@ impl VehicleProfile {
             external_id,
             travel_costs,
         }
+    }
+
+    pub fn external_id(&self) -> &str {
+        &self.external_id
     }
 
     #[inline(always)]

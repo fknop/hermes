@@ -29,12 +29,21 @@ impl Vehicle {
     pub fn external_id(&self) -> &str {
         &self.external_id
     }
+
     pub fn profile_id(&self) -> VehicleProfileIdx {
         self.vehicle_profile_id
     }
 
+    pub fn shift(&self) -> Option<&VehicleShift> {
+        self.shift.as_ref()
+    }
+
     pub fn capacity(&self) -> &Capacity {
         &self.capacity
+    }
+
+    pub fn skills(&self) -> &FxHashSet<Skill> {
+        &self.skills
     }
 
     pub fn depot_location_id(&self) -> Option<LocationIdx> {

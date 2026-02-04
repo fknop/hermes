@@ -21,7 +21,7 @@ pub async fn jobs_handler(
     let solver_manager = &state.solver_manager;
     let solvers = solver_manager.list_solvers().await;
 
-    let jobs: Vec<VehicleRoutingJob> = solvers
+    let mut jobs: Vec<VehicleRoutingJob> = solvers
         .into_iter()
         .map(|(job_id, solver)| VehicleRoutingJob {
             job_id,
@@ -29,6 +29,8 @@ pub async fn jobs_handler(
             created_at: solver.created_at(),
         })
         .collect();
+
+    jobs.sort_by(|job1, job2| job2.created_at.cmp(&job1.created_at));
 
     Ok(Json(PaginatedResponse {
         page: 1,
