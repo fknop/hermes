@@ -2,10 +2,10 @@ import { getContrastColor } from '@/lib/colors'
 import { isNil } from '../../utils/isNil'
 import { getRouteColor } from './colors'
 import { VehicleRoutingProblem } from './input'
-import { ApiSolution } from '@/api/generated/schemas'
+import { ApiSolution, VehicleRoutingJobInput } from '@/api/generated/schemas'
 
 export function transformSolutionToGeoJson(
-  problem: VehicleRoutingProblem,
+  problem: VehicleRoutingJobInput,
   solution: ApiSolution
 ): {
   assignedLocations: GeoJSON.FeatureCollection<GeoJSON.Point>
@@ -76,15 +76,19 @@ export function transformSolutionToGeoJson(
   }
 }
 
-export function getGeoJSONFromProblem(problem: VehicleRoutingProblem): {
-  points: GeoJSON.FeatureCollection<GeoJSON.Point>
+export function getGeoJSONFromProblem(problem: VehicleRoutingJobInput): {
+  locations: { points: GeoJSON.FeatureCollection<GeoJSON.Point> }
+  depots: { points: GeoJSON.FeatureCollection<GeoJSON.Point> }
 } {
   const depotLocationIds: number[] = problem.vehicles
     .map((vehicle) => vehicle.depot_location_id)
     .filter((id) => !isNil(id))
 
-  const points: GeoJSON.Feature<GeoJSON.Point>[] = problem.locations.map(
-    (location, index) => {
+  const points: GeoJSON.Feature<GeoJSON.Point>[] = problem.locations
+    .filter((_, index) => {
+      return !depotLocationIds.includes(index)
+    })
+    .map((location, index) => {
       return {
         geometry: {
           type: 'Point',
@@ -93,16 +97,41 @@ export function getGeoJSONFromProblem(problem: VehicleRoutingProblem): {
         type: 'Feature',
         properties: {
           locationId: (index + 1).toString(),
-          color: depotLocationIds.includes(index) ? 'black' : '#475569',
+          color: '#475569',
         },
       }
-    }
-  )
+    })
+
+  const depots: GeoJSON.Feature<GeoJSON.Point>[] = problem.locations
+    .filter((_, index) => {
+      return depotLocationIds.includes(index)
+    })
+    .map((location, index) => {
+      return {
+        geometry: {
+          type: 'Point',
+          coordinates: location.coordinates,
+        },
+        type: 'Feature',
+        properties: {
+          locationId: 'P',
+          color: 'black',
+        },
+      }
+    })
 
   return {
-    points: {
-      type: 'FeatureCollection',
-      features: points,
+    locations: {
+      points: {
+        type: 'FeatureCollection',
+        features: points,
+      },
+    },
+    depots: {
+      points: {
+        type: 'FeatureCollection',
+        features: depots,
+      },
     },
   }
 }

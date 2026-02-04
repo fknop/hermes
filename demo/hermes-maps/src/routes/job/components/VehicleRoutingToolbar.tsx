@@ -50,7 +50,7 @@ function RoutesVisibilityMenu() {
 export function VehicleRoutingToolbar() {
   const {
     isRunning,
-    onInputChange,
+    // onInputChange,
     input,
     isStarting,
     startRouting,
@@ -107,14 +107,14 @@ export function VehicleRoutingToolbar() {
         </Toolbar>
       </div>
       <div className="flex flex-row items-center gap-2">
-        <JsonFileUpload
+        {/*<JsonFileUpload
           variant="outline"
           onFileUpload={async (file) => {
             const data = await file.text()
             onInputChange(JSON.parse(data))
           }}
           disabled={isRunning}
-        />
+        />*/}
 
         <ButtonGroup>
           <Button

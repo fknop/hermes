@@ -17,8 +17,10 @@ type Pages = {
   "/jobs": {
     params: {};
   };
-  "/vehicle-routing": {
-    params: {};
+  "/jobs/:jobId": {
+    params: {
+      "jobId": string;
+    };
   };
   "/benchmarks": {
     params: {};
@@ -28,7 +30,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/jobs" | "/vehicle-routing" | "/benchmarks";
+    page: "/" | "/jobs" | "/jobs/:jobId" | "/benchmarks";
   };
   "./routes/home.tsx": {
     id: "routes/home";
@@ -38,9 +40,9 @@ type RouteFiles = {
     id: "routes/jobs/route";
     page: "/jobs";
   };
-  "./routes/vehicle-routing/route.tsx": {
-    id: "routes/vehicle-routing/route";
-    page: "/vehicle-routing";
+  "./routes/job/route.tsx": {
+    id: "routes/job/route";
+    page: "/jobs/:jobId";
   };
   "./routes/benchmarks/route.tsx": {
     id: "routes/benchmarks/route";
@@ -52,6 +54,6 @@ type RouteModules = {
   "root": typeof import("./src/root.tsx");
   "routes/home": typeof import("./src/./routes/home.tsx");
   "routes/jobs/route": typeof import("./src/./routes/jobs/route.tsx");
-  "routes/vehicle-routing/route": typeof import("./src/./routes/vehicle-routing/route.tsx");
+  "routes/job/route": typeof import("./src/./routes/job/route.tsx");
   "routes/benchmarks/route": typeof import("./src/./routes/benchmarks/route.tsx");
 };

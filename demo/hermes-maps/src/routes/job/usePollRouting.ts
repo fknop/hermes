@@ -1,16 +1,20 @@
 import { usePollJob } from '@/api/generated/hermes'
-import { isNil } from '../../utils/isNil'
 import { PollResponse } from '@/api/generated/schemas'
 
-export function usePollRouting({ jobId }: { jobId: string | null }): {
+export function usePollRouting({ jobId }: { jobId: string }): {
   response: PollResponse | null
   restartPolling: () => void
 } {
   const { data, refetch } = usePollJob(jobId, {
     query: {
-      enabled: !isNil(jobId),
       refetchInterval: (query) => {
         const isCompleted = query.state.data?.data.status === 'Completed'
+        const isPending = query.state.data?.data.status === 'Pending'
+
+        if (isPending) {
+          return 2000 // Poll every 2 seconds if pending
+        }
+
         return isCompleted ? false : 600
       },
     },

@@ -1238,6 +1238,8 @@ impl WorkingSolutionRoute {
             Some(self.start(problem))
         };
 
+        let current_vehicle_start = vehicle_start;
+
         let mut vehicle_end: Option<Timestamp> = if self.is_empty() {
             None
         } else {
@@ -1299,7 +1301,10 @@ impl WorkingSolutionRoute {
 
                 let current_departure_time = self.departure_times[current_activity_index];
                 // Early termination, if the departure time is earlier or equal to the current one, we know the next one are valid as well
-                if new_departure_time <= current_departure_time {
+                // TODO: edge case right now, if the first activity changes, the vehicle start time might change as well making the entire route shift and invalidating the maximum working duration check
+                if current_vehicle_start == vehicle_start
+                    && new_departure_time <= current_departure_time
+                {
                     return true;
                 }
             }

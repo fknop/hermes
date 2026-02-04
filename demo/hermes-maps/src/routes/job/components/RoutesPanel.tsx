@@ -1,3 +1,4 @@
+import { ApiSolution, VehicleRoutingJobInput } from '@/api/generated/schemas'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { DescriptionItem } from '@/components/ui/description-item'
@@ -5,15 +6,13 @@ import { useDurationFormatter } from '@/hooks/useDurationFormatter'
 import { SquareArrowUpRightIcon } from 'lucide-react'
 import { Temporal } from 'temporal-polyfill'
 import { useDistanceFormatter } from '../../../hooks/useDistanceFormatter'
-import { VehicleRoutingProblem } from '../input'
-import { RouteCard } from './RouteCard'
-import { WaitingDuration } from './WaitingDuration'
-import { useRoutingJobContext } from './RoutingJobContext'
 import { getRouteColor } from '../colors'
-import { ApiSolution } from '@/api/generated/schemas'
+import { RouteCard } from './RouteCard'
+import { useRoutingJobContext } from './RoutingJobContext'
+import { WaitingDuration } from './WaitingDuration'
 
 interface RoutesPanelProps {
-  problem: VehicleRoutingProblem
+  problem: VehicleRoutingJobInput
   solution: ApiSolution
   selectedRouteIndex: number | null
   onRouteSelect: (index: number | null) => void

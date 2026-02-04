@@ -1,4 +1,4 @@
-import { useCreateJob, useListJobs } from '@/api/generated/hermes'
+import { getJob, useCreateJob, useListJobs } from '@/api/generated/hermes'
 import { VehicleRoutingJob } from '@/api/generated/schemas'
 import { Button } from '@/components/ui/button'
 import {
@@ -23,15 +23,15 @@ import { useQueryClient } from '@tanstack/react-query'
 import { ColumnDef } from '@tanstack/react-table'
 import { EyeIcon, MoreHorizontal } from 'lucide-react'
 import { useMemo } from 'react'
-import { JsonFileUpload } from '../vehicle-routing/JsonFileUpload'
+import { JsonFileUpload } from '../job/JsonFileUpload'
+import { useNavigate } from 'react-router'
 
 export default function JobsRoute() {
   const { data, isPending, queryKey } = useListJobs()
   const { mutateAsync: createJob, isPending: isCreating } = useCreateJob()
   const client = useQueryClient()
   const { formatDateTime } = useDateTimeFormatter()
-
-  console.log(isCreating)
+  const navigate = useNavigate()
 
   const columns = useMemo(() => {
     const columns: ColumnDef<VehicleRoutingJob>[] = [
@@ -74,7 +74,11 @@ export default function JobsRoute() {
               <DropdownMenuContent align="end">
                 <DropdownMenuGroup>
                   <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      navigate(`/jobs/${row.original.job_id}`)
+                    }}
+                  >
                     <EyeIcon />
                     Open
                   </DropdownMenuItem>

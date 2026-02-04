@@ -20,7 +20,7 @@ import { useFetch } from '../../hooks/useFetch'
 import { isNil } from '../../utils/isNil'
 import { useDurationFormatter } from '../../hooks/useDurationFormatter'
 import { Button } from '@/components/ui/button'
-import { getRouteColor } from '../vehicle-routing/colors'
+import { getRouteColor } from '../job/colors'
 
 type ProblemData = {
   locations: { x: number; y: number }[]

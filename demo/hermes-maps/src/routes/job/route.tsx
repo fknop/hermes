@@ -1,4 +1,4 @@
-import { useCreateJob, useStartJob } from '@/api/generated/hermes.ts'
+import { getJob, useCreateJob, useStartJob } from '@/api/generated/hermes.ts'
 import {
   ResizablePanel,
   ResizablePanelGroup,
@@ -24,15 +24,21 @@ import { UnassignedJobsLayer } from './UnassignedJobsLayer.tsx'
 import { usePollRouting } from './usePollRouting.ts'
 import { useStopRouting } from './useStopRouting.ts'
 import { getSolution } from './solution.ts'
+import { ClientLoaderFunctionArgs, useLoaderData } from 'react-router'
+
+export async function clientLoader({ params }: ClientLoaderFunctionArgs) {
+  const jobId = params.jobId
+  const data = await getJob(jobId)
+  return { input: data.data, jobId: data.data.id }
+}
 
 export default function VehicleRoutingScreen() {
-  const [showUnassigned, setShowUnassigned] = useState(false)
-  const [input, setInput] = useState<VehicleRoutingProblem | null>(null)
+  const { input, jobId } = useLoaderData<typeof clientLoader>()
 
-  const { mutateAsync: createJob, isPending: isCreating, data } = useCreateJob()
+  const [showUnassigned, setShowUnassigned] = useState(false)
+
   const { mutateAsync: startJob, isPending: isStarting } = useStartJob()
 
-  const jobId = data?.data.job_id ?? null
   const stopRouting = useStopRouting()
   const { response, restartPolling } = usePollRouting({ jobId })
   const solution = getSolution(response)
@@ -72,12 +78,16 @@ export default function VehicleRoutingScreen() {
 
   const polling = response?.status === 'Running'
 
-  const solutionGeoJson =
-    !isNil(solution) && !isNil(input)
+  const solutionGeoJson = useMemo(() => {
+    return !isNil(solution) && !isNil(input)
       ? transformSolutionToGeoJson(input, solution)
       : null
+  }, [solution, input])
 
-  const problemGeoJson = !isNil(input) ? getGeoJSONFromProblem(input) : null
+  const { locations, depots } = useMemo(
+    () => getGeoJSONFromProblem(input),
+    [input]
+  )
 
   const unassignedServices = useMemo(() => {
     if (!input || !solution) return []
@@ -99,7 +109,7 @@ export default function VehicleRoutingScreen() {
       }
 
       const allCoordinates: [number, number][] = input.locations.map(
-        (location) => location.coordinates
+        (location) => location.coordinates as [number, number]
       )
 
       return allCoordinates
@@ -112,25 +122,17 @@ export default function VehicleRoutingScreen() {
         jobId,
         response,
         input: input,
-        isStarting: isCreating || isStarting,
+        isStarting: isStarting,
         startRouting: useCallback(async () => {
-          if (!isNil(input)) {
-            if (!isNil(jobId)) {
-              await startJob({ jobId })
-              restartPolling()
-            } else {
-              const response = await createJob({ data: input })
-              const jobId = response.data.job_id
-              await startJob({ jobId })
-            }
-          }
-        }, [createJob, startJob, input, jobId, restartPolling]),
+          await startJob({ jobId })
+          restartPolling()
+        }, [startJob, input, jobId, restartPolling]),
         stopRouting: useCallback(async () => {
           if (!isNil(jobId)) {
             await stopRouting({ jobId })
           }
         }, [jobId]),
-        onInputChange: setInput,
+        // onInputChange: setInput,
         isRunning: polling,
         showUnassigned,
         setShowUnassigned,
@@ -243,11 +245,11 @@ export default function VehicleRoutingScreen() {
                   </>
                 )}
 
-                {problemGeoJson && isNil(solutionGeoJson) && (
+                {isNil(solutionGeoJson) && (
                   <>
                     <Source
                       type="geojson"
-                      data={problemGeoJson.points}
+                      data={locations.points}
                       id="locations-geojson"
                     >
                       <LocationsLayer
@@ -257,6 +259,10 @@ export default function VehicleRoutingScreen() {
                     </Source>
                   </>
                 )}
+
+                <Source type="geojson" data={depots.points} id="depots-geojson">
+                  <LocationsLayer id="depots" sourceId="depots-geojson" />
+                </Source>
               </Map>
             </div>
           </ResizablePanel>

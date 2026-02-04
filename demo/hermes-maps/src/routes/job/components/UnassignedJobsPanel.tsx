@@ -1,19 +1,11 @@
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { Service } from '../input'
-import { useRoutingJobContext } from './RoutingJobContext'
 import { Badge } from '@/components/ui/badge'
-import { DescriptionItem } from '@/components/ui/description-item'
-import { useTimeWindowFormatter } from '@/hooks/useTimeWindowFormatter'
-import { useDurationFormatter } from '@/hooks/useDurationFormatter'
 import { Button } from '@/components/ui/button'
+import { DescriptionItem } from '@/components/ui/description-item'
+import { useDurationFormatter } from '@/hooks/useDurationFormatter'
+import { useTimeWindowFormatter } from '@/hooks/useTimeWindowFormatter'
 import { XIcon } from 'lucide-react'
-import { Separator } from 'react-resizable-panels'
+import { useRoutingJobContext } from './RoutingJobContext'
+import { Service } from '@/api/generated/schemas'
 
 interface UnassignedJobsPanelProps {
   unassignedServices: Service[]

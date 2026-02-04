@@ -37,7 +37,7 @@ impl SolverManager {
     }
 
     pub async fn create_job(&self, problem: VehicleRoutingProblem) -> String {
-        let job_id = Uuid::new_v4().to_string();
+        let job_id = problem.id().to_owned();
         let solver = Arc::new(Solver::new(problem, SolverParams::default()));
         self.solvers.write().await.insert(job_id.clone(), solver);
         job_id
