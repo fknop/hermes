@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { ButtonGroup } from '@/components/ui/button-group'
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import {
   Toolbar,
   ToolbarButton,
@@ -16,13 +17,10 @@ import {
   PlayIcon,
   StopCircleIcon,
 } from 'lucide-react'
-import { JsonFileUpload } from '../JsonFileUpload'
+import { getOperatorWeights, getSolution, getStatistics } from '../solution'
 import { DebugPanel } from './DebugPanel'
 import { useRoutingJobContext } from './RoutingJobContext'
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { RoutingSchedule } from './RoutingSchedule'
-import { getOperatorWeights, getSolution, getStatistics } from '../solution'
-import { g } from 'node_modules/@react-router/dev/dist/routes-CZR-bKRt'
 
 function RoutesVisibilityMenu() {
   const { input, response } = useRoutingJobContext()

@@ -1,7 +1,6 @@
 import { getContrastColor } from '@/lib/colors'
 import { isNil } from '../../utils/isNil'
 import { getRouteColor } from './colors'
-import { VehicleRoutingProblem } from './input'
 import { ApiSolution, VehicleRoutingJobInput } from '@/api/generated/schemas'
 
 export function transformSolutionToGeoJson(

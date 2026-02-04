@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { FilePlusIcon, FileUpIcon } from 'lucide-react'
+import { FilePlusIcon } from 'lucide-react'
 import { ReactElement, ReactNode } from 'react'
 import { DropzoneOptions, useDropzone } from 'react-dropzone'
 import { Button, ButtonProps } from './ui/button'

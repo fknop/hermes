@@ -1,12 +1,11 @@
-import { Temporal } from 'temporal-polyfill'
-import { useDistanceFormatter } from '../../../hooks/useDistanceFormatter'
-import clsx from 'clsx'
+import { ApiSolution } from '@/api/generated/schemas'
+import { Badge } from '@/components/ui/badge'
 import { DescriptionItem } from '@/components/ui/description-item'
 import { useDurationFormatter } from '@/hooks/useDurationFormatter'
-import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
+import clsx from 'clsx'
+import { Temporal } from 'temporal-polyfill'
+import { useDistanceFormatter } from '../../../hooks/useDistanceFormatter'
 import { WaitingDuration } from './WaitingDuration'
-import { ApiSolution } from '@/api/generated/schemas'
 
 type Route = ApiSolution['routes'][number]
 
@@ -42,10 +41,6 @@ export function RouteCard({
     : 'N/A'
 
   const formattedDuration = formatDuration(route.duration, { style: 'narrow' })
-
-  const formattedWaitingDuration = formatDuration(route.waiting_duration, {
-    style: 'narrow',
-  })
 
   return (
     <button

@@ -1,4 +1,4 @@
-import { getJob, useCreateJob, useStartJob } from '@/api/generated/hermes.ts'
+import { getJob, useStartJob } from '@/api/generated/hermes.ts'
 import {
   ResizablePanel,
   ResizablePanelGroup,
@@ -6,6 +6,7 @@ import {
 import { useMapboxBounds } from '@/hooks/useMapboxBounds.ts'
 import { useCallback, useMemo, useState } from 'react'
 import { Source } from 'react-map-gl/mapbox'
+import { ClientLoaderFunctionArgs, useLoaderData } from 'react-router'
 import { Map } from '../../components/ui/maps/Map.tsx'
 import { MapSidePanel } from '../../components/ui/maps/MapSidePanel.tsx'
 import { PolylineLayer } from '../../PolylineLayer.tsx'
@@ -18,13 +19,11 @@ import { RoutingJobContextProvider } from './components/RoutingJobContext.tsx'
 import { UnassignedJobsPanel } from './components/UnassignedJobsPanel.tsx'
 import { VehicleRoutingToolbar } from './components/VehicleRoutingToolbar.tsx'
 import { getGeoJSONFromProblem, transformSolutionToGeoJson } from './geojson.ts'
-import { VehicleRoutingProblem } from './input.ts'
 import { LocationsLayer } from './LocationsLayer.tsx'
+import { getSolution } from './solution.ts'
 import { UnassignedJobsLayer } from './UnassignedJobsLayer.tsx'
 import { usePollRouting } from './usePollRouting.ts'
 import { useStopRouting } from './useStopRouting.ts'
-import { getSolution } from './solution.ts'
-import { ClientLoaderFunctionArgs, useLoaderData } from 'react-router'
 
 export async function clientLoader({ params }: ClientLoaderFunctionArgs) {
   const jobId = params.jobId

@@ -1,4 +1,4 @@
-import { Temporal } from 'temporal-polyfill'
+import { ApiSolutionActivity } from '@/api/generated/schemas'
 import { DescriptionItem } from '@/components/ui/description-item'
 import {
   ClockArrowDownIcon,
@@ -7,10 +7,9 @@ import {
   PauseIcon,
   WarehouseIcon,
 } from 'lucide-react'
-import { useDurationFormatter } from '@/hooks/useDurationFormatter'
+import { Temporal } from 'temporal-polyfill'
 import { useRoutingJobContext } from './RoutingJobContext'
 import { WaitingDuration } from './WaitingDuration'
-import { ApiSolutionActivity } from '@/api/generated/schemas'
 
 interface ActivityCardProps {
   activity: ApiSolutionActivity
@@ -33,7 +32,6 @@ export function ActivityCard({
   isLast,
 }: ActivityCardProps) {
   const { input } = useRoutingJobContext()
-  const formatDuration = useDurationFormatter()
   const getActivityIcon = () => {
     switch (activity.type) {
       case 'Start':

@@ -1,11 +1,11 @@
 import { useTimeFormatter } from '@/hooks/useTimeFormatter'
 import { isNil } from '@/utils/isNil'
-import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react'
-import { Temporal } from 'temporal-polyfill'
-import { ButtonGroup, ButtonGroupText } from '../button-group'
-import { Button } from '../button'
-import { MinusIcon, PlusIcon } from 'lucide-react'
 import { HTMLProps, mergeProps, useRender } from '@base-ui/react'
+import { MinusIcon, PlusIcon } from 'lucide-react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Temporal } from 'temporal-polyfill'
+import { Button } from '../button'
+import { ButtonGroup, ButtonGroupText } from '../button-group'
 
 const SIDEBAR_WIDTH = 120
 const ROW_HEIGHT = 44
@@ -157,39 +157,6 @@ function Segment<D>({
 
   return element
 }
-
-// Legend
-const Legend = () => (
-  <div className="flex gap-4">
-    <div className="flex items-center gap-1.5 text-xs text-zinc-400 font-medium">
-      <div className="w-3 h-3 rounded-sm bg-blue-500" />
-      <span>Pickup</span>
-    </div>
-    <div className="flex items-center gap-1.5 text-xs text-zinc-400 font-medium">
-      <div
-        className="w-3 h-3 rounded-sm"
-        style={{ border: '2px dashed #6b7280' }}
-      />
-      <span>Driving</span>
-    </div>
-    <div className="flex items-center gap-1.5 text-xs text-zinc-400 font-medium">
-      <div className="w-3 h-3 rounded-sm bg-amber-500" />
-      <span>Waiting</span>
-    </div>
-    <div className="flex items-center gap-1.5 text-xs text-zinc-400 font-medium">
-      <div className="w-3 h-3 rounded-sm bg-emerald-500" />
-      <span>Service</span>
-    </div>
-    <div className="flex items-center gap-1.5 text-xs text-zinc-400 font-medium">
-      <div className="w-3 h-3 rounded-sm bg-violet-500" />
-      <span>Break</span>
-    </div>
-    <div className="flex items-center gap-1.5 text-xs text-zinc-400 font-medium">
-      <div className="w-3 h-3 rounded-sm bg-rose-500" />
-      <span>Return</span>
-    </div>
-  </div>
-)
 
 // Main
 export function Schedule<S, D>({

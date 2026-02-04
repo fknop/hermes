@@ -2,13 +2,13 @@ use std::sync::Arc;
 
 use axum::{
     Json,
-    extract::{Path, State},
+    extract::{Path, Query, State},
 };
 use geo::{Coord, Simplify};
 use geojson::{Feature, Geometry};
 use hermes_optimizer::{
     json::types::{FromProblem as _, JsonLocation, JsonService, JsonVehicle},
-    problem::{job::Job, vehicle_routing_problem::VehicleRoutingProblem},
+    problem::{job::Job, meters::Meters, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{
         accepted_solution::AcceptedSolution, alns_weights::AlnsWeights,
         recreate::recreate_strategy::RecreateStrategy, ruin::ruin_strategy::RuinStrategy,
@@ -112,7 +112,11 @@ fn compute_polyline(
     }
 }
 
-fn transform_solution(accepted_solution: &AcceptedSolution, hermes: &Hermes) -> ApiSolution {
+fn transform_solution(
+    accepted_solution: &AcceptedSolution,
+    hermes: &Hermes,
+    with_geojson: bool,
+) -> ApiSolution {
     let problem = accepted_solution.solution.problem();
     let routes: Vec<ApiSolutionRoute> = accepted_solution
         .solution
@@ -154,7 +158,11 @@ fn transform_solution(accepted_solution: &AcceptedSolution, hermes: &Hermes) -> 
                 vehicle_id: route.vehicle(problem).external_id().to_owned(),
                 waiting_duration: route.total_waiting_duration(),
                 activities,
-                polyline: compute_polyline(problem, route, hermes),
+                polyline: if with_geojson {
+                    compute_polyline(problem, route, hermes)
+                } else {
+                    Feature::default()
+                },
                 vehicle_max_load: route.max_load(problem),
             }
         })
@@ -166,6 +174,9 @@ fn transform_solution(accepted_solution: &AcceptedSolution, hermes: &Hermes) -> 
         duration: routes
             .iter()
             .fold(SignedDuration::ZERO, |acc, route| acc + route.duration),
+        distance: routes
+            .iter()
+            .fold(Meters::ZERO, |acc, route| acc + route.distance),
         routes,
         unassigned_jobs: accepted_solution
             .solution
@@ -176,9 +187,15 @@ fn transform_solution(accepted_solution: &AcceptedSolution, hermes: &Hermes) -> 
     }
 }
 
+#[derive(Deserialize, JsonSchema)]
+pub struct PollQuery {
+    geojson: Option<bool>,
+}
+
 pub async fn poll_handler(
     Path(path): Path<JobPath>,
     State(state): State<Arc<AppState>>,
+    Query(query): Query<PollQuery>,
 ) -> Result<Json<PollResponse>, ApiError> {
     let solver = state
         .solver_manager
@@ -189,9 +206,9 @@ pub async fn poll_handler(
     match solver.status() {
         SolverStatus::Pending => Ok(Json(PollResponse::Pending)),
         SolverStatus::Running => {
-            let solution = solver
-                .current_best_solution()
-                .map(|solution| transform_solution(&solution, &state.hermes));
+            let solution = solver.current_best_solution().map(|solution| {
+                transform_solution(&solution, &state.hermes, query.geojson.unwrap_or(true))
+            });
             let statistics = solver.statistics().aggregate();
             let weights = solver.weights();
             Ok(Json(PollResponse::Running(PollSolverRunning {
@@ -204,9 +221,9 @@ pub async fn poll_handler(
             })))
         }
         SolverStatus::Completed => {
-            let solution = solver
-                .current_best_solution()
-                .map(|solution| transform_solution(&solution, &state.hermes));
+            let solution = solver.current_best_solution().map(|solution| {
+                transform_solution(&solution, &state.hermes, query.geojson.unwrap_or(true))
+            });
             let statistics = solver.statistics().aggregate();
             let weights = solver.weights();
             Ok(Json(PollResponse::Completed(PollSolverCompleted {
@@ -255,6 +272,32 @@ pub struct VehicleRoutingJobInput {
     pub services: Vec<JsonService>,
 }
 
+impl From<&VehicleRoutingProblem> for VehicleRoutingJobInput {
+    fn from(problem: &VehicleRoutingProblem) -> Self {
+        VehicleRoutingJobInput {
+            id: problem.id().to_owned(),
+            locations: problem
+                .locations()
+                .iter()
+                .map(|location| JsonLocation::from_problem(location, problem))
+                .collect(),
+            vehicles: problem
+                .vehicles()
+                .iter()
+                .map(|vehicle| JsonVehicle::from_problem(vehicle, problem))
+                .collect(),
+            services: problem
+                .jobs()
+                .iter()
+                .filter_map(|job| match job {
+                    Job::Service(service) => Some(JsonService::from_problem(service, problem)),
+                    _ => None,
+                })
+                .collect(),
+        }
+    }
+}
+
 pub async fn job_handler(
     Path(path): Path<JobPath>,
     State(state): State<Arc<AppState>>,
@@ -267,25 +310,5 @@ pub async fn job_handler(
 
     let problem = solver.problem();
 
-    Ok(Json(VehicleRoutingJobInput {
-        id: problem.id().to_owned(),
-        locations: problem
-            .locations()
-            .iter()
-            .map(|location| JsonLocation::from_problem(location, problem))
-            .collect(),
-        vehicles: problem
-            .vehicles()
-            .iter()
-            .map(|vehicle| JsonVehicle::from_problem(vehicle, problem))
-            .collect(),
-        services: problem
-            .jobs()
-            .iter()
-            .filter_map(|job| match job {
-                Job::Service(service) => Some(JsonService::from_problem(service, problem)),
-                _ => None,
-            })
-            .collect(),
-    }))
+    Ok(Json(VehicleRoutingJobInput::from(problem)))
 }

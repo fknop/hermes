@@ -1,8 +1,23 @@
 import {
+  autoUpdate,
+  flip,
+  FloatingFocusManager,
+  FloatingOverlay,
+  FloatingPortal,
+  offset,
+  shift,
+  useDismiss,
+  useFloating,
+  useInteractions,
+  useListNavigation,
+  useRole,
+  useTypeahead,
+} from '@floating-ui/react'
+import clsx from 'clsx'
+import {
   ButtonHTMLAttributes,
   Children,
   cloneElement,
-  forwardRef,
   isValidElement,
   ReactElement,
   Ref,
@@ -10,23 +25,7 @@ import {
   useRef,
   useState,
 } from 'react'
-import {
-  useFloating,
-  autoUpdate,
-  flip,
-  offset,
-  shift,
-  useRole,
-  useDismiss,
-  useInteractions,
-  useListNavigation,
-  useTypeahead,
-  FloatingPortal,
-  FloatingFocusManager,
-  FloatingOverlay,
-} from '@floating-ui/react'
 import { MapMouseEvent, useMap } from 'react-map-gl/mapbox'
-import clsx from 'clsx'
 import { GeoPoint } from '../types/GeoPoint'
 
 type MenuItemProps = Omit<

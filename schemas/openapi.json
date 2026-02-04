@@ -91,6 +91,17 @@
               "format": "uuid"
             },
             "style": "simple"
+          },
+          {
+            "in": "query",
+            "name": "geojson",
+            "schema": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "style": "form"
           }
         ],
         "responses": {
@@ -326,6 +337,9 @@
       "ApiSolution": {
         "type": "object",
         "properties": {
+          "distance": {
+            "$ref": "#/components/schemas/Meters"
+          },
           "duration": {
             "type": "string",
             "format": "duration"
@@ -352,6 +366,7 @@
         "required": [
           "routes",
           "duration",
+          "distance",
           "score",
           "score_analysis",
           "unassigned_jobs"
@@ -680,6 +695,17 @@
           "total",
           "total_pages"
         ]
+      },
+      "PollQuery": {
+        "type": "object",
+        "properties": {
+          "geojson": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        }
       },
       "PollResponse": {
         "oneOf": [

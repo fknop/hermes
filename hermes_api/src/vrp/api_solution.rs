@@ -87,6 +87,7 @@ pub struct ApiSolutionRoute {
 pub struct ApiSolution {
     pub routes: Vec<ApiSolutionRoute>,
     pub duration: SignedDuration,
+    pub distance: Meters,
     pub score: Score,
     pub score_analysis: ScoreAnalysis,
     pub unassigned_jobs: Vec<String>,

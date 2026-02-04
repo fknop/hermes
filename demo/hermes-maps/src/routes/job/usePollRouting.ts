@@ -1,24 +1,36 @@
 import { usePollJob } from '@/api/generated/hermes'
 import { PollResponse } from '@/api/generated/schemas'
+import { isNil } from '@/utils/isNil'
 
-export function usePollRouting({ jobId }: { jobId: string }): {
+export function usePollRouting({
+  jobId,
+  geojson,
+}: {
+  jobId: string | null
+  geojson?: boolean
+}): {
   response: PollResponse | null
   restartPolling: () => void
 } {
-  const { data, refetch } = usePollJob(jobId, {
-    query: {
-      refetchInterval: (query) => {
-        const isCompleted = query.state.data?.data.status === 'Completed'
-        const isPending = query.state.data?.data.status === 'Pending'
+  const { data, refetch } = usePollJob(
+    jobId,
+    { geojson },
+    {
+      query: {
+        enabled: !isNil(jobId),
+        refetchInterval: (query) => {
+          const isCompleted = query.state.data?.data.status === 'Completed'
+          const isPending = query.state.data?.data.status === 'Pending'
 
-        if (isPending) {
-          return 2000 // Poll every 2 seconds if pending
-        }
+          if (isPending) {
+            return 2000 // Poll every 2 seconds if pending
+          }
 
-        return isCompleted ? false : 600
+          return isCompleted ? false : 600
+        },
       },
-    },
-  })
+    }
+  )
 
   // const [response, setResponse] = useState<SolutionResponse | null>(null)
   // const [error, setError] = useState<string | null>(null)

@@ -1,35 +1,37 @@
 import {
-  Schedule,
-  ScheduleProps,
-  ScheduleSegmentData,
-} from '@/components/ui/schedule/schedule'
-import { useRoutingJobContext } from './RoutingJobContext'
-import { PropsWithChildren, ReactElement, useCallback, useMemo } from 'react'
-import { Temporal } from 'temporal-polyfill'
+  ApiSolutionActivity,
+  ApiSolutionRoute,
+  Service,
+} from '@/api/generated/schemas'
+import { Badge } from '@/components/ui/badge'
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
 } from '@/components/ui/hover-card'
-import { getRouteColor } from '../colors'
-import { HTMLProps, mergeProps } from '@base-ui/react'
-import { useTimeFormatter } from '@/hooks/useTimeFormatter'
+import { Label } from '@/components/ui/label'
+import {
+  Schedule,
+  ScheduleProps,
+  ScheduleSegmentData,
+} from '@/components/ui/schedule/schedule'
 import { Separator } from '@/components/ui/separator'
 import { useDurationFormatter } from '@/hooks/useDurationFormatter'
-import { Badge } from '@/components/ui/badge'
-import { Label } from '@/components/ui/label'
-import { Service } from '../input'
+import { useTimeFormatter } from '@/hooks/useTimeFormatter'
 import { useTimeWindowFormatter } from '@/hooks/useTimeWindowFormatter'
+import { HTMLProps, mergeProps } from '@base-ui/react'
+import clsx from 'clsx'
 import {
   CornerDownLeftIcon,
-  PackageIcon,
   PackageMinusIcon,
   PauseIcon,
   TruckIcon,
 } from 'lucide-react'
-import clsx from 'clsx'
-import { ApiSolutionActivity, ApiSolutionRoute } from '@/api/generated/schemas'
+import { PropsWithChildren, ReactElement, useCallback, useMemo } from 'react'
+import { Temporal } from 'temporal-polyfill'
+import { getRouteColor } from '../colors'
 import { getSolution } from '../solution'
+import { useRoutingJobContext } from './RoutingJobContext'
 
 type SegmentData =
   | { type: 'activity'; activity: ApiSolutionActivity }
@@ -102,7 +104,6 @@ function StartHoverCardContent({
 }
 
 function ServiceHoverCardContent({
-  activity,
   service,
   segment,
 }: {
