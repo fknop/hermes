@@ -25,6 +25,7 @@ import { EyeIcon, MoreHorizontal } from 'lucide-react'
 import { useMemo } from 'react'
 import { JsonFileUpload } from '../job/JsonFileUpload'
 import { useNavigate } from 'react-router'
+import { toast } from 'sonner'
 
 export default function JobsRoute() {
   const { data, isPending, queryKey } = useListJobs()
@@ -105,9 +106,17 @@ export default function JobsRoute() {
                 onFileUpload={async (acceptedFile) => {
                   const content = await acceptedFile.text()
                   const input = JSON.parse(content)
-                  await createJob({ data: input })
+                  const response = await createJob({ data: input })
                   client.invalidateQueries({
                     queryKey,
+                  })
+
+                  const jobId = response.data.job_id
+                  toast('Job has been created', {
+                    action: {
+                      label: 'Open',
+                      onClick: () => navigate(`/jobs/${jobId}`),
+                    },
                   })
                 }}
               />

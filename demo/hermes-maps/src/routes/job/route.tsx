@@ -41,6 +41,7 @@ export default function VehicleRoutingScreen() {
   const stopRouting = useStopRouting()
   const { response, restartPolling } = usePollRouting({ jobId })
   const solution = getSolution(response)
+
   const [selectedRouteIndex, setSelectedRouteIndex] = useState<number | null>(
     null
   )
@@ -143,22 +144,18 @@ export default function VehicleRoutingScreen() {
     >
       <div className="h-screen w-screen">
         <ResizablePanelGroup orientation="horizontal">
-          {response && (
+          {solution && (
             <ResizablePanel defaultSize={84 * 4} minSize={84 * 4}>
               <MapSidePanel side="left">
                 <div className="flex flex-row h-full">
                   <div className="flex-1 overflow-auto pb-6">
                     <div className="flex flex-col gap-4">
-                      {solution && input && (
-                        <>
-                          <RoutesPanel
-                            solution={solution}
-                            selectedRouteIndex={selectedRouteIndex}
-                            onRouteSelect={setSelectedRouteIndex}
-                            problem={input}
-                          />
-                        </>
-                      )}
+                      <RoutesPanel
+                        solution={solution}
+                        selectedRouteIndex={selectedRouteIndex}
+                        onRouteSelect={setSelectedRouteIndex}
+                        problem={input}
+                      />
                     </div>
                   </div>
                 </div>

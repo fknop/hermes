@@ -35,11 +35,36 @@ export function Map({
       mapStyle={MAPBOX_STYLE}
       onClick={onClick}
       reuseMaps
+      trackResize
     >
       <AnimateBounds bounds={bounds} />
+      <Resizer />
       {children}
     </Mapbox>
   )
+}
+
+const Resizer = () => {
+  const mapRef = useMap()
+
+  useEffect(() => {
+    const resizeObserver = new ResizeObserver(() => {
+      // const bounds = mapRef.current!.getBounds()
+      // console.log(bounds)
+      const center = mapRef.current!.getCenter()
+      // mapRef.current!.resize()
+      // mapRef.current!.fitBounds(bounds!, { duration: 0, padding: 0 })
+      mapRef.current!.setCenter(center)
+    })
+
+    resizeObserver.observe(mapRef.current!.getContainer())
+
+    return () => {
+      resizeObserver.disconnect()
+    }
+  }, [mapRef])
+
+  return null
 }
 
 function AnimateBounds({ bounds }: { bounds?: LngLatBoundsLike }) {
