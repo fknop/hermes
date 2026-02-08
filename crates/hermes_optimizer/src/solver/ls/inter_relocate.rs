@@ -1,3 +1,5 @@
+use tracing::{Level, instrument};
+
 use crate::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
@@ -45,6 +47,7 @@ impl InterRelocateOperator {
 }
 
 impl LocalSearchOperator for InterRelocateOperator {
+    #[instrument(skip_all,level = Level::DEBUG)]
     fn generate_moves<C>(
         problem: &VehicleRoutingProblem,
         solution: &WorkingSolution,

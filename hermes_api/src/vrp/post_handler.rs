@@ -4,6 +4,7 @@ use axum::{Json, extract::State};
 use hermes_optimizer::json::types::JsonVehicleRoutingProblem;
 use schemars::JsonSchema;
 use serde::Serialize;
+use tracing::info;
 
 use crate::{error::ApiError, state::AppState};
 

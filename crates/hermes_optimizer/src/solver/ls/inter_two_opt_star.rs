@@ -1,3 +1,5 @@
+use tracing::{Level, instrument};
+
 use crate::{
     problem::{job::ActivityId, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{
@@ -95,6 +97,7 @@ impl InterTwoOptStarOperator {
 }
 
 impl LocalSearchOperator for InterTwoOptStarOperator {
+    #[instrument(skip_all,level = Level::DEBUG)]
     fn generate_moves<C>(
         problem: &VehicleRoutingProblem,
         solution: &WorkingSolution,

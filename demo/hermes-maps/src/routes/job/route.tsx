@@ -6,7 +6,7 @@ import {
 import { useMapboxBounds } from '@/hooks/useMapboxBounds.ts'
 import { useCallback, useMemo, useState } from 'react'
 import { Source } from 'react-map-gl/mapbox'
-import { ClientLoaderFunctionArgs, useLoaderData } from 'react-router'
+import { ClientLoaderFunctionArgs, redirect, useLoaderData } from 'react-router'
 import { Map } from '../../components/ui/maps/Map.tsx'
 import { MapSidePanel } from '../../components/ui/maps/MapSidePanel.tsx'
 import { PolylineLayer } from '../../PolylineLayer.tsx'
@@ -27,8 +27,19 @@ import { useStopRouting } from './useStopRouting.ts'
 
 export async function clientLoader({ params }: ClientLoaderFunctionArgs) {
   const jobId = params.jobId
-  const data = await getJob(jobId)
-  return { input: data.data, jobId: data.data.id }
+  const response = await getJob(jobId)
+
+  if (response.status === 200) {
+    return {
+      input: response.data,
+      jobId: response.data.id,
+      error: null,
+    }
+  } else if (response.status === 404) {
+    return redirect('/jobs')
+  } else {
+    return redirect('/jobs')
+  }
 }
 
 export default function VehicleRoutingScreen() {

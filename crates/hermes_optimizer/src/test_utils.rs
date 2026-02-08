@@ -1,4 +1,4 @@
-use std::{fs::File, path::PathBuf, str::FromStr, sync::Arc};
+use std::{fs::File, io::BufReader, path::PathBuf, str::FromStr, sync::Arc};
 
 use hermes_matrix_providers::{cache::MatricesCache, travel_matrix_client::TravelMatrixClient};
 use rand::RngCore;
@@ -47,8 +47,9 @@ impl MatricesCache for TestMatricesCache {
         for<'a> &'a P: Into<geo::Point>,
     {
         let file = File::open(&self.path).unwrap();
+        let reader = BufReader::new(file);
         let json: hermes_matrix_providers::travel_matrices::TravelMatrices =
-            serde_json::from_reader(file).unwrap();
+            serde_json::from_reader(reader).unwrap();
 
         Ok(Some(json))
     }
@@ -58,7 +59,8 @@ pub async fn create_test_problem_from_json_file(dir: PathBuf) -> VehicleRoutingP
     let input_path = dir.join("input.json");
     let matrices_path = dir.join("matrices.json");
     let file = File::open(&input_path).unwrap();
-    let json: JsonVehicleRoutingProblem = serde_json::from_reader(file).unwrap();
+    let reader = BufReader::new(file);
+    let json: JsonVehicleRoutingProblem = serde_json::from_reader(reader).unwrap();
     let cache = TestMatricesCache {
         path: matrices_path,
     };

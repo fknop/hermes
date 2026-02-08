@@ -1,11 +1,11 @@
 use std::{
     hash::{Hash, Hasher},
-    io::{BufWriter, Write},
+    io::{BufReader, BufWriter, Write},
     path::{Path, PathBuf},
 };
 
 use fxhash::FxHasher64;
-use tracing::debug;
+use tracing::{debug, info};
 
 use crate::{travel_matrices::TravelMatrices, travel_matrix_provider::TravelMatrixProvider};
 
@@ -108,9 +108,9 @@ impl MatricesCache for FileCache {
         }
 
         let file = std::fs::File::open(file_path)?;
-        let matrices: TravelMatrices = serde_json::from_reader(file)?;
 
-        debug!("Found cached matrix at {}", filename);
+        let reader = BufReader::new(file);
+        let matrices: TravelMatrices = serde_json::from_reader(reader)?;
 
         Ok(Some(matrices))
     }

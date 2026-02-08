@@ -12,15 +12,21 @@ export function usePollRouting({
   response: PollResponse | null
   restartPolling: () => void
 } {
-  const { data, refetch } = usePollJob(
+  const { data: response, refetch } = usePollJob(
     jobId,
     { geojson },
     {
       query: {
         enabled: !isNil(jobId),
         refetchInterval: (query) => {
-          const isCompleted = query.state.data?.data.status === 'Completed'
-          const isPending = query.state.data?.data.status === 'Pending'
+          const response = query.state.data
+
+          if (response?.status !== 200) {
+            return false
+          }
+
+          const isCompleted = response.data.status === 'Completed'
+          const isPending = response.data.status === 'Pending'
 
           if (isPending) {
             return 2000 // Poll every 2 seconds if pending
@@ -63,5 +69,8 @@ export function usePollRouting({
   //   }
   // }, [isCompleted, jobId])
 
-  return { response: data?.data ?? null, restartPolling: refetch }
+  return {
+    response: response?.status === 200 ? response.data : null,
+    restartPolling: refetch,
+  }
 }

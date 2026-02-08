@@ -5,6 +5,7 @@ use hermes_matrix_providers::{
 use jiff::{SignedDuration, Timestamp};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use tracing::info;
 
 use crate::problem::{
     capacity::Capacity,
@@ -23,7 +24,7 @@ pub trait FromProblem<T> {
 }
 
 #[derive(Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields, rename = "VehicleRoutingProblem")]
+#[serde(rename = "VehicleRoutingProblem")]
 pub struct JsonVehicleRoutingProblem {
     pub id: Option<String>,
     pub locations: Vec<JsonLocation>,

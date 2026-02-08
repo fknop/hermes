@@ -40,7 +40,7 @@ pub async fn run(args: OptimizeArgs) -> anyhow::Result<()> {
     // loading_bar.lock().set_message("pending...");
 
     let f = File::open(args.input)?;
-    let content: JsonVehicleRoutingProblem = serde_json::from_reader(f)?;
+    let content: JsonVehicleRoutingProblem = serde_json::from_reader(BufReader::new(f))?;
     let client = TravelMatrixClient::default();
     let problem = content.build_problem(&client).await?;
 

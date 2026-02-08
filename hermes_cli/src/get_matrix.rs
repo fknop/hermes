@@ -1,4 +1,4 @@
-use std::{fs::File, path::PathBuf};
+use std::{fs::File, io::BufReader, path::PathBuf};
 
 use clap::Args;
 use hermes_matrix_providers::{cache::FileCache, travel_matrix_client::TravelMatrixClient};
@@ -20,7 +20,8 @@ async fn fetch_matrix(
     file: &PathBuf,
 ) -> anyhow::Result<()> {
     let f = File::open(file)?;
-    let content: JsonVehicleRoutingProblem = serde_json::from_reader(f)?;
+    let reader = BufReader::new(f);
+    let content: JsonVehicleRoutingProblem = serde_json::from_reader(reader)?;
 
     for profile in content.vehicle_profiles {
         let cost_provider = profile.cost_provider;

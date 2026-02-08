@@ -28,6 +28,7 @@ use crate::{
         score::RUN_SCORE_ASSERTIONS,
         solution::{route_id::RouteIdx, working_solution::WorkingSolution},
     },
+    timer_debug,
     utils::enumerate_idx::EnumerateIdx,
 };
 

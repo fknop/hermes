@@ -1,3 +1,5 @@
+use tracing::{Level, instrument};
+
 use crate::{
     problem::{job::ActivityId, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{
@@ -71,6 +73,7 @@ impl CrossExchangeOperator {
 }
 
 impl LocalSearchOperator for CrossExchangeOperator {
+    #[instrument(skip_all,level = Level::DEBUG)]
     fn generate_moves<C>(
         problem: &VehicleRoutingProblem,
         solution: &WorkingSolution,
@@ -96,8 +99,8 @@ impl LocalSearchOperator for CrossExchangeOperator {
 
         for from_pos in 0..from_route_length - 1 {
             for to_pos in 0..to_route_length - 1 {
-                let max_from_chain = from_route_length - from_pos - 1;
-                let max_to_chain = to_route_length - to_pos - 1;
+                let max_from_chain = (from_route_length - from_pos - 1).max(3);
+                let max_to_chain = (to_route_length - to_pos - 1).max(3);
 
                 // A chain is at least length 2
                 for from_length in 2..=max_from_chain {

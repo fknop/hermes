@@ -24,6 +24,7 @@ use std::sync::Arc;
 use tower::ServiceBuilder;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::{Level, info};
+use tracing_subscriber::fmt::format::FmtSpan;
 
 use mimalloc::MiMalloc;
 
@@ -34,7 +35,14 @@ static GLOBAL: MiMalloc = MiMalloc;
 async fn main() {
     // console_subscriber::init();
     dotenvy::from_filename("./.env.local").ok();
-    tracing_subscriber::fmt().with_max_level(Level::INFO).init();
+
+    let is_debug = std::env::args().any(|a| a == "--debug");
+
+    tracing_subscriber::fmt()
+        .with_timer(tracing_subscriber::fmt::time::uptime())
+        .with_max_level(if is_debug { Level::DEBUG } else { Level::INFO })
+        .with_span_events(FmtSpan::CLOSE)
+        .init();
     aide::generate::on_error(|error| tracing::error!("{}", error));
     aide::generate::extract_schemas(true);
 

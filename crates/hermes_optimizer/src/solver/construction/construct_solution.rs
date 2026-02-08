@@ -3,6 +3,7 @@ use std::{f64, sync::Arc};
 use geo::ConvexHull;
 use jiff::Timestamp;
 use rand::rngs::SmallRng;
+use tracing::{Level, debug, instrument};
 
 use crate::{
     problem::{
@@ -114,6 +115,7 @@ fn compute_convex_hull(problem: &VehicleRoutingProblem) -> (Vec<JobIdx>, Vec<Job
     (exterior, interior)
 }
 
+#[instrument(skip_all, level = Level::DEBUG)]
 fn create_initial_routes(problem: &VehicleRoutingProblem, solution: &mut WorkingSolution) {
     let k_min = find_minimum_vehicles(problem);
 
@@ -300,6 +302,7 @@ pub fn construct_solution(
     constraints: &Vec<Constraint>,
     thread_pool: &rayon::ThreadPool,
 ) -> WorkingSolution {
+    debug!("Start construction heuristic");
     let mut solution = WorkingSolution::new(Arc::clone(problem));
     create_initial_routes(problem, &mut solution);
 
@@ -357,31 +360,34 @@ pub fn construct_solution(
         panic!("Bug: score should never fail when insert_on_failure is false")
     }
 
+    debug!("construct_solution: start local search");
+
     thread_pool.install(|| {
-        local_search.intensify(problem, &mut solution, 10000);
+        // local_search.intensify(problem, &mut solution, 10000);
 
-        let (score, score_analysis) = solution.compute_solution_score(constraints);
+        // let (score, score_analysis) = solution.compute_solution_score(constraints);
 
-        if score.is_failure() {
-            tracing::error!(
-                "Construction LS: solution rejected due to failure score: {:?}",
-                score_analysis,
-            );
-            panic!("Bug: score should never fail when insert_on_failure is false")
-        }
-
-        // for &route_id in &routes {
-        //     local_search.intensify_route(problem, &mut solution, route_id);
-        //     let (score, score_analysis) = solution.compute_solution_score(constraints);
-
-        //     if score.is_failure() {
-        //         tracing::error!(
-        //             "Construction LS: solution rejected due to failure score: {:?}",
-        //             score_analysis,
-        //         );
-        //         panic!("Bug: score should never fail when insert_on_failure is false")
-        //     }
+        // if score.is_failure() {
+        //     tracing::error!(
+        //         "Construction LS: solution rejected due to failure score: {:?}",
+        //         score_analysis,
+        //     );
+        //     panic!("Bug: score should never fail when insert_on_failure is false")
         // }
+
+        for &route_id in &routes {
+            debug!("Intensifying route {}", route_id);
+            local_search.intensify_route(problem, &mut solution, route_id);
+            let (score, score_analysis) = solution.compute_solution_score(constraints);
+
+            if score.is_failure() {
+                tracing::error!(
+                    "Construction LS: solution rejected due to failure score: {:?}",
+                    score_analysis,
+                );
+                panic!("Bug: score should never fail when insert_on_failure is false")
+            }
+        }
     });
 
     solution

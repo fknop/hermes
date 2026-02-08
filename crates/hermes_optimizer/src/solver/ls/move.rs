@@ -1,3 +1,5 @@
+use tracing::instrument;
+
 use crate::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
