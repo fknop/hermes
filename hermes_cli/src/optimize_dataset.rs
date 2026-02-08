@@ -1,5 +1,6 @@
 use std::{
     path::PathBuf,
+    sync::Arc,
     time::{Duration, Instant},
 };
 
@@ -17,6 +18,7 @@ use hermes_optimizer::{
     },
 };
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
+use parking_lot::Mutex;
 
 use crate::{file_utils::read_folder, parsers};
 
@@ -60,14 +62,14 @@ pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
     let style = ProgressStyle::with_template("{prefix:.bold} [{elapsed_precise}] {msg}").unwrap();
     let seconds = args.timeout.as_secs();
 
-    let mut bars: Vec<_> = paths
+    let bars: Vec<_> = paths
         .iter()
         .map(|path| {
             let pb = multi_bar.add(ProgressBar::new(seconds as u64));
             pb.set_style(style.clone());
             pb.set_prefix(path.file_name().unwrap().to_string_lossy().into_owned());
             pb.set_message("pending...");
-            pb
+            Arc::new(Mutex::new(pb))
         })
         .collect();
 
@@ -79,7 +81,6 @@ pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
         let mut optimal_sol: Option<(usize, f64)> = None;
 
         let extension = path.extension().unwrap();
-        let now = Instant::now();
 
         let vrp = if extension == "txt" {
             let parser = SolomonParser;
@@ -109,7 +110,7 @@ pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
             });
         }
 
-        let solver = Solver::new(
+        let mut solver = Solver::new(
             vrp,
             SolverParams {
                 terminations,
@@ -122,12 +123,30 @@ pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
             },
         );
 
-        let bar = &mut bars[i]; //Arc::new(ProgressBar::new(seconds as u64));
-        bar.set_message("running...");
-        bar.reset_elapsed();
-        bar.enable_steady_tick(Duration::from_millis(100));
+        let bar = Arc::clone(&bars[i]);
+        bar.lock().set_message("running...");
+        bar.lock().reset_elapsed();
+        bar.lock().enable_steady_tick(Duration::from_millis(100));
 
-        bar.set_style(style.clone());
+        bar.lock().set_style(style.clone());
+
+        let callback_bar = Arc::clone(&bars[i]);
+        solver.on_best_solution(move |s| {
+            let n_routes = s.solution.non_empty_routes_count();
+            let total_transport_cost = s.solution.total_transport_costs();
+            callback_bar.lock().finish_with_message(format!(
+                "Running... Routes = {}{}, costs = {}, unassigned = {}, gap = {}",
+                n_routes,
+                optimal_sol
+                    .map(|os| format!(" (optimal: {:+})", os.0))
+                    .unwrap_or_default(),
+                total_transport_cost,
+                s.solution.unassigned_jobs().len(),
+                optimal_sol
+                    .map(|oc| format!("{:+.2}%", gap_percent(total_transport_cost, oc.1)))
+                    .unwrap_or_else(|| "n/a".to_string())
+            ));
+        });
 
         solver.solve();
         let best_solution = solver.current_best_solution();
@@ -135,11 +154,11 @@ pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
         if let Some(best_solution) = best_solution {
             let n_routes = best_solution.solution.non_empty_routes_count();
             let total_transport_cost = best_solution.solution.total_transport_costs();
-            bar.finish_with_message(format!(
+            bar.lock().finish_with_message(format!(
                 "Finished - routes = {}{}, costs = {}, unassigned = {}, gap = {}",
                 n_routes,
                 optimal_sol
-                    .map(|os| format!(" ({:+})", n_routes - os.0))
+                    .map(|os| format!(" (optimal: {})", os.0))
                     .unwrap_or_default(),
                 total_transport_cost,
                 best_solution.solution.unassigned_jobs().len(),
@@ -160,7 +179,7 @@ pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
 
             // println!("{}", create_sol_file_contents(&best_solution.solution));
         } else {
-            bar.finish_with_message(format!("No solution"));
+            bar.lock().finish_with_message(format!("No solution"));
         }
     }
 

@@ -347,6 +347,10 @@ impl Alns {
             score,
             score_analysis,
         });
+
+        if let Some(callback) = &self.on_best_solution_handler {
+            callback.lock()(&self.best_solutions.read()[0]);
+        }
     }
 
     pub fn run(&self) {

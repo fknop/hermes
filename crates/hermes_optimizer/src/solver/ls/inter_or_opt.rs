@@ -75,7 +75,11 @@ impl LocalSearchOperator for InterOrOptOperator {
                 continue;
             }
 
-            for from_pos in 0..from_route.activity_ids().len() - (segment_length - 1) {
+            for from_pos in 0..from_route
+                .activity_ids()
+                .len()
+                .saturating_sub(segment_length - 1)
+            {
                 // TODO: handle shipments correctly
                 // let from_activity_id = from_route.activity_id(from_pos);
 

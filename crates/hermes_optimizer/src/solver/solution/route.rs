@@ -1414,6 +1414,10 @@ impl WorkingSolutionRoute {
         //     println!("pickup load not satisfied");
         //     return false;
         // }
+        //
+        if end == 3 && self.current_load.len() == 3 {
+            println!("Route length: {}, start = {}", self.len(), start);
+        }
 
         let load_at_end = &self.current_load[start] + &delivery_load_delta + &pickup_load_delta
             - &added_delivery_load
