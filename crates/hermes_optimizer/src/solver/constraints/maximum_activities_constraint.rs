@@ -6,6 +6,7 @@ use crate::{
     },
 };
 
+#[derive(Clone)]
 pub struct MaximumActivitiesConstraint;
 
 const WEIGHT: f64 = 1000.0;

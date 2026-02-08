@@ -8,7 +8,6 @@ use fxhash::FxHashMap;
 use jiff::{SignedDuration, Timestamp};
 use parking_lot::{MappedRwLockReadGuard, Mutex, RwLock, RwLockReadGuard};
 use rand::{Rng, SeedableRng, rngs::SmallRng};
-use tokio::sync::mpsc::error;
 use tracing::{debug, info, warn};
 
 use crate::{
@@ -427,7 +426,10 @@ impl Alns {
                             global_statistics,
                             thread_statistics,
                             insertion_thread_pool: self.create_insertion_thread_pool(),
-                            local_search: LocalSearch::new(&self.problem),
+                            local_search: LocalSearch::new(
+                                &self.problem,
+                                self.constraints.to_vec(),
+                            ),
                             solution_acceptor,
                             solution_selector,
                         };

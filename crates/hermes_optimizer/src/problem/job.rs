@@ -112,6 +112,14 @@ pub enum Job {
 }
 
 impl Job {
+    pub fn is_service(&self) -> bool {
+        matches!(self, Job::Service(_))
+    }
+
+    pub fn is_shipment(&self) -> bool {
+        matches!(self, Job::Shipment(_))
+    }
+
     pub fn skills(&self) -> &FxHashSet<Skill> {
         match self {
             Job::Service(service) => service.skills(),

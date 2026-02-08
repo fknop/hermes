@@ -50,12 +50,7 @@ impl<'a> RecreateContext<'a> {
     ) -> Score {
         let context =
             InsertionContext::new(self.problem, solution, insertion, self.insert_on_failure);
-        compute_insertion_score(
-            self.constraints,
-            &context,
-            best_score,
-            self.insert_on_failure,
-        )
+        compute_insertion_score(self.constraints, &context, best_score)
     }
 
     pub fn should_insert(&self, score: &Score) -> bool {

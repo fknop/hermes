@@ -8,6 +8,7 @@ use crate::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
         accepted_solution::AcceptedSolution,
+        constraints::constraint::Constraint,
         ls::{
             cross_exchange::CrossExchangeOperator,
             inter_mixed_exchange::InterMixedExchange,
@@ -21,6 +22,7 @@ use crate::{
             or_opt::OrOptOperator,
             relocate::RelocateOperator,
             swap::SwapOperator,
+            swap_star::find_best_swap_star_move,
             two_opt::TwoOptOperator,
         },
         score::RUN_SCORE_ASSERTIONS,
@@ -59,6 +61,7 @@ route_idx_index!(
 type RoutePair = (RouteIdx, RouteIdx);
 
 pub struct LocalSearch {
+    constraints: Vec<Constraint>,
     pairs: Vec<RoutePair>,
     state: LocalSearchState,
 }
@@ -66,12 +69,13 @@ pub struct LocalSearch {
 const MAX_DELTA: f64 = 0.0;
 
 impl LocalSearch {
-    pub fn new(problem: &VehicleRoutingProblem) -> Self {
+    pub fn new(problem: &VehicleRoutingProblem, constraints: Vec<Constraint>) -> Self {
         let count = problem.vehicles().len();
 
         let pairs = Vec::with_capacity(count * count);
 
         LocalSearch {
+            constraints,
             pairs,
             state: LocalSearchState::new(),
         }
@@ -227,6 +231,16 @@ impl LocalSearch {
                     }
                 });
 
+                if let Some(swap_star) =
+                    find_best_swap_star_move(problem, solution, &self.constraints, (r1, r2))
+                {
+                    let delta = swap_star.delta(solution);
+                    if delta < best_delta {
+                        best_delta = delta;
+                        best_move = Some(LocalSearchMove::SwapStar(swap_star));
+                    }
+                }
+
                 (r1, r2, best_delta, best_move)
             })
             .collect::<Vec<_>>();
@@ -276,7 +290,11 @@ impl LocalSearch {
                 let d1_before = solution.route(r1.into()).transport_costs(problem);
                 let d2_before = solution.route(r2.into()).transport_costs(problem);
 
+                let w1_before = solution.route(r1.into()).total_waiting_duration();
+                let w2_before = solution.route(r2.into()).total_waiting_duration();
+
                 let t_delta = op.transport_cost_delta(solution);
+                let w_delta = op.waiting_cost_delta(solution);
 
                 // debug!("{:?}", solution.route(r1.into()).activity_ids());
                 // debug!("{:?}", solution.route(r2.into()).activity_ids());
@@ -289,10 +307,25 @@ impl LocalSearch {
                 let d1_after = solution.route(r1.into()).transport_costs(problem);
                 let d2_after = solution.route(r2.into()).transport_costs(problem);
 
+                let w1_after = solution.route(r1.into()).total_waiting_duration();
+                let w2_after = solution.route(r2.into()).total_waiting_duration();
+
                 let (d_before, d_after) = if r1 == r2 {
                     (d1_before, d1_after)
                 } else {
                     (d1_before + d2_before, d1_after + d2_after)
+                };
+
+                let (w_before, w_after) = if r1 == r2 {
+                    (
+                        problem.waiting_duration_cost(w1_before),
+                        problem.waiting_duration_cost(w1_after),
+                    )
+                } else {
+                    (
+                        problem.waiting_duration_cost(w1_before + w2_before),
+                        problem.waiting_duration_cost(w1_after + w2_after),
+                    )
                 };
 
                 fn approx_eq(a: f64, b: f64, epsilon: f64) -> bool {
@@ -301,11 +334,33 @@ impl LocalSearch {
 
                 assert!(
                     approx_eq(d_before + t_delta, d_after, 1e-9),
-                    "Cost deviation detected, delta does not match the cost after apply. {} {} d={}",
+                    "Transport cost deviation detected for operator {}, delta does not match the cost after apply. {} {} d={}",
+                    op.operator_name(),
                     solution.route(r1.into()).len(),
                     solution.route(r2.into()).len(),
                     t_delta
                 );
+
+                assert!(
+                    approx_eq(w_before + w_delta, w_after, 1e-9),
+                    "Waiting cost deviation detected for operator {}, delta does not match the cost after apply. {} {} d={}",
+                    op.operator_name(),
+                    solution.route(r1.into()).len(),
+                    solution.route(r2.into()).len(),
+                    w_delta
+                );
+
+                let score = solution.compute_solution_score(&self.constraints);
+
+                if score.0.is_failure() {
+                    tracing::error!(
+                        ?op,
+                        "Operator {} broke constraints {:?}",
+                        op.operator_name(),
+                        score.1
+                    );
+                    panic!("Score failed after applying operation")
+                }
             } else {
                 op.apply(problem, solution);
             }

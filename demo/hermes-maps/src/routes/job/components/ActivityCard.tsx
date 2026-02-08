@@ -3,6 +3,7 @@ import { DescriptionItem } from '@/components/ui/description-item'
 import {
   ClockArrowDownIcon,
   ClockArrowUpIcon,
+  ClockIcon,
   CornerDownLeftIcon,
   PauseIcon,
   WarehouseIcon,
@@ -10,6 +11,7 @@ import {
 import { Temporal } from 'temporal-polyfill'
 import { useRoutingJobContext } from './RoutingJobContext'
 import { WaitingDuration } from './WaitingDuration'
+import { useTimeWindowFormatter } from '@/hooks/useTimeWindowFormatter'
 
 interface ActivityCardProps {
   activity: ApiSolutionActivity
@@ -32,6 +34,11 @@ export function ActivityCard({
   isLast,
 }: ActivityCardProps) {
   const { input } = useRoutingJobContext()
+  const service =
+    activity.type === 'Service'
+      ? input.services.find((s) => s.id === activity.id)
+      : undefined
+  const formatTimeWindows = useTimeWindowFormatter()
   const getActivityIcon = () => {
     switch (activity.type) {
       case 'Start':
@@ -102,6 +109,17 @@ export function ActivityCard({
               icon={PauseIcon}
               label="Waiting"
               value={<WaitingDuration duration={activity.waiting_duration} />}
+            />
+          )}
+          {service && (
+            <DescriptionItem
+              icon={ClockIcon}
+              label="Time windows"
+              value={
+                service.time_windows
+                  ?.map((tw) => formatTimeWindows(tw.start, tw.end))
+                  .join(', ') ?? 'N/A'
+              }
             />
           )}
         </div>

@@ -8,6 +8,7 @@ use crate::{
 
 use super::route_constraint::RouteConstraint;
 
+#[derive(Clone)]
 pub struct MaximumWorkingDurationConstraint;
 
 const SCORE_LEVEL: ScoreLevel = ScoreLevel::Hard;

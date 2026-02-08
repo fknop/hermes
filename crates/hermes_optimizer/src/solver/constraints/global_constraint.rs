@@ -11,6 +11,7 @@ pub trait GlobalConstraint {
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score;
 }
 
+#[derive(Clone)]
 pub enum GlobalConstraintType {
     TransportCost(TransportCostConstraint),
 }

@@ -70,27 +70,30 @@ impl LocalSearchOperator for InterOrOptOperator {
             return;
         }
 
-        if to_route.will_break_maximum_activities(problem, 2) {
-            return;
-        }
-
-        for from_pos in 0..from_route.activity_ids().len() - 1 {
-            let from_activity_id = from_route.activity_id(from_pos);
-
-            if from_activity_id.is_shipment() {
-                continue; // skip shipments for inter-relocate
+        for segment_length in 2..=3 {
+            if to_route.will_break_maximum_activities(problem, segment_length) {
+                continue;
             }
 
-            for to_pos in 0..=to_route.activity_ids().len() {
-                let op = InterOrOptOperator::new(InterOrOptParams {
-                    from_route_id: r1,
-                    to_route_id: r2,
-                    segment_start: from_pos,
-                    segment_length: 2,
-                    to: to_pos,
-                });
+            for from_pos in 0..from_route.activity_ids().len() - (segment_length - 1) {
+                // TODO: handle shipments correctly
+                // let from_activity_id = from_route.activity_id(from_pos);
 
-                consumer(op)
+                // if from_activity_id.is_shipment() {
+                //     continue; // skip shipments for or-opt
+                // }
+
+                for to_pos in 0..=to_route.activity_ids().len() {
+                    let op = InterOrOptOperator::new(InterOrOptParams {
+                        from_route_id: r1,
+                        to_route_id: r2,
+                        segment_start: from_pos,
+                        segment_length,
+                        to: to_pos,
+                    });
+
+                    consumer(op)
+                }
             }
         }
     }

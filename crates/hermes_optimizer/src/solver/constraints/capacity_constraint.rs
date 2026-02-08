@@ -13,6 +13,7 @@ use crate::{
 
 use super::route_constraint::RouteConstraint;
 
+#[derive(Clone)]
 pub struct CapacityConstraint {
     score_level: ScoreLevel,
 }

@@ -15,6 +15,7 @@ use crate::{
 
 use super::activity_constraint::ActivityConstraint;
 
+#[derive(Clone)]
 pub struct TimeWindowConstraint {
     score_level: ScoreLevel,
 }

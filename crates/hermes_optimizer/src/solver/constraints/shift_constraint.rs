@@ -10,6 +10,7 @@ use super::route_constraint::RouteConstraint;
 
 const SCORE_LEVEL: ScoreLevel = ScoreLevel::Hard;
 
+#[derive(Clone)]
 pub struct ShiftConstraint;
 
 impl RouteConstraint for ShiftConstraint {

@@ -12,6 +12,7 @@ use super::{
     route_constraint::{RouteConstraint, RouteConstraintType},
 };
 
+#[derive(Clone)]
 pub enum Constraint {
     Global(GlobalConstraintType),
     Route(RouteConstraintType),

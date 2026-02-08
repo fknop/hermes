@@ -337,7 +337,7 @@ pub fn construct_solution(
         },
     );
 
-    let mut local_search = LocalSearch::new(problem);
+    let mut local_search = LocalSearch::new(problem, constraints.to_vec());
 
     let routes = solution
         .routes()
@@ -358,18 +358,30 @@ pub fn construct_solution(
     }
 
     thread_pool.install(|| {
-        for &route_id in &routes {
-            local_search.intensify_route(problem, &mut solution, route_id);
-            let (score, score_analysis) = solution.compute_solution_score(constraints);
+        local_search.intensify(problem, &mut solution, 10000);
 
-            if score.is_failure() {
-                tracing::error!(
-                    "Construction LS: solution rejected due to failure score: {:?}",
-                    score_analysis,
-                );
-                panic!("Bug: score should never fail when insert_on_failure is false")
-            }
+        let (score, score_analysis) = solution.compute_solution_score(constraints);
+
+        if score.is_failure() {
+            tracing::error!(
+                "Construction LS: solution rejected due to failure score: {:?}",
+                score_analysis,
+            );
+            panic!("Bug: score should never fail when insert_on_failure is false")
         }
+
+        // for &route_id in &routes {
+        //     local_search.intensify_route(problem, &mut solution, route_id);
+        //     let (score, score_analysis) = solution.compute_solution_score(constraints);
+
+        //     if score.is_failure() {
+        //         tracing::error!(
+        //             "Construction LS: solution rejected due to failure score: {:?}",
+        //             score_analysis,
+        //         );
+        //         panic!("Bug: score should never fail when insert_on_failure is false")
+        //     }
+        // }
     });
 
     solution

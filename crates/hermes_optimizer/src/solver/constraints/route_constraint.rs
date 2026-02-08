@@ -22,6 +22,7 @@ pub trait RouteConstraint {
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score;
 }
 
+#[derive(Clone)]
 pub enum RouteConstraintType {
     Capacity(CapacityConstraint),
     Shift(ShiftConstraint),

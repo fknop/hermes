@@ -21,6 +21,7 @@ pub trait ActivityConstraint {
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score;
 }
 
+#[derive(Clone)]
 pub enum ActivityConstraintType {
     TimeWindow(TimeWindowConstraint),
 }

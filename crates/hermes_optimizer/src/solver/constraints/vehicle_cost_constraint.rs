@@ -10,6 +10,7 @@ use super::route_constraint::RouteConstraint;
 
 const SCORE_LEVEL: ScoreLevel = ScoreLevel::Soft;
 
+#[derive(Clone)]
 pub struct VehicleCostConstraint;
 
 impl RouteConstraint for VehicleCostConstraint {

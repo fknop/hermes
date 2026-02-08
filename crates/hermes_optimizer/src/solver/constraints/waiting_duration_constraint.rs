@@ -10,6 +10,7 @@ use crate::{
 
 use super::route_constraint::RouteConstraint;
 
+#[derive(Clone)]
 pub struct WaitingDurationConstraint;
 
 const SCORE_LEVEL: ScoreLevel = ScoreLevel::Soft;

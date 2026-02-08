@@ -11,4 +11,5 @@ pub mod r#move;
 pub mod or_opt;
 pub mod relocate;
 pub mod swap;
+pub mod swap_star;
 pub mod two_opt;
