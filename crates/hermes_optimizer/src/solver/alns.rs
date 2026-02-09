@@ -8,7 +8,7 @@ use fxhash::FxHashMap;
 use jiff::{SignedDuration, Timestamp};
 use parking_lot::{MappedRwLockReadGuard, Mutex, RwLock, RwLockReadGuard};
 use rand::{Rng, SeedableRng, rngs::SmallRng};
-use tracing::{debug, info, warn};
+use tracing::{debug, info, instrument, warn};
 
 use crate::{
     acceptor::{
@@ -20,9 +20,10 @@ use crate::{
     },
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     selector::{
-        select_best_selector::SelectBestSelector, select_random_selector::SelectRandomSelector,
-        select_solution::SelectSolution, select_weighted::SelectWeightedSelector,
-        solution_selector::SolutionSelector,
+        select_best_selector::SelectBestSelector,
+        select_binary_tournament::BinaryTournamentSelector,
+        select_random_selector::SelectRandomSelector, select_solution::SelectSolution,
+        select_weighted::SelectWeightedSelector, solution_selector::SolutionSelector,
     },
     solver::{
         alns_weights::{AlnsScores, AlnsWeights, UpdateScoreParams},
@@ -40,6 +41,7 @@ use crate::{
         ls::local_search::LocalSearch,
         noise::NoiseParams,
         score::RUN_SCORE_ASSERTIONS,
+        solution::population::Population,
         solver_params::SolverParamsDebugOptions,
         statistics::SearchStatisticsIteration,
     },
@@ -56,7 +58,7 @@ use super::{
         recreate_strategy::RecreateStrategy,
     },
     ruin::{ruin_context::RuinContext, ruin_solution::RuinSolution, ruin_strategy::RuinStrategy},
-    score::{Score, ScoreAnalysis},
+    score::Score,
     solution::working_solution::WorkingSolution,
     solver_params::{
         SolverAcceptorStrategy, SolverParams, SolverSelectorStrategy, Termination, Threads,
@@ -72,7 +74,8 @@ pub struct Alns {
     problem: Arc<VehicleRoutingProblem>,
     constraints: Vec<Constraint>,
     params: SolverParams,
-    best_solutions: Arc<RwLock<Vec<AcceptedSolution>>>,
+    // best_solutions: Arc<RwLock<Vec<AcceptedSolution>>>,
+    population: Arc<RwLock<Population>>,
     tabu: Arc<RwLock<VecDeque<AcceptedSolution>>>,
     global_alns_ruin_weights: Arc<RwLock<AlnsWeights<RuinStrategy>>>,
     global_alns_recreate_weights: Arc<RwLock<AlnsWeights<RecreateStrategy>>>,
@@ -94,7 +97,8 @@ impl Alns {
         Alns {
             problem: Arc::clone(&problem),
             constraints: Self::create_constraints(),
-            best_solutions: Arc::new(RwLock::new(Vec::with_capacity(params.max_solutions))),
+            population: Arc::new(RwLock::new(Population::new(params.max_solutions))),
+            // best_solutions: Arc::new(RwLock::new(Vec::with_capacity(params.max_solutions))),
             global_alns_ruin_weights: Arc::new(RwLock::new(AlnsWeights::new(
                 params.ruin_strategies().clone(),
             ))),
@@ -125,7 +129,7 @@ impl Alns {
 
     fn set_initial_solution(&self, solution: WorkingSolution) {
         let (score, score_analysis) = solution.compute_solution_score(&self.constraints);
-        self.best_solutions.write().push(AcceptedSolution {
+        self.population.write().add_solution(AcceptedSolution {
             solution,
             score,
             score_analysis,
@@ -158,6 +162,9 @@ impl Alns {
             }
             SolverSelectorStrategy::SelectWeighted => {
                 SolutionSelector::SelectWeighted(SelectWeightedSelector)
+            }
+            SolverSelectorStrategy::BinaryTournament => {
+                SolutionSelector::BinaryTournament(BinaryTournamentSelector)
             }
         }
     }
@@ -194,17 +201,17 @@ impl Alns {
                 shrimpf_initial_threshold_search.run();
 
                 let total_score = shrimpf_initial_threshold_search
-                    .best_solutions
+                    .population
                     .read()
-                    .iter()
+                    .all_solutions()
                     .map(|accepted_solution| accepted_solution.score.soft_score)
                     .sum::<f64>();
                 let mean = total_score / random_walks as f64;
 
                 let variance = shrimpf_initial_threshold_search
-                    .best_solutions
+                    .population
                     .read()
-                    .iter()
+                    .all_solutions()
                     .map(|accepted_solution| (accepted_solution.score.soft_score - mean).powf(2.0))
                     .sum::<f64>()
                     / ((random_walks - 1) as f64);
@@ -290,7 +297,7 @@ impl Alns {
     }
 
     pub fn best_solution(&self) -> Option<MappedRwLockReadGuard<'_, AcceptedSolution>> {
-        RwLockReadGuard::try_map(self.best_solutions.read(), |solutions| solutions.first()).ok()
+        RwLockReadGuard::try_map(self.population.read(), |population| population.best()).ok()
     }
 
     #[cfg(feature = "statistics")]
@@ -310,9 +317,10 @@ impl Alns {
             .store(true, std::sync::atomic::Ordering::Relaxed);
     }
 
+    #[instrument(skip_all, level = "debug")]
     fn run_construction(&self, rng: &mut SmallRng) {
         // Solutions already exist, no need to run construction heuristic
-        if !self.best_solutions.read().is_empty() {
+        if !self.population.read().is_empty() {
             return;
         }
 
@@ -342,14 +350,16 @@ impl Alns {
                 });
         }
 
-        self.best_solutions.write().push(AcceptedSolution {
+        self.population.write().add_solution(AcceptedSolution {
             solution: initial_solution,
             score,
             score_analysis,
         });
 
-        if let Some(callback) = &self.on_best_solution_handler {
-            callback.lock()(&self.best_solutions.read()[0]);
+        if let Some(callback) = &self.on_best_solution_handler
+            && let Some(best) = self.population.read().best()
+        {
+            callback.lock()(best);
         }
     }
 
@@ -379,7 +389,7 @@ impl Alns {
             for thread_index in 0..num_threads {
                 let thread_barrier = Arc::clone(&barrier);
 
-                let best_solutions = Arc::clone(&self.best_solutions);
+                let population = Arc::clone(&self.population);
                 let tabu = Arc::clone(&self.tabu);
 
                 let global_statistics = Arc::clone(self.statistics.global_statistics());
@@ -423,7 +433,7 @@ impl Alns {
                             alns_recreate_scores: AlnsScores::new(
                                 self.params.recreate_strategies().clone(),
                             ),
-                            best_solutions,
+                            population,
                             tabu,
                             last_intensify_iteration: None,
                             max_iterations,
@@ -452,22 +462,27 @@ impl Alns {
                                     best_score,
                                     best_unassigned_count,
                                 ) = {
-                                    let solutions_guard = state.best_solutions.read();
-                                    if !solutions_guard.is_empty()
+                                    let population = state.population.read();
+                                    if !population.is_empty()
                                         && let Some(AcceptedSolution {
                                             solution,
                                             score,
                                             score_analysis,
                                             ..
-                                        }) = best_selector
-                                            .select_solution(&solutions_guard, &mut thread_rng)
+                                        }) = population
+                                            .select_solution(&best_selector, &mut thread_rng)
                                     {
                                         (
                                             solution.clone(),
                                             *score,
                                             score_analysis.clone(),
-                                            solutions_guard[0].score,
-                                            solutions_guard[0].solution.unassigned_jobs().len(),
+                                            population.best().unwrap().score,
+                                            population
+                                                .best()
+                                                .unwrap()
+                                                .solution
+                                                .unassigned_jobs()
+                                                .len(),
                                         )
                                     } else {
                                         panic!("No solutions selected");
@@ -487,14 +502,14 @@ impl Alns {
                                 let score =
                                     working_solution.compute_solution_score(&self.constraints);
 
-                                if score.0.is_failure() {
+                                if score.0.is_infeasible() {
                                     warn!("LocalSearch broke hard constraints");
 
                                     let analysis = score
                                         .1
                                         .scores
                                         .iter()
-                                        .filter(|(_, s)| s.is_failure())
+                                        .filter(|(_, s)| s.is_infeasible())
                                         .collect::<FxHashMap<_, _>>();
 
                                     warn!("{:?}", analysis);
@@ -533,7 +548,7 @@ impl Alns {
                                     best_unassigned_count,
                                 };
 
-                                self.update_solutions(
+                                self.update_population(
                                     working_solution,
                                     &mut state,
                                     iteration_info,
@@ -588,7 +603,7 @@ impl Alns {
                                 state.alns_recreate_weights =
                                     self.global_alns_recreate_weights.read().clone();
 
-                                state.local_search.clear_stale(&self.best_solutions.read());
+                                state.local_search.clear_stale(&self.population.read());
                             }
 
                             let is_stopped =
@@ -620,7 +635,7 @@ impl Alns {
                 state.iterations_without_improvement >= max_iterations_without_improvement
             }
             Termination::Score(target_score) => {
-                if let Some(best_solution) = state.best_solutions.read().first()
+                if let Some(best_solution) = state.population.read().best()
                     && !best_solution.solution.has_unassigned()
                 {
                     (best_solution.score * 100.0).round() / 100.0 <= target_score
@@ -629,7 +644,7 @@ impl Alns {
                 }
             }
             Termination::VehiclesAndCosts { vehicles, costs } => {
-                if let Some(best_solution) = state.best_solutions.read().first()
+                if let Some(best_solution) = state.population.read().best()
                     && !best_solution.solution.has_unassigned()
                 {
                     best_solution.solution.total_transport_costs() <= costs
@@ -662,19 +677,17 @@ impl Alns {
 
     fn run_iteration(&self, state: &mut ThreadedSearchState, rng: &mut SmallRng) {
         let (mut working_solution, current_score, best_score, best_unassigned_count) = {
-            let solutions_guard = state.best_solutions.read();
-            if !solutions_guard.is_empty()
+            let population = state.population.read();
+            if !population.is_empty()
                 && let Some(AcceptedSolution {
                     solution, score, ..
-                }) = state
-                    .solution_selector
-                    .select_solution(&solutions_guard, rng)
+                }) = population.select_solution(state.solution_selector.as_ref(), rng)
             {
                 (
                     solution.clone(),
                     *score,
-                    solutions_guard[0].score,
-                    solutions_guard[0].solution.unassigned_jobs().len(),
+                    population.best().unwrap().score,
+                    population.best().unwrap().solution.unassigned_jobs().len(),
                 )
             } else {
                 panic!("No solutions selected");
@@ -686,9 +699,9 @@ impl Alns {
         let now = Timestamp::now();
         self.ruin(&mut working_solution, ruin_strategy, state, rng);
 
-        if !current_score.is_failure() && !self.params.recreate.insert_on_failure {
+        if !current_score.is_infeasible() && !self.params.recreate.insert_on_failure {
             let (score, analysis) = working_solution.compute_solution_score(&self.constraints);
-            if score.is_failure() {
+            if score.is_infeasible() {
                 tracing::warn!("Ignore iteration due to failing ruin");
                 return;
             }
@@ -724,7 +737,7 @@ impl Alns {
         //     });
         // }
 
-        self.update_solutions(
+        self.update_population(
             working_solution,
             state,
             IterationInfo::RuinRecreate {
@@ -741,7 +754,7 @@ impl Alns {
         );
     }
 
-    fn update_solutions(
+    fn update_population(
         &self,
         solution: WorkingSolution,
         state: &mut ThreadedSearchState,
@@ -757,7 +770,8 @@ impl Alns {
 
         let (score, score_analysis) = solution.compute_solution_score(&self.constraints);
 
-        if RUN_SCORE_ASSERTIONS && !self.params.recreate.insert_on_failure && score.is_failure() {
+        if RUN_SCORE_ASSERTIONS && !self.params.recreate.insert_on_failure && score.is_infeasible()
+        {
             tracing::error!(
                 "Solution rejected due to failure score: {:?} {:?}",
                 score_analysis,
@@ -766,7 +780,7 @@ impl Alns {
             panic!("Bug: score should never fail when insert_on_failure is false")
         }
 
-        let mut guard = state.best_solutions.upgradable_read();
+        let mut guard = state.population.upgradable_read();
 
         let is_best = (score < iteration_info.best_score()
             && solution.unassigned_jobs().len() <= iteration_info.best_unassigned_count())
@@ -777,7 +791,7 @@ impl Alns {
 
         if is_best
             || state.solution_acceptor.accept(
-                &guard,
+                guard.solutions(),
                 &solution,
                 &score,
                 AcceptSolutionContext {
@@ -788,11 +802,6 @@ impl Alns {
                 },
             )
         {
-            let is_duplicate = guard.iter().any(|accepted_solution| {
-                accepted_solution.score == score
-                    && accepted_solution.solution.is_identical(&solution)
-            });
-
             if !is_best {
                 state.iterations_without_improvement += 1;
             } else {
@@ -854,47 +863,58 @@ impl Alns {
                         && accepted_solution.solution.is_identical(&solution)
                 });
 
-            // Don't store it if it's a duplicate
-            if !is_duplicate && !is_tabu {
-                guard.with_upgraded(|guard| {
-                    // Evict worst
-                    if guard.len() + 1 > self.params.max_solutions
-                        && let Some(worst_solution) = guard.pop()
-                        && self.params.tabu_enabled
-                    {
-                        let mut guard = state.tabu.write();
-                        guard.push_front(worst_solution);
-                        if guard.len() > self.params.tabu_size {
-                            guard.pop_back();
-                        }
-                    }
-
-                    if solution.unassigned_jobs().len() < guard[0].solution.unassigned_jobs().len()
-                    {
-                        guard.retain(|s| {
-                            s.solution.unassigned_jobs().len() <= solution.unassigned_jobs().len()
-                        });
-                    }
-
-                    guard.push(AcceptedSolution {
-                        solution,
-                        score,
-                        score_analysis,
-                    });
-
-                    guard.sort_unstable_by(|a, b| {
-                        a.solution
-                            .unassigned_jobs()
-                            .len()
-                            .cmp(&b.solution.unassigned_jobs().len())
-                            .then(a.score.cmp(&b.score))
-                    });
-
-                    if is_best && let Some(callback) = &self.on_best_solution_handler {
-                        callback.lock()(&guard[0]);
-                    }
+            guard.with_upgraded(|guard| {
+                guard.add_solution(AcceptedSolution {
+                    solution,
+                    score,
+                    score_analysis,
                 });
-            }
+
+                if is_best
+                    && let Some(callback) = &self.on_best_solution_handler
+                    && let Some(best) = guard.best()
+                {
+                    callback.lock()(best);
+                }
+            });
+
+            // // Don't store it if it's a duplicate
+            // if !is_duplicate && !is_tabu {
+            //     guard.with_upgraded(|guard| {
+            //         // Evict worst
+            //         if guard.len() + 1 > self.params.max_solutions
+            //             && let Some(worst_solution) = guard.pop()
+            //             && self.params.tabu_enabled
+            //         {
+            //             let mut guard = state.tabu.write();
+            //             guard.push_front(worst_solution);
+            //             if guard.len() > self.params.tabu_size {
+            //                 guard.pop_back();
+            //             }
+            //         }
+
+            //         if solution.unassigned_jobs().len() < guard[0].solution.unassigned_jobs().len()
+            //         {
+            //             guard.retain(|s| {
+            //                 s.solution.unassigned_jobs().len() <= solution.unassigned_jobs().len()
+            //             });
+            //         }
+
+            //         guard.push(AcceptedSolution {
+            //             solution,
+            //             score,
+            //             score_analysis,
+            //         });
+
+            //         guard.sort_unstable_by(|a, b| {
+            //             a.solution
+            //                 .unassigned_jobs()
+            //                 .len()
+            //                 .cmp(&b.solution.unassigned_jobs().len())
+            //                 .then(a.score.cmp(&b.score))
+            //         });
+            //     });
+            // }
 
             if let Some(strategy) = iteration_info.strategy() {
                 state.alns_ruin_scores.update_scores(
@@ -1117,7 +1137,8 @@ struct ThreadedSearchState {
     alns_recreate_weights: AlnsWeights<RecreateStrategy>,
     alns_ruin_scores: AlnsScores<RuinStrategy>,
     alns_recreate_scores: AlnsScores<RecreateStrategy>,
-    best_solutions: Arc<RwLock<Vec<AcceptedSolution>>>,
+    // best_solutions: Arc<RwLock<Vec<AcceptedSolution>>>,
+    population: Arc<RwLock<Population>>,
     tabu: Arc<RwLock<VecDeque<AcceptedSolution>>>,
     iteration: usize,
     max_iterations: Option<usize>,

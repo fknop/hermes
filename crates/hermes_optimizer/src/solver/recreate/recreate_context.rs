@@ -57,7 +57,7 @@ impl<'a> RecreateContext<'a> {
         if self.insert_on_failure {
             true
         } else {
-            !score.is_failure()
+            !score.is_infeasible()
         }
     }
 
@@ -72,10 +72,10 @@ impl<'a> RecreateContext<'a> {
         solution.insert(&insertion);
 
         if !self.insert_on_failure {
-            let (current_score, current_score_analysis) =
+            let (_, current_score_analysis) =
                 cloned_solution.compute_solution_score(self.constraints);
             let (score, analysis) = solution.compute_solution_score(self.constraints);
-            if score.is_failure() {
+            if score.is_infeasible() {
                 tracing::error!(
                     "({}) Insertion {:?} resulted in a score failure",
                     strategy,

@@ -76,7 +76,11 @@ impl Score {
         }
     }
 
-    pub fn is_failure(&self) -> bool {
+    pub fn is_feasible(&self) -> bool {
+        self.hard_score == 0.0
+    }
+
+    pub fn is_infeasible(&self) -> bool {
         self.hard_score > 0.0
     }
 }

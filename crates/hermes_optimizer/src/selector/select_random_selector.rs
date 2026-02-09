@@ -10,7 +10,7 @@ impl SelectSolution for SelectRandomSelector {
     fn select_solution<'a>(
         &self,
         solutions: &'a [AcceptedSolution],
-        rng: &mut SmallRng,
+        rng: &mut impl rand::Rng,
     ) -> Option<&'a AcceptedSolution> {
         solutions.choose(rng)
     }

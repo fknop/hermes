@@ -99,10 +99,12 @@ impl WorkingSolution {
     /// 1) the number of routes
     /// 2) the vehicle IDs of each route
     /// 3) the service IDs of each activity in the routes
-    ///
-    /// Not perfect as routes that are not in the same order may not match properly
     pub fn is_identical(&self, other: &WorkingSolution) -> bool {
         if self.routes.len() != other.routes.len() {
+            return false;
+        }
+
+        if self.unassigned_jobs.len() != other.unassigned_jobs.len() {
             return false;
         }
 
@@ -111,7 +113,7 @@ impl WorkingSolution {
                 return false;
             }
 
-            if route.activity_ids.len() != other_route.activity_ids.len() {
+            if route.len() != other_route.len() {
                 return false;
             }
 

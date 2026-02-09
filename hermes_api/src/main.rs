@@ -24,6 +24,7 @@ use std::sync::Arc;
 use tower::ServiceBuilder;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::{Level, info};
+use tracing_subscriber::EnvFilter;
 use tracing_subscriber::fmt::format::FmtSpan;
 
 use mimalloc::MiMalloc;
@@ -42,6 +43,11 @@ async fn main() {
         .with_timer(tracing_subscriber::fmt::time::uptime())
         .with_max_level(if is_debug { Level::DEBUG } else { Level::INFO })
         .with_span_events(FmtSpan::CLOSE)
+        .with_env_filter(EnvFilter::new(if is_debug {
+            "hermes_routing=info,hermes_optimizer=debug,hermes_api=debug"
+        } else {
+            "aide=warn,hermes_optimizer=info,hermes_api=info,hermes_routing=info"
+        }))
         .init();
     aide::generate::on_error(|error| tracing::error!("{}", error));
     aide::generate::extract_schemas(true);

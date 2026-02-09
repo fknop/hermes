@@ -10,7 +10,7 @@ impl SelectSolution for SelectWeightedSelector {
     fn select_solution<'a>(
         &self,
         solutions: &'a [AcceptedSolution],
-        rng: &mut SmallRng,
+        rng: &mut impl rand::Rng,
     ) -> Option<&'a AcceptedSolution> {
         if solutions.is_empty() {
             return None; // No solutions to select from

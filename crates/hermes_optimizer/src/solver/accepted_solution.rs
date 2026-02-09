@@ -9,3 +9,9 @@ pub struct AcceptedSolution {
     pub score: Score,
     pub score_analysis: ScoreAnalysis,
 }
+
+impl AcceptedSolution {
+    pub fn is_feasible(&self) -> bool {
+        !self.score.is_infeasible()
+    }
+}

@@ -19,8 +19,11 @@ use crate::{
         ls::local_search::LocalSearch,
         noise::NoiseParams,
         recreate::{
+            best_insertion::{BestInsertion, BestInsertionParams, BestInsertionSortStrategy},
             construction_best_insertion::ConstructionBestInsertion,
-            recreate_context::RecreateContext, regret_insertion::RegretInsertion,
+            recreate_context::RecreateContext,
+            recreate_solution::RecreateSolution,
+            regret_insertion::RegretInsertion,
         },
         solution::{route_id::RouteIdx, working_solution::WorkingSolution},
         solver_params::SolverParams,
@@ -306,39 +309,44 @@ pub fn construct_solution(
     let mut solution = WorkingSolution::new(Arc::clone(problem));
     create_initial_routes(problem, &mut solution);
 
-    // let regret_insertion = RegretInsertion::new(2);
+    if problem.jobs().len() > 500 {
+        let best_insertion = BestInsertion::new(BestInsertionParams {
+            blink_rate: 0.0,
+            sort_strategy: BestInsertionSortStrategy::Far,
+        });
 
-    // regret_insertion.insert_services(
-    //     &mut solution,
-    //     RecreateContext {
-    //         rng,
-    //         constraints,
-    //         noise_params: NoiseParams {
-    //             max_cost: problem.max_cost(),
-    //             noise_level: params.noise_level,
-    //             noise_probability: params.noise_probability,
-    //         },
-    //         problem,
-    //         thread_pool,
-    //         insert_on_failure: false,
-    //     },
-    // );
-
-    ConstructionBestInsertion::insert_services(
-        &mut solution,
-        RecreateContext {
-            rng,
-            constraints,
-            noise_params: NoiseParams {
-                max_cost: problem.max_cost(),
-                noise_level: params.noise_level,
-                noise_probability: params.noise_probability,
+        best_insertion.recreate_solution(
+            &mut solution,
+            RecreateContext {
+                rng,
+                constraints,
+                noise_params: NoiseParams {
+                    max_cost: problem.max_cost(),
+                    noise_level: params.noise_level,
+                    noise_probability: params.noise_probability,
+                },
+                problem,
+                thread_pool,
+                insert_on_failure: false,
             },
-            problem,
-            thread_pool,
-            insert_on_failure: false,
-        },
-    );
+        );
+    } else {
+        ConstructionBestInsertion::insert_services(
+            &mut solution,
+            RecreateContext {
+                rng,
+                constraints,
+                noise_params: NoiseParams {
+                    max_cost: problem.max_cost(),
+                    noise_level: params.noise_level,
+                    noise_probability: params.noise_probability,
+                },
+                problem,
+                thread_pool,
+                insert_on_failure: false,
+            },
+        );
+    }
 
     let mut local_search = LocalSearch::new(problem, constraints.to_vec());
 
@@ -352,7 +360,7 @@ pub fn construct_solution(
 
     let (score, score_analysis) = solution.compute_solution_score(constraints);
 
-    if score.is_failure() {
+    if score.is_infeasible() {
         tracing::error!(
             "Construction ALNS: solution rejected due to failure score: {:?}",
             score_analysis,
@@ -363,31 +371,31 @@ pub fn construct_solution(
     debug!("construct_solution: start local search");
 
     thread_pool.install(|| {
-        // local_search.intensify(problem, &mut solution, 10000);
+        local_search.intensify(problem, &mut solution, 500);
 
-        // let (score, score_analysis) = solution.compute_solution_score(constraints);
+        let (score, score_analysis) = solution.compute_solution_score(constraints);
 
-        // if score.is_failure() {
-        //     tracing::error!(
-        //         "Construction LS: solution rejected due to failure score: {:?}",
-        //         score_analysis,
-        //     );
-        //     panic!("Bug: score should never fail when insert_on_failure is false")
-        // }
-
-        for &route_id in &routes {
-            debug!("Intensifying route {}", route_id);
-            local_search.intensify_route(problem, &mut solution, route_id);
-            let (score, score_analysis) = solution.compute_solution_score(constraints);
-
-            if score.is_failure() {
-                tracing::error!(
-                    "Construction LS: solution rejected due to failure score: {:?}",
-                    score_analysis,
-                );
-                panic!("Bug: score should never fail when insert_on_failure is false")
-            }
+        if score.is_infeasible() {
+            tracing::error!(
+                "Construction LS: solution rejected due to failure score: {:?}",
+                score_analysis,
+            );
+            panic!("Bug: score should never fail when insert_on_failure is false")
         }
+
+        // for &route_id in &routes {
+        //     debug!("Intensifying route {}", route_id);
+        //     local_search.intensify_route(problem, &mut solution, route_id);
+        //     let (score, score_analysis) = solution.compute_solution_score(constraints);
+
+        //     if score.is_infeasible() {
+        //         tracing::error!(
+        //             "Construction LS: solution rejected due to failure score: {:?}",
+        //             score_analysis,
+        //         );
+        //         panic!("Bug: score should never fail when insert_on_failure is false")
+        //     }
+        // }
     });
 
     solution

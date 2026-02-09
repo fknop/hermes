@@ -4,9 +4,7 @@ use crate::{
     problem::{job::ActivityId, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{
         ls::r#move::LocalSearchOperator,
-        solution::{
-            route::WorkingSolutionRoute, route_id::RouteIdx, working_solution::WorkingSolution,
-        },
+        solution::{route_id::RouteIdx, working_solution::WorkingSolution},
     },
 };
 

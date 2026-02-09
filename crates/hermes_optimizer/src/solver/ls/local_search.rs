@@ -2,7 +2,7 @@ use std::f64;
 
 use fxhash::{FxBuildHasher, FxHashMap, FxHashSet};
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
-use tracing::{debug, info, warn};
+use tracing::{debug, info, instrument, warn};
 
 use crate::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
@@ -26,7 +26,7 @@ use crate::{
             two_opt::TwoOptOperator,
         },
         score::RUN_SCORE_ASSERTIONS,
-        solution::{route_id::RouteIdx, working_solution::WorkingSolution},
+        solution::{population::Population, route_id::RouteIdx, working_solution::WorkingSolution},
     },
     timer_debug,
     utils::enumerate_idx::EnumerateIdx,
@@ -82,6 +82,7 @@ impl LocalSearch {
         }
     }
 
+    #[instrument(skip_all, level = "debug")]
     pub fn intensify(
         &mut self,
         problem: &VehicleRoutingProblem,
@@ -98,6 +99,7 @@ impl LocalSearch {
         iterations
     }
 
+    #[instrument(skip_all, level = "debug")]
     pub fn intensify_route(
         &mut self,
         problem: &VehicleRoutingProblem,
@@ -353,7 +355,7 @@ impl LocalSearch {
 
                 let score = solution.compute_solution_score(&self.constraints);
 
-                if score.0.is_failure() {
+                if score.0.is_infeasible() {
                     tracing::error!(
                         ?op,
                         "Operator {} broke constraints {:?}",
@@ -385,8 +387,8 @@ impl LocalSearch {
         }
     }
 
-    pub fn clear_stale(&mut self, accepted_solutions: &[AcceptedSolution]) {
-        self.state.clear_stale(accepted_solutions);
+    pub fn clear_stale(&mut self, population: &Population) {
+        self.state.clear_stale(population);
     }
 
     fn delta(&self, solution: &WorkingSolution, r1: RouteIdx, r2: RouteIdx) -> f64 {
@@ -490,9 +492,9 @@ impl LocalSearchState {
         self.0.insert(key, (delta, best_move));
     }
 
-    fn clear_stale(&mut self, solutions: &[AcceptedSolution]) {
-        let versions = solutions
-            .iter()
+    fn clear_stale(&mut self, population: &Population) {
+        let versions = population
+            .all_solutions()
             .flat_map(|s| s.solution.routes())
             .map(|r| r.version())
             .collect::<FxHashSet<_>>();

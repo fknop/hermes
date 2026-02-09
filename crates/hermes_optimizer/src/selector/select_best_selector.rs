@@ -10,7 +10,7 @@ impl SelectSolution for SelectBestSelector {
     fn select_solution<'a>(
         &self,
         solutions: &'a [AcceptedSolution],
-        _: &mut SmallRng,
+        _: &mut impl rand::Rng,
     ) -> Option<&'a AcceptedSolution> {
         // Assumption that it's sorted
         solutions.first()

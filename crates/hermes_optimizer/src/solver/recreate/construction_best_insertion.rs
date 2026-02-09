@@ -1,3 +1,5 @@
+use tracing::instrument;
+
 use crate::solver::{
     insertion::{Insertion, for_each_route_insertion},
     insertion_cache::InsertionCache,
@@ -11,6 +13,7 @@ use super::{recreate_context::RecreateContext, recreate_solution::RecreateSoluti
 pub struct ConstructionBestInsertion;
 
 impl ConstructionBestInsertion {
+    #[instrument(skip_all, level = "debug")]
     pub fn insert_services(solution: &mut WorkingSolution, context: RecreateContext) {
         // Insertions into routes will keep the same cost accross insertions while the routes remain unchanged
         let mut insertion_cache = InsertionCache::new();

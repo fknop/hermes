@@ -11,7 +11,7 @@ pub fn compute_insertion_score(
 
     let skip_on_failure = !context.insert_on_failure
         || best_score
-            .map(|best_score| !best_score.is_failure())
+            .map(|best_score| !best_score.is_infeasible())
             .unwrap_or(false);
 
     for constraint in constraints
@@ -20,7 +20,7 @@ pub fn compute_insertion_score(
     {
         score += constraint.compute_insertion_score(context);
 
-        if score.is_failure() && skip_on_failure {
+        if score.is_infeasible() && skip_on_failure {
             return score;
         }
     }

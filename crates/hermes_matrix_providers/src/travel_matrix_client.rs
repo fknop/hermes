@@ -1,3 +1,5 @@
+use tracing::instrument;
+
 use crate::{
     as_the_crow_flies::as_the_crow_flies_matrices,
     cache::{FileCache, MatricesCache},
@@ -39,6 +41,7 @@ where
         }
     }
 
+    #[instrument(skip_all, level = "debug")]
     pub async fn fetch_matrix<P>(
         &self,
         points: &[P],

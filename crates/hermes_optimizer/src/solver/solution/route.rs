@@ -1210,7 +1210,8 @@ impl WorkingSolutionRoute {
         start: usize,
         end: usize,
     ) -> bool {
-        if !problem.has_time_windows() {
+        if !problem.has_time_windows() && self.vehicle(problem).maximum_working_duration().is_none()
+        {
             return true;
         }
 

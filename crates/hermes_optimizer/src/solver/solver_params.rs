@@ -86,6 +86,7 @@ pub enum SolverSelectorStrategy {
     SelectBest,
     SelectRandom,
     SelectWeighted,
+    BinaryTournament,
 }
 
 impl Default for SolverParams {
@@ -102,7 +103,7 @@ impl Default for SolverParams {
             tabu_size: 5,
             tabu_iterations: 500,
             solver_acceptor: SolverAcceptorStrategy::SimulatedAnnealing,
-            solver_selector: SolverSelectorStrategy::SelectWeighted,
+            solver_selector: SolverSelectorStrategy::BinaryTournament,
             ruin: RuinParams::default(),
             recreate: RecreateParams::default(),
             search_threads: Threads::Multi(2),

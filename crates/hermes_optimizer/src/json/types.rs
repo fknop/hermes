@@ -5,7 +5,7 @@ use hermes_matrix_providers::{
 use jiff::{SignedDuration, Timestamp};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use tracing::info;
+use tracing::{info, instrument};
 
 use crate::problem::{
     capacity::Capacity,
@@ -170,6 +170,7 @@ impl From<JsonVehicleShift> for VehicleShift {
 }
 
 impl JsonVehicleRoutingProblem {
+    #[instrument(skip_all, level = "debug")]
     pub async fn build_problem(
         self,
         client: &TravelMatrixClient<impl MatricesCache>,
