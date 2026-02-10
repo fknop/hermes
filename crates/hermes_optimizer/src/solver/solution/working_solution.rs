@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fxhash::{FxHashMap, FxHashSet};
+use fxhash::{FxBuildHasher, FxHashMap, FxHashSet};
 use rand::seq::IteratorRandom;
 
 use crate::{
@@ -16,7 +16,7 @@ use crate::{
         score::{Score, ScoreAnalysis},
         solution::{route::WorkingSolutionRoute, route_id::RouteIdx},
     },
-    utils::enumerate_idx::EnumerateIdx,
+    utils::{broken_pairs_distance::broken_pairs_distance, enumerate_idx::EnumerateIdx},
 };
 
 #[derive(Clone)]
@@ -354,14 +354,40 @@ impl WorkingSolution {
 
     pub fn compute_solution_score(&self, constraints: &[Constraint]) -> (Score, ScoreAnalysis) {
         let mut score_analysis = ScoreAnalysis::default();
-
+        let mut total_score = Score::ZERO;
         for constraint in constraints.iter() {
             let score = constraint.compute_score(&self.problem, self);
-            score_analysis
-                .scores
-                .insert(constraint.constraint_name(), score);
+            total_score += score;
+
+            if score != Score::ZERO {
+                score_analysis
+                    .scores
+                    .insert(constraint.constraint_name(), score);
+            }
         }
 
-        (score_analysis.total_score(), score_analysis)
+        (total_score, score_analysis)
+    }
+
+    fn broken_pairs_distance_edges(&self) -> FxHashSet<(ActivityId, ActivityId)> {
+        self.routes
+            .iter()
+            .flat_map(|route| {
+                route.activity_ids.windows(2).map(|window| {
+                    if window[0].job_id().get() < window[1].job_id().get() {
+                        (window[0], window[1])
+                    } else {
+                        (window[1], window[0])
+                    }
+                })
+            })
+            .collect::<FxHashSet<_>>()
+    }
+
+    pub fn broken_pairs_distance(&self, other: &WorkingSolution) -> usize {
+        broken_pairs_distance(
+            &self.broken_pairs_distance_edges(),
+            &other.broken_pairs_distance_edges(),
+        )
     }
 }

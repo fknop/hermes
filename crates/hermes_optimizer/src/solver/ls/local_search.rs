@@ -7,7 +7,6 @@ use tracing::{debug, info, instrument, warn};
 use crate::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
-        accepted_solution::AcceptedSolution,
         constraints::constraint::Constraint,
         ls::{
             cross_exchange::CrossExchangeOperator,
@@ -28,7 +27,6 @@ use crate::{
         score::RUN_SCORE_ASSERTIONS,
         solution::{population::Population, route_id::RouteIdx, working_solution::WorkingSolution},
     },
-    timer_debug,
     utils::enumerate_idx::EnumerateIdx,
 };
 
@@ -494,7 +492,8 @@ impl LocalSearchState {
 
     fn clear_stale(&mut self, population: &Population) {
         let versions = population
-            .all_solutions()
+            .solutions()
+            .iter()
             .flat_map(|s| s.solution.routes())
             .map(|r| r.version())
             .collect::<FxHashSet<_>>();

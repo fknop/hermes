@@ -1,6 +1,8 @@
 use rand::rngs::SmallRng;
 
-use crate::solver::{accepted_solution::AcceptedSolution, score::Score};
+use crate::solver::{
+    accepted_solution::AcceptedSolution, score::Score, solution::population::Population,
+};
 
 use super::select_solution::SelectSolution;
 
@@ -9,22 +11,10 @@ pub struct SelectBestSelector;
 impl SelectSolution for SelectBestSelector {
     fn select_solution<'a>(
         &self,
-        solutions: &'a [AcceptedSolution],
+        population: &'a Population,
         _: &mut impl rand::Rng,
     ) -> Option<&'a AcceptedSolution> {
         // Assumption that it's sorted
-        solutions.first()
-        // TODO
-        // let mut max_score = Score::MAX;
-        // let mut best_solution = None;
-
-        // for solution in solutions {
-        // if solution.score < max_score {
-        // best_solution = Some(solution);
-        // max_score = solution.score;
-        // }
-        // }
-
-        // best_solution
+        population.solutions().first()
     }
 }

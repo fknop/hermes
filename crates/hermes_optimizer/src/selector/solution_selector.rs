@@ -1,8 +1,6 @@
-use rand::rngs::SmallRng;
-
 use crate::{
     selector::select_binary_tournament::BinaryTournamentSelector,
-    solver::accepted_solution::AcceptedSolution,
+    solver::{accepted_solution::AcceptedSolution, solution::population::Population},
 };
 
 use super::{
@@ -20,15 +18,15 @@ pub enum SolutionSelector {
 impl SelectSolution for SolutionSelector {
     fn select_solution<'a>(
         &self,
-        solutions: &'a [AcceptedSolution],
+        population: &'a Population,
         rng: &mut impl rand::Rng,
     ) -> Option<&'a AcceptedSolution> {
         match self {
-            SolutionSelector::SelectBest(selector) => selector.select_solution(solutions, rng),
-            SolutionSelector::SelectRandom(selector) => selector.select_solution(solutions, rng),
-            SolutionSelector::SelectWeighted(selector) => selector.select_solution(solutions, rng),
+            SolutionSelector::SelectBest(selector) => selector.select_solution(population, rng),
+            SolutionSelector::SelectRandom(selector) => selector.select_solution(population, rng),
+            SolutionSelector::SelectWeighted(selector) => selector.select_solution(population, rng),
             SolutionSelector::BinaryTournament(selector) => {
-                selector.select_solution(solutions, rng)
+                selector.select_solution(population, rng)
             }
         }
     }

@@ -42,7 +42,7 @@ use crate::{
         noise::NoiseParams,
         score::RUN_SCORE_ASSERTIONS,
         solution::population::Population,
-        solver_params::SolverParamsDebugOptions,
+        solver_params::{PopulationParams, SolverParamsDebugOptions},
         statistics::SearchStatisticsIteration,
     },
     timer_debug,
@@ -97,7 +97,7 @@ impl Alns {
         Alns {
             problem: Arc::clone(&problem),
             constraints: Self::create_constraints(),
-            population: Arc::new(RwLock::new(Population::new(params.max_solutions))),
+            population: Arc::new(RwLock::new(Population::new(params.population.clone()))),
             // best_solutions: Arc::new(RwLock::new(Vec::with_capacity(params.max_solutions))),
             global_alns_ruin_weights: Arc::new(RwLock::new(AlnsWeights::new(
                 params.ruin_strategies().clone(),
@@ -129,11 +129,9 @@ impl Alns {
 
     fn set_initial_solution(&self, solution: WorkingSolution) {
         let (score, score_analysis) = solution.compute_solution_score(&self.constraints);
-        self.population.write().add_solution(AcceptedSolution {
-            solution,
-            score,
-            score_analysis,
-        });
+        self.population
+            .write()
+            .add_solution(solution, score, score_analysis);
     }
 
     fn create_construction_thread_pool(&self) -> rayon::ThreadPool {
@@ -181,7 +179,10 @@ impl Alns {
                 let shrimpf_initial_threshold_search = Self::new(
                     SolverParams {
                         terminations: vec![Termination::Iterations(random_walks)],
-                        max_solutions: random_walks,
+                        population: PopulationParams {
+                            size: random_walks,
+                            ..PopulationParams::default()
+                        },
                         solver_acceptor: SolverAcceptorStrategy::Any,
                         search_threads: Threads::Single,
                         solver_selector: SolverSelectorStrategy::SelectBest,
@@ -203,7 +204,8 @@ impl Alns {
                 let total_score = shrimpf_initial_threshold_search
                     .population
                     .read()
-                    .all_solutions()
+                    .solutions()
+                    .iter()
                     .map(|accepted_solution| accepted_solution.score.soft_score)
                     .sum::<f64>();
                 let mean = total_score / random_walks as f64;
@@ -211,7 +213,8 @@ impl Alns {
                 let variance = shrimpf_initial_threshold_search
                     .population
                     .read()
-                    .all_solutions()
+                    .solutions()
+                    .iter()
                     .map(|accepted_solution| (accepted_solution.score.soft_score - mean).powf(2.0))
                     .sum::<f64>()
                     / ((random_walks - 1) as f64);
@@ -229,7 +232,10 @@ impl Alns {
                 let initial_temperature_search = Self::new(
                     SolverParams {
                         terminations: vec![Termination::Iterations(1)],
-                        max_solutions: 1,
+                        population: PopulationParams {
+                            size: 1,
+                            elite_size: 1,
+                        },
                         solver_acceptor: SolverAcceptorStrategy::Any,
                         search_threads: Threads::Single,
                         solver_selector: SolverSelectorStrategy::SelectBest,
@@ -350,11 +356,9 @@ impl Alns {
                 });
         }
 
-        self.population.write().add_solution(AcceptedSolution {
-            solution: initial_solution,
-            score,
-            score_analysis,
-        });
+        self.population
+            .write()
+            .add_solution(initial_solution, score, score_analysis);
 
         if let Some(callback) = &self.on_best_solution_handler
             && let Some(best) = self.population.read().best()
@@ -700,7 +704,7 @@ impl Alns {
         self.ruin(&mut working_solution, ruin_strategy, state, rng);
 
         if !current_score.is_infeasible() && !self.params.recreate.insert_on_failure {
-            let (score, analysis) = working_solution.compute_solution_score(&self.constraints);
+            let (score, _) = working_solution.compute_solution_score(&self.constraints);
             if score.is_infeasible() {
                 tracing::warn!("Ignore iteration due to failing ruin");
                 return;
@@ -797,7 +801,7 @@ impl Alns {
                 AcceptSolutionContext {
                     iteration: state.iteration,
                     max_iterations: state.max_iterations,
-                    max_solutions: self.params.max_solutions,
+                    max_solutions: self.params.population.size,
                     rng,
                 },
             )
@@ -864,11 +868,7 @@ impl Alns {
                 });
 
             guard.with_upgraded(|guard| {
-                guard.add_solution(AcceptedSolution {
-                    solution,
-                    score,
-                    score_analysis,
-                });
+                guard.add_solution(solution, score, score_analysis);
 
                 if is_best
                     && let Some(callback) = &self.on_best_solution_handler

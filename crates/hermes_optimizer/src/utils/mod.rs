@@ -1,4 +1,5 @@
 pub mod bbox;
+pub mod broken_pairs_distance;
 pub mod cancellable_barrier;
 pub mod enumerate_idx;
 pub mod kruskal;

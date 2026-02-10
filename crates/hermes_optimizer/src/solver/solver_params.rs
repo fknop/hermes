@@ -14,12 +14,33 @@ pub struct SolverParamsDebugOptions {
 }
 
 #[derive(Clone, Debug)]
+pub struct PopulationParams {
+    pub size: usize,
+    pub elite_size: usize,
+}
+
+impl PopulationParams {
+    pub fn n_closest(&self) -> usize {
+        (self.size / 5).max(1)
+    }
+}
+
+impl Default for PopulationParams {
+    fn default() -> Self {
+        Self {
+            size: 10,
+            elite_size: 3,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct SolverParams {
     pub terminations: Vec<Termination>,
     pub solver_acceptor: SolverAcceptorStrategy,
     pub solver_selector: SolverSelectorStrategy,
 
-    pub max_solutions: usize,
+    pub population: PopulationParams,
 
     pub ruin: RuinParams,
     pub recreate: RecreateParams,
@@ -97,12 +118,13 @@ impl Default for SolverParams {
                 Termination::Iterations(100000),
                 Termination::Duration(SignedDuration::from_mins(2)),
             ],
-            max_solutions: 10,
+
+            population: PopulationParams::default(),
 
             tabu_enabled: true,
             tabu_size: 5,
             tabu_iterations: 500,
-            solver_acceptor: SolverAcceptorStrategy::SimulatedAnnealing,
+            solver_acceptor: SolverAcceptorStrategy::Schrimpf,
             solver_selector: SolverSelectorStrategy::BinaryTournament,
             ruin: RuinParams::default(),
             recreate: RecreateParams::default(),

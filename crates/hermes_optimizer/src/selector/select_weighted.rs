@@ -1,6 +1,6 @@
 use rand::{rngs::SmallRng, seq::IndexedRandom};
 
-use crate::solver::accepted_solution::AcceptedSolution;
+use crate::solver::{accepted_solution::AcceptedSolution, solution::population::Population};
 
 use super::select_solution::SelectSolution;
 
@@ -9,12 +9,14 @@ pub struct SelectWeightedSelector;
 impl SelectSolution for SelectWeightedSelector {
     fn select_solution<'a>(
         &self,
-        solutions: &'a [AcceptedSolution],
+        population: &'a Population,
         rng: &mut impl rand::Rng,
     ) -> Option<&'a AcceptedSolution> {
-        if solutions.is_empty() {
+        if population.is_empty() {
             return None; // No solutions to select from
         }
+
+        let solutions = population.solutions();
 
         let weights = (0..solutions.len()).collect::<Vec<_>>();
         let index = weights
