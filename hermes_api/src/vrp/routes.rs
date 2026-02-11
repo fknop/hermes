@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use aide::axum::{
     ApiRouter,
-    routing::{get, get_with, post, post_with},
+    routing::{get_with, post_with},
 };
 
 use crate::{

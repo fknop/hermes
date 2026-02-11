@@ -1,4 +1,4 @@
-use tracing::{Level, info, instrument};
+use tracing::{Level, instrument};
 
 use crate::{
     problem::{job::ActivityId, vehicle_routing_problem::VehicleRoutingProblem},

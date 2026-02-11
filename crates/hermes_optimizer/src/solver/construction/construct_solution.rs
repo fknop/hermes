@@ -23,7 +23,6 @@ use crate::{
             construction_best_insertion::ConstructionBestInsertion,
             recreate_context::RecreateContext,
             recreate_solution::RecreateSolution,
-            regret_insertion::RegretInsertion,
         },
         solution::{route_id::RouteIdx, working_solution::WorkingSolution},
         solver_params::SolverParams,
@@ -350,7 +349,7 @@ pub fn construct_solution(
 
     let mut local_search = LocalSearch::new(problem, constraints.to_vec());
 
-    let routes = solution
+    let _routes = solution
         .routes()
         .iter()
         .enumerate_idx()

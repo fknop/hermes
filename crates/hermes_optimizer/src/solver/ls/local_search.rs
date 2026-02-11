@@ -2,7 +2,7 @@ use std::f64;
 
 use fxhash::{FxBuildHasher, FxHashMap, FxHashSet};
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
-use tracing::{debug, info, instrument, warn};
+use tracing::{debug, instrument, warn};
 
 use crate::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
@@ -119,7 +119,7 @@ impl LocalSearch {
         &mut self,
         problem: &VehicleRoutingProblem,
         solution: &mut WorkingSolution,
-        iteration: usize,
+        _iteration: usize,
     ) -> bool {
         for &(r1, r2) in &self.pairs {
             let v1 = solution.route(r1).version();

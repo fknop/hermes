@@ -1,6 +1,6 @@
-use std::{cell::RefCell, fs::File, io::BufReader, path::PathBuf, rc::Rc, sync::Arc};
+use std::{fs::File, io::BufReader, path::PathBuf};
 
-use clap::{Args, arg};
+use clap::Args;
 use hermes_matrix_providers::travel_matrix_client::TravelMatrixClient;
 use hermes_optimizer::{
     json::types::JsonVehicleRoutingProblem,
@@ -44,7 +44,7 @@ pub async fn run(args: OptimizeArgs) -> anyhow::Result<()> {
     let client = TravelMatrixClient::default();
     let problem = content.build_problem(&client).await?;
 
-    let mut solver = Solver::new(
+    let solver = Solver::new(
         problem,
         SolverParams {
             terminations: vec![Termination::Duration(args.timeout)],

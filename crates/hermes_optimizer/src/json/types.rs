@@ -5,7 +5,7 @@ use hermes_matrix_providers::{
 use jiff::{SignedDuration, Timestamp};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use tracing::{info, instrument};
+use tracing::instrument;
 
 use crate::problem::{
     capacity::Capacity,

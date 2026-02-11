@@ -305,7 +305,7 @@ impl WorkingSolutionRoute {
         transport_duration
     }
 
-    pub fn transport_costs(&self, problem: &VehicleRoutingProblem) -> f64 {
+    pub fn transport_costs(&self, _problem: &VehicleRoutingProblem) -> f64 {
         assert!(
             (self.is_empty() && self.total_transport_cost == 0.0)
                 || (!self.is_empty() && self.total_transport_cost > 0.0)

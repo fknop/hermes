@@ -1,6 +1,6 @@
-use geojson::{Feature, Geometry};
+use geojson::Feature;
 use hermes_optimizer::{
-    problem::{capacity::Capacity, job::JobIdx, meters::Meters, vehicle::VehicleIdx},
+    problem::{capacity::Capacity, meters::Meters},
     solver::score::{Score, ScoreAnalysis},
 };
 use jiff::{SignedDuration, Timestamp};

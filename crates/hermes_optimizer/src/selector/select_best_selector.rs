@@ -1,7 +1,6 @@
-use rand::rngs::SmallRng;
 
 use crate::solver::{
-    accepted_solution::AcceptedSolution, score::Score, solution::population::Population,
+    accepted_solution::AcceptedSolution, solution::population::Population,
 };
 
 use super::select_solution::SelectSolution;

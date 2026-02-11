@@ -3,7 +3,7 @@ use std::sync::Arc;
 use aide::{
     axum::{
         ApiRouter, IntoApiResponse,
-        routing::{get, get_with},
+        routing::get,
     },
     openapi::OpenApi,
     scalar::Scalar,

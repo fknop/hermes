@@ -1,12 +1,11 @@
 use std::{collections::HashMap, sync::Arc};
 
 use tokio::sync::RwLock;
-use uuid::Uuid;
 
 use crate::problem::vehicle_routing_problem::VehicleRoutingProblem;
 
 use super::{
-    solver::{Solver, SolverStatus},
+    solver::Solver,
     solver_params::SolverParams,
 };
 

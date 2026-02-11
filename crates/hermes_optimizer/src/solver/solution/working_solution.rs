@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fxhash::{FxBuildHasher, FxHashMap, FxHashSet};
+use fxhash::{FxHashMap, FxHashSet};
 use rand::seq::IteratorRandom;
 
 use crate::{

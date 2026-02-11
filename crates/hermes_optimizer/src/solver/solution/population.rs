@@ -1,7 +1,6 @@
 use std::{collections::BTreeMap, sync::atomic::AtomicUsize};
 
 use fxhash::FxHashMap;
-use tracing::info;
 
 use crate::{
     selector::select_solution::SelectSolution,

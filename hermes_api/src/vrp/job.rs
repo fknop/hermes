@@ -26,7 +26,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{error::ApiError, state::AppState, vrp::jobs::VehicleRoutingJob};
+use crate::{error::ApiError, state::AppState};
 
 use super::api_solution::{
     ApiEndActivity, ApiServiceActivity, ApiSolution, ApiSolutionActivity, ApiSolutionRoute,

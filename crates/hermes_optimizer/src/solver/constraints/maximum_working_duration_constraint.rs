@@ -1,7 +1,7 @@
 use crate::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
-        constraints::maximum_working_duration_constraint, insertion_context::InsertionContext,
+        insertion_context::InsertionContext,
         score::Score, score_level::ScoreLevel, solution::route::WorkingSolutionRoute,
     },
 };

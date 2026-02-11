@@ -5,7 +5,7 @@ use std::{
 };
 
 use fxhash::FxHasher64;
-use tracing::{debug, info};
+use tracing::debug;
 
 use crate::{travel_matrices::TravelMatrices, travel_matrix_provider::TravelMatrixProvider};
 

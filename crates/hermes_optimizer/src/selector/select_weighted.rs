@@ -1,4 +1,4 @@
-use rand::{rngs::SmallRng, seq::IndexedRandom};
+use rand::seq::IndexedRandom;
 
 use crate::solver::{accepted_solution::AcceptedSolution, solution::population::Population};
 

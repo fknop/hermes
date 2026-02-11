@@ -1,5 +1,5 @@
 use std::{
-    collections::{HashSet, VecDeque},
+    collections::VecDeque,
     sync::{Arc, atomic::AtomicBool},
     thread,
 };
@@ -8,7 +8,7 @@ use fxhash::FxHashMap;
 use jiff::{SignedDuration, Timestamp};
 use parking_lot::{MappedRwLockReadGuard, Mutex, RwLock, RwLockReadGuard};
 use rand::{Rng, SeedableRng, rngs::SmallRng};
-use tracing::{debug, info, instrument, warn};
+use tracing::{debug, instrument, warn};
 
 use crate::{
     acceptor::{
@@ -730,7 +730,7 @@ impl Alns {
 
         if improved {
             // Experiment with this: is this a good idea?
-            let iterations =
+            let _iterations =
                 state
                     .local_search
                     .intensify(&self.problem, &mut working_solution, 500);
@@ -856,7 +856,7 @@ impl Alns {
                 }
             }
 
-            let is_tabu = self.params.tabu_enabled
+            let _is_tabu = self.params.tabu_enabled
                 && state.tabu.read().iter().any(|accepted_solution| {
                     accepted_solution.score == score
                         && accepted_solution.solution.is_identical(&solution)
