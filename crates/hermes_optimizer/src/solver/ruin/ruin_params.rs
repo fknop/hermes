@@ -23,7 +23,7 @@ impl Default for RuinParams {
                 RuinStrategy::RuinString,
                 RuinStrategy::RuinTimeRelated,
                 RuinStrategy::RuinRadial,
-                RuinStrategy::Random,
+                // RuinStrategy::Random,
                 RuinStrategy::RuinWorst,
                 RuinStrategy::RuinCluster,
                 RuinStrategy::RuinRoute,

@@ -1,10 +1,8 @@
-use rand::{Rng, RngCore};
+use rand::Rng;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 use crate::solver::{
-    constraints,
     insertion::{Insertion, for_each_insertion},
-    insertion_context::InsertionContext,
     recreate::recreate_strategy::RecreateStrategy,
     score::{RUN_SCORE_ASSERTIONS, Score},
     solution::working_solution::WorkingSolution,
@@ -56,28 +54,20 @@ impl RegretInsertion {
                 let noiser_seed = context.create_noiser_seed(iteration_seed, job_id);
                 let mut noiser = context.create_noiser(noiser_seed);
                 let mut potential_insertions: Vec<(Score, Insertion)> = Vec::with_capacity(
-                    self.k + 2, // // One insertion after each activity
-                                // (context.problem.jobs().len() - solution.unassigned_jobs().len())
-                                // // One insertion at the start of every route
-                                // + solution.routes().len(),
+                    // One insertion after each activity
+                    (context.problem.jobs().len() - solution.unassigned_jobs().len())
+                        + solution.routes().len(), // One insertion at the start of every route
                 );
 
                 for_each_insertion(solution, job_id, |insertion| {
                     let score = noiser
                         .apply_noise(context.compute_insertion_score(solution, &insertion, None));
 
-                    // if let Some(last) = potential_insertions.last()
-                    //     && !potential_insertions.is_empty()
-                    //     && score > last.0
-                    // {
-                    //     return;
-                    // }
-
                     potential_insertions.push((score, insertion));
-                    potential_insertions.sort_unstable_by(|a, b| a.0.cmp(&b.0));
-                    if potential_insertions.len() > self.k + 1 {
-                        potential_insertions.pop();
-                    }
+                    // potential_insertions.sort_unstable_by(|a, b| a.0.cmp(&b.0));
+                    // if potential_insertions.len() > self.k + 1 {
+                    // potential_insertions.pop();
+                    // }
                 });
 
                 // If no valid insertion was found for this service, skip it
@@ -88,16 +78,22 @@ impl RegretInsertion {
                 // // Sort insertions by score to find the best ones
                 // potential_insertions.sort_unstable_by(|a, b| a.0.cmp(&b.0));
 
-                // 2. Calculate the regret value for this service
-                let best_insertion = &potential_insertions[0];
+                let nth = self.k.min(potential_insertions.len().saturating_sub(1));
+                let (best_insertions, _, _) =
+                    potential_insertions.select_nth_unstable_by_key(nth, |&(score, _)| score);
+
+                best_insertions.sort_unstable_by_key(|&(score, _)| score);
+
+                let best_insertion = &best_insertions[0];
                 let best_score = best_insertion.0;
+                // 2. Calculate the regret value for this service
                 let mut regret_value = Score::zero();
 
                 // The number of insertions to consider for the regret sum
-                let limit = self.k.min(potential_insertions.len());
+                let limit = (self.k - 1).min(best_insertions.len());
 
                 // Regret = sum of differences between k-th best and the best
-                for potential_insertion in potential_insertions.iter().skip(1).take(limit) {
+                for potential_insertion in best_insertions.iter().skip(1).take(limit) {
                     regret_value += potential_insertion.0 - best_score;
                 }
 
@@ -111,11 +107,14 @@ impl RegretInsertion {
 
         for (regret_value, insertion, best_score_for_insertion) in regret_values {
             if regret_value > max_regret
-                || (regret_value == max_regret && context.rng.random_bool(0.5))
+                || (regret_value == max_regret && best_score_for_insertion < best_score)
+                || (regret_value == max_regret
+                    && best_score_for_insertion == best_score
+                    && context.rng.random_bool(0.5))
             {
                 max_regret = regret_value;
                 best_insertion_for_max_regret = Some(insertion);
-                best_score = best_score_for_insertion; //best_score.min(best_score_for_insertion)
+                best_score = best_score_for_insertion;
             }
         }
 

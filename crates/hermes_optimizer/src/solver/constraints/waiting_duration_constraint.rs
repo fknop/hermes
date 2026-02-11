@@ -1,5 +1,3 @@
-use jiff::SignedDuration;
-
 use crate::{
     problem::{self, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{
@@ -25,19 +23,11 @@ impl RouteConstraint for WaitingDurationConstraint {
         problem: &VehicleRoutingProblem,
         route: &WorkingSolutionRoute,
     ) -> Score {
-        if !problem.has_waiting_duration_cost() {
+        if !problem.has_waiting_duration_cost() || !problem.has_time_windows() {
             return Score::zero();
         }
 
-        let waiting_duration = route
-            .activity_ids()
-            .iter()
-            .enumerate()
-            .map(|(index, _)| {
-                let activity = route.activity(index);
-                activity.waiting_duration()
-            })
-            .sum();
+        let waiting_duration = route.total_waiting_duration();
 
         Score::of(
             self.score_level(),
@@ -50,40 +40,20 @@ impl RouteConstraint for WaitingDurationConstraint {
             return Score::zero();
         }
 
-        let mut delta = SignedDuration::ZERO;
-
         let route = context.route();
 
         match context.insertion {
-            Insertion::Service(i) => {
-                return Score::soft(context.problem().waiting_duration_cost(
-                    route.waiting_duration_change_delta(
-                        context.problem(),
-                        std::iter::once(problem::job::ActivityId::Service(
-                            context.insertion.job_idx(),
-                        )),
-                        i.position,
-                        i.position,
-                    ),
-                ));
-            }
+            Insertion::Service(i) => Score::soft(context.problem().waiting_duration_cost(
+                route.waiting_duration_change_delta(
+                    context.problem(),
+                    std::iter::once(problem::job::ActivityId::Service(
+                        context.insertion.job_idx(),
+                    )),
+                    i.position,
+                    i.position,
+                ),
+            )),
             _ => todo!(),
         }
-
-        for activity_info in context.updated_activities_iter() {
-            let new_waiting_duration = activity_info.waiting_duration;
-            let old_waiting_duration = activity_info
-                .current_position
-                .map(|position| context.route().waiting_duration(position))
-                .unwrap_or(SignedDuration::ZERO);
-
-            delta += new_waiting_duration;
-            delta -= old_waiting_duration;
-        }
-
-        Score::of(
-            self.score_level(),
-            context.solution.problem().waiting_duration_cost(delta),
-        )
     }
 }

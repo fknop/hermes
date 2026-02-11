@@ -1,5 +1,5 @@
 use std::{
-    collections::VecDeque,
+    collections::{HashSet, VecDeque},
     sync::{Arc, atomic::AtomicBool},
     thread,
 };
@@ -453,9 +453,16 @@ impl Alns {
                         };
 
                         loop {
-                            let should_intensify = self.params.run_intensify_search
-                                && state.iteration - state.last_intensify_iteration.unwrap_or(0)
-                                    > 500;
+                            // Every 100 iterations, clear local search cache
+                            if state.iteration.is_multiple_of(100) {
+                                debug!("Clear LS cache");
+                                state.local_search.clear_stale(&self.population.read());
+                            }
+
+                            let should_intensify = false;
+                            // self.params.run_intensify_search
+                            // && state.iteration - state.last_intensify_iteration.unwrap_or(0)
+                            // > 500;
 
                             if should_intensify {
                                 let best_selector = SelectWeightedSelector;
@@ -606,8 +613,6 @@ impl Alns {
 
                                 state.alns_recreate_weights =
                                     self.global_alns_recreate_weights.read().clone();
-
-                                state.local_search.clear_stale(&self.population.read());
                             }
 
                             let is_stopped =
@@ -701,6 +706,7 @@ impl Alns {
         let (ruin_strategy, recreate_strategy) = self.select_ruin_recreate_strategy(state, rng);
 
         let now = Timestamp::now();
+
         self.ruin(&mut working_solution, ruin_strategy, state, rng);
 
         if !current_score.is_infeasible() && !self.params.recreate.insert_on_failure {
@@ -709,34 +715,26 @@ impl Alns {
                 tracing::warn!("Ignore iteration due to failing ruin");
                 return;
             }
-
-            // tracing::error!(
-            //     "Ruin broke hard constraints with strategy {:?} at iteration {}",
-            //     ruin_strategy,
-            //     state.iteration
-            // );
-            // tracing::error!("Score: {:?}", analysis);
-
-            // for route in working_solution.non_empty_routes_iter() {
-            //     route.dump(&self.problem);
-            // }
-
-            // panic!(
-            //     "Ruin broke hard constraints with strategy {:?} at iteration {}",
-            //     ruin_strategy, state.iteration
-            // );
         }
-
-        // Experiment with this: is this a good idea?
-        let iterations = state
-            .local_search
-            .intensify(&self.problem, &mut working_solution, 500);
 
         let ruin_duration = Timestamp::now().duration_since(now);
 
         let now = Timestamp::now();
         self.recreate(&mut working_solution, recreate_strategy, state, rng);
+
         let recreate_duration = Timestamp::now().duration_since(now);
+
+        let (score, _) = working_solution.compute_solution_score(&self.constraints);
+        let improved = score < current_score
+            && working_solution.unassigned_jobs().len() <= best_unassigned_count;
+
+        if improved {
+            // Experiment with this: is this a good idea?
+            let iterations =
+                state
+                    .local_search
+                    .intensify(&self.problem, &mut working_solution, 500);
+        }
 
         self.update_population(
             working_solution,
