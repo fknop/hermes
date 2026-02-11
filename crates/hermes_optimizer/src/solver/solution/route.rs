@@ -1535,7 +1535,6 @@ mod tests {
 
     use std::sync::Arc;
 
-    use fxhash::FxHashMap;
     use jiff::{SignedDuration, Timestamp};
 
     use crate::{

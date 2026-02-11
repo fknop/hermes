@@ -63,6 +63,9 @@ pub struct LocalSearch {
     constraints: Vec<Constraint>,
     pairs: Vec<RoutePair>,
     state: LocalSearchState,
+
+    #[cfg(feature = "statistics")]
+    statistics: LocalSearchStatistics,
 }
 
 const MAX_DELTA: f64 = 0.0;
@@ -77,6 +80,9 @@ impl LocalSearch {
             constraints,
             pairs,
             state: LocalSearchState::new(),
+
+            #[cfg(feature = "statistics")]
+            statistics: LocalSearchStatistics::default(),
         }
     }
 
@@ -268,9 +274,9 @@ impl LocalSearch {
         }
 
         if let (Some(r1), Some(r2)) = (best_r1, best_r2)
-            && let Some(op) = self
-                .state
-                .best_move(solution, RouteIdx::new(r1), RouteIdx::new(r2))
+            && let Some(op) =
+                self.state
+                    .take_best_move(solution, RouteIdx::new(r1), RouteIdx::new(r2))
             && best_delta <= -1e-6
         {
             debug!(
@@ -379,6 +385,9 @@ impl LocalSearch {
                 }
             }
 
+            #[cfg(feature = "statistics")]
+            self.statistics.add_move(op, best_delta);
+
             true
         } else {
             false
@@ -437,6 +446,16 @@ impl LocalSearch {
             (max - self.pairs.len()) as f64 / max as f64
         );
     }
+
+    #[cfg(feature = "statistics")]
+    pub fn statistics(&self) -> &LocalSearchStatistics {
+        &self.statistics
+    }
+
+    #[cfg(feature = "statistics")]
+    pub fn print_statistics(&self) {
+        self.statistics.print()
+    }
 }
 
 type VersionPair = (usize, usize);
@@ -463,17 +482,17 @@ impl LocalSearchState {
             .unwrap_or(MAX_DELTA)
     }
 
-    fn best_move(
-        &self,
+    fn take_best_move(
+        &mut self,
         solution: &WorkingSolution,
         r1: RouteIdx,
         r2: RouteIdx,
-    ) -> Option<&LocalSearchMove> {
+    ) -> Option<LocalSearchMove> {
         let route_a = solution.route(r1);
         let route_b = solution.route(r2);
         self.0
-            .get(&(route_a.version(), route_b.version()))
-            .map(|entry| &entry.1)
+            .remove(&(route_a.version(), route_b.version()))
+            .map(|entry| entry.1)
     }
 
     fn update_best(
@@ -500,5 +519,36 @@ impl LocalSearchState {
 
         self.0
             .retain(|&k, _| versions.contains(&k.0) && versions.contains(&k.1))
+    }
+}
+
+#[derive(Default)]
+pub struct LocalSearchStatistics {
+    pub moves: Vec<(LocalSearchMove, f64)>,
+    pub statistics: FxHashMap<&'static str, LocalSearchMoveStatistics>,
+}
+
+#[derive(Default)]
+pub struct LocalSearchMoveStatistics {
+    total_delta: f64,
+    invocations: usize,
+}
+
+impl LocalSearchStatistics {
+    pub fn add_move(&mut self, ls_move: LocalSearchMove, delta: f64) {
+        let entry = self.statistics.entry(ls_move.operator_name()).or_default();
+        entry.total_delta += delta;
+        entry.invocations += 1;
+
+        self.moves.push((ls_move, delta));
+    }
+
+    pub fn print(&self) {
+        for (name, stats) in &self.statistics {
+            println!(
+                "{}: total_delta={}, invocations={}",
+                name, stats.total_delta, stats.invocations
+            );
+        }
     }
 }
