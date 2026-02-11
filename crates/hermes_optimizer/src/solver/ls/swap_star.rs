@@ -132,7 +132,7 @@ fn in_place_delta(
     transport_cost_delta + waiting_cost_delta
 }
 
-#[instrument(skip_all,level = Level::DEBUG)]
+#[instrument(skip_all,level = Level::TRACE)]
 pub fn find_best_swap_star_move(
     problem: &VehicleRoutingProblem,
     solution: &WorkingSolution,
@@ -356,7 +356,7 @@ impl SwapStar {
 }
 
 impl LocalSearchOperator for SwapStar {
-    #[instrument(skip_all,level = Level::DEBUG)]
+    #[instrument(skip_all,level = Level::TRACE)]
     fn generate_moves<C>(
         _problem: &VehicleRoutingProblem,
         _solution: &WorkingSolution,

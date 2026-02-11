@@ -727,19 +727,16 @@ impl Alns {
             // );
         }
 
+        // Experiment with this: is this a good idea?
+        let iterations = state
+            .local_search
+            .intensify(&self.problem, &mut working_solution, 500);
+
         let ruin_duration = Timestamp::now().duration_since(now);
 
         let now = Timestamp::now();
         self.recreate(&mut working_solution, recreate_strategy, state, rng);
         let recreate_duration = Timestamp::now().duration_since(now);
-
-        // if rng.random_bool(self.params.intensify_probability) {
-        //     state.insertion_thread_pool.install(|| {
-        //         state
-        //             .local_search
-        //             .intensify(self, &self.problem, &mut working_solution, 1000);
-        //     });
-        // }
 
         self.update_population(
             working_solution,

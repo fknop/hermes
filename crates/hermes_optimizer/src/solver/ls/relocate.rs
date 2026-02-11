@@ -48,7 +48,7 @@ impl RelocateOperator {
 }
 
 impl LocalSearchOperator for RelocateOperator {
-    #[instrument(skip_all,level = Level::DEBUG)]
+    #[instrument(skip_all,level = Level::TRACE)]
     fn generate_moves<C>(
         _problem: &VehicleRoutingProblem,
         solution: &WorkingSolution,

@@ -62,7 +62,7 @@ impl SwapOperator {
 }
 
 impl LocalSearchOperator for SwapOperator {
-    #[instrument(skip_all,level = Level::DEBUG)]
+    #[instrument(skip_all,level = Level::TRACE)]
     fn generate_moves<C>(
         _problem: &VehicleRoutingProblem,
         solution: &WorkingSolution,

@@ -92,6 +92,20 @@ impl Population {
         }
     }
 
+    fn remove_worst_fitness(&mut self) -> Option<AcceptedSolution> {
+        let worst_fitness = self
+            .biased_fitnesses
+            .iter()
+            .max_by(|a, b| a.partial_cmp(b).unwrap())?;
+
+        let worst_index = self
+            .biased_fitnesses
+            .iter()
+            .position(|&x| x == *worst_fitness)?;
+
+        Some(self.solutions.remove(worst_index))
+    }
+
     pub fn add_solution(
         &mut self,
         solution: WorkingSolution,
@@ -109,7 +123,7 @@ impl Population {
 
         #[allow(clippy::collapsible_if)] // I think it's clearer this way
         if self.solutions.len() == self.params.size {
-            if let Some(removed_solution) = self.solutions.pop() {
+            if let Some(removed_solution) = self.remove_worst_fitness() {
                 // TODO: remove based on fitness value instead of worst
                 // Cleanup data for removed solution
                 self.broken_pair_distances.remove(&removed_solution.id);
