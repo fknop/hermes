@@ -104,14 +104,47 @@ impl LocalSearchOperator for CrossExchangeOperator {
 
                 // A chain is at least length 2
                 for from_length in 2..=max_from_chain {
+                    let from_previous = from_route.get(from_pos - 1);
+                    let from_start = from_route.activity_id(from_pos);
+                    let from_end = from_route.activity_id(from_pos + from_length - 1);
+                    let from_next = from_route.get(from_pos + from_length);
+
                     for to_length in 2..=max_to_chain {
+                        let to_previous = to_route.get(to_pos - 1);
+                        let to_start = to_route.activity_id(to_pos);
+                        let to_end = to_route.activity_id(to_pos + to_length - 1);
+                        let to_next = to_route.get(to_pos + to_length);
+
                         if from_route
                             .will_break_maximum_activities(problem, to_length - from_length)
+                            || to_route
+                                .will_break_maximum_activities(problem, from_length - to_length)
                         {
                             continue;
                         }
 
-                        if to_route.will_break_maximum_activities(problem, from_length - to_length)
+                        // Neighborhoods checks
+
+                        if let Some(from_previous) = from_previous
+                            && !problem.in_nearest_neighborhood_of(from_previous, to_start)
+                        {
+                            continue;
+                        }
+
+                        if let Some(from_next) = from_next
+                            && !problem.in_nearest_neighborhood_of(from_next, to_start)
+                        {
+                            continue;
+                        }
+
+                        if let Some(to_previous) = to_previous
+                            && !problem.in_nearest_neighborhood_of(to_previous, from_start)
+                        {
+                            continue;
+                        }
+
+                        if let Some(to_next) = to_next
+                            && !problem.in_nearest_neighborhood_of(to_next, from_start)
                         {
                             continue;
                         }

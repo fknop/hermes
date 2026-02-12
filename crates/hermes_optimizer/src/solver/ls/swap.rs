@@ -64,7 +64,7 @@ impl SwapOperator {
 impl LocalSearchOperator for SwapOperator {
     #[instrument(skip_all,level = Level::TRACE)]
     fn generate_moves<C>(
-        _problem: &VehicleRoutingProblem,
+        problem: &VehicleRoutingProblem,
         solution: &WorkingSolution,
         (r1, r2): (RouteIdx, RouteIdx),
         mut consumer: C,
@@ -79,6 +79,17 @@ impl LocalSearchOperator for SwapOperator {
 
         for from_pos in 0..route.activity_ids().len() {
             for to_pos in from_pos + 1..route.activity_ids().len() {
+                if !route.in_swap_neighborhood(
+                    problem,
+                    from_pos,
+                    from_pos + 1,
+                    route,
+                    to_pos,
+                    to_pos + 1,
+                ) {
+                    continue;
+                }
+
                 let op = SwapOperator::new(SwapOperatorParams {
                     route_id: r1,
                     first: from_pos,

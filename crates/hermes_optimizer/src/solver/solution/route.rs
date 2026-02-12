@@ -524,6 +524,80 @@ impl WorkingSolutionRoute {
         }
     }
 
+    /// Check if an activity id is in the neighborhood for insertion at a given position
+    pub fn in_insertion_neighborhood(
+        &self,
+        problem: &VehicleRoutingProblem,
+        activity_id: ActivityId,
+        position: usize,
+    ) -> bool {
+        let previous = self.activity_ids.get(position - 1).copied();
+        let next = self.activity_ids.get(position).copied();
+
+        match (previous, next) {
+            (Some(previous), Some(next)) => {
+                problem.in_nearest_neighborhood_of(previous, activity_id)
+                    || problem.in_nearest_neighborhood_of(next, activity_id)
+            }
+            (Some(previous), None) => problem.in_nearest_neighborhood_of(previous, activity_id),
+            (None, Some(next)) => problem.in_nearest_neighborhood_of(next, activity_id),
+            (None, None) => true, // Route is empty
+        }
+    }
+
+    pub fn in_segment_insertion_neighborhood(
+        &self,
+        problem: &VehicleRoutingProblem,
+        from_activity_id: ActivityId,
+        to_activity_id: ActivityId,
+        position: usize,
+    ) -> bool {
+        // position - 1 => from_activity_id ... to_activity_id ... position
+
+        let previous = self.activity_ids.get(position - 1).copied();
+        let next = self.activity_ids.get(position).copied();
+
+        match (previous, next) {
+            (Some(previous), Some(next)) => {
+                problem.in_nearest_neighborhood_of(previous, from_activity_id)
+                    && problem.in_nearest_neighborhood_of(next, to_activity_id)
+            }
+            (Some(previous), None) => {
+                problem.in_nearest_neighborhood_of(previous, from_activity_id)
+            }
+            (None, Some(next)) => problem.in_nearest_neighborhood_of(next, to_activity_id),
+            (None, None) => true, // Route is empty
+        }
+    }
+
+    pub fn in_swap_neighborhood(
+        &self,
+        problem: &VehicleRoutingProblem,
+        self_pos_start: usize,
+        self_pos_end: usize, // Exclusive
+        other: &WorkingSolutionRoute,
+        other_pos_start: usize,
+        other_pos_end: usize, // Exclusive
+    ) -> bool {
+        let self_previous = self.get(self_pos_start - 1);
+        let self_next = self.get(self_pos_end);
+
+        let other_activity_start = other.activity_id(other_pos_start);
+        let other_activity_end = other.activity_id(other_pos_end - 1);
+
+        match (self_previous, self_next) {
+            (Some(previous), Some(next)) => {
+                problem.in_nearest_neighborhood_of(previous, other_activity_start)
+                    && problem.in_nearest_neighborhood_of(next, other_activity_end)
+            }
+            (Some(previous), None) => {
+                problem.in_nearest_neighborhood_of(previous, other_activity_start)
+            }
+            (None, Some(next)) => problem.in_nearest_neighborhood_of(next, other_activity_end),
+            (None, None) => true, // Route is empty
+        }
+    }
+
     fn increment_version(&mut self, problem: &VehicleRoutingProblem) {
         self.updated_in_iteration = true;
         self.version = problem.next_route_version();

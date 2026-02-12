@@ -1,5 +1,6 @@
 use std::sync::atomic::AtomicUsize;
 
+use fxhash::FxHashSet;
 use jiff::SignedDuration;
 use uuid::Uuid;
 
@@ -39,6 +40,8 @@ pub struct VehicleRoutingProblem {
 
     has_time_windows: bool,
     has_capacity: bool,
+
+    neighborhoods: Vec<FxHashSet<ActivityId>>,
 
     precomputed_vehicle_compatibilities: Vec<bool>,
     precomputed_capacity_dimensions: usize,
@@ -110,6 +113,15 @@ impl VehicleRoutingProblem {
                 &params.jobs,
             );
 
+        let neighborhoods = VehicleRoutingProblem::precompute_neighborhoods(
+            &params.locations,
+            &service_location_index,
+        );
+
+        for neighborhood in &neighborhoods {
+            assert!(!neighborhood.is_empty())
+        }
+
         Self {
             id: params.id,
             has_time_windows: params.jobs.iter().any(|job| job.has_time_windows()),
@@ -119,6 +131,7 @@ impl VehicleRoutingProblem {
             vehicle_profiles: params.vehicle_profiles,
             jobs: params.jobs,
             // travel_costs: params.travel_costs,
+            neighborhoods,
             service_location_index,
             precomputed_average_cost_from_depot,
             precomputed_normalized_demands,
@@ -326,9 +339,8 @@ impl VehicleRoutingProblem {
     }
 
     pub fn in_nearest_neighborhood_of(&self, of: ActivityId, activity_id: ActivityId) -> bool {
-        let location = &self.locations[self.job_activity(activity_id).location_id()];
-        self.service_location_index
-            .in_nearest_neighborhood_of(of, location)
+        let location_id = self.job_activity(activity_id).location_id();
+        self.neighborhoods[location_id.get()].contains(&of)
     }
 
     pub fn is_symmetric(&self) -> bool {
@@ -372,6 +384,23 @@ impl VehicleRoutingProblem {
 
     pub fn set_waiting_duration_weight(&mut self, cost: f64) {
         self.waiting_duration_weight = cost;
+    }
+
+    fn precompute_neighborhoods(
+        locations: &[Location],
+        index: &ServiceLocationIndex,
+    ) -> Vec<FxHashSet<ActivityId>> {
+        let k = 50;
+
+        locations
+            .iter()
+            .map(|location| {
+                index
+                    .nearest_neighbor_iter(location)
+                    .take(k)
+                    .collect::<FxHashSet<ActivityId>>()
+            })
+            .collect()
     }
 
     fn precompute_vehicle_compatibilities(vehicles: &[Vehicle], jobs: &[Job]) -> Vec<bool> {

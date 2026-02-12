@@ -3,7 +3,7 @@ use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 use crate::solver::{
     insertion::{Insertion, for_each_insertion},
-    recreate::recreate_strategy::RecreateStrategy,
+    recreate::{best_insertion, recreate_strategy::RecreateStrategy},
     score::{RUN_SCORE_ASSERTIONS, Score},
     solution::working_solution::WorkingSolution,
 };
@@ -79,12 +79,17 @@ impl RegretInsertion {
                 // potential_insertions.sort_unstable_by(|a, b| a.0.cmp(&b.0));
 
                 let nth = self.k.min(potential_insertions.len().saturating_sub(1));
-                let (best_insertions, _, _) =
+                let (best_insertions, median, _) =
                     potential_insertions.select_nth_unstable_by_key(nth, |&(score, _)| score);
 
                 best_insertions.sort_unstable_by_key(|&(score, _)| score);
 
-                let best_insertion = &best_insertions[0];
+                let best_insertion = if best_insertions.is_empty() {
+                    median
+                } else {
+                    &best_insertions[0]
+                };
+
                 let best_score = best_insertion.0;
                 // 2. Calculate the regret value for this service
                 let mut regret_value = Score::zero();

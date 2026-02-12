@@ -1,5 +1,8 @@
 use crate::{
-    problem::job::{Job, JobIdx},
+    problem::{
+        job::{ActivityId, Job, JobIdx},
+        vehicle_routing_problem::VehicleRoutingProblem,
+    },
     solver::solution::{
         route::WorkingSolutionRoute, route_id::RouteIdx, working_solution::WorkingSolution,
     },
@@ -96,13 +99,21 @@ fn for_each_service_insertion(
         .enumerate_idx()
         .for_each(|(route_id, route)| {
             if !route.has_maximum_activities(solution.problem()) {
-                (0..=route.len()).for_each(|position| {
-                    f(Insertion::Service(ServiceInsertion {
-                        route_id,
-                        job_index,
-                        position,
-                    }));
-                });
+                (0..=route.len())
+                    .filter(|position| {
+                        route.in_insertion_neighborhood(
+                            solution.problem(),
+                            ActivityId::Service(job_index),
+                            *position,
+                        )
+                    })
+                    .for_each(|position| {
+                        f(Insertion::Service(ServiceInsertion {
+                            route_id,
+                            job_index,
+                            position,
+                        }));
+                    });
             }
         });
 }
@@ -119,6 +130,14 @@ fn for_each_route_service_insertion(
     }
 
     for position in 0..=route.len() {
+        if !route.in_insertion_neighborhood(
+            solution.problem(),
+            ActivityId::Service(job_index),
+            position,
+        ) {
+            continue;
+        }
+
         f(Insertion::Service(ServiceInsertion {
             route_id: route_index,
             job_index,

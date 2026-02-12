@@ -95,6 +95,10 @@ impl LocalSearchOperator for RelocateOperator {
                     continue; // no change in this case
                 }
 
+                if !route.in_insertion_neighborhood(solution.problem(), from_id, to_pos) {
+                    continue;
+                }
+
                 let op = RelocateOperator::new(RelocateOperatorParams {
                     route_id: r1,
                     from: from_pos,

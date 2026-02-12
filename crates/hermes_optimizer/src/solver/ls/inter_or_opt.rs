@@ -83,6 +83,8 @@ impl LocalSearchOperator for InterOrOptOperator {
                 .len()
                 .saturating_sub(segment_length - 1)
             {
+                let from_start = from_route.activity_id(from_pos);
+                let from_end = from_route.activity_id(from_pos + segment_length - 1);
                 // TODO: handle shipments correctly
                 // let from_activity_id = from_route.activity_id(from_pos);
 
@@ -91,6 +93,12 @@ impl LocalSearchOperator for InterOrOptOperator {
                 // }
 
                 for to_pos in 0..=to_route.activity_ids().len() {
+                    if !to_route
+                        .in_segment_insertion_neighborhood(problem, from_start, from_end, to_pos)
+                    {
+                        continue;
+                    }
+
                     let op = InterOrOptOperator::new(InterOrOptParams {
                         from_route_id: r1,
                         to_route_id: r2,

@@ -103,6 +103,24 @@ impl LocalSearchOperator for InterMixedExchange {
 
         for position in 0..route1.len() {
             for segment_start in 0..route2.len().saturating_sub(segment_length) {
+                if !route1.in_swap_neighborhood(
+                    problem,
+                    position,
+                    position + 1,
+                    route2,
+                    segment_start,
+                    segment_start + segment_length,
+                ) || !route2.in_swap_neighborhood(
+                    problem,
+                    segment_start,
+                    segment_start + segment_length,
+                    route1,
+                    position,
+                    position + 1,
+                ) {
+                    continue;
+                }
+
                 let params = InterMixedExchangeParams {
                     from_route_id: r1,
                     to_route_id: r2,

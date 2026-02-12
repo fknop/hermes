@@ -48,7 +48,7 @@ impl InterSwapOperator {
 impl LocalSearchOperator for InterSwapOperator {
     #[instrument(skip_all,level = Level::TRACE)]
     fn generate_moves<C>(
-        _problem: &VehicleRoutingProblem,
+        problem: &VehicleRoutingProblem,
         solution: &WorkingSolution,
         (r1, r2): (RouteIdx, RouteIdx),
         mut consumer: C,
@@ -64,6 +64,24 @@ impl LocalSearchOperator for InterSwapOperator {
 
         for from_pos in 0..from_route.activity_ids().len() {
             for to_pos in 0..to_route.activity_ids().len() {
+                if !from_route.in_swap_neighborhood(
+                    problem,
+                    from_pos,
+                    from_pos + 1,
+                    to_route,
+                    to_pos,
+                    to_pos + 1,
+                ) || !to_route.in_swap_neighborhood(
+                    problem,
+                    to_pos,
+                    to_pos + 1,
+                    from_route,
+                    from_pos,
+                    from_pos + 1,
+                ) {
+                    continue;
+                }
+
                 let op = InterSwapOperator::new(InterSwapOperatorParams {
                     first_route_id: r1,
                     second_route_id: r2,

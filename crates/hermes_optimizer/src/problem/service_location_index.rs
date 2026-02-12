@@ -127,17 +127,6 @@ impl ServiceLocationIndex {
             .nearest_neighbor_iter(&[point.x(), point.y()])
             .map(|geom_with_data| geom_with_data.data.activity_id)
     }
-
-    pub fn in_nearest_neighborhood_of<P>(&self, of: ActivityId, point: P) -> bool
-    where
-        P: Into<geo::Point>,
-    {
-        let point: geo::Point = point.into();
-        self.tree
-            .nearest_neighbor_iter(&[point.x(), point.y()])
-            .take(100)
-            .any(|geom_with_data| geom_with_data.data.activity_id == of)
-    }
 }
 
 #[cfg(test)]
