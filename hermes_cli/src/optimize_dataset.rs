@@ -1,8 +1,4 @@
-use std::{
-    path::PathBuf,
-    sync::Arc,
-    time::Duration,
-};
+use std::{path::PathBuf, sync::Arc, time::Duration};
 
 use clap::Args;
 use hermes_optimizer::{
@@ -138,7 +134,7 @@ pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
                 "Running... Routes = {}{}, costs = {}, unassigned = {}, gap = {}",
                 n_routes,
                 optimal_sol
-                    .map(|os| format!(" (optimal: {:+})", os.0))
+                    .map(|os| format!(" (optimal: {})", os.0))
                     .unwrap_or_default(),
                 total_transport_cost,
                 s.solution.unassigned_jobs().len(),

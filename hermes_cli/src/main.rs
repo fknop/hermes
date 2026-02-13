@@ -2,6 +2,7 @@ use clap::{Parser, Subcommand};
 
 #[cfg(not(feature = "dhat-heap"))]
 use mimalloc::MiMalloc;
+use tracing_subscriber::fmt::format::FmtSpan;
 
 use crate::{
     generate::GenerateSubcommands, get_matrix::GetMatrixArgs, optimize::OptimizeArgs,
@@ -74,6 +75,7 @@ async fn main() -> Result<(), anyhow::Error> {
         } else {
             tracing::Level::INFO
         })
+        .with_span_events(FmtSpan::CLOSE)
         .init();
 
     match cli.command {

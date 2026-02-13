@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use geo::Coord;
+use tracing::instrument;
 
 use crate::{
     parsers::parser::DatasetParser,
@@ -20,6 +21,7 @@ use crate::{
 pub struct CVRPLibParser;
 
 impl DatasetParser for CVRPLibParser {
+    #[instrument(skip_all, level = "debug")]
     fn parse<P: AsRef<Path>>(&self, file: P) -> Result<VehicleRoutingProblem, anyhow::Error> {
         let file_content = std::fs::read_to_string(file)?;
         let instance = parse(&file_content)?;

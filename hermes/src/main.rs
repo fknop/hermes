@@ -118,97 +118,97 @@ fn create_solomon_dataset() -> Vec<SolomonDataset> {
             vehicles: 17,
             optimal_cost: 1486.12,
         },
-        // SolomonDataset {
-        //     file: "./data/solomon/r1/r103.txt",
-        //     vehicles: 13,
-        //     optimal_cost: 1292.68,
-        // },
-        // SolomonDataset {
-        //     file: "./data/solomon/r1/r104.txt",
-        //     vehicles: 9,
-        //     optimal_cost: 1007.31,
-        // },
-        // SolomonDataset {
-        //     file: "./data/solomon/r1/r105.txt",
-        //     vehicles: 14,
-        //     optimal_cost: 1377.11,
-        // },
-        // SolomonDataset {
-        //     file: "./data/solomon/r1/r106.txt",
-        //     vehicles: 12,
-        //     optimal_cost: 1252.03,
-        // },
-        // SolomonDataset {
-        //     file: "./data/solomon/r1/r107.txt",
-        //     vehicles: 10,
-        //     optimal_cost: 1104.66,
-        // },
-        // SolomonDataset {
-        //     file: "./data/solomon/r1/r108.txt",
-        //     vehicles: 9,
-        //     optimal_cost: 960.88,
-        // },
-        // SolomonDataset {
-        //     file: "./data/solomon/r1/r109.txt",
-        //     vehicles: 11,
-        //     optimal_cost: 1194.84,
-        // },
-        // SolomonDataset {
-        //     file: "./data/solomon/r1/r110.txt",
-        //     vehicles: 10,
-        //     optimal_cost: 1118.84,
-        // },
-        // SolomonDataset {
-        //     file: "./data/solomon/r1/r111.txt",
-        //     vehicles: 10,
-        //     optimal_cost: 1096.72,
-        // },
-        // SolomonDataset {
-        //     file: "./data/solomon/r1/r112.txt",
-        //     vehicles: 9,
-        //     optimal_cost: 982.14,
-        // },
-        // // r2
-        // SolomonDataset {
-        //     file: "./data/solomon/r2/r201.txt",
-        //     vehicles: 4,
-        //     optimal_cost: 1252.37,
-        // },
-        // SolomonDataset {
-        //     file: "./data/solomon/r2/r202.txt",
-        //     vehicles: 3,
-        //     optimal_cost: 1191.70,
-        // },
-        // SolomonDataset {
-        //     file: "./data/solomon/r2/r203.txt",
-        //     vehicles: 3,
-        //     optimal_cost: 939.50,
-        // },
-        // SolomonDataset {
-        //     file: "./data/solomon/r2/r204.txt",
-        //     vehicles: 2,
-        //     optimal_cost: 825.52,
-        // },
-        // SolomonDataset {
-        //     file: "./data/solomon/r2/r205.txt",
-        //     vehicles: 3,
-        //     optimal_cost: 994.43,
-        // },
-        // SolomonDataset {
-        //     file: "./data/solomon/r2/r206.txt",
-        //     vehicles: 3,
-        //     optimal_cost: 906.14,
-        // },
-        // SolomonDataset {
-        //     file: "./data/solomon/r2/r207.txt",
-        //     vehicles: 2,
-        //     optimal_cost: 890.61,
-        // },
-        // SolomonDataset {
-        //     file: "./data/solomon/r2/r208.txt",
-        //     vehicles: 2,
-        //     optimal_cost: 726.82,
-        // },
+        SolomonDataset {
+            file: "./data/solomon/r1/r103.txt",
+            vehicles: 13,
+            optimal_cost: 1292.68,
+        },
+        SolomonDataset {
+            file: "./data/solomon/r1/r104.txt",
+            vehicles: 9,
+            optimal_cost: 1007.31,
+        },
+        SolomonDataset {
+            file: "./data/solomon/r1/r105.txt",
+            vehicles: 14,
+            optimal_cost: 1377.11,
+        },
+        SolomonDataset {
+            file: "./data/solomon/r1/r106.txt",
+            vehicles: 12,
+            optimal_cost: 1252.03,
+        },
+        SolomonDataset {
+            file: "./data/solomon/r1/r107.txt",
+            vehicles: 10,
+            optimal_cost: 1104.66,
+        },
+        SolomonDataset {
+            file: "./data/solomon/r1/r108.txt",
+            vehicles: 9,
+            optimal_cost: 960.88,
+        },
+        SolomonDataset {
+            file: "./data/solomon/r1/r109.txt",
+            vehicles: 11,
+            optimal_cost: 1194.84,
+        },
+        SolomonDataset {
+            file: "./data/solomon/r1/r110.txt",
+            vehicles: 10,
+            optimal_cost: 1118.84,
+        },
+        SolomonDataset {
+            file: "./data/solomon/r1/r111.txt",
+            vehicles: 10,
+            optimal_cost: 1096.72,
+        },
+        SolomonDataset {
+            file: "./data/solomon/r1/r112.txt",
+            vehicles: 9,
+            optimal_cost: 982.14,
+        },
+        // r2
+        SolomonDataset {
+            file: "./data/solomon/r2/r201.txt",
+            vehicles: 4,
+            optimal_cost: 1252.37,
+        },
+        SolomonDataset {
+            file: "./data/solomon/r2/r202.txt",
+            vehicles: 3,
+            optimal_cost: 1191.70,
+        },
+        SolomonDataset {
+            file: "./data/solomon/r2/r203.txt",
+            vehicles: 3,
+            optimal_cost: 939.50,
+        },
+        SolomonDataset {
+            file: "./data/solomon/r2/r204.txt",
+            vehicles: 2,
+            optimal_cost: 825.52,
+        },
+        SolomonDataset {
+            file: "./data/solomon/r2/r205.txt",
+            vehicles: 3,
+            optimal_cost: 994.43,
+        },
+        SolomonDataset {
+            file: "./data/solomon/r2/r206.txt",
+            vehicles: 3,
+            optimal_cost: 906.14,
+        },
+        SolomonDataset {
+            file: "./data/solomon/r2/r207.txt",
+            vehicles: 2,
+            optimal_cost: 890.61,
+        },
+        SolomonDataset {
+            file: "./data/solomon/r2/r208.txt",
+            vehicles: 2,
+            optimal_cost: 726.82,
+        },
     ]
 }
 
@@ -236,8 +236,8 @@ async fn main() {
                     Termination::Duration(SignedDuration::from_secs(10)),
                 ],
                 run_intensify_search: true,
-                insertion_threads: Threads::Multi(4),
-                search_threads: Threads::Multi(2),
+                insertion_threads: Threads::Multi(8),
+                search_threads: Threads::Multi(1),
                 debug_options: SolverParamsDebugOptions {
                     enable_local_search: true,
                 },

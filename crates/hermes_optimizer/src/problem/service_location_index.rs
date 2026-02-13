@@ -1,6 +1,7 @@
 use geo::{Distance, Haversine};
 use rstar::primitives::GeomWithData;
 use rstar::{AABB, Envelope, PointDistance, RTree, RTreeObject};
+use tracing::instrument;
 
 use crate::problem::job::{ActivityId, Job};
 use crate::utils::enumerate_idx::EnumerateIdx;
@@ -67,6 +68,7 @@ pub struct ServiceLocationIndex {
 }
 
 impl ServiceLocationIndex {
+    #[instrument(skip_all, level = "debug")]
     pub fn new(
         locations: &[Location],
         jobs: &[Job],

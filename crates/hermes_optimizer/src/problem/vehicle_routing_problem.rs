@@ -2,6 +2,7 @@ use std::sync::atomic::AtomicUsize;
 
 use fxhash::FxHashSet;
 use jiff::SignedDuration;
+use tracing::instrument;
 use uuid::Uuid;
 
 use crate::{
@@ -16,7 +17,9 @@ use crate::{
         vehicle_profile::{VehicleProfile, VehicleProfileIdx},
     },
     solver::constraints::transport_cost_constraint::TRANSPORT_COST_WEIGHT,
-    utils::{enumerate_idx::EnumerateIdx, prim::prim_mst_adjacency, zip_longest::zip_longest},
+    utils::{
+        enumerate_idx::EnumerateIdx, one_tree::alpha_nearest_neighbors, zip_longest::zip_longest,
+    },
 };
 
 use super::{
@@ -391,6 +394,7 @@ impl VehicleRoutingProblem {
         self.waiting_duration_weight = cost;
     }
 
+    #[instrument(skip_all, level = "debug")]
     fn precompute_neighborhoods(
         locations: &[Location],
         jobs: &[Job],
@@ -416,50 +420,32 @@ impl VehicleRoutingProblem {
             }
         }
 
-        // Compute MST over all locations using travel costs from the first vehicle profile
-        let profile = &vehicle_profiles[0];
-        let mst_adj = prim_mst_adjacency(num_locations, |from, to| {
-            let a = LocationIdx::new(from);
-            let b = LocationIdx::new(to);
-            profile.travel_cost(a, b).min(profile.travel_cost(b, a))
-        });
+        // Compute alpha-nearest neighbor locations using 1-tree Held-Karp lower bound
+        let profile = &vehicle_profiles[0]; // TODO: handle different profiles
+        let alpha_neighbors = alpha_nearest_neighbors(
+            num_locations,
+            |from, to| {
+                let a = LocationIdx::new(from);
+                let b = LocationIdx::new(to);
+                profile.travel_cost(a, b).min(profile.travel_cost(b, a))
+            },
+            num_locations - 1, // get all neighbors sorted by alpha
+        );
 
-        // For each location, build neighborhood from MST neighbors + k-nearest by cost
-        (0..num_locations)
-            .map(|loc| {
+        // For each location, take locations with smallest alpha values until we
+        // reach the target neighborhood size in activities
+        locations
+            .iter()
+            .enumerate()
+            .map(|(location_id, _)| {
                 let mut neighborhood = FxHashSet::default();
 
-                // Add all activities at MST neighbor locations
-                for &mst_neighbor in &mst_adj[loc] {
-                    for &activity in &location_activities[mst_neighbor] {
-                        neighborhood.insert(activity);
+                for &neighbor_loc in &alpha_neighbors[location_id] {
+                    if neighborhood.len() >= target_size {
+                        break;
                     }
-                }
-
-                // If we haven't reached target size, fill with k-nearest by cost
-                if neighborhood.len() < target_size {
-                    let from = LocationIdx::new(loc);
-                    let mut cost_to_location: Vec<(f64, usize)> = (0..num_locations)
-                        .filter(|&other| other != loc)
-                        .map(|other| {
-                            let to = LocationIdx::new(other);
-                            let cost = profile
-                                .travel_cost(from, to)
-                                .min(profile.travel_cost(to, from));
-                            (cost, other)
-                        })
-                        .collect();
-                    cost_to_location.sort_unstable_by(|a, b| {
-                        a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal)
-                    });
-
-                    for (_, other_loc) in cost_to_location {
-                        if neighborhood.len() >= target_size {
-                            break;
-                        }
-                        for &activity in &location_activities[other_loc] {
-                            neighborhood.insert(activity);
-                        }
+                    for &activity in &location_activities[neighbor_loc] {
+                        neighborhood.insert(activity);
                     }
                 }
 
@@ -468,6 +454,7 @@ impl VehicleRoutingProblem {
             .collect()
     }
 
+    #[instrument(skip_all, level = "debug")]
     fn precompute_vehicle_compatibilities(vehicles: &[Vehicle], jobs: &[Job]) -> Vec<bool> {
         let mut compatibilities = vec![true; vehicles.len() * jobs.len()];
 
@@ -484,6 +471,7 @@ impl VehicleRoutingProblem {
         compatibilities
     }
 
+    #[instrument(skip_all, level = "debug")]
     fn precompute_waiting_duration_weight(vehicle_profiles: &[VehicleProfile]) -> f64 {
         let sum = vehicle_profiles
             .iter()
@@ -511,6 +499,7 @@ impl VehicleRoutingProblem {
         sum / vehicle_profiles.len() as f64
     }
 
+    #[instrument(skip_all, level = "debug")]
     fn precompute_normalized_demands(jobs: &[Job]) -> PrecomputedNormalizedDemands {
         let mut max_capacity: Capacity = Capacity::empty();
 
@@ -538,6 +527,7 @@ impl VehicleRoutingProblem {
             .collect()
     }
 
+    #[instrument(skip_all, level = "debug")]
     fn precompute_average_cost_from_depot(
         locations: &[Location],
         vehicles: &[Vehicle],
