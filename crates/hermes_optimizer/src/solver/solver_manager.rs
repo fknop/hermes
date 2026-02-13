@@ -4,10 +4,7 @@ use tokio::sync::RwLock;
 
 use crate::problem::vehicle_routing_problem::VehicleRoutingProblem;
 
-use super::{
-    solver::Solver,
-    solver_params::SolverParams,
-};
+use super::{solver::Solver, solver_params::SolverParams};
 
 #[derive(Default)]
 pub struct SolverManager {
@@ -37,7 +34,8 @@ impl SolverManager {
 
     pub async fn create_job(&self, problem: VehicleRoutingProblem) -> String {
         let job_id = problem.id().to_owned();
-        let solver = Arc::new(Solver::new(problem, SolverParams::default()));
+        let solver_params = SolverParams::default_from_problem(&problem);
+        let solver = Arc::new(Solver::new(problem, solver_params));
         self.solvers.write().await.insert(job_id.clone(), solver);
         job_id
     }

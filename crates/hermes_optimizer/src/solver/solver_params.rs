@@ -1,7 +1,8 @@
 use jiff::SignedDuration;
 
-use crate::solver::{
-    recreate::recreate_strategy::RecreateStrategy, ruin::ruin_strategy::RuinStrategy,
+use crate::{
+    problem::vehicle_routing_problem::VehicleRoutingProblem,
+    solver::{recreate::recreate_strategy::RecreateStrategy, ruin::ruin_strategy::RuinStrategy},
 };
 
 use super::{
@@ -153,6 +154,13 @@ impl Default for SolverParams {
 }
 
 impl SolverParams {
+    pub fn default_from_problem(problem: &VehicleRoutingProblem) -> Self {
+        Self {
+            recreate: RecreateParams::default_from_problem(problem),
+            ..Self::default()
+        }
+    }
+
     pub fn ruin_strategies(&self) -> &Vec<RuinStrategy> {
         &self.ruin.ruin_strategies
     }

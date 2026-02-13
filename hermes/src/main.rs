@@ -1,7 +1,7 @@
 use hermes_optimizer::{
     parsers::{parser::DatasetParser, solomon::SolomonParser},
     solver::{
-        solver::Solver,
+        solver::{self, Solver},
         solver_params::{SolverParams, SolverParamsDebugOptions, Termination, Threads},
     },
 };
@@ -223,27 +223,26 @@ async fn main() {
         let parser = SolomonParser;
         let vrp = parser.parse(dataset.file).unwrap();
 
-        let solver = Solver::new(
-            vrp,
-            SolverParams {
-                terminations: vec![
-                    // Termination::Iterations(20000),
-                    Termination::VehiclesAndCosts {
-                        vehicles: dataset.vehicles,
-                        costs: dataset.optimal_cost + 0.5,
-                    },
-                    // Termination::IterationsWithoutImprovement(10000),
-                    Termination::Duration(SignedDuration::from_secs(10)),
-                ],
-                run_intensify_search: true,
-                insertion_threads: Threads::Multi(8),
-                search_threads: Threads::Multi(1),
-                debug_options: SolverParamsDebugOptions {
-                    enable_local_search: true,
+        let solver_params = SolverParams {
+            terminations: vec![
+                // Termination::Iterations(20000),
+                Termination::VehiclesAndCosts {
+                    vehicles: dataset.vehicles,
+                    costs: dataset.optimal_cost + 0.5,
                 },
-                ..SolverParams::default()
+                // Termination::IterationsWithoutImprovement(10000),
+                Termination::Duration(SignedDuration::from_secs(10)),
+            ],
+            run_intensify_search: true,
+            insertion_threads: Threads::Multi(8),
+            search_threads: Threads::Multi(1),
+            debug_options: SolverParamsDebugOptions {
+                enable_local_search: true,
             },
-        );
+            ..SolverParams::default_from_problem(&vrp)
+        };
+
+        let solver = Solver::new(vrp, solver_params);
 
         solver.solve();
 

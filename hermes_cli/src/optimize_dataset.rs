@@ -106,18 +106,17 @@ pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
             });
         }
 
-        let mut solver = Solver::new(
-            vrp,
-            SolverParams {
-                terminations,
-                search_threads: Threads::Multi(args.sthreads as usize),
-                insertion_threads: Threads::Multi(args.ithreads as usize),
-                debug_options: SolverParamsDebugOptions {
-                    enable_local_search: true,
-                },
-                ..SolverParams::default()
+        let solver_params = SolverParams {
+            terminations,
+            search_threads: Threads::Multi(args.sthreads as usize),
+            insertion_threads: Threads::Multi(args.ithreads as usize),
+            debug_options: SolverParamsDebugOptions {
+                enable_local_search: true,
             },
-        );
+            ..SolverParams::default_from_problem(&vrp)
+        };
+
+        let mut solver = Solver::new(vrp, solver_params);
 
         let bar = Arc::clone(&bars[i]);
         bar.lock().set_message("running...");

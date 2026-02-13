@@ -44,15 +44,14 @@ pub async fn run(args: OptimizeArgs) -> anyhow::Result<()> {
     let client = TravelMatrixClient::default();
     let problem = content.build_problem(&client).await?;
 
-    let solver = Solver::new(
-        problem,
-        SolverParams {
-            terminations: vec![Termination::Duration(args.timeout)],
-            insertion_threads: Threads::Multi(args.threads as usize),
-            run_intensify_search: true,
-            ..SolverParams::default()
-        },
-    );
+    let solver_params = SolverParams {
+        terminations: vec![Termination::Duration(args.timeout)],
+        insertion_threads: Threads::Multi(args.threads as usize),
+        run_intensify_search: true,
+        ..SolverParams::default_from_problem(&problem)
+    };
+
+    let solver = Solver::new(problem, solver_params);
 
     // let closure_loading_bar = Arc::clone(&loading_bar);
     // solver.on_best_solution(move |best_solution| {
