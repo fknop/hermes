@@ -16,7 +16,7 @@ use crate::{
         vehicle_profile::{VehicleProfile, VehicleProfileIdx},
     },
     solver::constraints::transport_cost_constraint::TRANSPORT_COST_WEIGHT,
-    utils::{enumerate_idx::EnumerateIdx, zip_longest::zip_longest},
+    utils::{enumerate_idx::EnumerateIdx, prim::prim_mst_adjacency, zip_longest::zip_longest},
 };
 
 use super::{
@@ -115,7 +115,8 @@ impl VehicleRoutingProblem {
 
         let neighborhoods = VehicleRoutingProblem::precompute_neighborhoods(
             &params.locations,
-            &service_location_index,
+            &params.jobs,
+            &params.vehicle_profiles,
         );
 
         for neighborhood in &neighborhoods {
@@ -392,17 +393,77 @@ impl VehicleRoutingProblem {
 
     fn precompute_neighborhoods(
         locations: &[Location],
-        index: &ServiceLocationIndex,
+        jobs: &[Job],
+        vehicle_profiles: &[VehicleProfile],
     ) -> Vec<FxHashSet<ActivityId>> {
-        let k = 50;
+        let target_size = 50;
+        let num_locations = locations.len();
 
-        locations
-            .iter()
-            .map(|location| {
-                index
-                    .nearest_neighbor_iter(location)
-                    .take(k)
-                    .collect::<FxHashSet<ActivityId>>()
+        // Build location -> activities mapping
+        let mut location_activities: Vec<Vec<ActivityId>> = vec![vec![]; num_locations];
+        for (job_idx, job) in jobs.iter().enumerate_idx() {
+            match job {
+                Job::Service(service) => {
+                    location_activities[service.location_id().get()]
+                        .push(ActivityId::Service(job_idx));
+                }
+                Job::Shipment(shipment) => {
+                    location_activities[shipment.pickup().location_id().get()]
+                        .push(ActivityId::ShipmentPickup(job_idx));
+                    location_activities[shipment.delivery().location_id().get()]
+                        .push(ActivityId::ShipmentDelivery(job_idx));
+                }
+            }
+        }
+
+        // Compute MST over all locations using travel costs from the first vehicle profile
+        let profile = &vehicle_profiles[0];
+        let mst_adj = prim_mst_adjacency(num_locations, |from, to| {
+            let a = LocationIdx::new(from);
+            let b = LocationIdx::new(to);
+            profile.travel_cost(a, b).min(profile.travel_cost(b, a))
+        });
+
+        // For each location, build neighborhood from MST neighbors + k-nearest by cost
+        (0..num_locations)
+            .map(|loc| {
+                let mut neighborhood = FxHashSet::default();
+
+                // Add all activities at MST neighbor locations
+                for &mst_neighbor in &mst_adj[loc] {
+                    for &activity in &location_activities[mst_neighbor] {
+                        neighborhood.insert(activity);
+                    }
+                }
+
+                // If we haven't reached target size, fill with k-nearest by cost
+                if neighborhood.len() < target_size {
+                    let from = LocationIdx::new(loc);
+                    let mut cost_to_location: Vec<(f64, usize)> = (0..num_locations)
+                        .filter(|&other| other != loc)
+                        .map(|other| {
+                            let to = LocationIdx::new(other);
+                            let cost = profile
+                                .travel_cost(from, to)
+                                .min(profile.travel_cost(to, from));
+                            (cost, other)
+                        })
+                        .collect();
+                    cost_to_location.sort_unstable_by(|a, b| {
+                        a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal)
+                    });
+
+                    for (_, other_loc) in cost_to_location {
+                        if neighborhood.len() >= target_size {
+                            break;
+                        }
+                        for &activity in &location_activities[other_loc] {
+                            neighborhood.insert(activity);
+                        }
+                    }
+                }
+
+                neighborhood
             })
             .collect()
     }
