@@ -75,7 +75,10 @@ export function transformSolutionToGeoJson(
   }
 }
 
-export function getGeoJSONFromProblem(problem: VehicleRoutingJobInput): {
+export function getGeoJSONFromProblem(
+  problem: VehicleRoutingJobInput,
+  neighbors: number[] | null
+): {
   locations: { points: GeoJSON.FeatureCollection<GeoJSON.Point> }
   depots: { points: GeoJSON.FeatureCollection<GeoJSON.Point> }
 } {
@@ -84,10 +87,11 @@ export function getGeoJSONFromProblem(problem: VehicleRoutingJobInput): {
     .filter((id) => !isNil(id))
 
   const points: GeoJSON.Feature<GeoJSON.Point>[] = problem.locations
-    .filter((_, index) => {
+    .map((location, index) => ({ location, index }))
+    .filter(({ index }) => {
       return !depotLocationIds.includes(index)
     })
-    .map((location, index) => {
+    .map(({ location, index }) => {
       return {
         geometry: {
           type: 'Point',
@@ -96,16 +100,17 @@ export function getGeoJSONFromProblem(problem: VehicleRoutingJobInput): {
         type: 'Feature',
         properties: {
           locationId: (index + 1).toString(),
-          color: '#475569',
+          color: neighbors?.includes(index) ? 'red' : '#475569',
         },
       }
     })
 
   const depots: GeoJSON.Feature<GeoJSON.Point>[] = problem.locations
-    .filter((_, index) => {
+    .map((location, index) => ({ location, index }))
+    .filter(({ index }) => {
       return depotLocationIds.includes(index)
     })
-    .map((location, index) => {
+    .map(({ location }) => {
       return {
         geometry: {
           type: 'Point',

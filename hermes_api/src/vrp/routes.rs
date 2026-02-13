@@ -29,6 +29,13 @@ pub fn vrp_routes(state: Arc<AppState>) -> ApiRouter {
             }),
         )
         .api_route(
+            "/jobs/{job_id}/neighbors",
+            get_with(job::neighbors_handler, |op| {
+                op.description("Get the neighbors of a location")
+                    .id("getLocationNeighbors")
+            }),
+        )
+        .api_route(
             "/jobs/{job_id}/poll",
             get_with(job::poll_handler, |op| {
                 op.description("Poll a job that is currently running")

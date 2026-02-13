@@ -24,6 +24,8 @@ import { getSolution } from './solution.ts'
 import { UnassignedJobsLayer } from './UnassignedJobsLayer.tsx'
 import { usePollRouting } from './usePollRouting.ts'
 import { useStopRouting } from './useStopRouting.ts'
+import { useGetNeighbors } from './useGetNeighbors.ts'
+import { LocationsPanel } from './components/LocationsPanel.tsx'
 
 export async function clientLoader({ params }: ClientLoaderFunctionArgs) {
   const jobId = params.jobId
@@ -95,9 +97,11 @@ export default function VehicleRoutingScreen() {
       : null
   }, [solution, input])
 
+  const [fetchNeighbors, { neighbors }] = useGetNeighbors()
+
   const { locations, depots } = useMemo(
-    () => getGeoJSONFromProblem(input),
-    [input]
+    () => getGeoJSONFromProblem(input, neighbors),
+    [input, neighbors]
   )
 
   const unassignedServices = useMemo(() => {
@@ -155,24 +159,36 @@ export default function VehicleRoutingScreen() {
     >
       <div className="h-screen w-screen">
         <ResizablePanelGroup orientation="horizontal">
-          {solution && (
-            <ResizablePanel defaultSize={84 * 4} minSize={84 * 4}>
-              <MapSidePanel side="left">
-                <div className="flex flex-row h-full">
-                  <div className="flex-1 overflow-auto pb-6">
-                    <div className="flex flex-col gap-4">
+          <ResizablePanel defaultSize={84 * 4} minSize={84 * 4}>
+            <MapSidePanel side="left">
+              <div className="flex flex-row h-full">
+                <div className="flex-1 overflow-auto pb-6">
+                  <div className="flex flex-col gap-4">
+                    {solution && (
                       <RoutesPanel
                         solution={solution}
                         selectedRouteIndex={selectedRouteIndex}
                         onRouteSelect={setSelectedRouteIndex}
                         problem={input}
                       />
-                    </div>
+                    )}
+
+                    {isNil(solution) && (
+                      <LocationsPanel
+                        problem={input}
+                        onSelect={(locationId) =>
+                          fetchNeighbors({
+                            job_id: jobId,
+                            location_id: locationId,
+                          })
+                        }
+                      />
+                    )}
                   </div>
                 </div>
-              </MapSidePanel>
-            </ResizablePanel>
-          )}
+              </div>
+            </MapSidePanel>
+          </ResizablePanel>
           {selectedRoute && selectedRouteIndex !== null && (
             <ResizablePanel defaultSize={84 * 4} minSize={84 * 4}>
               <MapSidePanel side="left">

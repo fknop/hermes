@@ -137,6 +137,72 @@
         }
       }
     },
+    "/vrp/jobs/{job_id}/neighbors": {
+      "get": {
+        "description": "Get the neighbors of a location",
+        "operationId": "getLocationNeighbors",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "style": "simple"
+          },
+          {
+            "in": "query",
+            "name": "location_id",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "uint",
+              "minimum": 0
+            },
+            "style": "form"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "format": "uint",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/vrp/jobs/{job_id}/poll": {
       "get": {
         "description": "Poll a job that is currently running",
@@ -711,6 +777,19 @@
           "foot",
           "small_truck",
           "truck"
+        ]
+      },
+      "JobNeighborsQuery": {
+        "type": "object",
+        "properties": {
+          "location_id": {
+            "type": "integer",
+            "format": "uint",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "location_id"
         ]
       },
       "JobPath": {
@@ -1327,7 +1406,6 @@
             }
           }
         },
-        "additionalProperties": false,
         "required": [
           "locations",
           "services",

@@ -150,10 +150,9 @@ impl RegretInsertion {
 
                 // unassigned_jobs.retain(|u| *u != insertion.job_idx());
             } else {
-                panic!("no insertion possible");
                 // If no service could be inserted (e.g., all remaining are infeasible),
                 // we stop the insertion process. The rest will remain unassigned.
-                // break;
+                break;
             }
         }
     }

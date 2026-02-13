@@ -155,6 +155,10 @@ impl VehicleRoutingProblem {
         &self.jobs
     }
 
+    pub fn neighbors(&self, location_id: LocationIdx) -> &FxHashSet<ActivityId> {
+        &self.neighborhoods[location_id.get()]
+    }
+
     pub fn services_iter(&self) -> impl Iterator<Item = &Service> {
         self.jobs.iter().filter_map(|job| match job {
             Job::Service(service) => Some(service),

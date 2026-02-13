@@ -312,3 +312,30 @@ pub async fn job_handler(
 
     Ok(Json(VehicleRoutingJobInput::from(problem)))
 }
+
+#[derive(Deserialize, JsonSchema)]
+pub struct JobNeighborsQuery {
+    location_id: usize,
+}
+
+pub async fn neighbors_handler(
+    Path(path): Path<JobPath>,
+    State(state): State<Arc<AppState>>,
+    Query(query): Query<JobNeighborsQuery>,
+) -> Result<Json<Vec<usize>>, ApiError> {
+    let solver = state
+        .solver_manager
+        .solver(&path.job_id.to_string())
+        .await
+        .ok_or(ApiError::NotFound(path.job_id.to_string()))?;
+
+    let problem = solver.problem();
+
+    let neighbors = problem
+        .neighbors(query.location_id.into())
+        .iter()
+        .map(|&activity_id| problem.job_activity(activity_id).location_id().get())
+        .collect::<Vec<_>>();
+
+    Ok(Json(neighbors))
+}
