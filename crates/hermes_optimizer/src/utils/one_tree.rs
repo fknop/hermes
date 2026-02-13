@@ -7,24 +7,24 @@ use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 use super::prim::prim_mst;
 
-/// Computes alpha-nearness values for all edges using the 1-tree Held-Karp
-/// lower bound with subgradient optimization.
+/// Returns the k-nearest neighbors for each node based on alpha-nearness.
+/// `result[i]` contains the node indices sorted by ascending alpha value.
 ///
-/// Alpha-nearness of edge (i,j) = cost of the minimum 1-tree forced to contain
-/// edge (i,j) minus the cost of the optimal 1-tree. Edges with small alpha
-/// values are structurally important and likely to appear in good solutions.
-///
-/// `cost_fn(from, to)` returns the original edge cost.
-/// Returns a flat matrix `alpha[i * num_nodes + j]` of alpha values.
-pub fn compute_alpha_nearness(
+/// Fuses alpha and beta computation to avoid allocating full n² matrices.
+/// For each node, computes beta via DFS, derives alpha values, and extracts
+/// the top-k neighbors — all with O(n) temporary memory per thread.
+pub fn alpha_nearest_neighbors(
     num_nodes: usize,
     cost_fn: impl Fn(usize, usize) -> f64 + Sync,
-) -> Vec<f64> {
+    k: usize,
+) -> Vec<Vec<usize>> {
     if num_nodes <= 2 {
-        return vec![0.0; num_nodes * num_nodes];
+        return (0..num_nodes)
+            .map(|i| (0..num_nodes).filter(|&j| j != i).collect())
+            .collect();
     }
 
-    // The special node excluded from the MST (node 0, typically the depot)
+    let k = k.min(num_nodes - 1);
     let special = 0;
 
     // Subgradient optimization to find optimal pi-values
@@ -36,77 +36,50 @@ pub fn compute_alpha_nearness(
     // Build optimal 1-tree: MST on non-special nodes + two cheapest edges from special
     let mst_result = prim_mst(num_nodes, &modified_cost, Some(special));
 
-    // Compute the beta values: for each pair (i,j) of non-special nodes,
-    // beta(i,j) is the maximum edge cost on the unique MST path from i to j.
-    // When we force a non-MST edge (i,j), we can remove the heaviest edge on
-    // the MST path between i and j, so the cost increase is edge_cost - beta.
-    let beta = compute_beta_values(num_nodes, &mst_result.adjacency, &modified_cost);
+    // Find the two cheapest edges from the special node
+    let (cheapest_1, cheapest_2) = two_cheapest_special_edges(num_nodes, &modified_cost, special);
 
-    // Find the two cheapest edges from the special node (used in the optimal 1-tree)
-    let mut special_edges: Vec<(f64, usize)> = (0..num_nodes)
-        .filter(|&n| n != special)
-        .map(|n| (modified_cost(special, n), n))
-        .collect();
-    special_edges
-        .sort_unstable_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
+    let adjacency = &mst_result.adjacency;
 
-    let cheapest_1 = special_edges[0]; // (cost, node)
-    let cheapest_2 = special_edges[1]; // (cost, node)
-
-    // Compute alpha-nearness for every edge
-    let mut alpha = vec![0.0_f64; num_nodes * num_nodes];
-
-    for i in 0..num_nodes {
-        for j in (i + 1)..num_nodes {
-            let a = if i == special || j == special {
-                // Edge involves the special node.
-                let other = if i == special { j } else { i };
-                let edge_cost = modified_cost(special, other);
-
-                if other == cheapest_1.1 || other == cheapest_2.1 {
-                    0.0
-                } else {
-                    (edge_cost - cheapest_2.0).max(0.0)
-                }
-            } else {
-                // Edge does not involve the special node.
-                let edge_cost = modified_cost(i, j);
-                let b = beta[i * num_nodes + j];
-
-                if b == f64::MAX {
-                    f64::MAX
-                } else {
-                    (edge_cost - b).max(0.0)
-                }
-            };
-
-            alpha[i * num_nodes + j] = a;
-            alpha[j * num_nodes + i] = a;
-        }
-    }
-
-    alpha
-}
-
-/// Returns the k-nearest neighbors for each node based on alpha-nearness.
-/// `result[i]` contains the node indices sorted by ascending alpha value.
-pub fn alpha_nearest_neighbors(
-    num_nodes: usize,
-    cost_fn: impl Fn(usize, usize) -> f64 + Sync,
-    k: usize,
-) -> Vec<Vec<usize>> {
-    let alpha = compute_alpha_nearness(num_nodes, &cost_fn);
-    let k = k.min(num_nodes - 1);
-
+    // For each node, compute beta row via DFS, derive alpha, extract top-k
     (0..num_nodes)
+        .into_par_iter()
         .map(|i| {
-            let mut neighbors: Vec<(f64, usize)> = (0..num_nodes)
-                .filter(|&j| j != i)
-                .map(|j| (alpha[i * num_nodes + j], j))
-                .collect();
+            // Step 1: Compute beta[i, *] via DFS on the MST
+            let beta_row = compute_beta_row(num_nodes, adjacency, &modified_cost, i);
 
-            // Use partial sort: partition around k-th element in O(n),
-            // then sort only the first k elements in O(k log k)
+            // Step 2: Compute alpha[i, j] for all j != i
+            let mut neighbors: Vec<(f64, usize)> = Vec::with_capacity(num_nodes - 1);
+
+            for j in 0..num_nodes {
+                if j == i {
+                    continue;
+                }
+
+                let a = if i == special || j == special {
+                    let other = if i == special { j } else { i };
+                    let edge_cost = modified_cost(special, other);
+
+                    if other == cheapest_1.1 || other == cheapest_2.1 {
+                        0.0
+                    } else {
+                        (edge_cost - cheapest_2.0).max(0.0)
+                    }
+                } else {
+                    let edge_cost = modified_cost(i, j);
+                    let b = beta_row[j];
+
+                    if b == f64::MAX {
+                        f64::MAX
+                    } else {
+                        (edge_cost - b).max(0.0)
+                    }
+                };
+
+                neighbors.push((a, j));
+            }
+
+            // Step 3: Extract top-k via partial sort
             if k < neighbors.len() {
                 neighbors.select_nth_unstable_by(k, |a, b| {
                     a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal)
@@ -120,6 +93,31 @@ pub fn alpha_nearest_neighbors(
             neighbors.into_iter().map(|(_, j)| j).collect()
         })
         .collect()
+}
+
+/// Finds the two cheapest edges from the special node in O(n).
+fn two_cheapest_special_edges(
+    num_nodes: usize,
+    cost_fn: &impl Fn(usize, usize) -> f64,
+    special: usize,
+) -> ((f64, usize), (f64, usize)) {
+    let mut first = (f64::INFINITY, usize::MAX);
+    let mut second = (f64::INFINITY, usize::MAX);
+
+    for n in 0..num_nodes {
+        if n == special {
+            continue;
+        }
+        let cost = cost_fn(special, n);
+        if cost < first.0 {
+            second = first;
+            first = (cost, n);
+        } else if cost < second.0 {
+            second = (cost, n);
+        }
+    }
+
+    (first, second)
 }
 
 /// Subgradient optimization to find pi-values that maximize the 1-tree lower bound.
@@ -204,71 +202,96 @@ fn compute_1tree_with_degree(
     let mst = prim_mst(num_nodes, cost_fn, Some(special));
     let mut degree: Vec<usize> = mst.adjacency.iter().map(|adj| adj.len()).collect();
 
-    // Find two cheapest edges from the special node
-    let mut special_edges: Vec<(f64, usize)> = (0..num_nodes)
-        .filter(|&n| n != special)
-        .map(|n| (cost_fn(special, n), n))
-        .collect();
-    special_edges
-        .sort_unstable_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
+    let (cheapest_1, cheapest_2) = two_cheapest_special_edges(num_nodes, cost_fn, special);
 
-    let total_cost = mst.total_cost + special_edges[0].0 + special_edges[1].0;
+    let total_cost = mst.total_cost + cheapest_1.0 + cheapest_2.0;
 
     // Update degrees for the two special edges
     degree[special] = 2;
-    degree[special_edges[0].1] += 1;
-    degree[special_edges[1].1] += 1;
+    degree[cheapest_1.1] += 1;
+    degree[cheapest_2.1] += 1;
 
     (total_cost, degree)
 }
 
-/// Computes beta values using DFS on the MST, parallelized with rayon.
-/// beta[i * n + j] = maximum edge cost on the unique MST path from i to j.
-/// This is needed to compute alpha for non-MST edges.
-fn compute_beta_values(
+/// Computes beta values for a single source node via DFS on the MST.
+/// Returns a Vec where `result[j]` = maximum edge cost on the unique MST path
+/// from `start` to `j`.
+fn compute_beta_row(
     num_nodes: usize,
     adjacency: &[Vec<usize>],
-    cost_fn: &(impl Fn(usize, usize) -> f64 + Sync),
+    cost_fn: &impl Fn(usize, usize) -> f64,
+    start: usize,
 ) -> Vec<f64> {
-    // Each row is computed independently via DFS, so we parallelize across rows.
-    let rows: Vec<Vec<f64>> = (0..num_nodes)
-        .into_par_iter()
-        .map(|start| {
-            let mut row = vec![f64::MAX; num_nodes];
-            row[start] = 0.0;
+    let mut row = vec![f64::MAX; num_nodes];
+    row[start] = 0.0;
 
-            let mut stack: Vec<(usize, f64)> = vec![(start, 0.0)];
-            let mut visited = vec![false; num_nodes];
-            visited[start] = true;
+    let mut stack: Vec<(usize, f64)> = vec![(start, 0.0)];
+    let mut visited = vec![false; num_nodes];
+    visited[start] = true;
 
-            while let Some((node, max_cost_on_path)) = stack.pop() {
-                row[node] = max_cost_on_path;
+    while let Some((node, max_cost_on_path)) = stack.pop() {
+        row[node] = max_cost_on_path;
 
-                for &neighbor in &adjacency[node] {
-                    if !visited[neighbor] {
-                        visited[neighbor] = true;
-                        let edge_cost = cost_fn(node, neighbor);
-                        let new_max = max_cost_on_path.max(edge_cost);
-                        stack.push((neighbor, new_max));
-                    }
-                }
+        for &neighbor in &adjacency[node] {
+            if !visited[neighbor] {
+                visited[neighbor] = true;
+                let edge_cost = cost_fn(node, neighbor);
+                let new_max = max_cost_on_path.max(edge_cost);
+                stack.push((neighbor, new_max));
             }
-
-            row
-        })
-        .collect();
-
-    // Flatten into the n² matrix
-    let mut beta = vec![f64::MAX; num_nodes * num_nodes];
-    for (i, row) in rows.into_iter().enumerate() {
-        beta[i * num_nodes..(i + 1) * num_nodes].copy_from_slice(&row);
+        }
     }
-    beta
+
+    row
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Test helper: compute full alpha matrix for verification.
+    fn compute_alpha_nearness_for_test(
+        num_nodes: usize,
+        cost_fn: impl Fn(usize, usize) -> f64 + Sync,
+    ) -> Vec<f64> {
+        if num_nodes <= 2 {
+            return vec![0.0; num_nodes * num_nodes];
+        }
+        let special = 0;
+        let pi = subgradient_optimization(num_nodes, &cost_fn, special);
+        let modified_cost = |i: usize, j: usize| -> f64 { cost_fn(i, j) + pi[i] + pi[j] };
+        let mst_result = prim_mst(num_nodes, &modified_cost, Some(special));
+        let (cheapest_1, cheapest_2) =
+            two_cheapest_special_edges(num_nodes, &modified_cost, special);
+
+        let mut alpha = vec![0.0_f64; num_nodes * num_nodes];
+        for i in 0..num_nodes {
+            let beta_row = compute_beta_row(num_nodes, &mst_result.adjacency, &modified_cost, i);
+            for j in (i + 1)..num_nodes {
+                let a = if i == special || j == special {
+                    let other = if i == special { j } else { i };
+                    let edge_cost = modified_cost(special, other);
+                    if other == cheapest_1.1 || other == cheapest_2.1 {
+                        0.0
+                    } else {
+                        (edge_cost - cheapest_2.0).max(0.0)
+                    }
+                } else {
+                    let edge_cost = modified_cost(i, j);
+                    let b = beta_row[j];
+                    if b == f64::MAX {
+                        f64::MAX
+                    } else {
+                        (edge_cost - b).max(0.0)
+                    }
+                };
+                alpha[i * num_nodes + j] = a;
+                alpha[j * num_nodes + i] = a;
+            }
+        }
+        alpha
+    }
 
     /// With 3 nodes and only 3 possible edges, every edge must be in the 1-tree
     /// (MST on {1,2} = edge 1-2, plus edges 0-1 and 0-2 from special node).
@@ -276,7 +299,7 @@ mod tests {
     #[test]
     fn test_alpha_nearness_triangle() {
         let costs = [[0.0, 1.0, 3.0], [1.0, 0.0, 2.0], [3.0, 2.0, 0.0]];
-        let alpha = compute_alpha_nearness(3, |i, j| costs[i][j]);
+        let alpha = compute_alpha_nearness_for_test(3, |i, j| costs[i][j]);
 
         assert!(alpha[1] < 1e-6, "alpha(0,1) = {}", alpha[1]);
         assert!(alpha[2] < 1e-6, "alpha(0,2) = {}", alpha[2]);
@@ -298,7 +321,7 @@ mod tests {
     fn test_alpha_nearness_five_nodes_no_pi() {
         // Line graph costs: dist(i,j) = |i-j|
         let n = 5;
-        let alpha = compute_alpha_nearness(n, |i, j| (i as f64 - j as f64).abs());
+        let alpha = compute_alpha_nearness_for_test(n, |i, j| (i as f64 - j as f64).abs());
 
         // Edges in the optimal 1-tree should have alpha = 0 or very small
         // 0-1 is a special edge (cheapest from 0): alpha ≈ 0
@@ -362,7 +385,7 @@ mod tests {
             [10.0, 1.0, 0.0, 1.0],
             [1.0, 10.0, 1.0, 0.0],
         ];
-        let alpha = compute_alpha_nearness(4, |i, j| costs[i][j]);
+        let alpha = compute_alpha_nearness_for_test(4, |i, j| costs[i][j]);
 
         // Alpha should be symmetric
         for i in 0..4 {
@@ -383,7 +406,7 @@ mod tests {
 
     #[test]
     fn test_alpha_nearness_two_nodes() {
-        let alpha = compute_alpha_nearness(2, |_, _| 5.0);
+        let alpha = compute_alpha_nearness_for_test(2, |_, _| 5.0);
         assert!((alpha[1]).abs() < 1e-6);
         assert!((alpha[2]).abs() < 1e-6);
     }

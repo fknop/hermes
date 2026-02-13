@@ -99,7 +99,7 @@ export function getGeoJSONFromProblem(
         },
         type: 'Feature',
         properties: {
-          locationId: (index + 1).toString(),
+          locationId: index.toString(),
           color: neighbors?.includes(index) ? 'red' : '#475569',
         },
       }
