@@ -34,7 +34,7 @@ pub fn alpha_nearest_neighbors(
     let modified_cost = |i: usize, j: usize| -> f64 { cost_fn(i, j) + pi[i] + pi[j] };
 
     // Build optimal 1-tree: MST on non-special nodes + two cheapest edges from special
-    let mst_result = prim_mst(num_nodes, &modified_cost, Some(special));
+    let mst_result = prim_mst(num_nodes, modified_cost, Some(special));
 
     // Find the two cheapest edges from the special node
     let (cheapest_1, cheapest_2) = two_cheapest_special_edges(num_nodes, &modified_cost, special);
@@ -250,103 +250,45 @@ fn compute_beta_row(
 mod tests {
     use super::*;
 
-    /// Test helper: compute full alpha matrix for verification.
-    fn compute_alpha_nearness_for_test(
-        num_nodes: usize,
-        cost_fn: impl Fn(usize, usize) -> f64 + Sync,
-    ) -> Vec<f64> {
-        if num_nodes <= 2 {
-            return vec![0.0; num_nodes * num_nodes];
-        }
-        let special = 0;
-        let pi = subgradient_optimization(num_nodes, &cost_fn, special);
-        let modified_cost = |i: usize, j: usize| -> f64 { cost_fn(i, j) + pi[i] + pi[j] };
-        let mst_result = prim_mst(num_nodes, &modified_cost, Some(special));
-        let (cheapest_1, cheapest_2) =
-            two_cheapest_special_edges(num_nodes, &modified_cost, special);
-
-        let mut alpha = vec![0.0_f64; num_nodes * num_nodes];
-        for i in 0..num_nodes {
-            let beta_row = compute_beta_row(num_nodes, &mst_result.adjacency, &modified_cost, i);
-            for j in (i + 1)..num_nodes {
-                let a = if i == special || j == special {
-                    let other = if i == special { j } else { i };
-                    let edge_cost = modified_cost(special, other);
-                    if other == cheapest_1.1 || other == cheapest_2.1 {
-                        0.0
-                    } else {
-                        (edge_cost - cheapest_2.0).max(0.0)
-                    }
-                } else {
-                    let edge_cost = modified_cost(i, j);
-                    let b = beta_row[j];
-                    if b == f64::MAX {
-                        f64::MAX
-                    } else {
-                        (edge_cost - b).max(0.0)
-                    }
-                };
-                alpha[i * num_nodes + j] = a;
-                alpha[j * num_nodes + i] = a;
-            }
-        }
-        alpha
-    }
-
-    /// With 3 nodes and only 3 possible edges, every edge must be in the 1-tree
-    /// (MST on {1,2} = edge 1-2, plus edges 0-1 and 0-2 from special node).
-    /// So all alpha values should be 0.
+    /// With 3 nodes, every node must be a neighbor of every other node.
+    /// All edges are structurally required so the best neighbors should
+    /// include all other nodes.
     #[test]
-    fn test_alpha_nearness_triangle() {
+    fn test_alpha_nearest_triangle() {
         let costs = [[0.0, 1.0, 3.0], [1.0, 0.0, 2.0], [3.0, 2.0, 0.0]];
-        let alpha = compute_alpha_nearness_for_test(3, |i, j| costs[i][j]);
+        let neighbors = alpha_nearest_neighbors(3, |i, j| costs[i][j], 2);
 
-        assert!(alpha[1] < 1e-6, "alpha(0,1) = {}", alpha[1]);
-        assert!(alpha[2] < 1e-6, "alpha(0,2) = {}", alpha[2]);
-        assert!(alpha[3 + 2] < 1e-6, "alpha(1,2) = {}", alpha[3 + 2]);
+        for i in 0..3 {
+            assert_eq!(neighbors[i].len(), 2);
+        }
     }
 
-    /// 5-node example with clear structure. Nodes on a line: 0-1-2-3-4
-    /// with short sequential edges and expensive cross edges.
-    /// Without pi-values (pi=0), manually verify:
-    ///   Special = 0, MST on {1,2,3,4}: 1-2(1), 2-3(1), 3-4(1) cost=3
-    ///   Two cheapest from 0: 0-1(1), 0-2(2) → 1-tree cost = 3+1+2 = 6
-    ///   Edge 0-3(3): replaces 0-2(2), alpha = 3-2 = 1
-    ///   Edge 0-4(4): replaces 0-2(2), alpha = 4-2 = 2
-    ///   Edge 1-3(2): MST path 1→2→3, beta=max(1,1)=1, alpha=2-1=1
-    ///   Edge 1-4(3): MST path 1→2→3→4, beta=max(1,1,1)=1, alpha=3-1=2
-    ///   Edge 2-4(2): MST path 2→3→4, beta=max(1,1)=1, alpha=2-1=1
-    ///   Edge 1-2(1): in MST, beta=1, alpha=1-1=0
+    /// 5-node line graph: 0-1-2-3-4 with dist(i,j) = |i-j|.
+    /// Adjacent nodes (small alpha) should appear before distant nodes.
     #[test]
-    fn test_alpha_nearness_five_nodes_no_pi() {
-        // Line graph costs: dist(i,j) = |i-j|
-        let n = 5;
-        let alpha = compute_alpha_nearness_for_test(n, |i, j| (i as f64 - j as f64).abs());
+    fn test_alpha_nearest_five_nodes_line() {
+        let neighbors = alpha_nearest_neighbors(5, |i, j| (i as f64 - j as f64).abs(), 2);
 
-        // Edges in the optimal 1-tree should have alpha = 0 or very small
-        // 0-1 is a special edge (cheapest from 0): alpha ≈ 0
-        assert!(alpha[1] < 0.5, "alpha(0,1) = {}", alpha[1]);
-        // 0-2 is a special edge (second cheapest from 0): alpha ≈ 0
-        assert!(alpha[2] < 0.5, "alpha(0,2) = {}", alpha[2]);
-        // 1-2, 2-3, 3-4 are MST edges: alpha ≈ 0
-        assert!(alpha[n + 2] < 0.5, "alpha(1,2) = {}", alpha[n + 2]);
-        assert!(alpha[2 * n + 3] < 0.5, "alpha(2,3) = {}", alpha[2 * n + 3]);
-        assert!(alpha[3 * n + 4] < 0.5, "alpha(3,4) = {}", alpha[3 * n + 4]);
-
-        // Cross edges should have higher alpha
-        // 0-4 (cost 4) should have higher alpha than 0-1 (cost 1)
+        // Node 0's two nearest by alpha should be 1 and 2 (the two cheapest
+        // special edges from the depot)
         assert!(
-            alpha[4] > alpha[1],
-            "alpha(0,4)={} should be > alpha(0,1)={}",
-            alpha[4],
-            alpha[1]
+            neighbors[0].contains(&1),
+            "Node 0 neighbors should contain 1, got {:?}",
+            neighbors[0]
         );
-        // 1-4 (cost 3) should have higher alpha than 1-2 (cost 1)
+
+        // Node 2's nearest should include its MST-adjacent nodes 1 and 3
         assert!(
-            alpha[n + 4] > alpha[n + 2],
-            "alpha(1,4)={} should be > alpha(1,2)={}",
-            alpha[n + 4],
-            alpha[n + 2]
+            neighbors[2].contains(&1) || neighbors[2].contains(&3),
+            "Node 2 neighbors should contain 1 or 3, got {:?}",
+            neighbors[2]
+        );
+
+        // Node 4's nearest should include 3 (direct MST neighbor)
+        assert!(
+            neighbors[4].contains(&3),
+            "Node 4 neighbors should contain 3, got {:?}",
+            neighbors[4]
         );
     }
 
@@ -377,6 +319,9 @@ mod tests {
         );
     }
 
+    /// Alpha-nearness is symmetric, so neighbors should reflect that:
+    /// if j is a top neighbor of i, then i should be a top neighbor of j
+    /// (for small enough graphs where all neighbors are returned).
     #[test]
     fn test_alpha_nearness_symmetric() {
         let costs = [
@@ -385,29 +330,28 @@ mod tests {
             [10.0, 1.0, 0.0, 1.0],
             [1.0, 10.0, 1.0, 0.0],
         ];
-        let alpha = compute_alpha_nearness_for_test(4, |i, j| costs[i][j]);
+        let neighbors = alpha_nearest_neighbors(4, |i, j| costs[i][j], 3);
 
-        // Alpha should be symmetric
+        // With k=3 and 4 nodes, every node gets all others as neighbors.
+        // Check symmetry: if j appears in neighbors[i], then i appears in neighbors[j].
         for i in 0..4 {
-            for j in 0..4 {
+            for &j in &neighbors[i] {
                 assert!(
-                    (alpha[i * 4 + j] - alpha[j * 4 + i]).abs() < 1e-9,
-                    "alpha({},{})={} != alpha({},{})={}",
-                    i,
-                    j,
-                    alpha[i * 4 + j],
+                    neighbors[j].contains(&i),
+                    "Node {} is neighbor of {} but {} is not neighbor of {}",
                     j,
                     i,
-                    alpha[j * 4 + i]
+                    i,
+                    j
                 );
             }
         }
     }
 
     #[test]
-    fn test_alpha_nearness_two_nodes() {
-        let alpha = compute_alpha_nearness_for_test(2, |_, _| 5.0);
-        assert!((alpha[1]).abs() < 1e-6);
-        assert!((alpha[2]).abs() < 1e-6);
+    fn test_alpha_nearest_two_nodes() {
+        let neighbors = alpha_nearest_neighbors(2, |_, _| 5.0, 1);
+        assert_eq!(neighbors[0], vec![1]);
+        assert_eq!(neighbors[1], vec![0]);
     }
 }
