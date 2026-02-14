@@ -1,5 +1,4 @@
 use std::{
-    collections::VecDeque,
     sync::{Arc, atomic::AtomicBool},
     thread,
 };
@@ -74,9 +73,7 @@ pub struct Alns {
     problem: Arc<VehicleRoutingProblem>,
     constraints: Vec<Constraint>,
     params: SolverParams,
-    // best_solutions: Arc<RwLock<Vec<AcceptedSolution>>>,
     population: Arc<RwLock<Population>>,
-    tabu: Arc<RwLock<VecDeque<AcceptedSolution>>>,
     global_alns_ruin_weights: Arc<RwLock<AlnsWeights<RuinStrategy>>>,
     global_alns_recreate_weights: Arc<RwLock<AlnsWeights<RecreateStrategy>>>,
     global_alns_ruin_scores: Arc<RwLock<AlnsScores<RuinStrategy>>>,
@@ -112,7 +109,6 @@ impl Alns {
                 params.recreate_strategies().clone(),
             ))),
 
-            tabu: Arc::new(RwLock::new(VecDeque::with_capacity(params.tabu_size))),
             on_best_solution_handler: None,
 
             is_stopped: Arc::new(AtomicBool::new(false)),
@@ -186,7 +182,6 @@ impl Alns {
                         solver_acceptor: SolverAcceptorStrategy::Any,
                         search_threads: Threads::Single,
                         solver_selector: SolverSelectorStrategy::SelectBest,
-                        tabu_enabled: false,
                         run_intensify_search: false,
                         intensify_probability: 0.0,
                         ..self.params.clone()
@@ -239,7 +234,6 @@ impl Alns {
                         solver_acceptor: SolverAcceptorStrategy::Any,
                         search_threads: Threads::Single,
                         solver_selector: SolverSelectorStrategy::SelectBest,
-                        tabu_enabled: false,
                         run_intensify_search: false,
                         intensify_probability: 0.0,
                         debug_options: SolverParamsDebugOptions {
@@ -394,7 +388,6 @@ impl Alns {
                 let thread_barrier = Arc::clone(&barrier);
 
                 let population = Arc::clone(&self.population);
-                let tabu = Arc::clone(&self.tabu);
 
                 let global_statistics = Arc::clone(self.statistics.global_statistics());
                 let thread_statistics = Arc::clone(self.statistics.thread_statistics(thread_index));
@@ -438,7 +431,6 @@ impl Alns {
                                 self.params.recreate_strategies().clone(),
                             ),
                             population,
-                            tabu,
                             last_intensify_iteration: None,
                             max_iterations,
                             global_statistics,
@@ -760,13 +752,6 @@ impl Alns {
         iteration_info: IterationInfo,
         rng: &mut SmallRng,
     ) {
-        if self.params.tabu_enabled
-            && state.iteration > 0
-            && state.iteration.is_multiple_of(self.params.tabu_iterations)
-        {
-            state.tabu.write().clear();
-        }
-
         let (score, score_analysis) = solution.compute_solution_score(&self.constraints);
 
         if RUN_SCORE_ASSERTIONS && !self.params.recreate.insert_on_failure && score.is_infeasible()
@@ -856,12 +841,6 @@ impl Alns {
                 }
             }
 
-            let _is_tabu = self.params.tabu_enabled
-                && state.tabu.read().iter().any(|accepted_solution| {
-                    accepted_solution.score == score
-                        && accepted_solution.solution.is_identical(&solution)
-                });
-
             guard.with_upgraded(|guard| {
                 guard.add_solution(solution, score, score_analysis);
 
@@ -872,44 +851,6 @@ impl Alns {
                     callback.lock()(best);
                 }
             });
-
-            // // Don't store it if it's a duplicate
-            // if !is_duplicate && !is_tabu {
-            //     guard.with_upgraded(|guard| {
-            //         // Evict worst
-            //         if guard.len() + 1 > self.params.max_solutions
-            //             && let Some(worst_solution) = guard.pop()
-            //             && self.params.tabu_enabled
-            //         {
-            //             let mut guard = state.tabu.write();
-            //             guard.push_front(worst_solution);
-            //             if guard.len() > self.params.tabu_size {
-            //                 guard.pop_back();
-            //             }
-            //         }
-
-            //         if solution.unassigned_jobs().len() < guard[0].solution.unassigned_jobs().len()
-            //         {
-            //             guard.retain(|s| {
-            //                 s.solution.unassigned_jobs().len() <= solution.unassigned_jobs().len()
-            //             });
-            //         }
-
-            //         guard.push(AcceptedSolution {
-            //             solution,
-            //             score,
-            //             score_analysis,
-            //         });
-
-            //         guard.sort_unstable_by(|a, b| {
-            //             a.solution
-            //                 .unassigned_jobs()
-            //                 .len()
-            //                 .cmp(&b.solution.unassigned_jobs().len())
-            //                 .then(a.score.cmp(&b.score))
-            //         });
-            //     });
-            // }
 
             if let Some(strategy) = iteration_info.strategy() {
                 state.alns_ruin_scores.update_scores(
@@ -951,8 +892,6 @@ impl Alns {
                 },
             );
         }
-
-        // let segment_size = (self.problem.jobs().len() / 5).clamp(50, 200);
 
         if state.iteration > 0 {
             if state.iterations_without_improvement > 0
@@ -1134,7 +1073,6 @@ struct ThreadedSearchState {
     alns_recreate_scores: AlnsScores<RecreateStrategy>,
     // best_solutions: Arc<RwLock<Vec<AcceptedSolution>>>,
     population: Arc<RwLock<Population>>,
-    tabu: Arc<RwLock<VecDeque<AcceptedSolution>>>,
     iteration: usize,
     max_iterations: Option<usize>,
     global_statistics: Arc<RwLock<GlobalStatistics>>,
