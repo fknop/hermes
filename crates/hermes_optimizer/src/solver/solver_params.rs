@@ -126,7 +126,7 @@ impl Default for SolverParams {
             tabu_size: 5,
             tabu_iterations: 500,
             solver_acceptor: SolverAcceptorStrategy::Schrimpf,
-            solver_selector: SolverSelectorStrategy::BinaryTournament,
+            solver_selector: SolverSelectorStrategy::SelectWeighted,
             ruin: RuinParams::default(),
             recreate: RecreateParams::default(),
             search_threads: Threads::Multi(2),

@@ -21,7 +21,8 @@ impl SelectSolution for SelectWeightedSelector {
         let weights = (0..solutions.len()).collect::<Vec<_>>();
         let index = weights
             .choose_weighted(rng, |index| {
-                1.3_f64.powf((solutions.len() - 1 - index) as f64)
+                2.0 - population.biased_fitness(&solutions[*index])
+                // 1.3_f64.powf((solutions.len() - 1 - index) as f64)
             })
             .ok();
 
