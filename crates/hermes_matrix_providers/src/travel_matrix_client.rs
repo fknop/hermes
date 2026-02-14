@@ -1,4 +1,4 @@
-use hermes_graphhopper::graphhopper_api::{GraphHopperMatrixClient, GraphhopperMatrixClientParams};
+use hermes_graphhopper::client::{GraphHopperMatrixClient, GraphhopperMatrixClientParams};
 use hermes_osrm::client::{OsrmMatrixClient, OsrmMatrixClientParams};
 use tracing::instrument;
 
@@ -81,7 +81,7 @@ where
                     costs: Some(response.weights.into_iter().flatten().collect()),
                 })
             }
-            TravelMatrixProvider::OSRM { .. } => {
+            TravelMatrixProvider::Osrm { .. } => {
                 // TODO: profile
                 let response = self.osrm_client.fetch_matrix(points).await?;
                 Ok(TravelMatrices {

@@ -1,1 +1,1 @@
-pub mod graphhopper_api;
+pub mod client;

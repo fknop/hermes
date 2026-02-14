@@ -1,4 +1,4 @@
-use hermes_graphhopper::graphhopper_api::GraphHopperProfile;
+use hermes_graphhopper::client::GraphHopperProfile;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -31,7 +31,7 @@ pub enum TravelMatrixProvider {
     GraphHopperApi {
         gh_profile: GraphHopperProfile,
     },
-    OSRM {
+    Osrm {
         profile: String,
     },
     // Valhalla { profile: String },
@@ -51,7 +51,7 @@ impl std::hash::Hash for TravelMatrixProvider {
                 state.write_u8(0);
                 gh_profile.hash(state);
             }
-            TravelMatrixProvider::OSRM { profile } => {
+            TravelMatrixProvider::Osrm { profile } => {
                 state.write_u8(1);
                 profile.hash(state);
             }

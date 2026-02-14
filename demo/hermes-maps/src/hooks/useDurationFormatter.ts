@@ -17,7 +17,9 @@ export function useDurationFormatter() {
         minutesDisplay: temporal.total('seconds') === 0 ? 'always' : 'auto',
       })
 
-      return formatter.format(temporal.round({ largestUnit: 'hours' }))
+      return formatter.format(
+        temporal.round({ largestUnit: 'hours', smallestUnit: 'second' })
+      )
     },
     []
   )

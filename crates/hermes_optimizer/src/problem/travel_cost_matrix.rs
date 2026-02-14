@@ -23,7 +23,7 @@ pub struct TravelMatrices {
     is_symmetric: bool,
 }
 
-fn is_flat_matrix_symmetric(matrix: &[Meters], num_locations: usize) -> bool {
+fn is_flat_matrix_symmetric(matrix: &[f64], num_locations: usize) -> bool {
     for i in 0..num_locations {
         for j in 0..num_locations {
             if matrix[i * num_locations + j] != matrix[j * num_locations + i] {
@@ -31,6 +31,7 @@ fn is_flat_matrix_symmetric(matrix: &[Meters], num_locations: usize) -> bool {
             }
         }
     }
+
     true
 }
 
@@ -73,7 +74,7 @@ impl TravelMatrices {
 
         let len = distances.len();
         let num_locations = len.isqrt();
-        let is_symmetric = is_flat_matrix_symmetric(&distances, num_locations);
+        let is_symmetric = is_flat_matrix_symmetric(&costs, num_locations);
 
         Self {
             distances,
