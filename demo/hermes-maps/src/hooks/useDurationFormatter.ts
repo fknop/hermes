@@ -5,7 +5,19 @@ export function useDurationFormatter() {
   return useCallback(
     (
       duration: DurationLike,
-      options?: { style: 'long' | 'short' | 'narrow' }
+      options?: {
+        style?: 'long' | 'short' | 'narrow'
+        smallestUnit?:
+          | 'second'
+          | 'minute'
+          | 'hour'
+          | 'day'
+          | 'week'
+          | 'month'
+          | 'year'
+          | 'microsecond'
+          | 'millisecond'
+      }
     ) => {
       let temporal = toTemporalDuration(duration)
 
@@ -18,7 +30,10 @@ export function useDurationFormatter() {
       })
 
       return formatter.format(
-        temporal.round({ largestUnit: 'hours', smallestUnit: 'second' })
+        temporal.round({
+          largestUnit: 'hours',
+          smallestUnit: options?.smallestUnit ?? 'second',
+        })
       )
     },
     []

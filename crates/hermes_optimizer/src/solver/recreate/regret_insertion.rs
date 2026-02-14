@@ -1,9 +1,11 @@
+use std::f64;
+
 use rand::Rng;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 use crate::solver::{
     insertion::{Insertion, for_each_insertion},
-    recreate::{best_insertion, recreate_strategy::RecreateStrategy},
+    recreate::recreate_strategy::RecreateStrategy,
     score::{RUN_SCORE_ASSERTIONS, Score},
     solution::working_solution::WorkingSolution,
 };
@@ -91,18 +93,23 @@ impl RegretInsertion {
                 };
 
                 let best_score = best_insertion.0;
-                // 2. Calculate the regret value for this service
-                let mut regret_value = Score::zero();
 
-                // The number of insertions to consider for the regret sum
-                let limit = (self.k - 1).min(best_insertions.len());
+                if best_insertions.is_empty() {
+                    Some((Score::MAX, best_insertion.1.clone(), best_score))
+                } else {
+                    // 2. Calculate the regret value for this service
+                    let mut regret_value = Score::zero();
 
-                // Regret = sum of differences between k-th best and the best
-                for potential_insertion in best_insertions.iter().skip(1).take(limit) {
-                    regret_value += potential_insertion.0 - best_score;
+                    // The number of insertions to consider for the regret sum
+                    let limit = (self.k - 1).min(best_insertions.len());
+
+                    // Regret = sum of differences between k-th best and the best
+                    for potential_insertion in best_insertions.iter().skip(1).take(limit) {
+                        regret_value += potential_insertion.0 - best_score;
+                    }
+
+                    Some((regret_value, best_insertion.1.clone(), best_score))
                 }
-
-                Some((regret_value, best_insertion.1.clone(), best_score))
             })
             .collect();
 

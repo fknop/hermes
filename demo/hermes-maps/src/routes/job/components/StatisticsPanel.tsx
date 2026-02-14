@@ -47,7 +47,10 @@ function StatisticsDataTable({
         {
           accessorKey: 'avg_duration',
           header: 'Avg Duration',
-          cell: (info) => formatDuration(info.row.original.avg_duration),
+          cell: (info) =>
+            formatDuration(info.row.original.avg_duration, {
+              smallestUnit: 'microsecond',
+            }),
         },
         {
           accessorKey: 'avg_score_percentage_improvement',
