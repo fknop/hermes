@@ -1,9 +1,10 @@
+use hermes_graphhopper::graphhopper_api::{GraphHopperMatrixClient, GraphhopperMatrixClientParams};
+use hermes_osrm::client::{OsrmMatrixClient, OsrmMatrixClientParams};
 use tracing::instrument;
 
 use crate::{
     as_the_crow_flies::as_the_crow_flies_matrices,
     cache::{FileCache, MatricesCache},
-    graphhopper_api::{GraphHopperMatrixClient, GraphhopperMatrixClientParams},
     travel_matrices::TravelMatrices,
     travel_matrix_provider::TravelMatrixProvider,
 };
@@ -13,6 +14,7 @@ where
     C: MatricesCache,
 {
     graphhopper_client: Option<GraphHopperMatrixClient>,
+    osrm_client: OsrmMatrixClient,
     cache: C,
 }
 
@@ -24,7 +26,14 @@ where
         Self {
             cache,
             graphhopper_client: Self::create_default_graphhopper_client(),
+            osrm_client: Self::create_default_osrm_client(),
         }
+    }
+
+    fn create_default_osrm_client() -> OsrmMatrixClient {
+        let osrm_url =
+            std::env::var("OSRM_URL").unwrap_or(String::from("http://router.project-osrm.org"));
+        OsrmMatrixClient::new(OsrmMatrixClientParams { osrm_url })
     }
 
     fn create_default_graphhopper_client() -> Option<GraphHopperMatrixClient> {
@@ -65,7 +74,21 @@ where
                     .as_ref()
                     .ok_or(anyhow::anyhow!("Missing GH api key"))?;
 
-                gh_client.fetch_matrix(points, *profile).await
+                let response = gh_client.fetch_matrix(points, *profile).await?;
+                Ok(TravelMatrices {
+                    distances: response.distances.into_iter().flatten().collect(),
+                    times: response.times.into_iter().flatten().collect(),
+                    costs: Some(response.weights.into_iter().flatten().collect()),
+                })
+            }
+            TravelMatrixProvider::OSRM { .. } => {
+                // TODO: profile
+                let response = self.osrm_client.fetch_matrix(points).await?;
+                Ok(TravelMatrices {
+                    distances: response.distances,
+                    times: response.times,
+                    costs: None,
+                })
             }
             TravelMatrixProvider::AsTheCrowFlies { speed_kmh } => {
                 Ok(as_the_crow_flies_matrices(points, *speed_kmh))
@@ -92,6 +115,7 @@ impl Default for TravelMatrixClient<FileCache> {
                 &std::env::var("HERMES_CACHE_FOLDER").expect("HERMES_CACHE_FOLDER must be set"),
             ),
             graphhopper_client: Self::create_default_graphhopper_client(),
+            osrm_client: Self::create_default_osrm_client(),
         }
     }
 }

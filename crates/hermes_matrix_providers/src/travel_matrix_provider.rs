@@ -1,7 +1,6 @@
+use hermes_graphhopper::graphhopper_api::GraphHopperProfile;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-
-use crate::graphhopper_api::GraphHopperProfile;
 
 #[derive(Deserialize, Serialize, JsonSchema)]
 pub struct CustomMatrices {
@@ -32,7 +31,9 @@ pub enum TravelMatrixProvider {
     GraphHopperApi {
         gh_profile: GraphHopperProfile,
     },
-    // OSRM { profile: String },
+    OSRM {
+        profile: String,
+    },
     // Valhalla { profile: String },
     AsTheCrowFlies {
         speed_kmh: f64,
@@ -49,6 +50,10 @@ impl std::hash::Hash for TravelMatrixProvider {
             TravelMatrixProvider::GraphHopperApi { gh_profile } => {
                 state.write_u8(0);
                 gh_profile.hash(state);
+            }
+            TravelMatrixProvider::OSRM { profile } => {
+                state.write_u8(1);
+                profile.hash(state);
             }
             TravelMatrixProvider::AsTheCrowFlies { speed_kmh } => {
                 state.write_u8(1);

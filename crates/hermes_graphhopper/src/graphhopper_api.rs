@@ -5,8 +5,6 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tracing::debug;
 
-use crate::travel_matrices::TravelMatrices;
-
 pub type GHPoint = [f64; 2];
 
 #[derive(Deserialize, Serialize, JsonSchema, Copy, Clone, Hash)]
@@ -81,7 +79,7 @@ pub struct MatrixRequestBody {
 }
 
 #[derive(Deserialize)]
-struct MatrixSolution {
+pub struct GraphhopperMatrices {
     /// Travel times in seconds
     pub times: Vec<Vec<f64>>,
 
@@ -100,7 +98,7 @@ struct AsyncMatrixJobResponse {
 #[derive(Deserialize)]
 struct AsyncMatrixResponse {
     status: String,
-    solution: Option<MatrixSolution>,
+    solution: Option<GraphhopperMatrices>,
 }
 
 pub struct GraphhopperMatrixClientParams {
@@ -132,7 +130,7 @@ impl GraphHopperMatrixClient {
         &self,
         points: &[P],
         profile: GraphHopperProfile,
-    ) -> anyhow::Result<TravelMatrices>
+    ) -> anyhow::Result<GraphhopperMatrices>
     where
         for<'a> &'a P: Into<geo_types::Point>,
     {
@@ -166,17 +164,7 @@ impl GraphHopperMatrixClient {
         };
 
         match result {
-            Ok(solution) => {
-                let times = solution.times.into_iter().flatten().collect();
-                let distances = solution.distances.into_iter().flatten().collect();
-                let costs = solution.weights.into_iter().flatten().collect();
-
-                Ok(TravelMatrices {
-                    times,
-                    distances,
-                    costs: Some(costs),
-                })
-            }
+            Ok(solution) => Ok(solution),
             Err(e) => Err(anyhow::anyhow!(e)),
         }
     }
@@ -184,7 +172,7 @@ impl GraphHopperMatrixClient {
     async fn sync_matrix_request(
         &self,
         body: &MatrixRequestBody,
-    ) -> Result<MatrixSolution, GraphHopperError> {
+    ) -> Result<GraphhopperMatrices, GraphHopperError> {
         let response = self
             .client
             .post(GRAPHOPPER_MATRIX_SYNC_API_URL)
@@ -199,7 +187,7 @@ impl GraphHopperMatrixClient {
     async fn async_matrix_requset(
         &self,
         body: &MatrixRequestBody,
-    ) -> Result<MatrixSolution, GraphHopperError> {
+    ) -> Result<GraphhopperMatrices, GraphHopperError> {
         let post_response = self
             .client
             .post(GRAPHOPPER_MATRIX_ASYNC_POST_API_URL)
@@ -224,7 +212,7 @@ impl GraphHopperMatrixClient {
     async fn fetch_solution(
         &self,
         job_id: &str,
-    ) -> Result<Option<MatrixSolution>, GraphHopperError> {
+    ) -> Result<Option<GraphhopperMatrices>, GraphHopperError> {
         let url = format!("{}/{}", GRAPHOPPER_MATRIX_ASYNC_POLL_API_URL, job_id);
         let poll_response = self
             .client
@@ -248,7 +236,10 @@ impl GraphHopperMatrixClient {
         }
     }
 
-    async fn poll_until_completed(&self, job_id: &str) -> Result<MatrixSolution, GraphHopperError> {
+    async fn poll_until_completed(
+        &self,
+        job_id: &str,
+    ) -> Result<GraphhopperMatrices, GraphHopperError> {
         for attempt in 1..=self.params.max_poll_attempts {
             debug!(
                 "GraphHopperApi: Polling for job completion {}/{}",
@@ -267,9 +258,9 @@ impl GraphHopperMatrixClient {
     async fn handle_response(
         &self,
         response: reqwest::Response,
-    ) -> Result<MatrixSolution, GraphHopperError> {
+    ) -> Result<GraphhopperMatrices, GraphHopperError> {
         if response.status().is_success() {
-            let matrix_solution: MatrixSolution = response.json().await?;
+            let matrix_solution: GraphhopperMatrices = response.json().await?;
             Ok(matrix_solution)
         } else {
             let status = response.status().as_u16();

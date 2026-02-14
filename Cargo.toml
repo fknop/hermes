@@ -17,6 +17,7 @@ thiserror = "2.0.17"
 anyhow = "1.0.100"
 dotenvy = "0.15.7"
 schemars = { version = "1.2.0", features = ["derive", "jiff02", "uuid1", "smallvec1"] }
+reqwest = { version = "0.12.28", features = ["json"] }
 
 [profile.release]
 debug = false

@@ -1,5 +1,5 @@
 [package]
-name = "hermes_matrix_providers"
+name = "hermes_graphhopper"
 version = "0.1.0"
 edition = "2024"
 
@@ -10,9 +10,6 @@ reqwest.workspace = true
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
-tokio = { workspace = true }
 tracing = { workspace = true }
-fxhash = { workspace = true }
 schemars = { workspace = true }
-hermes_graphhopper = { version = "0.1.0", path = "../hermes_graphhopper" }
-hermes_osrm = { version = "0.1.0", path = "../hermes_osrm" }
+tokio = { workspace = true }
