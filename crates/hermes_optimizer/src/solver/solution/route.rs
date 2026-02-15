@@ -65,10 +65,10 @@ pub struct WorkingSolutionRoute {
     /// waiting_time_slacks[i] stored the maximum time a task can be moved "backward" in time without causing waiting time, or more waiting time if some already exists.
     pub(super) waiting_time_slacks: Vec<SignedDuration>,
 
-    // bwd_time_slacks[i] stores the maximum time delay that can be absorbed at activity i
+    // fwd_time_slacks[i] stores the maximum time delay that can be absorbed (arrival time is moved forward) at activity i
     // before violating time windows of subsequent activities
     // computed backward from end to start
-    pub(super) bwd_time_slacks: Vec<SignedDuration>,
+    pub(super) fwd_time_slacks: Vec<SignedDuration>,
 
     /// Forward load for pickups at each activity
     pub(super) fwd_load_pickups: Vec<Capacity>,
@@ -134,7 +134,7 @@ impl WorkingSolutionRoute {
             fwd_load_deliveries: Vec::new(),
             fwd_load_pickups: Vec::new(),
             fwd_load_shipments: Vec::new(),
-            bwd_time_slacks: Vec::new(),
+            fwd_time_slacks: Vec::new(),
             delivery_load_slack: problem.vehicle(vehicle_id).capacity().clone(),
             pickup_load_slack: problem.vehicle(vehicle_id).capacity().clone(),
         };
@@ -769,7 +769,7 @@ impl WorkingSolutionRoute {
         self.fwd_cumulative_waiting_durations
             .resize(steps, SignedDuration::ZERO);
 
-        self.bwd_time_slacks.resize(steps, SignedDuration::MAX);
+        self.fwd_time_slacks.resize(steps, SignedDuration::MAX);
 
         self.fwd_load_peaks.resize_with(steps, || {
             Capacity::with_dimensions(problem.capacity_dimensions())
@@ -991,7 +991,7 @@ impl WorkingSolutionRoute {
                 (None, None) => Timestamp::MAX,
             };
 
-            self.bwd_time_slacks[len + 1] = latest_end.duration_since(self.end(problem));
+            self.fwd_time_slacks[len + 1] = latest_end.duration_since(self.end(problem));
 
             for (index, &activity_job_id) in self.activity_ids.iter().enumerate().rev() {
                 assert_ne!(self.arrival_times[index], Timestamp::MAX);
@@ -1016,26 +1016,24 @@ impl WorkingSolutionRoute {
                         .unwrap_or(SignedDuration::MAX),
                 );
 
-                self.bwd_time_slacks[index + 1] = if let Some(next_activity_time_slack) =
-                    self.bwd_time_slacks.get(index + 2)
+                self.fwd_time_slacks[index + 1] = if let Some(next_activity_time_slack) =
+                    self.fwd_time_slacks.get(index + 2)
                 {
                     current_time_slack
                         .min(next_activity_time_slack.saturating_add(self.waiting_durations[index]))
                 } else {
                     current_time_slack
                 };
-
-                // next_activity_time_slack = Some(self.bwd_time_slacks[index + 1]);
             }
 
             if let Some(latest_start) = vehicle.latest_start_time() {
-                self.bwd_time_slacks[0] =
-                    (latest_start.duration_since(self.start(problem))).min(self.bwd_time_slacks[1]);
+                self.fwd_time_slacks[0] =
+                    (latest_start.duration_since(self.start(problem))).min(self.fwd_time_slacks[1]);
             } else {
-                self.bwd_time_slacks[0] = self.bwd_time_slacks[1];
+                self.fwd_time_slacks[0] = self.fwd_time_slacks[1];
             }
         } else {
-            self.bwd_time_slacks.fill(SignedDuration::MAX);
+            self.fwd_time_slacks.fill(SignedDuration::MAX);
         }
     }
 
@@ -1363,7 +1361,7 @@ impl WorkingSolutionRoute {
                 // This means we're in the succeeding_activities and the end chain should not change
                 && index >= end
             {
-                let current_time_slack = self.bwd_time_slacks[current_activity_index + 1];
+                let current_time_slack = self.fwd_time_slacks[current_activity_index + 1];
                 let current_arrival_time = self.arrival_times[current_activity_index];
 
                 if arrival_time
@@ -1888,12 +1886,12 @@ mod tests {
         );
 
         // Check time slacks
-        assert_eq!(route.bwd_time_slacks[0], SignedDuration::from_mins(40));
-        assert_eq!(route.bwd_time_slacks[1], SignedDuration::from_mins(40));
-        assert_eq!(route.bwd_time_slacks[2], SignedDuration::from_mins(40));
-        assert_eq!(route.bwd_time_slacks[3], SignedDuration::from_mins(40));
+        assert_eq!(route.fwd_time_slacks[0], SignedDuration::from_mins(40));
+        assert_eq!(route.fwd_time_slacks[1], SignedDuration::from_mins(40));
+        assert_eq!(route.fwd_time_slacks[2], SignedDuration::from_mins(40));
+        assert_eq!(route.fwd_time_slacks[3], SignedDuration::from_mins(40));
         assert_eq!(
-            route.bwd_time_slacks[4],
+            route.fwd_time_slacks[4],
             Timestamp::MAX.duration_since(route.end(&problem))
         );
     }

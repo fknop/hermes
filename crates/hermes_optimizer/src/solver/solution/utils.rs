@@ -24,36 +24,6 @@ pub(crate) fn compute_first_activity_arrival_time(
         None => SignedDuration::ZERO,
     };
 
-    // let time_window_start = task
-    //     .time_windows()
-    //     .iter()
-    //     .filter(|tw| tw.is_satisfied(earliest_start_time + travel_time))
-    //     .min_by_key(|tw| tw.start())
-    //     .and_then(|tw| tw.start());
-
-    // let latest_start = vehicle.latest_start_time();
-
-    // let minimum_depot_departure_time = earliest_start_time + travel_time + depot_duration;
-    // let maximum_depot_departure_time = latest_start
-    //     .map(|latest| latest + travel_time + depot_duration)
-    //     .unwrap_or(Timestamp::MAX);
-
-    // match (latest_start, time_window_start) {
-    //     (Some(_), Some(tw_start)) => {
-    //         let ideal_depot_departure_time = tw_start - travel_time;
-
-    //         let depot_departure_time = ideal_depot_departure_time
-    //             .max(minimum_depot_departure_time)
-    //             .min(maximum_depot_departure_time);
-
-    //         depot_departure_time + travel_time
-    //         // ((earliest_start_time + travel_time + depot_duration).max(tw_start)).min(latest_start)
-    //     }
-    //     (Some(latest_start), None) => earliest_start_time + travel_time + depot_duration,
-    //     (None, Some(tw_start)) => tw_start,
-    //     (None, None) => minimum_depot_departure_time + travel_time,
-    // }
-
     compute_initial_arrival_time(
         earliest_start_time,
         latest_start_time,
