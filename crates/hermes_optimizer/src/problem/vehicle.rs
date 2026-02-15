@@ -107,7 +107,7 @@ impl Vehicle {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq, Default)]
 pub struct VehicleShift {
     pub(crate) earliest_start: Option<Timestamp>,
     pub(crate) latest_start: Option<Timestamp>,

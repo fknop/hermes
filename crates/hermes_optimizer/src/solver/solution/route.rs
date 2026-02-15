@@ -1020,6 +1020,7 @@ impl WorkingSolutionRoute {
                     self.fwd_time_slacks.get(index + 2)
                 {
                     current_time_slack
+                        // The waiting time will absorb the shift before the next activity does
                         .min(next_activity_time_slack.saturating_add(self.waiting_durations[index]))
                 } else {
                     current_time_slack
@@ -1617,7 +1618,7 @@ mod tests {
             service::{ServiceBuilder, ServiceType},
             time_window::TimeWindow,
             travel_cost_matrix::TravelMatrices,
-            vehicle::{VehicleBuilder, VehicleIdx},
+            vehicle::{VehicleBuilder, VehicleIdx, VehicleShift},
             vehicle_profile::VehicleProfile,
             vehicle_routing_problem::{VehicleRoutingProblem, VehicleRoutingProblemBuilder},
         },
@@ -2130,7 +2131,20 @@ mod tests {
         assert!(!is_valid);
     }
 
-    fn create_problem_for_tw_change(services: Vec<TimeWindow>) -> VehicleRoutingProblem {
+    #[derive(Default)]
+    pub struct TestProblemOptions {
+        earliest_start: Option<Timestamp>,
+        latest_start: Option<Timestamp>,
+        latest_end: Option<Timestamp>,
+        maximum_working_duration: Option<SignedDuration>,
+        travel_time: Option<SignedDuration>,
+        service_time: Option<SignedDuration>,
+    }
+
+    fn create_problem_for_tw_change(
+        services: Vec<TimeWindow>,
+        options: TestProblemOptions,
+    ) -> VehicleRoutingProblem {
         // 10 locations from (0, 0) to (9, 0)
         let locations = test_utils::create_location_grid(1, 10);
 
@@ -2139,6 +2153,16 @@ mod tests {
         vehicle_builder.set_capacity(Capacity::from_vec(vec![100.0]));
         vehicle_builder.set_vehicle_id(String::from("vehicle"));
         vehicle_builder.set_profile_id(0);
+
+        let shift = VehicleShift {
+            maximum_working_duration: options.maximum_working_duration,
+            earliest_start: options.earliest_start,
+            latest_start: options.latest_start,
+            latest_end: options.latest_end,
+            ..VehicleShift::default()
+        };
+        vehicle_builder.set_vehicle_shift(shift);
+
         let vehicle = vehicle_builder.build();
         let vehicles = vec![vehicle];
 
@@ -2149,7 +2173,11 @@ mod tests {
                 let mut service_builder = ServiceBuilder::default();
                 service_builder.set_demand(Capacity::from_vec(vec![10.0]));
                 service_builder.set_external_id(format!("service_{}", i + 1));
-                service_builder.set_service_duration(SignedDuration::from_mins(10));
+                service_builder.set_service_duration(
+                    options
+                        .service_time
+                        .unwrap_or(SignedDuration::from_mins(10)),
+                );
                 service_builder.set_location_id(i + 1);
                 service_builder.set_time_window(time_window);
                 service_builder.build()
@@ -2163,9 +2191,15 @@ mod tests {
             "test_profile".to_owned(),
             TravelMatrices::from_constant(
                 &locations,
-                SignedDuration::from_mins(30).as_secs_f64(),
+                options
+                    .travel_time
+                    .unwrap_or(SignedDuration::from_mins(30))
+                    .as_secs_f64(),
                 100.0,
-                SignedDuration::from_mins(30).as_secs_f64(),
+                options
+                    .travel_time
+                    .unwrap_or(SignedDuration::from_mins(30))
+                    .as_secs_f64(),
             ),
         )]);
         builder.set_locations(locations);
@@ -2182,32 +2216,35 @@ mod tests {
         // So arrival at location 1 is 08:30, departure is 08:40
         // Arrival at location 2 is 09:10, departure is 09:20
         // etc.
-        let problem = create_problem_for_tw_change(vec![
-            TimeWindow::from_iso(
-                Some("2025-11-30T08:00:00+02:00"),
-                Some("2025-11-30T09:00:00+02:00"),
-            ), // 0: TW ends at 09:00
-            TimeWindow::from_iso(
-                Some("2025-11-30T08:00:00+02:00"),
-                Some("2025-11-30T10:00:00+02:00"),
-            ), // 1: TW ends at 10:00
-            TimeWindow::from_iso(
-                Some("2025-11-30T08:00:00+02:00"),
-                Some("2025-11-30T11:00:00+02:00"),
-            ), // 2: TW ends at 11:00
-            TimeWindow::from_iso(
-                Some("2025-11-30T08:00:00+02:00"),
-                Some("2025-11-30T12:00:00+02:00"),
-            ), // 3: TW ends at 12:00
-            TimeWindow::from_iso(
-                Some("2025-11-30T08:00:00+02:00"),
-                Some("2025-11-30T08:35:00+02:00"),
-            ), // 4: TW ends at 08:35 (tight)
-            TimeWindow::from_iso(
-                Some("2025-11-30T08:00:00+02:00"),
-                Some("2025-11-30T14:00:00+02:00"),
-            ), // 5: TW ends at 14:00 (relaxed)
-        ]);
+        let problem = create_problem_for_tw_change(
+            vec![
+                TimeWindow::from_iso(
+                    Some("2025-11-30T08:00:00+02:00"),
+                    Some("2025-11-30T09:00:00+02:00"),
+                ), // 0: TW ends at 09:00
+                TimeWindow::from_iso(
+                    Some("2025-11-30T08:00:00+02:00"),
+                    Some("2025-11-30T10:00:00+02:00"),
+                ), // 1: TW ends at 10:00
+                TimeWindow::from_iso(
+                    Some("2025-11-30T08:00:00+02:00"),
+                    Some("2025-11-30T11:00:00+02:00"),
+                ), // 2: TW ends at 11:00
+                TimeWindow::from_iso(
+                    Some("2025-11-30T08:00:00+02:00"),
+                    Some("2025-11-30T12:00:00+02:00"),
+                ), // 3: TW ends at 12:00
+                TimeWindow::from_iso(
+                    Some("2025-11-30T08:00:00+02:00"),
+                    Some("2025-11-30T08:35:00+02:00"),
+                ), // 4: TW ends at 08:35 (tight)
+                TimeWindow::from_iso(
+                    Some("2025-11-30T08:00:00+02:00"),
+                    Some("2025-11-30T14:00:00+02:00"),
+                ), // 5: TW ends at 14:00 (relaxed)
+            ],
+            TestProblemOptions::default(),
+        );
 
         let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
         // Route: 0 -> 1 -> 2 (arrival times: 08:30, 09:10, 09:50)
@@ -2279,6 +2316,170 @@ mod tests {
             1,
             2,
         );
+        assert!(!is_valid);
+    }
+
+    #[test]
+    fn test_is_valid_tw_after_insertion() {
+        let problem = create_problem_for_tw_change(
+            vec![
+                TimeWindow::from_iso(
+                    Some("2025-11-30T08:00:00+02:00"),
+                    Some("2025-11-30T09:00:00+02:00"),
+                ), // 0: TW ends at 09:00
+                TimeWindow::from_iso(
+                    Some("2025-11-30T08:00:00+02:00"),
+                    Some("2025-11-30T10:00:00+02:00"),
+                ), // 1: TW ends at 10:00
+                TimeWindow::from_iso(
+                    Some("2025-11-30T08:00:00+02:00"),
+                    Some("2025-11-30T11:00:00+02:00"),
+                ), // 2: TW ends at 11:00
+                TimeWindow::from_iso(
+                    Some("2025-11-30T08:00:00+02:00"),
+                    Some("2025-11-30T12:00:00+02:00"),
+                ), // 3: TW ends at 12:00
+                TimeWindow::from_iso(
+                    Some("2025-11-30T08:00:00+02:00"),
+                    Some("2025-11-30T08:35:00+02:00"),
+                ), // 4: TW ends at 08:35 (tight)
+                TimeWindow::from_iso(
+                    Some("2025-11-30T08:00:00+02:00"),
+                    Some("2025-11-30T14:00:00+02:00"),
+                ), // 5: TW ends at 14:00 (relaxed)
+            ],
+            TestProblemOptions::default(),
+        );
+
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        // Route: 0 -> 1 -> 2 (arrival times: 08:30, 09:10, 09:50)
+        route.insert_service(&problem, 0, JobIdx::new(1));
+        route.insert_service(&problem, 1, JobIdx::new(2));
+        route.insert_service(&problem, 2, JobIdx::new(3));
+
+        assert_eq!(
+            route.start(&problem),
+            "2025-11-30T07:30:00+02:00".parse().unwrap()
+        );
+
+        assert_eq!(
+            route.arrival_times[0],
+            "2025-11-30T08:00:00+02:00".parse().unwrap()
+        );
+
+        assert_eq!(
+            route.arrival_times[1],
+            "2025-11-30T08:40:00+02:00".parse().unwrap()
+        );
+
+        assert_eq!(
+            route.arrival_times[2],
+            "2025-11-30T09:20:00+02:00".parse().unwrap()
+        );
+
+        // Insert job 0 at position 3
+        let is_valid =
+            route.is_valid_tw_change(&problem, [ActivityId::service(0)].into_iter(), 3, 3);
+        assert!(!is_valid);
+
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        // Route: 0 -> 1 -> 2 (arrival times: 08:30, 09:10, 09:50)
+        route.insert_service(&problem, 0, JobIdx::new(1));
+        route.insert_service(&problem, 1, JobIdx::new(0));
+        route.insert_service(&problem, 2, JobIdx::new(2));
+
+        assert_eq!(
+            route.arrival_times[0],
+            "2025-11-30T08:00:00+02:00".parse().unwrap()
+        );
+
+        assert_eq!(
+            route.arrival_times[1],
+            "2025-11-30T08:40:00+02:00".parse().unwrap()
+        );
+
+        assert_eq!(
+            route.arrival_times[2],
+            "2025-11-30T09:20:00+02:00".parse().unwrap()
+        );
+
+        // Insert job 3 at position 1
+        let is_valid =
+            route.is_valid_tw_change(&problem, [ActivityId::service(3)].into_iter(), 1, 1);
+        assert!(!is_valid);
+    }
+
+    #[test]
+    fn test_is_valid_tw_change_maximum_working_duration() {
+        // Vehicle starts at depot (location 0) at 08:00
+        // Travel time between locations is 30 mins, service duration is 10 mins
+        // So arrival at location 1 is 08:30, departure is 08:40
+        // Arrival at location 2 is 09:10, departure is 09:20
+        // etc.
+        let problem = create_problem_for_tw_change(
+            vec![
+                TimeWindow::from_iso(
+                    Some("2025-11-30T08:00:00+02:00"),
+                    Some("2025-11-30T09:00:00+02:00"),
+                ), // 0: TW ends at 09:00
+                TimeWindow::from_iso(
+                    Some("2025-11-30T08:00:00+02:00"),
+                    Some("2025-11-30T10:00:00+02:00"),
+                ), // 1: TW ends at 10:00
+                TimeWindow::from_iso(
+                    Some("2025-11-30T08:00:00+02:00"),
+                    Some("2025-11-30T11:00:00+02:00"),
+                ), // 2: TW ends at 11:00
+                TimeWindow::from_iso(
+                    Some("2025-11-30T08:00:00+02:00"),
+                    Some("2025-11-30T12:00:00+02:00"),
+                ), // 3: TW ends at 12:00
+                TimeWindow::from_iso(
+                    Some("2025-11-30T08:00:00+02:00"),
+                    Some("2025-11-30T08:35:00+02:00"),
+                ), // 4: TW ends at 08:35 (tight)
+                TimeWindow::from_iso(
+                    Some("2025-11-30T08:00:00+02:00"),
+                    Some("2025-11-30T14:00:00+02:00"),
+                ), // 5: TW ends at 14:00 (relaxed)
+            ],
+            TestProblemOptions {
+                earliest_start: Some("2025-11-30T06:00:00+02:00".parse().unwrap()),
+                latest_start: Some("2025-11-30T08:30:00+02:00".parse().unwrap()),
+                maximum_working_duration: Some(SignedDuration::from_hours(2)),
+                ..TestProblemOptions::default()
+            },
+        );
+
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        route.insert_service(&problem, 1, JobIdx::new(1));
+        route.insert_service(&problem, 2, JobIdx::new(2));
+
+        assert_eq!(
+            route.start(&problem),
+            "2025-11-30T07:30:00+02:00".parse().unwrap()
+        );
+
+        assert_eq!(
+            route.arrival_times[0],
+            "2025-11-30T08:00:00+02:00".parse().unwrap()
+        );
+
+        assert_eq!(
+            route.arrival_times[1],
+            "2025-11-30T08:40:00+02:00".parse().unwrap()
+        );
+
+        assert_eq!(
+            route.arrival_times[2],
+            "2025-11-30T09:20:00+02:00".parse().unwrap()
+        );
+
+        // 1h50 of work total right now, adding a new service would break that
+        let is_valid =
+            route.is_valid_tw_change(&problem, [ActivityId::service(3)].into_iter(), 3, 3);
+
         assert!(!is_valid);
     }
 
@@ -2400,32 +2601,35 @@ mod tests {
 
     #[test]
     fn test_routes_versions() {
-        let problem = create_problem_for_tw_change(vec![
-            TimeWindow::from_iso(
-                Some("2025-11-30T08:00:00+02:00"),
-                Some("2025-11-30T09:00:00+02:00"),
-            ), // 0: TW ends at 09:00
-            TimeWindow::from_iso(
-                Some("2025-11-30T08:00:00+02:00"),
-                Some("2025-11-30T10:00:00+02:00"),
-            ), // 1: TW ends at 10:00
-            TimeWindow::from_iso(
-                Some("2025-11-30T08:00:00+02:00"),
-                Some("2025-11-30T11:00:00+02:00"),
-            ), // 2: TW ends at 11:00
-            TimeWindow::from_iso(
-                Some("2025-11-30T08:00:00+02:00"),
-                Some("2025-11-30T12:00:00+02:00"),
-            ), // 3: TW ends at 12:00
-            TimeWindow::from_iso(
-                Some("2025-11-30T08:00:00+02:00"),
-                Some("2025-11-30T08:35:00+02:00"),
-            ), // 4: TW ends at 08:35 (tight)
-            TimeWindow::from_iso(
-                Some("2025-11-30T08:00:00+02:00"),
-                Some("2025-11-30T14:00:00+02:00"),
-            ), // 5: TW ends at 14:00 (relaxed)
-        ]);
+        let problem = create_problem_for_tw_change(
+            vec![
+                TimeWindow::from_iso(
+                    Some("2025-11-30T08:00:00+02:00"),
+                    Some("2025-11-30T09:00:00+02:00"),
+                ), // 0: TW ends at 09:00
+                TimeWindow::from_iso(
+                    Some("2025-11-30T08:00:00+02:00"),
+                    Some("2025-11-30T10:00:00+02:00"),
+                ), // 1: TW ends at 10:00
+                TimeWindow::from_iso(
+                    Some("2025-11-30T08:00:00+02:00"),
+                    Some("2025-11-30T11:00:00+02:00"),
+                ), // 2: TW ends at 11:00
+                TimeWindow::from_iso(
+                    Some("2025-11-30T08:00:00+02:00"),
+                    Some("2025-11-30T12:00:00+02:00"),
+                ), // 3: TW ends at 12:00
+                TimeWindow::from_iso(
+                    Some("2025-11-30T08:00:00+02:00"),
+                    Some("2025-11-30T08:35:00+02:00"),
+                ), // 4: TW ends at 08:35 (tight)
+                TimeWindow::from_iso(
+                    Some("2025-11-30T08:00:00+02:00"),
+                    Some("2025-11-30T14:00:00+02:00"),
+                ), // 5: TW ends at 14:00 (relaxed)
+            ],
+            TestProblemOptions::default(),
+        );
 
         let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
         assert_eq!(route.version(), 0);
