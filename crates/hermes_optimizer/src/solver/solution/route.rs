@@ -260,6 +260,10 @@ impl WorkingSolutionRoute {
     }
 
     pub fn duration(&self, problem: &VehicleRoutingProblem) -> SignedDuration {
+        if self.is_empty() {
+            return SignedDuration::ZERO;
+        }
+
         let start = self.start(problem);
         let end = self.end(problem);
         end.duration_since(start)
@@ -745,8 +749,6 @@ impl WorkingSolutionRoute {
         self.departure_times.resize(len, Timestamp::MAX);
         self.waiting_durations.resize(len, SignedDuration::ZERO);
 
-        self.bwd_cumulative_waiting_durations
-            .resize(len, SignedDuration::ZERO);
         self.waiting_time_slacks.resize(len, SignedDuration::MAX);
 
         self.fwd_load_pickups.resize_with(len, || {
@@ -766,6 +768,8 @@ impl WorkingSolutionRoute {
         });
 
         let steps = len + 2;
+        self.bwd_cumulative_waiting_durations
+            .resize(steps, SignedDuration::ZERO);
         self.fwd_cumulative_waiting_durations
             .resize(steps, SignedDuration::ZERO);
 
@@ -992,16 +996,17 @@ impl WorkingSolutionRoute {
             };
 
             self.fwd_time_slacks[len + 1] = latest_end.duration_since(self.end(problem));
+            self.bwd_cumulative_waiting_durations[len + 1] = SignedDuration::ZERO;
 
             for (index, &activity_job_id) in self.activity_ids.iter().enumerate().rev() {
                 assert_ne!(self.arrival_times[index], Timestamp::MAX);
                 let current_time_slack =
                     compute_time_slack(problem, activity_job_id, self.arrival_times[index]);
 
-                self.bwd_cumulative_waiting_durations[index] = self.waiting_durations[index]
+                self.bwd_cumulative_waiting_durations[index + 1] = self.waiting_durations[index]
                     + self
                         .bwd_cumulative_waiting_durations
-                        .get(index + 1)
+                        .get(index + 2)
                         .copied()
                         .unwrap_or(SignedDuration::ZERO);
 
@@ -1253,7 +1258,7 @@ impl WorkingSolutionRoute {
             if shift.is_positive() || shift.is_zero() {
                 // Later or equal arrival
                 // This is the waiting that can absorb the shift, recucing total waiting time
-                let bwd_cumulative_waiting_at_end = self.bwd_cumulative_waiting_durations[end];
+                let bwd_cumulative_waiting_at_end = self.bwd_cumulative_waiting_durations[end + 1];
 
                 delta -= shift.min(bwd_cumulative_waiting_at_end)
             } else {
@@ -1320,8 +1325,9 @@ impl WorkingSolutionRoute {
             Some(self.end(problem))
         };
 
-        let mut index = start;
-        for activity_id in activity_ids.chain(succeeding_activities.iter().copied()) {
+        let mut is_removal = true;
+        for activity_id in activity_ids {
+            is_removal = false;
             let arrival_time = if let Some(previous_activity_id) = previous_activity_id
                 && let Some(previous_departure_time) = previous_departure_time
             {
@@ -1357,32 +1363,6 @@ impl WorkingSolutionRoute {
                 new_departure_time,
             ));
 
-            // TODO: tests
-            if let Some(&current_activity_index) = self.jobs.get(&activity_id)
-                // This means we're in the succeeding_activities and the end chain should not change
-                && index >= end
-            {
-                let current_time_slack = self.fwd_time_slacks[current_activity_index + 1];
-                let current_arrival_time = self.arrival_times[current_activity_index];
-
-                if arrival_time
-                    > current_arrival_time
-                        .saturating_add(current_time_slack)
-                        .unwrap()
-                {
-                    return false;
-                }
-
-                let current_departure_time = self.departure_times[current_activity_index];
-                // Early termination, if the departure time is earlier or equal to the current one, we know the next one are valid as well
-                // TODO: edge case right now, if the first activity changes, the vehicle start time might change as well making the entire route shift and invalidating the maximum working duration check
-                if current_vehicle_start == vehicle_start
-                    && new_departure_time <= current_departure_time
-                {
-                    return true;
-                }
-            }
-
             if !problem
                 .job_activity(activity_id)
                 .time_windows()
@@ -1393,15 +1373,51 @@ impl WorkingSolutionRoute {
 
             previous_activity_id = Some(activity_id);
             previous_departure_time = Some(new_departure_time);
-            index += 1;
         }
 
-        if let Some(max_working_duration) = self.vehicle(problem).maximum_working_duration()
-            && let Some(vehicle_start) = vehicle_start
-            && let Some(vehicle_end) = vehicle_end
-            && vehicle_end.duration_since(vehicle_start) > max_working_duration
+        let mut delta = SignedDuration::ZERO;
+        if let Some(&next_activity_id) = self.activity_ids.get(end)
+            && let Some(&current_activity_index) = self.jobs.get(&next_activity_id)
+            && let Some(previous_departure_time) = previous_departure_time
+            && let Some(previous_activity_id) = previous_activity_id
+            && !is_removal
         {
-            return false;
+            let current_time_slack = self.fwd_time_slacks[current_activity_index + 1];
+            let current_arrival_time = self.arrival_times[current_activity_index];
+
+            let arrival_time = compute_activity_arrival_time(
+                problem,
+                self.vehicle_id,
+                previous_activity_id,
+                previous_departure_time,
+                next_activity_id,
+            );
+
+            delta = arrival_time.duration_since(current_arrival_time);
+
+            if delta > current_time_slack {
+                return false;
+            }
+        }
+
+        if let Some(max_working_duration) = self.vehicle(problem).maximum_working_duration() {
+            let new_route_duration = if self.is_empty()
+                && let Some(vehicle_start) = vehicle_start
+                && let Some(vehicle_end) = vehicle_end
+            {
+                vehicle_end.duration_since(vehicle_start)
+            } else if end >= self.len()
+                && let Some(vehicle_start) = vehicle_start
+                && let Some(vehicle_end) = vehicle_end
+            {
+                vehicle_end.duration_since(vehicle_start)
+            } else {
+                let bwd_waiting_duration = self.bwd_cumulative_waiting_durations[end];
+
+                self.duration(problem) + (delta - bwd_waiting_duration).max(SignedDuration::ZERO)
+            };
+
+            return new_route_duration <= max_working_duration;
         }
 
         true
@@ -1865,6 +1881,14 @@ mod tests {
         );
         assert_eq!(
             route.bwd_cumulative_waiting_durations[2],
+            SignedDuration::ZERO
+        );
+        assert_eq!(
+            route.bwd_cumulative_waiting_durations[3],
+            SignedDuration::ZERO
+        );
+        assert_eq!(
+            route.bwd_cumulative_waiting_durations[4],
             SignedDuration::ZERO
         );
 
@@ -2480,6 +2504,22 @@ mod tests {
         let is_valid =
             route.is_valid_tw_change(&problem, [ActivityId::service(3)].into_iter(), 3, 3);
 
+        assert!(!is_valid);
+
+        // Test when route is empty
+        let route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        let is_valid = route.is_valid_tw_change(
+            &problem,
+            [
+                ActivityId::service(0),
+                ActivityId::service(1),
+                ActivityId::service(2),
+                ActivityId::service(3),
+            ]
+            .into_iter(),
+            0,
+            0,
+        );
         assert!(!is_valid);
     }
 
