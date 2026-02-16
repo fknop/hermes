@@ -980,9 +980,7 @@ impl WorkingSolutionRoute {
         self.pickup_load_slack
             .update_expr(vehicle_capacity - &self.current_load[self.len()]);
 
-        if problem.has_time_windows() {
-            let vehicle = self.vehicle(problem);
-
+        if problem.has_time_windows() || vehicle.maximum_working_duration().is_some() {
             let latest_end = match (
                 vehicle.latest_end_time(),
                 vehicle.maximum_working_duration(),
@@ -1371,8 +1369,6 @@ impl WorkingSolutionRoute {
             previous_departure_time = Some(new_departure_time);
         }
 
-        let mut delta = SignedDuration::ZERO;
-
         if let Some(&next_activity_id) = self.activity_ids.get(end)
             && let Some(&current_activity_index) = self.jobs.get(&next_activity_id)
             && let Some(previous_departure_time) = previous_departure_time
@@ -1390,32 +1386,21 @@ impl WorkingSolutionRoute {
                 next_activity_id,
             );
 
-            delta = arrival_time.duration_since(current_arrival_time);
+            let delta = arrival_time.duration_since(current_arrival_time);
 
             if delta > current_time_slack {
                 return false;
             }
         }
 
-        if let Some(max_working_duration) = self.vehicle(problem).maximum_working_duration() {
-            let new_route_duration = if self.is_empty()
-                && let Some(vehicle_start) = vehicle_start
-                && let Some(vehicle_end) = vehicle_end
-            {
-                vehicle_end.duration_since(vehicle_start)
-            } else if end >= self.len()
-                && let Some(vehicle_start) = vehicle_start
-                && let Some(vehicle_end) = vehicle_end
-            {
-                vehicle_end.duration_since(vehicle_start)
-            } else {
-                let bwd_waiting_duration = self.bwd_cumulative_waiting_durations[end + 1];
-
-                // Waiting duration will absorb some of the delta
-                self.duration(problem) + (delta - bwd_waiting_duration).max(SignedDuration::ZERO)
-            };
-
-            return new_route_duration <= max_working_duration;
+        if let Some(max_working_duration) = self.vehicle(problem).maximum_working_duration()
+            && let Some(vehicle_start) = vehicle_start
+            && let Some(vehicle_end) = vehicle_end
+            // Other use cases are already handled by the fwd_time_slacks
+            // In these two use cases, the vehicle_start and vehicle_end actually represent the start and end of the route
+            && (self.is_empty() || end >= self.len())
+        {
+            return vehicle_end.duration_since(vehicle_start) <= max_working_duration;
         }
 
         true
@@ -1503,9 +1488,6 @@ impl WorkingSolutionRoute {
         //     return false;
         // }
         //
-        if end == 3 && self.current_load.len() == 3 {
-            println!("Route length: {}, start = {}", self.len(), start);
-        }
 
         let load_at_end = &self.current_load[start] + &delivery_load_delta + &pickup_load_delta
             - &added_delivery_load
