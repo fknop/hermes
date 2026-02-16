@@ -1,8 +1,8 @@
 use crate::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
-        insertion_context::InsertionContext,
-        score::Score, score_level::ScoreLevel, solution::route::WorkingSolutionRoute,
+        insertion_context::InsertionContext, score::Score, score_level::ScoreLevel,
+        solution::route::WorkingSolutionRoute,
     },
 };
 
@@ -25,7 +25,7 @@ impl RouteConstraint for MaximumWorkingDurationConstraint {
     ) -> Score {
         let vehicle = route.vehicle(problem);
         if let Some(maximum_working_duration) = vehicle.maximum_working_duration() {
-            let working_duration = route.end(problem).duration_since(route.start(problem));
+            let working_duration = route.duration(problem);
             if working_duration > maximum_working_duration {
                 return Score::of(
                     self.score_level(),

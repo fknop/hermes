@@ -1410,6 +1410,7 @@ impl WorkingSolutionRoute {
             } else {
                 let bwd_waiting_duration = self.bwd_cumulative_waiting_durations[end];
 
+                // Waiting duration will absorb some of the delta
                 self.duration(problem) + (delta - bwd_waiting_duration).max(SignedDuration::ZERO)
             };
 
@@ -2354,37 +2355,36 @@ mod tests {
 
     #[test]
     fn test_is_valid_tw_change_maximum_working_duration() {
-        // Vehicle starts at depot (location 0) at 08:00
-        // Travel time between locations is 30 mins, service duration is 10 mins
-        // So arrival at location 1 is 08:30, departure is 08:40
-        // Arrival at location 2 is 09:10, departure is 09:20
-        // etc.
         let problem = create_problem_for_tw_change(
             vec![
                 TimeWindow::from_iso(
                     Some("2025-11-30T08:00:00+02:00"),
                     Some("2025-11-30T09:00:00+02:00"),
-                ), // 0: TW ends at 09:00
+                ),
                 TimeWindow::from_iso(
                     Some("2025-11-30T08:00:00+02:00"),
                     Some("2025-11-30T10:00:00+02:00"),
-                ), // 1: TW ends at 10:00
+                ),
                 TimeWindow::from_iso(
                     Some("2025-11-30T08:00:00+02:00"),
                     Some("2025-11-30T11:00:00+02:00"),
-                ), // 2: TW ends at 11:00
+                ),
                 TimeWindow::from_iso(
                     Some("2025-11-30T08:00:00+02:00"),
                     Some("2025-11-30T12:00:00+02:00"),
-                ), // 3: TW ends at 12:00
+                ),
                 TimeWindow::from_iso(
-                    Some("2025-11-30T08:00:00+02:00"),
-                    Some("2025-11-30T08:35:00+02:00"),
-                ), // 4: TW ends at 08:35 (tight)
+                    Some("2025-11-30T10:00:00+02:00"),
+                    Some("2025-11-30T11:00:00+02:00"),
+                ),
                 TimeWindow::from_iso(
-                    Some("2025-11-30T08:00:00+02:00"),
-                    Some("2025-11-30T14:00:00+02:00"),
-                ), // 5: TW ends at 14:00 (relaxed)
+                    Some("2025-11-30T10:00:00+02:00"),
+                    Some("2025-11-30T11:00:00+02:00"),
+                ),
+                TimeWindow::from_iso(
+                    Some("2025-11-30T09:00:00+02:00"),
+                    Some("2025-11-30T11:00:00+02:00"),
+                ),
             ],
             TestProblemOptions {
                 earliest_start: timestamp!("2025-11-30T06:00:00+02:00"),
@@ -2438,6 +2438,80 @@ mod tests {
             .into_iter(),
             0,
             0,
+        );
+        assert!(!is_valid);
+
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(4));
+
+        assert_eq!(route.duration(&problem), SignedDuration::from_mins(100));
+
+        let is_valid =
+            route.is_valid_tw_change(&problem, [ActivityId::service(0)].into_iter(), 0, 0);
+
+        assert!(is_valid);
+
+        // Same duration because waiting time absorbed the difference
+        assert_eq!(route.duration(&problem), SignedDuration::from_mins(100));
+
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        assert_eq!(route.duration(&problem), SignedDuration::from_mins(40));
+        let is_valid =
+            route.is_valid_tw_change(&problem, [ActivityId::service(1)].into_iter(), 1, 1);
+        assert!(is_valid);
+        route.insert_service(&problem, 1, JobIdx::new(1));
+        assert_eq!(route.duration(&problem), SignedDuration::from_mins(80));
+        let is_valid =
+            route.is_valid_tw_change(&problem, [ActivityId::service(2)].into_iter(), 2, 2);
+        assert!(is_valid);
+        let is_valid =
+            route.is_valid_tw_change(&problem, [ActivityId::service(2)].into_iter(), 1, 1);
+        assert!(is_valid);
+
+        route.insert_service(&problem, 2, JobIdx::new(2));
+
+        // Maximum duration
+        assert_eq!(route.duration(&problem), SignedDuration::from_mins(120));
+
+        // Reverse segment
+        let is_valid = route.is_valid_tw_change(
+            &problem,
+            [ActivityId::service(2), ActivityId::service(1)].into_iter(),
+            1,
+            3,
+        );
+        assert!(is_valid);
+
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        route.insert_service(&problem, 1, JobIdx::new(6));
+
+        assert_eq!(route.duration(&problem), SignedDuration::from_mins(100));
+
+        // Valid because we add 40minutes for the service 1, but remove 20 minutes from the waiting duration of service 6
+        let is_valid =
+            route.is_valid_tw_change(&problem, [ActivityId::service(1)].into_iter(), 1, 1);
+        assert!(is_valid);
+
+        let is_valid = route.is_valid_tw_change(
+            &problem,
+            [ActivityId::service(1), ActivityId::service(2)].into_iter(),
+            1,
+            1,
+        );
+        assert!(!is_valid);
+
+        let is_valid = route.is_valid_tw_change(
+            &problem,
+            [
+                ActivityId::service(1),
+                ActivityId::service(2),
+                ActivityId::service(3),
+            ]
+            .into_iter(),
+            1,
+            3,
         );
         assert!(!is_valid);
     }
