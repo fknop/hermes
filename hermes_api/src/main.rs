@@ -44,9 +44,9 @@ async fn main() {
         .with_max_level(if is_debug { Level::DEBUG } else { Level::INFO })
         .with_span_events(FmtSpan::CLOSE)
         .with_env_filter(EnvFilter::new(if is_debug {
-            "hermes_routing=info,hermes_optimizer=debug,hermes_api=debug"
+            "hermes_routing=info,hermes_optimizer=debug,hermes_api=debug,hermes_osrm=debug,hermes_graphhopper=debug,hermes_matrix_providers=debug"
         } else {
-            "aide=warn,hermes_optimizer=info,hermes_api=info,hermes_routing=info"
+            "aide=warn,hermes_optimizer=info,hermes_api=info,hermes_routing=info,hermes_osrm=info,hermes_graphhopper=info,hermes_matrix_providers=info"
         }))
         .init();
     aide::generate::on_error(|error| tracing::error!("{}", error));

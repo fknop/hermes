@@ -1403,6 +1403,15 @@ impl WorkingSolutionRoute {
             return vehicle_end.duration_since(vehicle_start) <= max_working_duration;
         }
 
+        if let Some(latest_end) = self.vehicle(problem).latest_end_time()
+            && let Some(vehicle_end) = vehicle_end
+            // Other use cases are already handled by the fwd_time_slacks
+            // In these two use cases, the vehicle_start and vehicle_end actually represent the start and end of the route
+            && (self.is_empty() || end >= self.len())
+        {
+            return vehicle_end <= latest_end;
+        }
+
         true
     }
 

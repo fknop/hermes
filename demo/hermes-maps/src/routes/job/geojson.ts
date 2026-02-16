@@ -86,12 +86,13 @@ export function getGeoJSONFromProblem(
     .map((vehicle) => vehicle.depot_location_id)
     .filter((id) => !isNil(id))
 
-  const points: GeoJSON.Feature<GeoJSON.Point>[] = problem.locations
-    .map((location, index) => ({ location, index }))
+  const points: GeoJSON.Feature<GeoJSON.Point>[] = problem.services
+    .map((service, index) => ({ service, index }))
     .filter(({ index }) => {
       return !depotLocationIds.includes(index)
     })
-    .map(({ location, index }) => {
+    .map(({ service, index }) => {
+      const location = problem.locations[service.location_id]
       return {
         geometry: {
           type: 'Point',
@@ -99,8 +100,8 @@ export function getGeoJSONFromProblem(
         },
         type: 'Feature',
         properties: {
-          locationId: index.toString(),
-          color: neighbors?.includes(index) ? 'red' : '#475569',
+          locationId: service.location_id.toString(),
+          color: neighbors?.includes(service.location_id) ? 'red' : '#475569',
         },
       }
     })

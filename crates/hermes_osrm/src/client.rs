@@ -1,13 +1,19 @@
 use flatbuffers::InvalidFlatbuffer;
+use reqwest::StatusCode;
 use serde::Deserialize;
 use thiserror::Error;
 
 use crate::fbresult_generated;
 
+pub const OSRM_MAX_TABLE_SIZE: usize = 2000;
+
 #[derive(Debug, Error)]
 pub enum OsrmError {
     #[error("HTTP request failed: {0}")]
     Request(#[from] reqwest::Error),
+
+    #[error("Maximum table size ({OSRM_MAX_TABLE_SIZE}) exceeded {0}")]
+    MaximumTableSizeExceeded(usize),
 
     #[error("Deserialization error: {0}")]
     Deserialize(#[from] InvalidFlatbuffer),
@@ -48,6 +54,10 @@ impl OsrmMatrixClient {
     where
         for<'a> &'a P: Into<geo_types::Point>,
     {
+        if points.len() > OSRM_MAX_TABLE_SIZE {
+            return Err(OsrmError::MaximumTableSizeExceeded(points.len()));
+        }
+
         let mut url = self.params.osrm_url.clone();
         url.push_str(OSRM_TABLE_API_PATH);
 
@@ -70,7 +80,12 @@ impl OsrmMatrixClient {
                 ("skip_waypoints", "true"),
             ])
             .send()
-            .await?;
+            .await?
+            .error_for_status()
+            .map_err(|error| {
+                tracing::error!("OSRM table request failed with {}", error);
+                OsrmError::Request(error)
+            })?;
 
         let bytes = response.bytes().await?;
         let result =
