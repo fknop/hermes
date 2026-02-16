@@ -1372,6 +1372,7 @@ impl WorkingSolutionRoute {
         }
 
         let mut delta = SignedDuration::ZERO;
+
         if let Some(&next_activity_id) = self.activity_ids.get(end)
             && let Some(&current_activity_index) = self.jobs.get(&next_activity_id)
             && let Some(previous_departure_time) = previous_departure_time
@@ -1638,7 +1639,7 @@ mod tests {
         solver::solution::{
             route::WorkingSolutionRoute, route_update_iterator::RouteUpdateActivityData,
         },
-        test_utils::{self, TestProblemOptions, create_problem_for_tw_change},
+        test_utils::{self, TestProblemOptions, TestService, create_problem_for_tw_change},
         timestamp,
     };
 
@@ -2162,30 +2163,30 @@ mod tests {
         // etc.
         let problem = create_problem_for_tw_change(
             vec![
-                TimeWindow::new(
+                TestService::with_time_window(TimeWindow::new(
                     timestamp!("2025-11-30T08:00:00+02:00"),
                     timestamp!("2025-11-30T09:00:00+02:00"),
-                ), // 0: TW ends at 09:00
-                TimeWindow::new(
+                )),
+                TestService::with_time_window(TimeWindow::new(
                     timestamp!("2025-11-30T08:00:00+02:00"),
                     timestamp!("2025-11-30T10:00:00+02:00"),
-                ), // 1: TW ends at 10:00
-                TimeWindow::new(
+                )),
+                TestService::with_time_window(TimeWindow::new(
                     timestamp!("2025-11-30T08:00:00+02:00"),
                     timestamp!("2025-11-30T11:00:00+02:00"),
-                ), // 2: TW ends at 11:00
-                TimeWindow::new(
+                )),
+                TestService::with_time_window(TimeWindow::new(
                     timestamp!("2025-11-30T08:00:00+02:00"),
                     timestamp!("2025-11-30T12:00:00+02:00"),
-                ), // 3: TW ends at 12:00
-                TimeWindow::new(
+                )),
+                TestService::with_time_window(TimeWindow::new(
                     timestamp!("2025-11-30T08:00:00+02:00"),
                     timestamp!("2025-11-30T08:35:00+02:00"),
-                ), // 4: TW ends at 08:35 (tight)
-                TimeWindow::new(
+                )),
+                TestService::with_time_window(TimeWindow::new(
                     timestamp!("2025-11-30T08:00:00+02:00"),
                     timestamp!("2025-11-30T14:00:00+02:00"),
-                ), // 5: TW ends at 14:00 (relaxed)
+                )),
             ],
             TestProblemOptions::default(),
         );
@@ -2267,30 +2268,30 @@ mod tests {
     fn test_is_valid_tw_after_insertion() {
         let problem = create_problem_for_tw_change(
             vec![
-                TimeWindow::from_iso(
+                TestService::with_time_window(TimeWindow::from_iso(
                     Some("2025-11-30T08:00:00+02:00"),
                     Some("2025-11-30T09:00:00+02:00"),
-                ), // 0: TW ends at 09:00
-                TimeWindow::from_iso(
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
                     Some("2025-11-30T08:00:00+02:00"),
                     Some("2025-11-30T10:00:00+02:00"),
-                ), // 1: TW ends at 10:00
-                TimeWindow::from_iso(
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
                     Some("2025-11-30T08:00:00+02:00"),
                     Some("2025-11-30T11:00:00+02:00"),
-                ), // 2: TW ends at 11:00
-                TimeWindow::from_iso(
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
                     Some("2025-11-30T08:00:00+02:00"),
                     Some("2025-11-30T12:00:00+02:00"),
-                ), // 3: TW ends at 12:00
-                TimeWindow::from_iso(
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
                     Some("2025-11-30T08:00:00+02:00"),
-                    Some("2025-11-30T08:35:00+02:00"),
-                ), // 4: TW ends at 08:35 (tight)
-                TimeWindow::from_iso(
+                    Some("2025-11-30T13:00:00+02:00"),
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
                     Some("2025-11-30T08:00:00+02:00"),
                     Some("2025-11-30T14:00:00+02:00"),
-                ), // 5: TW ends at 14:00 (relaxed)
+                )),
             ],
             TestProblemOptions::default(),
         );
@@ -2357,34 +2358,34 @@ mod tests {
     fn test_is_valid_tw_change_maximum_working_duration() {
         let problem = create_problem_for_tw_change(
             vec![
-                TimeWindow::from_iso(
+                TestService::with_time_window(TimeWindow::from_iso(
                     Some("2025-11-30T08:00:00+02:00"),
                     Some("2025-11-30T09:00:00+02:00"),
-                ),
-                TimeWindow::from_iso(
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
                     Some("2025-11-30T08:00:00+02:00"),
                     Some("2025-11-30T10:00:00+02:00"),
-                ),
-                TimeWindow::from_iso(
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
                     Some("2025-11-30T08:00:00+02:00"),
                     Some("2025-11-30T11:00:00+02:00"),
-                ),
-                TimeWindow::from_iso(
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
                     Some("2025-11-30T08:00:00+02:00"),
                     Some("2025-11-30T12:00:00+02:00"),
-                ),
-                TimeWindow::from_iso(
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
                     Some("2025-11-30T10:00:00+02:00"),
                     Some("2025-11-30T11:00:00+02:00"),
-                ),
-                TimeWindow::from_iso(
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
                     Some("2025-11-30T10:00:00+02:00"),
                     Some("2025-11-30T11:00:00+02:00"),
-                ),
-                TimeWindow::from_iso(
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
                     Some("2025-11-30T09:00:00+02:00"),
                     Some("2025-11-30T11:00:00+02:00"),
-                ),
+                )),
             ],
             TestProblemOptions {
                 earliest_start: timestamp!("2025-11-30T06:00:00+02:00"),
@@ -2517,21 +2518,224 @@ mod tests {
     }
 
     #[test]
+    fn test_is_valid_tw_change_maximum_working_duration_2() {
+        let problem = create_problem_for_tw_change(
+            vec![
+                TestService::with_time_window(TimeWindow::from_iso(
+                    Some("2025-11-30T09:30:00+02:00"),
+                    Some("2025-11-30T20:00:00+02:00"),
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
+                    Some("2025-11-30T10:30:00+02:00"),
+                    Some("2025-11-30T20:00:00+02:00"),
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
+                    Some("2025-11-30T11:30:00+02:00"),
+                    Some("2025-11-30T20:00:00+02:00"),
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
+                    Some("2025-11-30T08:30:00+02:00"),
+                    Some("2025-11-30T20:00:00+02:00"),
+                )),
+                TestService {
+                    time_windows: Some(vec![TimeWindow::from_iso(
+                        Some("2025-11-30T08:30:00+02:00"),
+                        Some("2025-11-30T20:00:00+02:00"),
+                    )]),
+                    service_duration: Some(SignedDuration::from_mins(40)),
+                },
+            ],
+            TestProblemOptions {
+                earliest_start: timestamp!("2025-11-30T06:00:00+02:00"),
+                latest_start: timestamp!("2025-11-30T08:30:00+02:00"),
+                maximum_working_duration: Some(SignedDuration::from_mins(190)),
+                ..TestProblemOptions::default()
+            },
+        );
+
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        route.insert_service(&problem, 1, JobIdx::new(1));
+        route.insert_service(&problem, 2, JobIdx::new(2));
+
+        assert_eq!(
+            route.start(&problem),
+            timestamp!("2025-11-30T08:30:00+02:00")
+        );
+
+        assert_eq!(
+            route.arrival_times[0],
+            timestamp!("2025-11-30T09:00:00+02:00")
+        );
+
+        assert_eq!(
+            route.arrival_times[1],
+            timestamp!("2025-11-30T10:10:00+02:00")
+        );
+
+        assert_eq!(
+            route.arrival_times[2],
+            timestamp!("2025-11-30T11:10:00+02:00")
+        );
+
+        // 08:30 -> 11:20
+        assert_eq!(route.duration(&problem), SignedDuration::from_mins(190));
+        assert_eq!(
+            route.bwd_cumulative_waiting_durations[0],
+            SignedDuration::from_mins(70)
+        );
+        assert_eq!(
+            route.bwd_cumulative_waiting_durations[1],
+            SignedDuration::from_mins(70)
+        );
+        assert_eq!(
+            route.bwd_cumulative_waiting_durations[2],
+            SignedDuration::from_mins(40)
+        );
+        assert_eq!(
+            route.bwd_cumulative_waiting_durations[3],
+            SignedDuration::from_mins(20)
+        );
+        assert_eq!(
+            route.bwd_cumulative_waiting_durations[4],
+            SignedDuration::ZERO
+        );
+
+        assert!(!route.is_valid_tw_change(&problem, [ActivityId::service(3)].into_iter(), 3, 3));
+        assert!(!route.is_valid_tw_change(&problem, [ActivityId::service(3)].into_iter(), 2, 2));
+        assert!(route.is_valid_tw_change(&problem, [ActivityId::service(3)].into_iter(), 1, 1));
+        assert!(route.is_valid_tw_change(&problem, [ActivityId::service(3)].into_iter(), 0, 0));
+
+        // 20 minutes less waiting time
+        // 30 minutes more service time -> NOT OK
+        assert!(!route.is_valid_tw_change(&problem, [ActivityId::service(4)].into_iter(), 2, 3));
+
+        // Arrival at 10h20
+        // Service time until 10h50
+        // Arrival at next at 11h20
+        assert!(route.is_valid_tw_change(&problem, [ActivityId::service(4)].into_iter(), 1, 2));
+        assert!(route.is_valid_tw_change(&problem, [ActivityId::service(4)].into_iter(), 0, 1));
+    }
+
+    #[test]
+    fn test_is_valid_tw_change_maximum_working_duration_3() {
+        let problem = create_problem_for_tw_change(
+            vec![
+                TestService::with_time_window(TimeWindow::from_iso(
+                    Some("2025-11-30T09:30:00+02:00"),
+                    Some("2025-11-30T20:00:00+02:00"),
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
+                    Some("2025-11-30T10:30:00+02:00"),
+                    Some("2025-11-30T20:00:00+02:00"),
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
+                    Some("2025-11-30T11:30:00+02:00"),
+                    Some("2025-11-30T20:00:00+02:00"),
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
+                    Some("2025-11-30T08:30:00+02:00"),
+                    Some("2025-11-30T20:00:00+02:00"),
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
+                    Some("2025-11-30T08:30:00+02:00"),
+                    Some("2025-11-30T20:00:00+02:00"),
+                )),
+                TestService {
+                    time_windows: Some(vec![TimeWindow::from_iso(
+                        Some("2025-11-30T08:30:00+02:00"),
+                        Some("2025-11-30T20:00:00+02:00"),
+                    )]),
+                    service_duration: Some(SignedDuration::from_mins(10)),
+                },
+            ],
+            TestProblemOptions {
+                earliest_start: timestamp!("2025-11-30T06:00:00+02:00"),
+                latest_start: timestamp!("2025-11-30T08:30:00+02:00"),
+                maximum_working_duration: Some(SignedDuration::from_mins(250)),
+                ..TestProblemOptions::default()
+            },
+        );
+
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        route.insert_service(&problem, 1, JobIdx::new(1));
+        route.insert_service(&problem, 2, JobIdx::new(3));
+        route.insert_service(&problem, 3, JobIdx::new(4));
+
+        assert_eq!(
+            route.start(&problem),
+            timestamp!("2025-11-30T08:30:00+02:00")
+        );
+
+        assert_eq!(
+            route.arrival_times[0],
+            timestamp!("2025-11-30T09:00:00+02:00")
+        );
+
+        assert_eq!(
+            route.arrival_times[1],
+            timestamp!("2025-11-30T10:10:00+02:00")
+        );
+
+        assert_eq!(
+            route.arrival_times[2],
+            timestamp!("2025-11-30T11:10:00+02:00")
+        );
+
+        assert_eq!(
+            route.arrival_times[3],
+            timestamp!("2025-11-30T11:50:00+02:00")
+        );
+
+        assert_eq!(route.duration(&problem), SignedDuration::from_mins(210));
+        assert_eq!(
+            route.bwd_cumulative_waiting_durations[0],
+            SignedDuration::from_mins(50)
+        );
+        assert_eq!(
+            route.bwd_cumulative_waiting_durations[1],
+            SignedDuration::from_mins(50)
+        );
+        assert_eq!(
+            route.bwd_cumulative_waiting_durations[2],
+            SignedDuration::from_mins(20)
+        );
+        assert_eq!(
+            route.bwd_cumulative_waiting_durations[3],
+            SignedDuration::ZERO
+        );
+        assert_eq!(
+            route.bwd_cumulative_waiting_durations[4],
+            SignedDuration::ZERO
+        );
+        assert_eq!(
+            route.bwd_cumulative_waiting_durations[5],
+            SignedDuration::ZERO
+        );
+
+        assert!(route.is_valid_tw_change(&problem, [ActivityId::service(5)].into_iter(), 2, 2));
+
+        route.insert_service(&problem, 2, JobIdx::new(5));
+        assert_eq!(route.duration(&problem), SignedDuration::from_mins(250));
+    }
+
+    #[test]
     fn test_waiting_duration_data() {
         let problem = create_problem_for_tw_change(
             vec![
-                TimeWindow::from_iso(
+                TestService::with_time_window(TimeWindow::from_iso(
                     Some("2025-11-30T08:00:00+02:00"),
                     Some("2025-11-30T09:00:00+02:00"),
-                ),
-                TimeWindow::from_iso(
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
                     Some("2025-11-30T10:00:00+02:00"),
                     Some("2025-11-30T11:00:00+02:00"),
-                ),
-                TimeWindow::from_iso(
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
                     Some("2025-11-30T10:00:00+02:00"),
                     Some("2025-11-30T12:00:00+02:00"),
-                ),
+                )),
             ],
             TestProblemOptions::default(),
         );
@@ -2659,22 +2863,22 @@ mod tests {
     fn test_waiting_duration_delta() {
         let problem = create_problem_for_tw_change(
             vec![
-                TimeWindow::from_iso(
+                TestService::with_time_window(TimeWindow::from_iso(
                     Some("2025-11-30T08:00:00+02:00"),
                     Some("2025-11-30T09:00:00+02:00"),
-                ),
-                TimeWindow::from_iso(
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
                     Some("2025-11-30T10:00:00+02:00"),
                     Some("2025-11-30T11:00:00+02:00"),
-                ),
-                TimeWindow::from_iso(
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
                     Some("2025-11-30T10:00:00+02:00"),
                     Some("2025-11-30T12:00:00+02:00"),
-                ),
-                TimeWindow::from_iso(
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
                     Some("2025-11-30T08:00:00+02:00"),
                     Some("2025-11-30T12:00:00+02:00"),
-                ),
+                )),
             ],
             TestProblemOptions {
                 earliest_start: timestamp!("2025-11-30T07:00:00+02:00"),
@@ -2875,30 +3079,30 @@ mod tests {
     fn test_routes_versions() {
         let problem = create_problem_for_tw_change(
             vec![
-                TimeWindow::from_iso(
+                TestService::with_time_window(TimeWindow::from_iso(
                     Some("2025-11-30T08:00:00+02:00"),
                     Some("2025-11-30T09:00:00+02:00"),
-                ), // 0: TW ends at 09:00
-                TimeWindow::from_iso(
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
                     Some("2025-11-30T08:00:00+02:00"),
                     Some("2025-11-30T10:00:00+02:00"),
-                ), // 1: TW ends at 10:00
-                TimeWindow::from_iso(
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
                     Some("2025-11-30T08:00:00+02:00"),
                     Some("2025-11-30T11:00:00+02:00"),
-                ), // 2: TW ends at 11:00
-                TimeWindow::from_iso(
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
                     Some("2025-11-30T08:00:00+02:00"),
                     Some("2025-11-30T12:00:00+02:00"),
-                ), // 3: TW ends at 12:00
-                TimeWindow::from_iso(
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
                     Some("2025-11-30T08:00:00+02:00"),
-                    Some("2025-11-30T08:35:00+02:00"),
-                ), // 4: TW ends at 08:35 (tight)
-                TimeWindow::from_iso(
+                    Some("2025-11-30T13:00:00+02:00"),
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
                     Some("2025-11-30T08:00:00+02:00"),
-                    Some("2025-11-30T14:00:00+02:00"),
-                ), // 5: TW ends at 14:00 (relaxed)
+                    Some("2025-11-30T13:00:00+02:00"),
+                )),
             ],
             TestProblemOptions::default(),
         );

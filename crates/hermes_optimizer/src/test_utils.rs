@@ -212,8 +212,23 @@ pub struct TestProblemOptions {
     pub service_time: Option<SignedDuration>,
 }
 
+#[derive(Default)]
+pub struct TestService {
+    pub time_windows: Option<Vec<TimeWindow>>,
+    pub service_duration: Option<SignedDuration>,
+}
+
+impl TestService {
+    pub fn with_time_window(time_windows: TimeWindow) -> Self {
+        Self {
+            time_windows: Some(vec![time_windows]),
+            service_duration: None,
+        }
+    }
+}
+
 pub fn create_problem_for_tw_change(
-    services: Vec<TimeWindow>,
+    services: Vec<TestService>,
     options: TestProblemOptions,
 ) -> VehicleRoutingProblem {
     // 10 locations from (0, 0) to (9, 0)
@@ -240,17 +255,23 @@ pub fn create_problem_for_tw_change(
     let services = services
         .into_iter()
         .enumerate()
-        .map(|(i, time_window)| {
+        .map(|(i, test_service)| {
             let mut service_builder = ServiceBuilder::default();
             service_builder.set_demand(Capacity::from_vec(vec![10.0]));
             service_builder.set_external_id(format!("service_{}", i + 1));
             service_builder.set_service_duration(
-                options
-                    .service_time
-                    .unwrap_or(SignedDuration::from_mins(10)),
+                test_service.service_duration.unwrap_or(
+                    options
+                        .service_time
+                        .unwrap_or(SignedDuration::from_mins(10)),
+                ),
             );
             service_builder.set_location_id(i + 1);
-            service_builder.set_time_window(time_window);
+
+            if let Some(tw) = test_service.time_windows {
+                service_builder.set_time_windows(tw);
+            }
+
             service_builder.build()
         })
         .collect::<Vec<_>>();
