@@ -1,8 +1,5 @@
 use crate::{
-    problem::{
-        job::{ActivityId, Job, JobIdx},
-        vehicle_routing_problem::VehicleRoutingProblem,
-    },
+    problem::job::{ActivityId, Job, JobIdx},
     solver::solution::{
         route::WorkingSolutionRoute, route_id::RouteIdx, working_solution::WorkingSolution,
     },

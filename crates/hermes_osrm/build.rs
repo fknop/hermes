@@ -1,11 +1,16 @@
 use std::process::Command;
 
+// https://github.com/google/flatbuffers/releases
+fn get_executable_path() -> &'static str {
+    match (std::env::consts::OS, std::env::consts::ARCH) {
+        ("macos", "aarch64") => "../../tools/macos/flatc",
+        ("windows", _) => "../../tools/windows/flatc.exe",
+        _ => panic!("Unsupported platform: add the flatc binary in the tools folder"),
+    }
+}
+
 fn main() {
-    let flatc = if cfg!(windows) {
-        "../../tools/flatc.exe"
-    } else {
-        "../../tools/flatc"
-    };
+    let flatc = get_executable_path();
 
     let status = Command::new(flatc)
         .args([

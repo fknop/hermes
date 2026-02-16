@@ -21,8 +21,8 @@ use crate::{
     selector::{
         select_best_selector::SelectBestSelector,
         select_binary_tournament::BinaryTournamentSelector,
-        select_random_selector::SelectRandomSelector, select_solution::SelectSolution,
-        select_weighted::SelectWeightedSelector, solution_selector::SolutionSelector,
+        select_random_selector::SelectRandomSelector, select_weighted::SelectWeightedSelector,
+        solution_selector::SolutionSelector,
     },
     solver::{
         alns_weights::{AlnsScores, AlnsWeights, UpdateScoreParams},
