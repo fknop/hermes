@@ -1409,7 +1409,7 @@ impl WorkingSolutionRoute {
             {
                 vehicle_end.duration_since(vehicle_start)
             } else {
-                let bwd_waiting_duration = self.bwd_cumulative_waiting_durations[end];
+                let bwd_waiting_duration = self.bwd_cumulative_waiting_durations[end + 1];
 
                 // Waiting duration will absorb some of the delta
                 self.duration(problem) + (delta - bwd_waiting_duration).max(SignedDuration::ZERO)
