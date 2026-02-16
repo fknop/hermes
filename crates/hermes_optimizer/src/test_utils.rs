@@ -1,17 +1,20 @@
 use std::{fs::File, io::BufReader, path::PathBuf, str::FromStr, sync::Arc};
 
 use hermes_matrix_providers::{cache::MatricesCache, travel_matrix_client::TravelMatrixClient};
+use jiff::{SignedDuration, Timestamp};
 use rand::RngCore;
 
 use crate::{
     json::types::JsonVehicleRoutingProblem,
     problem::{
+        capacity::Capacity,
         distance_method::DistanceMethod,
         fleet::Fleet,
         location::Location,
         service::{Service, ServiceBuilder},
+        time_window::TimeWindow,
         travel_cost_matrix::TravelMatrices,
-        vehicle::{Vehicle, VehicleBuilder},
+        vehicle::{Vehicle, VehicleBuilder, VehicleShift},
         vehicle_profile::VehicleProfile,
         vehicle_routing_problem::{VehicleRoutingProblem, VehicleRoutingProblemBuilder},
     },
@@ -20,6 +23,15 @@ use crate::{
         solution::{route_id::RouteIdx, working_solution::WorkingSolution},
     },
 };
+
+#[macro_export]
+macro_rules! timestamp {
+    ($iso:expr) => {{
+        $iso.parse::<jiff::Timestamp>()
+            .expect("Expected valid ISO 8601 timestamp")
+            .into()
+    }};
+}
 
 struct TestMatricesCache {
     path: PathBuf,
@@ -188,6 +200,84 @@ pub fn create_test_working_solution(
     }
 
     solution
+}
+
+#[derive(Default)]
+pub struct TestProblemOptions {
+    pub earliest_start: Option<Timestamp>,
+    pub latest_start: Option<Timestamp>,
+    pub latest_end: Option<Timestamp>,
+    pub maximum_working_duration: Option<SignedDuration>,
+    pub travel_time: Option<SignedDuration>,
+    pub service_time: Option<SignedDuration>,
+}
+
+pub fn create_problem_for_tw_change(
+    services: Vec<TimeWindow>,
+    options: TestProblemOptions,
+) -> VehicleRoutingProblem {
+    // 10 locations from (0, 0) to (9, 0)
+    let locations = create_location_grid(1, services.len() + 1);
+
+    let mut vehicle_builder = VehicleBuilder::default();
+    vehicle_builder.set_depot_location_id(0);
+    vehicle_builder.set_capacity(Capacity::from_vec(vec![100.0]));
+    vehicle_builder.set_vehicle_id(String::from("vehicle"));
+    vehicle_builder.set_profile_id(0);
+
+    let shift = VehicleShift {
+        maximum_working_duration: options.maximum_working_duration,
+        earliest_start: options.earliest_start,
+        latest_start: options.latest_start,
+        latest_end: options.latest_end,
+        ..VehicleShift::default()
+    };
+    vehicle_builder.set_vehicle_shift(shift);
+
+    let vehicle = vehicle_builder.build();
+    let vehicles = vec![vehicle];
+
+    let services = services
+        .into_iter()
+        .enumerate()
+        .map(|(i, time_window)| {
+            let mut service_builder = ServiceBuilder::default();
+            service_builder.set_demand(Capacity::from_vec(vec![10.0]));
+            service_builder.set_external_id(format!("service_{}", i + 1));
+            service_builder.set_service_duration(
+                options
+                    .service_time
+                    .unwrap_or(SignedDuration::from_mins(10)),
+            );
+            service_builder.set_location_id(i + 1);
+            service_builder.set_time_window(time_window);
+            service_builder.build()
+        })
+        .collect::<Vec<_>>();
+
+    let mut builder = VehicleRoutingProblemBuilder::default();
+    // Travel time of 30 mins between consecutive locations
+
+    builder.set_vehicle_profiles(vec![VehicleProfile::new(
+        "test_profile".to_owned(),
+        TravelMatrices::from_constant(
+            &locations,
+            options
+                .travel_time
+                .unwrap_or(SignedDuration::from_mins(30))
+                .as_secs_f64(),
+            100.0,
+            options
+                .travel_time
+                .unwrap_or(SignedDuration::from_mins(30))
+                .as_secs_f64(),
+        ),
+    )]);
+    builder.set_locations(locations);
+    builder.set_fleet(Fleet::Finite(vehicles));
+    builder.set_services(services);
+
+    builder.build()
 }
 
 pub struct MockRng {

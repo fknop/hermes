@@ -55,11 +55,13 @@ pub struct WorkingSolutionRoute {
     pub(super) waiting_durations: Vec<SignedDuration>,
 
     /// List of cumulative waiting duration computed forward
-    /// fwd_cumulative_waiting_durations[i] is the total waiting duration from activity 0 until activity i
+    /// fwd_cumulative_waiting_durations[i] is the total waiting duration from step 0 until step i
+    /// step 0 is the depot, step[len + 1] is the last step
     pub(super) fwd_cumulative_waiting_durations: Vec<SignedDuration>,
 
     /// List of cumulative waiting duration computed backward
-    /// bwd_cumulative_waiting_durations[i] is the total waiting duration from activity i to the end of the route
+    /// bwd_cumulative_waiting_durations[i] is the total waiting duration from step i to the end of the route
+    /// step 0 is the depot, step[len + 1] is the last step
     pub(super) bwd_cumulative_waiting_durations: Vec<SignedDuration>,
 
     /// waiting_time_slacks[i] stored the maximum time a task can be moved "backward" in time without causing waiting time, or more waiting time if some already exists.
@@ -1032,6 +1034,8 @@ impl WorkingSolutionRoute {
                 };
             }
 
+            self.bwd_cumulative_waiting_durations[0] = self.bwd_cumulative_waiting_durations[1];
+
             if let Some(latest_start) = vehicle.latest_start_time() {
                 self.fwd_time_slacks[0] =
                     (latest_start.duration_since(self.start(problem))).min(self.fwd_time_slacks[1]);
@@ -1305,19 +1309,11 @@ impl WorkingSolutionRoute {
             Some(self.departure_times[start - 1])
         };
 
-        let succeeding_activities = if end < self.activity_ids.len() {
-            &self.activity_ids[end..]
-        } else {
-            &[]
-        };
-
         let mut vehicle_start: Option<Timestamp> = if self.is_empty() {
             None
         } else {
             Some(self.start(problem))
         };
-
-        let current_vehicle_start = vehicle_start;
 
         let mut vehicle_end: Option<Timestamp> = if self.is_empty() {
             None
@@ -1641,7 +1637,8 @@ mod tests {
         solver::solution::{
             route::WorkingSolutionRoute, route_update_iterator::RouteUpdateActivityData,
         },
-        test_utils,
+        test_utils::{self, TestProblemOptions, create_problem_for_tw_change},
+        timestamp,
     };
 
     fn create_problem() -> VehicleRoutingProblem {
@@ -2155,84 +2152,6 @@ mod tests {
         assert!(!is_valid);
     }
 
-    #[derive(Default)]
-    pub struct TestProblemOptions {
-        earliest_start: Option<Timestamp>,
-        latest_start: Option<Timestamp>,
-        latest_end: Option<Timestamp>,
-        maximum_working_duration: Option<SignedDuration>,
-        travel_time: Option<SignedDuration>,
-        service_time: Option<SignedDuration>,
-    }
-
-    fn create_problem_for_tw_change(
-        services: Vec<TimeWindow>,
-        options: TestProblemOptions,
-    ) -> VehicleRoutingProblem {
-        // 10 locations from (0, 0) to (9, 0)
-        let locations = test_utils::create_location_grid(1, 10);
-
-        let mut vehicle_builder = VehicleBuilder::default();
-        vehicle_builder.set_depot_location_id(0);
-        vehicle_builder.set_capacity(Capacity::from_vec(vec![100.0]));
-        vehicle_builder.set_vehicle_id(String::from("vehicle"));
-        vehicle_builder.set_profile_id(0);
-
-        let shift = VehicleShift {
-            maximum_working_duration: options.maximum_working_duration,
-            earliest_start: options.earliest_start,
-            latest_start: options.latest_start,
-            latest_end: options.latest_end,
-            ..VehicleShift::default()
-        };
-        vehicle_builder.set_vehicle_shift(shift);
-
-        let vehicle = vehicle_builder.build();
-        let vehicles = vec![vehicle];
-
-        let services = services
-            .into_iter()
-            .enumerate()
-            .map(|(i, time_window)| {
-                let mut service_builder = ServiceBuilder::default();
-                service_builder.set_demand(Capacity::from_vec(vec![10.0]));
-                service_builder.set_external_id(format!("service_{}", i + 1));
-                service_builder.set_service_duration(
-                    options
-                        .service_time
-                        .unwrap_or(SignedDuration::from_mins(10)),
-                );
-                service_builder.set_location_id(i + 1);
-                service_builder.set_time_window(time_window);
-                service_builder.build()
-            })
-            .collect::<Vec<_>>();
-
-        let mut builder = VehicleRoutingProblemBuilder::default();
-        // Travel time of 30 mins between consecutive locations
-
-        builder.set_vehicle_profiles(vec![VehicleProfile::new(
-            "test_profile".to_owned(),
-            TravelMatrices::from_constant(
-                &locations,
-                options
-                    .travel_time
-                    .unwrap_or(SignedDuration::from_mins(30))
-                    .as_secs_f64(),
-                100.0,
-                options
-                    .travel_time
-                    .unwrap_or(SignedDuration::from_mins(30))
-                    .as_secs_f64(),
-            ),
-        )]);
-        builder.set_locations(locations);
-        builder.set_fleet(Fleet::Finite(vehicles));
-        builder.set_services(services);
-
-        builder.build()
-    }
-
     #[test]
     fn test_is_valid_tw_change_delivery_only() {
         // Vehicle starts at depot (location 0) at 08:00
@@ -2242,29 +2161,29 @@ mod tests {
         // etc.
         let problem = create_problem_for_tw_change(
             vec![
-                TimeWindow::from_iso(
-                    Some("2025-11-30T08:00:00+02:00"),
-                    Some("2025-11-30T09:00:00+02:00"),
+                TimeWindow::new(
+                    timestamp!("2025-11-30T08:00:00+02:00"),
+                    timestamp!("2025-11-30T09:00:00+02:00"),
                 ), // 0: TW ends at 09:00
-                TimeWindow::from_iso(
-                    Some("2025-11-30T08:00:00+02:00"),
-                    Some("2025-11-30T10:00:00+02:00"),
+                TimeWindow::new(
+                    timestamp!("2025-11-30T08:00:00+02:00"),
+                    timestamp!("2025-11-30T10:00:00+02:00"),
                 ), // 1: TW ends at 10:00
-                TimeWindow::from_iso(
-                    Some("2025-11-30T08:00:00+02:00"),
-                    Some("2025-11-30T11:00:00+02:00"),
+                TimeWindow::new(
+                    timestamp!("2025-11-30T08:00:00+02:00"),
+                    timestamp!("2025-11-30T11:00:00+02:00"),
                 ), // 2: TW ends at 11:00
-                TimeWindow::from_iso(
-                    Some("2025-11-30T08:00:00+02:00"),
-                    Some("2025-11-30T12:00:00+02:00"),
+                TimeWindow::new(
+                    timestamp!("2025-11-30T08:00:00+02:00"),
+                    timestamp!("2025-11-30T12:00:00+02:00"),
                 ), // 3: TW ends at 12:00
-                TimeWindow::from_iso(
-                    Some("2025-11-30T08:00:00+02:00"),
-                    Some("2025-11-30T08:35:00+02:00"),
+                TimeWindow::new(
+                    timestamp!("2025-11-30T08:00:00+02:00"),
+                    timestamp!("2025-11-30T08:35:00+02:00"),
                 ), // 4: TW ends at 08:35 (tight)
-                TimeWindow::from_iso(
-                    Some("2025-11-30T08:00:00+02:00"),
-                    Some("2025-11-30T14:00:00+02:00"),
+                TimeWindow::new(
+                    timestamp!("2025-11-30T08:00:00+02:00"),
+                    timestamp!("2025-11-30T14:00:00+02:00"),
                 ), // 5: TW ends at 14:00 (relaxed)
             ],
             TestProblemOptions::default(),
@@ -2468,8 +2387,8 @@ mod tests {
                 ), // 5: TW ends at 14:00 (relaxed)
             ],
             TestProblemOptions {
-                earliest_start: Some("2025-11-30T06:00:00+02:00".parse().unwrap()),
-                latest_start: Some("2025-11-30T08:30:00+02:00".parse().unwrap()),
+                earliest_start: timestamp!("2025-11-30T06:00:00+02:00"),
+                latest_start: timestamp!("2025-11-30T08:30:00+02:00"),
                 maximum_working_duration: Some(SignedDuration::from_hours(2)),
                 ..TestProblemOptions::default()
             },
@@ -2482,22 +2401,22 @@ mod tests {
 
         assert_eq!(
             route.start(&problem),
-            "2025-11-30T07:30:00+02:00".parse().unwrap()
+            timestamp!("2025-11-30T07:30:00+02:00")
         );
 
         assert_eq!(
             route.arrival_times[0],
-            "2025-11-30T08:00:00+02:00".parse().unwrap()
+            timestamp!("2025-11-30T08:00:00+02:00")
         );
 
         assert_eq!(
             route.arrival_times[1],
-            "2025-11-30T08:40:00+02:00".parse().unwrap()
+            timestamp!("2025-11-30T08:40:00+02:00")
         );
 
         assert_eq!(
             route.arrival_times[2],
-            "2025-11-30T09:20:00+02:00".parse().unwrap()
+            timestamp!("2025-11-30T09:20:00+02:00")
         );
 
         // 1h50 of work total right now, adding a new service would break that
@@ -2521,6 +2440,245 @@ mod tests {
             0,
         );
         assert!(!is_valid);
+    }
+
+    #[test]
+    fn test_waiting_duration_data() {
+        let problem = create_problem_for_tw_change(
+            vec![
+                TimeWindow::from_iso(
+                    Some("2025-11-30T08:00:00+02:00"),
+                    Some("2025-11-30T09:00:00+02:00"),
+                ),
+                TimeWindow::from_iso(
+                    Some("2025-11-30T10:00:00+02:00"),
+                    Some("2025-11-30T11:00:00+02:00"),
+                ),
+                TimeWindow::from_iso(
+                    Some("2025-11-30T10:00:00+02:00"),
+                    Some("2025-11-30T12:00:00+02:00"),
+                ),
+            ],
+            TestProblemOptions::default(),
+        );
+
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0));
+
+        assert_eq!(
+            route.arrival_times[0],
+            timestamp!("2025-11-30T08:00:00+02:00")
+        );
+        assert_eq!(route.waiting_durations[0], SignedDuration::ZERO);
+        for i in 0..route.len() + 2 {
+            assert_eq!(
+                route.fwd_cumulative_waiting_durations[i],
+                SignedDuration::ZERO
+            );
+            assert_eq!(
+                route.bwd_cumulative_waiting_durations[i],
+                SignedDuration::ZERO
+            );
+        }
+
+        route.insert_service(&problem, 1, JobIdx::new(1));
+        assert_eq!(
+            route.arrival_times[1],
+            timestamp!("2025-11-30T08:40:00+02:00")
+        );
+        assert_eq!(route.waiting_durations[0], SignedDuration::ZERO);
+        assert_eq!(route.waiting_durations[1], SignedDuration::from_mins(80));
+        assert_eq!(route.waiting_time_slacks[0], SignedDuration::ZERO);
+        assert_eq!(route.waiting_time_slacks[1], SignedDuration::ZERO);
+
+        assert_eq!(
+            route.fwd_cumulative_waiting_durations[0],
+            SignedDuration::ZERO
+        );
+        assert_eq!(
+            route.fwd_cumulative_waiting_durations[1],
+            SignedDuration::ZERO
+        );
+        assert_eq!(
+            route.fwd_cumulative_waiting_durations[2],
+            SignedDuration::from_mins(80)
+        );
+        assert_eq!(
+            route.fwd_cumulative_waiting_durations[3],
+            SignedDuration::from_mins(80)
+        );
+
+        assert_eq!(
+            route.bwd_cumulative_waiting_durations[0],
+            SignedDuration::from_mins(80)
+        );
+        assert_eq!(
+            route.bwd_cumulative_waiting_durations[1],
+            SignedDuration::from_mins(80)
+        );
+        assert_eq!(
+            route.bwd_cumulative_waiting_durations[2],
+            SignedDuration::from_mins(80)
+        );
+        assert_eq!(
+            route.bwd_cumulative_waiting_durations[3],
+            SignedDuration::ZERO
+        );
+
+        route.insert_service(&problem, 2, JobIdx::new(2));
+        assert_eq!(
+            route.arrival_times[2],
+            timestamp!("2025-11-30T10:40:00+02:00")
+        );
+        assert_eq!(route.waiting_durations[0], SignedDuration::ZERO);
+        assert_eq!(route.waiting_durations[1], SignedDuration::from_mins(80));
+        assert_eq!(route.waiting_durations[2], SignedDuration::ZERO);
+        assert_eq!(route.waiting_time_slacks[0], SignedDuration::ZERO);
+        assert_eq!(route.waiting_time_slacks[1], SignedDuration::ZERO);
+        // Can be shifted in time 40 minutes until waiting time occurs
+        assert_eq!(route.waiting_time_slacks[2], SignedDuration::from_mins(40));
+
+        assert_eq!(
+            route.fwd_cumulative_waiting_durations[0],
+            SignedDuration::ZERO
+        );
+        assert_eq!(
+            route.fwd_cumulative_waiting_durations[1],
+            SignedDuration::ZERO
+        );
+        assert_eq!(
+            route.fwd_cumulative_waiting_durations[2],
+            SignedDuration::from_mins(80)
+        );
+        assert_eq!(
+            route.fwd_cumulative_waiting_durations[3],
+            SignedDuration::from_mins(80)
+        );
+        assert_eq!(
+            route.fwd_cumulative_waiting_durations[4],
+            SignedDuration::from_mins(80)
+        );
+
+        assert_eq!(
+            route.bwd_cumulative_waiting_durations[0],
+            SignedDuration::from_mins(80)
+        );
+        assert_eq!(
+            route.bwd_cumulative_waiting_durations[1],
+            SignedDuration::from_mins(80)
+        );
+        assert_eq!(
+            route.bwd_cumulative_waiting_durations[2],
+            SignedDuration::from_mins(80)
+        );
+        assert_eq!(
+            route.bwd_cumulative_waiting_durations[3],
+            SignedDuration::ZERO
+        );
+        assert_eq!(
+            route.bwd_cumulative_waiting_durations[4],
+            SignedDuration::ZERO
+        );
+    }
+
+    #[test]
+    fn test_waiting_duration_delta() {
+        let problem = create_problem_for_tw_change(
+            vec![
+                TimeWindow::from_iso(
+                    Some("2025-11-30T08:00:00+02:00"),
+                    Some("2025-11-30T09:00:00+02:00"),
+                ),
+                TimeWindow::from_iso(
+                    Some("2025-11-30T10:00:00+02:00"),
+                    Some("2025-11-30T11:00:00+02:00"),
+                ),
+                TimeWindow::from_iso(
+                    Some("2025-11-30T10:00:00+02:00"),
+                    Some("2025-11-30T12:00:00+02:00"),
+                ),
+                TimeWindow::from_iso(
+                    Some("2025-11-30T08:00:00+02:00"),
+                    Some("2025-11-30T12:00:00+02:00"),
+                ),
+            ],
+            TestProblemOptions {
+                earliest_start: timestamp!("2025-11-30T07:00:00+02:00"),
+                latest_start: timestamp!("2025-11-30T09:00:00+02:00"),
+                ..TestProblemOptions::default()
+            },
+        );
+
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+
+        let delta = route.waiting_duration_change_delta(
+            &problem,
+            [ActivityId::service(0)].into_iter(),
+            0,
+            0,
+        );
+
+        assert_eq!(delta, SignedDuration::ZERO);
+
+        route.insert_service(&problem, 0, JobIdx::new(0));
+
+        let delta = route.waiting_duration_change_delta(
+            &problem,
+            [ActivityId::service(1)].into_iter(),
+            1,
+            1,
+        );
+
+        assert_eq!(delta, SignedDuration::from_mins(80));
+
+        route.insert_service(&problem, 1, JobIdx::new(1));
+
+        let delta = route.waiting_duration_change_delta(
+            &problem,
+            [ActivityId::service(3)].into_iter(),
+            1,
+            1,
+        );
+
+        assert_eq!(delta, SignedDuration::from_mins(-40));
+
+        route.insert_service(&problem, 1, JobIdx::new(3));
+
+        // Reverse segment [3, 1] to [1, 3]
+        let delta = route.waiting_duration_change_delta(
+            &problem,
+            [ActivityId::service(1), ActivityId::service(3)].into_iter(),
+            1,
+            3,
+        );
+
+        assert_eq!(delta, SignedDuration::from_mins(40));
+
+        // Removal of service 1
+        let delta = route.waiting_duration_change_delta(&problem, [].into_iter(), 2, 3);
+        assert_eq!(delta, SignedDuration::from_mins(-40));
+
+        // Add service 2 at the start and remove the first one
+        let delta = route.waiting_duration_change_delta(
+            &problem,
+            [ActivityId::service(2)].into_iter(),
+            0,
+            1,
+        );
+
+        // Add 30m waiting time, but remove 40m later
+        assert_eq!(delta, SignedDuration::from_mins(-10));
+
+        let delta = route.waiting_duration_change_delta(
+            &problem,
+            [ActivityId::service(2)].into_iter(),
+            0,
+            0,
+        );
+
+        // Add 30m waiting time, but remove 40m later, but time windows break here
+        assert_eq!(delta, SignedDuration::from_mins(-10));
+        assert!(!route.is_valid_tw_change(&problem, [ActivityId::service(2)].into_iter(), 0, 0))
     }
 
     fn create_problem_with_n_services(services: usize) -> VehicleRoutingProblem {
