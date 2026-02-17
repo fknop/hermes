@@ -981,22 +981,26 @@ impl WorkingSolutionRoute {
             .update_expr(vehicle_capacity - &self.current_load[self.len()]);
 
         if problem.has_time_windows()
-            || vehicle.maximum_working_duration().is_some()
+            // || vehicle.maximum_working_duration().is_some()
             || vehicle.latest_end_time().is_some()
         {
-            let latest_end = match (
-                vehicle.latest_end_time(),
-                vehicle.maximum_working_duration(),
-            ) {
-                (Some(latest_end), Some(maximum_working_duration)) => {
-                    latest_end.min(self.start(problem) + maximum_working_duration)
-                }
-                (Some(latest_end), None) => latest_end,
-                (None, Some(maximum_working_duration)) => {
-                    self.start(problem) + maximum_working_duration
-                }
-                (None, None) => Timestamp::MAX,
-            };
+            // TODO: remove max working duration from time slacks calculations, it's not correct
+            // It's not corect because arriving later does not mean we would break the duration, we could also remove a segment and start later
+            // let latest_end = match (
+            //     vehicle.latest_end_time(),
+            //     vehicle.maximum_working_duration(),
+            // ) {
+            //     (Some(latest_end), Some(maximum_working_duration)) => {
+            //         latest_end.min(self.start(problem) + maximum_working_duration)
+            //     }
+            //     (Some(latest_end), None) => latest_end,
+            //     (None, Some(maximum_working_duration)) => {
+            //         self.start(problem) + maximum_working_duration
+            //     }
+            //     (None, None) => Timestamp::MAX,
+            // };
+
+            let latest_end = vehicle.latest_end_time().unwrap_or(Timestamp::MAX);
 
             self.fwd_time_slacks[len + 1] = latest_end.duration_since(self.end(problem));
             self.bwd_cumulative_waiting_durations[len + 1] = SignedDuration::ZERO;
@@ -1092,7 +1096,7 @@ impl WorkingSolutionRoute {
         start: usize,
         end: usize,
     ) -> bool {
-        self.is_valid_tw_change(problem, activity_ids.clone(), start, end)
+        self.is_valid_time_change(problem, activity_ids.clone(), start, end)
             && self.is_valid_capacity_change(problem, activity_ids, start, end)
     }
 
@@ -1286,7 +1290,8 @@ impl WorkingSolutionRoute {
     }
 
     /// Checks whether inserting the given job IDs between the given [start, end) indices is valid
-    pub fn is_valid_tw_change(
+    /// Checks the time windows, maximum working duration, and latest end time constraints.
+    pub fn is_valid_time_change(
         &self,
         problem: &VehicleRoutingProblem,
         activity_ids: impl Iterator<Item = ActivityId>,
@@ -1396,53 +1401,60 @@ impl WorkingSolutionRoute {
             if next_delta > current_time_slack {
                 return false;
             }
+        } else if end >= self.len()
+            && !self.is_empty()
+            && let Some(previous_departure_time) = previous_departure_time
+            && let Some(previous_activity_id) = previous_activity_id
+        {
+            let vehicle_end = compute_vehicle_end(
+                problem,
+                self.vehicle_id,
+                previous_activity_id,
+                previous_departure_time,
+            );
+
+            let current_vehicle_end = self.end(problem);
+            let delta = vehicle_end.duration_since(current_vehicle_end);
+            if delta > self.fwd_time_slacks[self.len() + 1] {
+                return false;
+            }
         }
 
-        // if let Some(max_working_duration) = self.vehicle(problem).maximum_working_duration() {
-        //     let new_route_duration = if self.is_empty()
-        //         && let Some(vehicle_start) = vehicle_start
-        //         && let Some(vehicle_end) = vehicle_end
-        //     {
-        //         vehicle_end.duration_since(vehicle_start)
-        //     } else if end >= self.len()
-        //         && let Some(vehicle_start) = vehicle_start
-        //         && let Some(vehicle_end) = vehicle_end
-        //     {
-        //         vehicle_end.duration_since(vehicle_start)
-        //     } else {
-        //         let bwd_waiting_duration = self.bwd_cumulative_waiting_durations[end];
-
-        //         // Waiting duration will absorb some of the delta
-        //         self.duration(problem) + (delta - bwd_waiting_duration).max(SignedDuration::ZERO)
-        //     };
-
-        //     if new_route_duration > max_working_duration {
-        //         return false;
-        //     }
-        // }
-        //
+        let start_delta = if let Some(vehicle_start) = vehicle_start
+            && let Some(current_vehicle_start) = current_vehicle_start
+            && current_vehicle_start != vehicle_start
+        {
+            current_vehicle_start.duration_since(vehicle_start)
+        } else {
+            SignedDuration::ZERO
+        };
 
         if let Some(max_working_duration) = self.vehicle(problem).maximum_working_duration() {
             if let Some(vehicle_start) = vehicle_start
-            && let Some(vehicle_end) = vehicle_end
-            // Other use cases are already handled by the fwd_time_slacks
-            // In these two use cases, the vehicle_start and vehicle_end actually represent the start and end of the route
-            && (self.is_empty() || end >= self.len()) &&
-            vehicle_end.duration_since(vehicle_start) > max_working_duration
+                && let Some(vehicle_end) = vehicle_end
+                && (self.is_empty() || end >= self.len())
+                && vehicle_end.duration_since(vehicle_start) > max_working_duration
             {
                 return false;
-            } else if let Some(current_vehicle_start) = current_vehicle_start
+            }
+
+            let delta = if let Some(current_vehicle_start) = current_vehicle_start
                 && let Some(vehicle_start) = vehicle_start
                 && vehicle_start < current_vehicle_start
+                && next_delta < SignedDuration::ZERO
             {
-                let start_delta = current_vehicle_start.duration_since(vehicle_start);
-                let delta = (start_delta + next_delta
-                    - self.bwd_cumulative_waiting_durations[end + 1])
-                    .max(SignedDuration::ZERO);
+                // Starting earlier + arriving earlier: waiting time absorbs some work
+                let waiting_slack = self.waiting_time_slacks[end];
+                let positive_delta = -next_delta;
+                let work_delta = positive_delta - waiting_slack;
+                start_delta + work_delta
+            } else {
+                (start_delta + next_delta - self.bwd_cumulative_waiting_durations[end + 1])
+                    .max(SignedDuration::ZERO)
+            };
 
-                if self.duration(problem) + delta > max_working_duration {
-                    return false;
-                }
+            if self.duration(problem) + delta > max_working_duration {
+                return false;
             }
         }
 
@@ -2234,53 +2246,53 @@ mod tests {
         // Test 1: Replace service 1 with service 3 (same position, later TW)
         // This should be valid since service 3 has a later end time
         let is_valid =
-            route.is_valid_tw_change(&problem, std::iter::once(ActivityId::service(3)), 1, 2);
+            route.is_valid_time_change(&problem, std::iter::once(ActivityId::service(3)), 1, 2);
         assert!(is_valid);
 
         // Test 2: Replace service 1 with service 5 (relaxed TW)
         let is_valid =
-            route.is_valid_tw_change(&problem, std::iter::once(ActivityId::service(5)), 1, 2);
+            route.is_valid_time_change(&problem, std::iter::once(ActivityId::service(5)), 1, 2);
         assert!(is_valid);
 
         // Test 3: Insert service 4 (tight TW ending at 08:35) before service 0
         // Service 0 arrives at 08:30, so inserting 4 before would push 0 later
         // Service 4 arrives at 08:30 which is before its TW end of 08:35 - valid
         let is_valid =
-            route.is_valid_tw_change(&problem, std::iter::once(ActivityId::service(4)), 0, 0);
+            route.is_valid_time_change(&problem, std::iter::once(ActivityId::service(4)), 0, 0);
         assert!(is_valid);
 
         // Test 4: Insert service 4 (tight TW) after service 0
         // After serving 0 (depart 08:40), arrive at 4's location at 09:10
         // But service 4's TW ends at 08:35, so this should be invalid
         let is_valid =
-            route.is_valid_tw_change(&problem, std::iter::once(ActivityId::service(4)), 1, 1);
+            route.is_valid_time_change(&problem, std::iter::once(ActivityId::service(4)), 1, 1);
         assert!(!is_valid);
 
         // Test 5: Replace service 0 with service 4
         // Service 4 would arrive at 08:30 (within TW ending 08:35) - valid
         let is_valid =
-            route.is_valid_tw_change(&problem, std::iter::once(ActivityId::service(4)), 0, 1);
+            route.is_valid_time_change(&problem, std::iter::once(ActivityId::service(4)), 0, 1);
         assert!(is_valid);
 
         // Test 6: Insert service 5 at end
         // After route 0->1->2, departing at 10:00, arrive at 5 at 10:30
         // Service 5's TW ends at 14:00, so this is valid
         let is_valid =
-            route.is_valid_tw_change(&problem, std::iter::once(ActivityId::service(5)), 3, 3);
+            route.is_valid_time_change(&problem, std::iter::once(ActivityId::service(5)), 3, 3);
         assert!(is_valid);
 
         // Test 7: Remove service 0 (replace with nothing)
         // This should be valid as it only makes subsequent services earlier
-        let is_valid = route.is_valid_tw_change(&problem, [].into_iter(), 0, 1);
+        let is_valid = route.is_valid_time_change(&problem, [].into_iter(), 0, 1);
         assert!(is_valid);
 
         // Test 8: Remove service 2 (replace with nothing)
         // This should be valid
-        let is_valid = route.is_valid_tw_change(&problem, [].into_iter(), 2, 3);
+        let is_valid = route.is_valid_time_change(&problem, [].into_iter(), 2, 3);
         assert!(is_valid);
 
         // Test 9: Insert 3 and 5, replace 1 by 3
-        let is_valid = route.is_valid_tw_change(
+        let is_valid = route.is_valid_time_change(
             &problem,
             [ActivityId::service(3), ActivityId::service(5)].into_iter(),
             1,
@@ -2289,7 +2301,7 @@ mod tests {
         assert!(is_valid);
 
         // Test 9: Insert 4 and 5, replace 1 by 4
-        let is_valid = route.is_valid_tw_change(
+        let is_valid = route.is_valid_time_change(
             &problem,
             [ActivityId::service(4), ActivityId::service(5)].into_iter(),
             1,
@@ -2358,7 +2370,7 @@ mod tests {
 
         // Insert job 0 at position 3
         let is_valid =
-            route.is_valid_tw_change(&problem, [ActivityId::service(0)].into_iter(), 3, 3);
+            route.is_valid_time_change(&problem, [ActivityId::service(0)].into_iter(), 3, 3);
         assert!(!is_valid);
 
         let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
@@ -2384,7 +2396,7 @@ mod tests {
 
         // Insert job 3 at position 1
         let is_valid =
-            route.is_valid_tw_change(&problem, [ActivityId::service(3)].into_iter(), 1, 1);
+            route.is_valid_time_change(&problem, [ActivityId::service(3)].into_iter(), 1, 1);
         assert!(!is_valid);
     }
 
@@ -2456,13 +2468,13 @@ mod tests {
 
         // 1h50 of work total right now, adding a new service would break that
         let is_valid =
-            route.is_valid_tw_change(&problem, [ActivityId::service(3)].into_iter(), 3, 3);
+            route.is_valid_time_change(&problem, [ActivityId::service(3)].into_iter(), 3, 3);
 
         assert!(!is_valid);
 
         // Test when route is empty
         let route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
-        let is_valid = route.is_valid_tw_change(
+        let is_valid = route.is_valid_time_change(
             &problem,
             [
                 ActivityId::service(0),
@@ -2482,26 +2494,23 @@ mod tests {
         assert_eq!(route.duration(&problem), SignedDuration::from_mins(100));
 
         let is_valid =
-            route.is_valid_tw_change(&problem, [ActivityId::service(0)].into_iter(), 0, 0);
+            route.is_valid_time_change(&problem, [ActivityId::service(0)].into_iter(), 0, 0);
 
-        assert!(is_valid);
-
-        // Same duration because waiting time absorbed the difference
-        assert_eq!(route.duration(&problem), SignedDuration::from_mins(100));
+        assert!(!is_valid);
 
         let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
         route.insert_service(&problem, 0, JobIdx::new(0));
         assert_eq!(route.duration(&problem), SignedDuration::from_mins(40));
         let is_valid =
-            route.is_valid_tw_change(&problem, [ActivityId::service(1)].into_iter(), 1, 1);
+            route.is_valid_time_change(&problem, [ActivityId::service(1)].into_iter(), 1, 1);
         assert!(is_valid);
         route.insert_service(&problem, 1, JobIdx::new(1));
         assert_eq!(route.duration(&problem), SignedDuration::from_mins(80));
         let is_valid =
-            route.is_valid_tw_change(&problem, [ActivityId::service(2)].into_iter(), 2, 2);
+            route.is_valid_time_change(&problem, [ActivityId::service(2)].into_iter(), 2, 2);
         assert!(is_valid);
         let is_valid =
-            route.is_valid_tw_change(&problem, [ActivityId::service(2)].into_iter(), 1, 1);
+            route.is_valid_time_change(&problem, [ActivityId::service(2)].into_iter(), 1, 1);
         assert!(is_valid);
 
         route.insert_service(&problem, 2, JobIdx::new(2));
@@ -2510,7 +2519,7 @@ mod tests {
         assert_eq!(route.duration(&problem), SignedDuration::from_mins(120));
 
         // Reverse segment
-        let is_valid = route.is_valid_tw_change(
+        let is_valid = route.is_valid_time_change(
             &problem,
             [ActivityId::service(2), ActivityId::service(1)].into_iter(),
             1,
@@ -2526,10 +2535,10 @@ mod tests {
 
         // Valid because we add 40minutes for the service 1, but remove 20 minutes from the waiting duration of service 6
         let is_valid =
-            route.is_valid_tw_change(&problem, [ActivityId::service(1)].into_iter(), 1, 1);
+            route.is_valid_time_change(&problem, [ActivityId::service(1)].into_iter(), 1, 1);
         assert!(is_valid);
 
-        let is_valid = route.is_valid_tw_change(
+        let is_valid = route.is_valid_time_change(
             &problem,
             [ActivityId::service(1), ActivityId::service(2)].into_iter(),
             1,
@@ -2537,7 +2546,7 @@ mod tests {
         );
         assert!(!is_valid);
 
-        let is_valid = route.is_valid_tw_change(
+        let is_valid = route.is_valid_time_change(
             &problem,
             [
                 ActivityId::service(1),
@@ -2612,7 +2621,7 @@ mod tests {
             timestamp!("2025-11-30T11:10:00+02:00")
         );
 
-        // 08:30 -> 11:20
+        // 08:30 -> 11:40
         assert_eq!(route.duration(&problem), SignedDuration::from_mins(190));
         assert_eq!(
             route.bwd_cumulative_waiting_durations[0],
@@ -2635,20 +2644,20 @@ mod tests {
             SignedDuration::ZERO
         );
 
-        assert!(!route.is_valid_tw_change(&problem, [ActivityId::service(3)].into_iter(), 3, 3));
-        assert!(!route.is_valid_tw_change(&problem, [ActivityId::service(3)].into_iter(), 2, 2));
-        assert!(route.is_valid_tw_change(&problem, [ActivityId::service(3)].into_iter(), 1, 1));
-        assert!(route.is_valid_tw_change(&problem, [ActivityId::service(3)].into_iter(), 0, 0));
+        assert!(!route.is_valid_time_change(&problem, [ActivityId::service(3)].into_iter(), 3, 3));
+        assert!(!route.is_valid_time_change(&problem, [ActivityId::service(3)].into_iter(), 2, 2));
+        assert!(route.is_valid_time_change(&problem, [ActivityId::service(3)].into_iter(), 1, 1));
+        assert!(route.is_valid_time_change(&problem, [ActivityId::service(3)].into_iter(), 0, 0));
 
         // 20 minutes less waiting time
         // 30 minutes more service time -> NOT OK
-        assert!(!route.is_valid_tw_change(&problem, [ActivityId::service(4)].into_iter(), 2, 3));
+        assert!(!route.is_valid_time_change(&problem, [ActivityId::service(4)].into_iter(), 2, 3));
 
-        // Arrival at 10h20
-        // Service time until 10h50
-        // Arrival at next at 11h20
-        assert!(route.is_valid_tw_change(&problem, [ActivityId::service(4)].into_iter(), 1, 2));
-        assert!(route.is_valid_tw_change(&problem, [ActivityId::service(4)].into_iter(), 0, 1));
+        // // Arrival at 10h20
+        // // Service time until 10h50
+        // // Arrival at next at 11h20
+        assert!(route.is_valid_time_change(&problem, [ActivityId::service(4)].into_iter(), 1, 2));
+        assert!(!route.is_valid_time_change(&problem, [ActivityId::service(4)].into_iter(), 0, 1));
     }
 
     #[test]
@@ -2748,10 +2757,115 @@ mod tests {
             SignedDuration::ZERO
         );
 
-        assert!(route.is_valid_tw_change(&problem, [ActivityId::service(5)].into_iter(), 2, 2));
+        assert!(route.is_valid_time_change(&problem, [ActivityId::service(5)].into_iter(), 2, 2));
 
         route.insert_service(&problem, 2, JobIdx::new(5));
         assert_eq!(route.duration(&problem), SignedDuration::from_mins(250));
+    }
+
+    #[test]
+    fn test_is_valid_tw_change_maximum_working_duration_vehicle_start_later() {
+        let problem = create_problem_for_tw_change(
+            vec![
+                TestService::with_time_window(TimeWindow::from_iso(
+                    Some("2025-11-30T11:00:00+02:00"),
+                    Some("2025-11-30T20:00:00+02:00"),
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
+                    Some("2025-11-30T11:00:00+02:00"),
+                    Some("2025-11-30T20:00:00+02:00"),
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
+                    Some("2025-11-30T11:00:00+02:00"),
+                    Some("2025-11-30T20:00:00+02:00"),
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
+                    Some("2025-11-30T11:00:00+02:00"),
+                    Some("2025-11-30T20:00:00+02:00"),
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
+                    Some("2025-11-30T11:00:00+02:00"),
+                    Some("2025-11-30T20:00:00+02:00"),
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
+                    Some("2025-11-30T14:00:00+02:00"),
+                    Some("2025-11-30T20:00:00+02:00"),
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
+                    Some("2025-11-30T16:00:00+02:00"),
+                    Some("2025-11-30T20:00:00+02:00"),
+                )),
+            ],
+            TestProblemOptions {
+                maximum_working_duration: Some(SignedDuration::from_mins(200)),
+                ..TestProblemOptions::default()
+            },
+        );
+
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        route.insert_service(&problem, 1, JobIdx::new(1));
+        route.insert_service(&problem, 2, JobIdx::new(2));
+        route.insert_service(&problem, 3, JobIdx::new(3));
+        route.insert_service(&problem, 4, JobIdx::new(4));
+
+        assert_eq!(route.duration(&problem), SignedDuration::from_mins(200));
+
+        assert!(route.is_valid_time_change(&problem, [ActivityId::service(5)].into_iter(), 0, 1));
+        assert!(!route.is_valid_time_change(&problem, [ActivityId::service(5)].into_iter(), 0, 0));
+        assert!(route.is_valid_time_change(&problem, [ActivityId::service(6)].into_iter(), 0, 2));
+        assert!(route.is_valid_time_change(&problem, [ActivityId::service(6)].into_iter(), 0, 1));
+
+        route.replace_activities(&problem, &[ActivityId::service(5)], 0, 1);
+
+        assert_eq!(route.duration(&problem), SignedDuration::from_mins(200));
+    }
+
+    #[test]
+    fn test_is_valid_tw_change_maximum_working_duration_removal() {
+        let problem = create_problem_for_tw_change(
+            vec![
+                TestService::with_time_window(TimeWindow::from_iso(
+                    Some("2025-11-30T11:00:00+02:00"),
+                    Some("2025-11-30T20:00:00+02:00"),
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
+                    Some("2025-11-30T12:00:00+02:00"),
+                    Some("2025-11-30T20:00:00+02:00"),
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
+                    Some("2025-11-30T13:00:00+02:00"),
+                    Some("2025-11-30T20:00:00+02:00"),
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
+                    Some("2025-11-30T14:00:00+02:00"),
+                    Some("2025-11-30T20:00:00+02:00"),
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
+                    Some("2025-11-30T10:00:00+02:00"),
+                    Some("2025-11-30T20:00:00+02:00"),
+                )),
+            ],
+            TestProblemOptions {
+                maximum_working_duration: Some(SignedDuration::from_mins(60 * 3 + 40)),
+                ..TestProblemOptions::default()
+            },
+        );
+
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        route.insert_service(&problem, 1, JobIdx::new(1));
+        route.insert_service(&problem, 2, JobIdx::new(2));
+        route.insert_service(&problem, 3, JobIdx::new(3));
+
+        assert_eq!(
+            route.duration(&problem),
+            SignedDuration::from_mins(60 * 3 + 40)
+        );
+
+        assert!(route.is_valid_time_change(&problem, [].into_iter(), 0, 1));
+        assert!(route.is_valid_time_change(&problem, [].into_iter(), 1, 3));
+        assert!(!route.is_valid_time_change(&problem, [ActivityId::service(4)].into_iter(), 0, 2));
     }
 
     #[test]
@@ -2789,7 +2903,7 @@ mod tests {
 
         assert_eq!(route.duration(&problem), SignedDuration::from_mins(120));
 
-        assert!(!route.is_valid_tw_change(&problem, [ActivityId::service(0)].into_iter(), 0, 0));
+        assert!(!route.is_valid_time_change(&problem, [ActivityId::service(0)].into_iter(), 0, 0));
     }
 
     #[test]
@@ -3028,7 +3142,7 @@ mod tests {
 
         // Add 30m waiting time, but remove 40m later, but time windows break here
         assert_eq!(delta, SignedDuration::from_mins(-10));
-        assert!(!route.is_valid_tw_change(&problem, [ActivityId::service(2)].into_iter(), 0, 0))
+        assert!(!route.is_valid_time_change(&problem, [ActivityId::service(2)].into_iter(), 0, 0))
     }
 
     fn create_problem_with_n_services(services: usize) -> VehicleRoutingProblem {

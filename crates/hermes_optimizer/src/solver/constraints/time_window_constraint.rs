@@ -71,7 +71,7 @@ impl ActivityConstraint for TimeWindowConstraint {
 
         match context.insertion {
             Insertion::Service(insertion) => {
-                if route.is_valid_tw_change(
+                if route.is_valid_time_change(
                     problem,
                     std::iter::once(ActivityId::Service(context.insertion.job_idx())),
                     insertion.position,

@@ -704,11 +704,27 @@ impl Alns {
 
         self.ruin(&mut working_solution, ruin_strategy, state, rng);
 
-        if !current_score.is_infeasible() && !self.params.recreate.insert_on_failure {
+        // Maximum duration is not optimized right now and can break after a ruin, we just ignore the iteration for now if it happens
+        for route in working_solution.routes() {
+            let vehicle = route.vehicle(&self.problem);
+            if let Some(max_working_duration) = vehicle.maximum_working_duration() {
+                let route_duration = route.duration(&self.problem);
+                if route_duration > max_working_duration {
+                    tracing::warn!(
+                        "Ignoring ruin iteration: route duration exceeds vehicle's maximum working duration"
+                    );
+                    return;
+                }
+            }
+        }
+
+        if RUN_SCORE_ASSERTIONS
+            && !current_score.is_infeasible()
+            && !self.params.recreate.insert_on_failure
+        {
             let (score, _) = working_solution.compute_solution_score(&self.constraints);
             if score.is_infeasible() {
-                tracing::warn!("Ignore iteration due to failing ruin");
-                return;
+                panic!("Infeasible solution after ruin");
             }
         }
 
