@@ -1178,6 +1178,30 @@
               "config": {
                 "type": "object",
                 "properties": {
+                  "profile": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "profile"
+                ]
+              },
+              "type": {
+                "type": "string",
+                "const": "osrm"
+              }
+            },
+            "required": [
+              "type",
+              "config"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "config": {
+                "type": "object",
+                "properties": {
                   "speed_kmh": {
                     "type": "number",
                     "format": "double"
