@@ -980,7 +980,10 @@ impl WorkingSolutionRoute {
         self.pickup_load_slack
             .update_expr(vehicle_capacity - &self.current_load[self.len()]);
 
-        if problem.has_time_windows() || vehicle.maximum_working_duration().is_some() {
+        if problem.has_time_windows()
+            || vehicle.maximum_working_duration().is_some()
+            || vehicle.latest_end_time().is_some()
+        {
             let latest_end = match (
                 vehicle.latest_end_time(),
                 vehicle.maximum_working_duration(),
@@ -1290,7 +1293,9 @@ impl WorkingSolutionRoute {
         start: usize,
         end: usize,
     ) -> bool {
-        if !problem.has_time_windows() && self.vehicle(problem).maximum_working_duration().is_none()
+        if !problem.has_time_windows()
+            && self.vehicle(problem).maximum_working_duration().is_none()
+            && self.vehicle(problem).latest_end_time().is_none()
         {
             return true;
         }
@@ -1313,15 +1318,15 @@ impl WorkingSolutionRoute {
             Some(self.start(problem))
         };
 
+        let current_vehicle_start = vehicle_start;
+
         let mut vehicle_end: Option<Timestamp> = if self.is_empty() {
             None
         } else {
             Some(self.end(problem))
         };
 
-        let mut is_removal = true;
         for activity_id in activity_ids {
-            is_removal = false;
             let arrival_time = if let Some(previous_activity_id) = previous_activity_id
                 && let Some(previous_departure_time) = previous_departure_time
             {
@@ -1369,11 +1374,11 @@ impl WorkingSolutionRoute {
             previous_departure_time = Some(new_departure_time);
         }
 
+        let mut next_delta = SignedDuration::ZERO;
         if let Some(&next_activity_id) = self.activity_ids.get(end)
             && let Some(&current_activity_index) = self.jobs.get(&next_activity_id)
             && let Some(previous_departure_time) = previous_departure_time
             && let Some(previous_activity_id) = previous_activity_id
-            && !is_removal
         {
             let current_time_slack = self.fwd_time_slacks[current_activity_index + 1];
             let current_arrival_time = self.arrival_times[current_activity_index];
@@ -1386,30 +1391,68 @@ impl WorkingSolutionRoute {
                 next_activity_id,
             );
 
-            let delta = arrival_time.duration_since(current_arrival_time);
+            next_delta = arrival_time.duration_since(current_arrival_time);
 
-            if delta > current_time_slack {
+            if next_delta > current_time_slack {
                 return false;
             }
         }
 
-        if let Some(max_working_duration) = self.vehicle(problem).maximum_working_duration()
-            && let Some(vehicle_start) = vehicle_start
+        // if let Some(max_working_duration) = self.vehicle(problem).maximum_working_duration() {
+        //     let new_route_duration = if self.is_empty()
+        //         && let Some(vehicle_start) = vehicle_start
+        //         && let Some(vehicle_end) = vehicle_end
+        //     {
+        //         vehicle_end.duration_since(vehicle_start)
+        //     } else if end >= self.len()
+        //         && let Some(vehicle_start) = vehicle_start
+        //         && let Some(vehicle_end) = vehicle_end
+        //     {
+        //         vehicle_end.duration_since(vehicle_start)
+        //     } else {
+        //         let bwd_waiting_duration = self.bwd_cumulative_waiting_durations[end];
+
+        //         // Waiting duration will absorb some of the delta
+        //         self.duration(problem) + (delta - bwd_waiting_duration).max(SignedDuration::ZERO)
+        //     };
+
+        //     if new_route_duration > max_working_duration {
+        //         return false;
+        //     }
+        // }
+        //
+
+        if let Some(max_working_duration) = self.vehicle(problem).maximum_working_duration() {
+            if let Some(vehicle_start) = vehicle_start
             && let Some(vehicle_end) = vehicle_end
             // Other use cases are already handled by the fwd_time_slacks
             // In these two use cases, the vehicle_start and vehicle_end actually represent the start and end of the route
-            && (self.is_empty() || end >= self.len())
-        {
-            return vehicle_end.duration_since(vehicle_start) <= max_working_duration;
+            && (self.is_empty() || end >= self.len()) &&
+            vehicle_end.duration_since(vehicle_start) > max_working_duration
+            {
+                return false;
+            } else if let Some(current_vehicle_start) = current_vehicle_start
+                && let Some(vehicle_start) = vehicle_start
+                && vehicle_start < current_vehicle_start
+            {
+                let start_delta = current_vehicle_start.duration_since(vehicle_start);
+                let delta = (start_delta + next_delta
+                    - self.bwd_cumulative_waiting_durations[end + 1])
+                    .max(SignedDuration::ZERO);
+
+                if self.duration(problem) + delta > max_working_duration {
+                    return false;
+                }
+            }
         }
 
         if let Some(latest_end) = self.vehicle(problem).latest_end_time()
             && let Some(vehicle_end) = vehicle_end
             // Other use cases are already handled by the fwd_time_slacks
             // In these two use cases, the vehicle_start and vehicle_end actually represent the start and end of the route
-            && (self.is_empty() || end >= self.len())
+            && (self.is_empty() || end >= self.len()) && vehicle_end > latest_end
         {
-            return vehicle_end <= latest_end;
+            return false;
         }
 
         true
@@ -2346,7 +2389,7 @@ mod tests {
     }
 
     #[test]
-    fn test_is_valid_tw_change_maximum_working_duration() {
+    fn test_is_valid_tw_change_maximum_working_duration_scenario_1() {
         let problem = create_problem_for_tw_change(
             vec![
                 TestService::with_time_window(TimeWindow::from_iso(
@@ -2509,7 +2552,7 @@ mod tests {
     }
 
     #[test]
-    fn test_is_valid_tw_change_maximum_working_duration_2() {
+    fn test_is_valid_tw_change_maximum_working_duration_scenario_2() {
         let problem = create_problem_for_tw_change(
             vec![
                 TestService::with_time_window(TimeWindow::from_iso(
@@ -2609,7 +2652,7 @@ mod tests {
     }
 
     #[test]
-    fn test_is_valid_tw_change_maximum_working_duration_3() {
+    fn test_is_valid_tw_change_maximum_working_duration_scenario_3() {
         let problem = create_problem_for_tw_change(
             vec![
                 TestService::with_time_window(TimeWindow::from_iso(
@@ -2709,6 +2752,44 @@ mod tests {
 
         route.insert_service(&problem, 2, JobIdx::new(5));
         assert_eq!(route.duration(&problem), SignedDuration::from_mins(250));
+    }
+
+    #[test]
+    fn test_is_valid_tw_change_maximum_working_duration_vehicle_start_change() {
+        let problem = create_problem_for_tw_change(
+            vec![
+                TestService::with_time_window(TimeWindow::from_iso(
+                    Some("2025-11-30T10:00:00+02:00"),
+                    Some("2025-11-30T20:00:00+02:00"),
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
+                    Some("2025-11-30T11:00:00+02:00"),
+                    Some("2025-11-30T20:00:00+02:00"),
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
+                    Some("2025-11-30T11:00:00+02:00"),
+                    Some("2025-11-30T20:00:00+02:00"),
+                )),
+                TestService::with_time_window(TimeWindow::from_iso(
+                    Some("2025-11-30T11:00:00+02:00"),
+                    Some("2025-11-30T20:00:00+02:00"),
+                )),
+            ],
+            TestProblemOptions {
+                earliest_start: timestamp!("2025-11-30T06:00:00+02:00"),
+                maximum_working_duration: Some(SignedDuration::from_mins(140)),
+                ..TestProblemOptions::default()
+            },
+        );
+
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(1));
+        route.insert_service(&problem, 1, JobIdx::new(2));
+        route.insert_service(&problem, 2, JobIdx::new(3));
+
+        assert_eq!(route.duration(&problem), SignedDuration::from_mins(120));
+
+        assert!(!route.is_valid_tw_change(&problem, [ActivityId::service(0)].into_iter(), 0, 0));
     }
 
     #[test]

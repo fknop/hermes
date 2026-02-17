@@ -1,5 +1,5 @@
 use hermes_graphhopper::client::{GraphHopperMatrixClient, GraphhopperMatrixClientParams};
-use hermes_osrm::client::{OsrmMatrixClient, OsrmMatrixClientParams};
+use hermes_osrm::client::{OsrmClient, OsrmClientParams};
 use tracing::instrument;
 
 use crate::{
@@ -14,7 +14,7 @@ where
     C: MatricesCache,
 {
     graphhopper_client: Option<GraphHopperMatrixClient>,
-    osrm_client: OsrmMatrixClient,
+    osrm_client: OsrmClient,
     cache: C,
 }
 
@@ -30,10 +30,10 @@ where
         }
     }
 
-    fn create_default_osrm_client() -> OsrmMatrixClient {
+    fn create_default_osrm_client() -> OsrmClient {
         let osrm_url =
             std::env::var("OSRM_URL").unwrap_or(String::from("http://router.project-osrm.org"));
-        OsrmMatrixClient::new(OsrmMatrixClientParams { osrm_url })
+        OsrmClient::new(OsrmClientParams { osrm_url })
     }
 
     fn create_default_graphhopper_client() -> Option<GraphHopperMatrixClient> {

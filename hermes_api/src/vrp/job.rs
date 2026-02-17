@@ -4,15 +4,21 @@ use axum::{
     Json,
     extract::{Path, Query, State},
 };
-use geo::{Coord, Simplify};
+use geo::{Coord, Point, Simplify};
 use geojson::{Feature, Geometry};
 use hermes_optimizer::{
     json::types::{FromProblem as _, JsonLocation, JsonService, JsonVehicle},
-    problem::{job::Job, meters::Meters, vehicle_routing_problem::VehicleRoutingProblem},
+    problem::{
+        job::Job, location::Location, meters::Meters,
+        vehicle_routing_problem::VehicleRoutingProblem,
+    },
     solver::{
-        accepted_solution::AcceptedSolution, alns_weights::AlnsWeights,
-        recreate::recreate_strategy::RecreateStrategy, ruin::ruin_strategy::RuinStrategy,
-        solution::route::WorkingSolutionRoute, solver::SolverStatus,
+        accepted_solution::{self, AcceptedSolution},
+        alns_weights::AlnsWeights,
+        recreate::recreate_strategy::RecreateStrategy,
+        ruin::ruin_strategy::RuinStrategy,
+        solution::route::WorkingSolutionRoute,
+        solver::SolverStatus,
         statistics::AggregatedStatistics,
     },
 };
@@ -22,11 +28,15 @@ use hermes_routing::{
     routing::routing_request::{RoutingAlgorithm, RoutingRequest, RoutingRequestOptions},
 };
 use jiff::SignedDuration;
+use parking_lot::MappedRwLockReadGuard;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{error::ApiError, state::AppState};
+use crate::{
+    error::ApiError,
+    state::{self, AppState},
+};
 
 use super::api_solution::{
     ApiEndActivity, ApiServiceActivity, ApiSolution, ApiSolutionActivity, ApiSolutionRoute,
@@ -66,68 +76,102 @@ pub struct JobPath {
     pub job_id: Uuid,
 }
 
-fn compute_polyline(
+async fn compute_polyline(
     problem: &VehicleRoutingProblem,
     route: &WorkingSolutionRoute,
-    hermes: &Hermes,
+    state: &AppState,
 ) -> Feature {
+    let osrm_client = &state.osrm_client;
+
+    // osrm_client.fetch_geometry(points)
+
     let location_ids = route.compute_location_ids(problem);
+    let locations: Vec<Point> = location_ids
+        .iter()
+        .map(|id| problem.location(*id).into())
+        .collect::<Vec<_>>();
 
-    let mut points: Vec<Coord<f64>> = vec![];
-    for (index, &location_id) in location_ids.iter().enumerate() {
-        if index == location_ids.len() - 1 {
-            continue;
+    let response = osrm_client.fetch_geometry(locations.as_slice()).await;
+
+    match response {
+        Ok(geometry) => {
+            let geometry = geo::LineString::new(
+                geometry
+                    .into_iter()
+                    .map(|coord| Coord {
+                        x: coord.x as f64,
+                        y: coord.y as f64,
+                    })
+                    .collect::<Vec<Coord<f64>>>(),
+            )
+            .simplify(0.0001);
+
+            Feature {
+                geometry: Some(Geometry::from(&geometry)),
+                ..Default::default()
+            }
         }
-
-        let next_location_id = location_ids[index + 1];
-
-        let location = problem.location(location_id);
-        let next_location = problem.location(next_location_id);
-
-        let result = hermes
-            .route(RoutingRequest {
-                start: GeoPoint::new(location.lon(), location.lat()),
-                end: GeoPoint::new(next_location.lon(), next_location.lat()),
-                profile: String::from("car"),
-                options: Some(RoutingRequestOptions {
-                    algorithm: Some(RoutingAlgorithm::ContractionHierarchies),
-                    include_debug_info: None,
-                }),
-            })
-            .unwrap();
-
-        points.extend(result.path.legs().iter().flat_map(|leg| {
-            leg.points().iter().map(|point| geo::Coord {
-                x: point.lon(),
-                y: point.lat(),
-            })
-        }));
+        Err(err) => {
+            tracing::error!("Failed to fetch geometry: {}", err);
+            Feature::default()
+        }
     }
 
-    let geometry = geo::LineString::new(points).simplify(&0.0001);
+    // let mut points: Vec<Coord<f64>> = vec![];
+    // for (index, &location_id) in location_ids.iter().enumerate() {
+    //     if index == location_ids.len() - 1 {
+    //         continue;
+    //     }
 
-    Feature {
-        geometry: Some(Geometry::from(&geometry)),
-        ..Default::default()
-    }
+    //     let next_location_id = location_ids[index + 1];
+
+    //     let location = problem.location(location_id);
+    //     let next_location = problem.location(next_location_id);
+
+    //     let result = hermes
+    //         .route(RoutingRequest {
+    //             start: GeoPoint::new(location.lon(), location.lat()),
+    //             end: GeoPoint::new(next_location.lon(), next_location.lat()),
+    //             profile: String::from("car"),
+    //             options: Some(RoutingRequestOptions {
+    //                 algorithm: Some(RoutingAlgorithm::ContractionHierarchies),
+    //                 include_debug_info: None,
+    //             }),
+    //         })
+    //         .unwrap();
+
+    //     points.extend(result.path.legs().iter().flat_map(|leg| {
+    //         leg.points().iter().map(|point| geo::Coord {
+    //             x: point.lon(),
+    //             y: point.lat(),
+    //         })
+    //     }));
+    // }
+
+    // let geometry = geo::LineString::new(points).simplify(&0.0001);
+
+    // Feature {
+    //     geometry: Some(Geometry::from(&geometry)),
+    //     ..Default::default()
+    // }
 }
 
-fn transform_solution(
-    accepted_solution: &AcceptedSolution,
-    hermes: &Hermes,
+async fn transform_solution<'a>(
+    accepted_solution: Arc<AcceptedSolution>,
+    state: &Arc<AppState>,
     with_geojson: bool,
 ) -> ApiSolution {
-    let problem = accepted_solution.solution.problem();
-    let routes: Vec<ApiSolutionRoute> = accepted_solution
+    let mut routes: Vec<ApiSolutionRoute> = accepted_solution
         .solution
         .non_empty_routes_iter()
         .map(|route| {
+            let problem = accepted_solution.solution.problem();
             let vehicle = problem.vehicle(route.vehicle_id());
             let mut activities: Vec<ApiSolutionActivity> = vec![];
-            if route.has_start(problem) {
+            if route.has_start(&problem) {
                 activities.push(ApiSolutionActivity::Start(ApiStartActivity {
-                    arrival_time: route.start(problem),
-                    departure_time: route.start(problem) + vehicle.depot_duration(),
+                    arrival_time: route.start(&problem),
+                    departure_time: route.start(&problem) + vehicle.depot_duration(),
                 }));
             }
 
@@ -143,30 +187,54 @@ fn transform_solution(
                 })
             }));
 
-            if route.has_end(problem) {
+            if route.has_end(&problem) {
                 activities.push(ApiSolutionActivity::End(ApiEndActivity {
-                    arrival_time: route.end(problem) - vehicle.end_depot_duration(),
-                    departure_time: route.end(problem),
+                    arrival_time: route.end(&problem) - vehicle.end_depot_duration(),
+                    departure_time: route.end(&problem),
                 }));
             }
 
             ApiSolutionRoute {
-                distance: route.distance(problem),
-                duration: route.duration(problem),
-                transport_duration: route.transport_duration(problem),
+                distance: route.distance(&problem),
+                duration: route.duration(&problem),
+                transport_duration: route.transport_duration(&problem),
                 total_demand: route.total_initial_load().clone(),
-                vehicle_id: route.vehicle(problem).external_id().to_owned(),
+                vehicle_id: route.vehicle(&problem).external_id().to_owned(),
                 waiting_duration: route.total_waiting_duration(),
                 activities,
-                polyline: if with_geojson {
-                    compute_polyline(problem, route, hermes)
-                } else {
-                    Feature::default()
-                },
-                vehicle_max_load: route.max_load(problem),
+                polyline: Feature::default(),
+                vehicle_max_load: route.max_load(&problem),
             }
         })
         .collect();
+
+    if with_geojson {
+        let handles = accepted_solution
+            .solution
+            .routes()
+            .iter()
+            .enumerate()
+            .filter_map(|(i, r)| {
+                if r.is_empty() {
+                    return None;
+                }
+
+                Some(tokio::spawn({
+                    let state = state.clone();
+                    let accepted_solution = accepted_solution.clone();
+                    async move {
+                        let route = &accepted_solution.solution.route(i.into());
+                        compute_polyline(accepted_solution.solution.problem(), route, &state).await
+                    }
+                }))
+            })
+            .collect::<Vec<_>>();
+
+        for (i, handle) in handles.into_iter().enumerate() {
+            let polyline = handle.await.unwrap();
+            routes[i].polyline = polyline;
+        }
+    }
 
     ApiSolution {
         score: accepted_solution.score,
@@ -182,7 +250,14 @@ fn transform_solution(
             .solution
             .unassigned_jobs()
             .iter()
-            .map(|job_id| problem.job(*job_id).external_id().to_owned())
+            .map(|job_id| {
+                accepted_solution
+                    .solution
+                    .problem()
+                    .job(*job_id)
+                    .external_id()
+                    .to_owned()
+            })
             .collect::<Vec<_>>(),
     }
 }
@@ -192,6 +267,7 @@ pub struct PollQuery {
     geojson: Option<bool>,
 }
 
+#[axum::debug_handler]
 pub async fn poll_handler(
     Path(path): Path<JobPath>,
     State(state): State<Arc<AppState>>,
@@ -207,12 +283,15 @@ pub async fn poll_handler(
         SolverStatus::Pending => Ok(Json(PollResponse::Pending)),
         SolverStatus::Running => {
             let solution = solver.current_best_solution().map(|solution| {
-                transform_solution(&solution, &state.hermes, query.geojson.unwrap_or(true))
+                transform_solution(solution.clone(), &state, query.geojson.unwrap_or(true))
             });
             let statistics = solver.statistics().aggregate();
             let weights = solver.weights();
             Ok(Json(PollResponse::Running(PollSolverRunning {
-                solution,
+                solution: match solution {
+                    Some(solution) => Some(solution.await),
+                    None => None,
+                },
                 statistics,
                 weights: OperatorWeights {
                     ruin: weights.0,
@@ -222,12 +301,15 @@ pub async fn poll_handler(
         }
         SolverStatus::Completed => {
             let solution = solver.current_best_solution().map(|solution| {
-                transform_solution(&solution, &state.hermes, query.geojson.unwrap_or(true))
+                transform_solution(solution.clone(), &state, query.geojson.unwrap_or(true))
             });
             let statistics = solver.statistics().aggregate();
             let weights = solver.weights();
             Ok(Json(PollResponse::Completed(PollSolverCompleted {
-                solution,
+                solution: match solution {
+                    Some(solution) => Some(solution.await),
+                    None => None,
+                },
                 statistics,
                 weights: OperatorWeights {
                     ruin: weights.0,
@@ -310,7 +392,7 @@ pub async fn job_handler(
 
     let problem = solver.problem();
 
-    Ok(Json(VehicleRoutingJobInput::from(problem)))
+    Ok(Json(VehicleRoutingJobInput::from(problem.as_ref())))
 }
 
 #[derive(Deserialize, JsonSchema)]

@@ -13,7 +13,7 @@ dhat-heap = []
 
 [dependencies]
 clap = { version = "4.5.53", features = ["derive"] }
-jiff = "0.2.17"
+jiff.workspace = true
 tokio = { workspace = true, features = ["rt","rt-multi-thread","macros"] }
 tracing = { workspace = true }
 tracing-subscriber = "0.3.19"

@@ -18,6 +18,7 @@ use axum::routing::{get, post};
 use axum::{Extension, serve};
 use hermes_matrix_providers::travel_matrix_client::TravelMatrixClient;
 use hermes_optimizer::solver::solver_manager::SolverManager;
+use hermes_osrm::client::{OsrmClient, OsrmClientParams};
 use hermes_routing::hermes::Hermes;
 use landmarks::get_landmarks;
 use std::sync::Arc;
@@ -58,6 +59,10 @@ async fn main() {
         hermes,
         solver_manager: SolverManager::default(),
         matrix_client: TravelMatrixClient::default(),
+        osrm_client: OsrmClient::new(OsrmClientParams {
+            osrm_url: std::env::var("OSRM_URL")
+                .unwrap_or(String::from("http://router.project-osrm.org")),
+        }),
     });
 
     let cors_layer = CorsLayer::new()

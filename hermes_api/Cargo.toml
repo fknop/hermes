@@ -17,8 +17,8 @@ tracing-subscriber = "0.3.19"
 tracing = "0.1.41"
 uuid = { version = "1.17.0", features = ["serde"] }
 parking_lot = { version = "0.12.4", features = ["serde"] }
-jiff = "0.2.15"
-geo = "0.30.0"
+jiff.workspace = true
+geo.workspace = true
 mimalloc = "0.1.47"
 hermes_matrix_providers = { version = "0.1.0", path = "../crates/hermes_matrix_providers" }
 anyhow = {workspace = true}
@@ -35,3 +35,4 @@ aide = { version = "0.16.0-alpha.2", features = [
 schemars.workspace = true
 serde_with.workspace = true
 console-subscriber = "0.5.0"
+hermes_osrm = { version = "0.1.0", path = "../crates/hermes_osrm" }

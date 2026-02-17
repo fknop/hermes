@@ -1,9 +1,8 @@
+use crate::fbresult_generated;
 use flatbuffers::InvalidFlatbuffer;
-use reqwest::StatusCode;
+use geo_types::{Coord, Point};
 use serde::Deserialize;
 use thiserror::Error;
-
-use crate::fbresult_generated;
 
 pub const OSRM_MAX_TABLE_SIZE: usize = 2000;
 
@@ -31,19 +30,20 @@ pub struct OsrmMatrices {
     pub distances: Vec<f64>,
 }
 
-pub struct OsrmMatrixClientParams {
+pub struct OsrmClientParams {
     pub osrm_url: String,
 }
 
-pub const OSRM_TABLE_API_PATH: &str = "/table/v1/driving/";
+const OSRM_TABLE_API_PATH: &str = "/table/v1/driving/";
+const OSRM_ROUTE_API_PATH: &str = "/route/v1/driving/";
 
-pub struct OsrmMatrixClient {
-    params: OsrmMatrixClientParams,
+pub struct OsrmClient {
+    params: OsrmClientParams,
     client: reqwest::Client,
 }
 
-impl OsrmMatrixClient {
-    pub fn new(params: OsrmMatrixClientParams) -> Self {
+impl OsrmClient {
+    pub fn new(params: OsrmClientParams) -> Self {
         Self {
             params,
             client: reqwest::Client::new(),
@@ -108,6 +108,68 @@ impl OsrmMatrixClient {
                     .collect::<Vec<f64>>();
 
                 Ok(OsrmMatrices { times, distances })
+            }
+            Err(err) => Err(OsrmError::Deserialize(err)),
+        }
+    }
+
+    pub async fn fetch_geometry<P>(
+        &self,
+        points: &[P],
+    ) -> Result<Vec<geo_types::Coord<f32>>, OsrmError>
+    where
+        P: Copy + Into<geo_types::Point>,
+    {
+        let mut url = self.params.osrm_url.clone();
+        url.push_str(OSRM_ROUTE_API_PATH);
+
+        for (i, &point) in points.iter().enumerate() {
+            let point: geo_types::Point = point.into();
+            url.push_str(&format!("{},{}", point.x(), point.y()));
+
+            if i < points.len() - 1 {
+                url.push(';');
+            }
+        }
+
+        url.push_str(".flatbuffers");
+
+        let response = self
+            .client
+            .post(url)
+            .query(&[
+                ("geometries", "geojson"),
+                ("skip_waypoints", "true"),
+                ("overview", "full"),
+            ])
+            .send()
+            .await?
+            .error_for_status()
+            .map_err(|error| {
+                tracing::error!("OSRM route request failed with {}", error);
+                OsrmError::Request(error)
+            })?;
+
+        let bytes = response.bytes().await?;
+        let result =
+            fbresult_generated::osrm::engine::api::fbresult::root_as_fbresult(bytes.as_ref());
+
+        match result {
+            Ok(result) => {
+                let routes = result.routes().ok_or(OsrmError::IncompleteResponse)?;
+
+                let route = routes.get(0);
+                let coordinates = route.coordinates().ok_or(OsrmError::IncompleteResponse)?;
+
+                let points = coordinates
+                    .into_iter()
+                    .map(|coordinate| Coord {
+                        x: coordinate.longitude(),
+                        y: coordinate.latitude(),
+                    })
+                    .collect::<Vec<Coord<f32>>>();
+
+                Ok(points)
             }
             Err(err) => Err(OsrmError::Deserialize(err)),
         }

@@ -119,7 +119,7 @@ impl Alns {
         }
     }
 
-    pub fn problem(&self) -> &VehicleRoutingProblem {
+    pub fn problem(&self) -> &Arc<VehicleRoutingProblem> {
         &self.problem
     }
 
@@ -296,8 +296,11 @@ impl Alns {
         self.on_best_solution_handler = Some(Arc::new(Mutex::new(callback)));
     }
 
-    pub fn best_solution(&self) -> Option<MappedRwLockReadGuard<'_, AcceptedSolution>> {
-        RwLockReadGuard::try_map(self.population.read(), |population| population.best()).ok()
+    pub fn best_solution(&self) -> Option<Arc<AcceptedSolution>> {
+        self.population
+            .read()
+            .best()
+            .map(|accepted_solution| Arc::new(accepted_solution.clone()))
     }
 
     #[cfg(feature = "statistics")]

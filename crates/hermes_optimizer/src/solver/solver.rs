@@ -60,7 +60,7 @@ impl Solver {
         *self.status.write() = SolverStatus::Completed;
     }
 
-    pub fn problem(&self) -> &VehicleRoutingProblem {
+    pub fn problem(&self) -> &Arc<VehicleRoutingProblem> {
         self.search.problem()
     }
 
@@ -72,7 +72,7 @@ impl Solver {
         self.created_at
     }
 
-    pub fn current_best_solution(&self) -> Option<MappedRwLockReadGuard<'_, AcceptedSolution>> {
+    pub fn current_best_solution(&self) -> Option<Arc<AcceptedSolution>> {
         self.search.best_solution()
     }
 

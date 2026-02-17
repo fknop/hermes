@@ -124,7 +124,7 @@ impl Default for SolverParams {
             ruin: RuinParams::default(),
             recreate: RecreateParams::default(),
             search_threads: Threads::Multi(2),
-            insertion_threads: Threads::Multi(4),
+            insertion_threads: Threads::Multi(6),
             noise_level: 0.025,
             noise_probability: 0.15,
 
