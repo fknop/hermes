@@ -1,6 +1,6 @@
 use crate::fbresult_generated;
 use flatbuffers::InvalidFlatbuffer;
-use geo_types::{Coord, Point};
+use geo_types::Coord;
 use serde::Deserialize;
 use thiserror::Error;
 

@@ -156,7 +156,7 @@ async fn compute_polyline(
     // }
 }
 
-async fn transform_solution<'a>(
+async fn transform_solution(
     accepted_solution: Arc<AcceptedSolution>,
     state: &Arc<AppState>,
     with_geojson: bool,

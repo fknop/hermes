@@ -10,6 +10,13 @@ fn get_executable_path() -> &'static str {
 }
 
 fn main() {
+    println!("cargo:rerun-if-changed=schemas/fbresult.fbs");
+    println!("cargo:rerun-if-changed=schemas/position.fbs");
+    println!("cargo:rerun-if-changed=schemas/route.fbs");
+    println!("cargo:rerun-if-changed=schemas/table.fbs");
+    println!("cargo:rerun-if-changed=schemas/waypoint.fbs");
+    println!("cargo:rerun-if-changed=build.rs");
+
     let flatc = get_executable_path();
 
     let status = Command::new(flatc)

@@ -24,8 +24,8 @@ pub struct OptimizeDatasetArgs {
     #[arg(short, long)]
     dataset: PathBuf,
 
-    #[arg(short, long, value_parser=parsers::parse_duration, default_value = "2m")]
-    timeout: jiff::SignedDuration,
+    #[arg(short, long, value_parser=parsers::parse_duration)]
+    timeout: Option<jiff::SignedDuration>,
 
     #[arg(long, default_value_t = 4)]
     ithreads: u8,
@@ -56,12 +56,11 @@ pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
 
     let multi_bar = MultiProgress::new();
     let style = ProgressStyle::with_template("{prefix:.bold} [{elapsed_precise}] {msg}").unwrap();
-    let seconds = args.timeout.as_secs();
 
     let bars: Vec<_> = paths
         .iter()
         .map(|path| {
-            let pb = multi_bar.add(ProgressBar::new(seconds as u64));
+            let pb = multi_bar.add(ProgressBar::new(0));
             pb.set_style(style.clone());
             pb.set_prefix(path.file_name().unwrap().to_string_lossy().into_owned());
             pb.set_message("pending...");
@@ -93,7 +92,11 @@ pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
             continue;
         };
 
-        let mut terminations: Vec<Termination> = vec![Termination::Duration(args.timeout)];
+        let mut terminations: Vec<Termination> = vec![];
+
+        if let Some(timeout) = args.timeout {
+            terminations.push(Termination::Duration(timeout));
+        }
 
         if let Some(iterations) = args.iterations {
             terminations.push(Termination::Iterations(iterations));

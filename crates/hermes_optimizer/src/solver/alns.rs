@@ -5,7 +5,7 @@ use std::{
 
 use fxhash::FxHashMap;
 use jiff::{SignedDuration, Timestamp};
-use parking_lot::{MappedRwLockReadGuard, Mutex, RwLock, RwLockReadGuard};
+use parking_lot::{Mutex, RwLock};
 use rand::{Rng, SeedableRng, rngs::SmallRng};
 use tracing::{debug, instrument, warn};
 

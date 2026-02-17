@@ -402,29 +402,6 @@ impl LocalSearch {
         self.state.delta(solution, r1, r2)
     }
 
-    fn is_best_delta(
-        &self,
-        solution: &WorkingSolution,
-        operator: &impl LocalSearchOperator,
-        best: f64,
-    ) -> bool {
-        let mut delta = operator.fixed_route_cost_delta(solution);
-
-        if delta < best {
-            return true;
-        }
-
-        delta += operator.transport_cost_delta(solution);
-
-        if delta < best {
-            return true;
-        }
-
-        delta += operator.waiting_cost_delta(solution);
-
-        delta < best
-    }
-
     fn build_pairs(&mut self, solution: &WorkingSolution) {
         self.pairs.clear();
         let max = solution.routes().len().pow(2);
