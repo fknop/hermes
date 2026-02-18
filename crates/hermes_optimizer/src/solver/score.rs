@@ -10,7 +10,7 @@ use serde::Serialize;
 
 use super::score_level::ScoreLevel;
 
-pub const RUN_SCORE_ASSERTIONS: bool = false;
+pub const RUN_SCORE_ASSERTIONS: bool = true;
 
 #[derive(Debug, Copy, Clone, PartialEq, Serialize, JsonSchema)]
 pub struct Score {

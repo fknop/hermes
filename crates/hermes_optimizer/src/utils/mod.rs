@@ -6,5 +6,6 @@ pub mod kruskal;
 pub mod newtype_index;
 pub mod one_tree;
 pub mod prim;
+pub mod sparse_table;
 pub mod time;
 pub mod zip_longest;

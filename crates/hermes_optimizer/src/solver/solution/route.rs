@@ -9,6 +9,7 @@ use crate::{
         location::LocationIdx,
         meters::Meters,
         service::{Service, ServiceType},
+        skill::SkillBitset,
         vehicle::{Vehicle, VehicleIdx},
         vehicle_routing_problem::VehicleRoutingProblem,
     },
@@ -23,7 +24,7 @@ use crate::{
             },
         },
     },
-    utils::bbox::BBox,
+    utils::{bbox::BBox, sparse_table::SparseTable},
 };
 
 #[derive(Clone)]
@@ -105,6 +106,9 @@ pub struct WorkingSolutionRoute {
     /// Total pickup capacity available for the route
     pub(super) pickup_load_slack: Capacity,
 
+    /// Store the total set of required skills for the services from the start to step i
+    pub(super) skills_sparse_table: SparseTable,
+
     bbox: BBox,
 
     updated_in_iteration: bool,
@@ -137,6 +141,7 @@ impl WorkingSolutionRoute {
             fwd_load_pickups: Vec::new(),
             fwd_load_shipments: Vec::new(),
             fwd_time_slacks: Vec::new(),
+            skills_sparse_table: SparseTable::empty(),
             delivery_load_slack: problem.vehicle(vehicle_id).capacity().clone(),
             pickup_load_slack: problem.vehicle(vehicle_id).capacity().clone(),
         };
@@ -820,6 +825,19 @@ impl WorkingSolutionRoute {
         }
 
         let len = self.len();
+
+        if problem.has_skills() {
+            let bitsets = self
+                .activity_ids
+                .iter()
+                .map(|&activity_id| {
+                    let job = problem.job(activity_id.job_id());
+                    job.skills_bitset().bitset()
+                })
+                .cloned()
+                .collect();
+            self.skills_sparse_table = SparseTable::build(bitsets)
+        }
 
         let mut current_load_pickups = Capacity::with_dimensions(problem.capacity_dimensions());
         let mut current_load_deliveries = Capacity::with_dimensions(problem.capacity_dimensions());

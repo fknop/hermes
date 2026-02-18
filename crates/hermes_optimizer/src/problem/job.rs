@@ -6,8 +6,12 @@ use jiff::SignedDuration;
 use crate::{
     define_index_newtype,
     problem::{
-        capacity::Capacity, location::LocationIdx, service::Service, shipment::Shipment,
-        skill::Skill, time_window::TimeWindows,
+        capacity::Capacity,
+        location::LocationIdx,
+        service::Service,
+        shipment::Shipment,
+        skill::{Skill, SkillBitset},
+        time_window::TimeWindows,
     },
 };
 
@@ -124,6 +128,20 @@ impl Job {
         match self {
             Job::Service(service) => service.skills(),
             Job::Shipment(shipment) => shipment.skills(),
+        }
+    }
+
+    pub fn skills_bitset(&self) -> &SkillBitset {
+        match self {
+            Job::Service(service) => service.skills_bitset(),
+            Job::Shipment(shipment) => shipment.skills_bitset(),
+        }
+    }
+
+    pub fn set_skills_bitset(&mut self, skills_bitset: SkillBitset) {
+        match self {
+            Job::Service(service) => service.set_skills_bitset(skills_bitset),
+            Job::Shipment(shipment) => shipment.set_skills_bitset(skills_bitset),
         }
     }
 

@@ -14,6 +14,7 @@ use crate::{
         meters::Meters,
         service::Service,
         shipment::Shipment,
+        skill::{Skill, SkillBitset},
         vehicle_profile::{VehicleProfile, VehicleProfileIdx},
     },
     solver::constraints::transport_cost_constraint::TRANSPORT_COST_WEIGHT,
@@ -46,6 +47,7 @@ pub struct VehicleRoutingProblem {
 
     neighborhoods: Vec<FxHashSet<ActivityId>>,
 
+    skill_registry: Vec<Skill>,
     precomputed_vehicle_compatibilities: Vec<bool>,
     precomputed_capacity_dimensions: usize,
     precomputed_normalized_demands: PrecomputedNormalizedDemands,
@@ -63,7 +65,6 @@ struct VehicleRoutingProblemParams {
     fleet: Fleet,
     vehicle_profiles: Vec<VehicleProfile>,
     jobs: Vec<Job>,
-    // travel_costs: TravelMatrices,
     distance_method: DistanceMethod,
     penalize_waiting_duration: bool,
 }
@@ -126,7 +127,9 @@ impl VehicleRoutingProblem {
             assert!(!neighborhood.is_empty())
         }
 
-        Self {
+        let skills = VehicleRoutingProblem::collect_skills(params.fleet.vehicles(), &params.jobs);
+
+        let mut problem = Self {
             id: params.id,
             has_time_windows: params.jobs.iter().any(|job| job.has_time_windows()),
             has_capacity: params.jobs.iter().any(|job| !job.demand().is_empty()),
@@ -134,7 +137,6 @@ impl VehicleRoutingProblem {
             fleet: params.fleet,
             vehicle_profiles: params.vehicle_profiles,
             jobs: params.jobs,
-            // travel_costs: params.travel_costs,
             neighborhoods,
             service_location_index,
             precomputed_average_cost_from_depot,
@@ -142,8 +144,29 @@ impl VehicleRoutingProblem {
             precomputed_capacity_dimensions,
             precomputed_vehicle_compatibilities,
             waiting_duration_weight,
+            skill_registry: skills,
             version_counter: AtomicUsize::new(0),
+        };
+
+        for vehicle in problem.fleet.vehicles_mut() {
+            vehicle.set_skills_bitset(SkillBitset::from_registry(
+                &problem.skill_registry,
+                vehicle.skills(),
+            ));
         }
+
+        for job in &mut problem.jobs {
+            job.set_skills_bitset(SkillBitset::from_registry(
+                &problem.skill_registry,
+                job.skills(),
+            ));
+        }
+
+        problem
+    }
+
+    pub fn create_skills_bitset(&self, skills: &FxHashSet<Skill>) -> SkillBitset {
+        SkillBitset::from_registry(&self.skill_registry, skills)
     }
 
     pub fn id(&self) -> &str {
@@ -369,6 +392,10 @@ impl VehicleRoutingProblem {
         self.has_capacity
     }
 
+    pub fn has_skills(&self) -> bool {
+        !self.skill_registry.is_empty()
+    }
+
     pub fn average_cost_from_depot(&self, location_id: LocationIdx) -> f64 {
         self.precomputed_average_cost_from_depot[location_id.get()]
     }
@@ -551,6 +578,20 @@ impl VehicleRoutingProblem {
         ));
 
         precomputed_average_cost_from_depot
+    }
+
+    fn collect_skills(vehicles: &[Vehicle], jobs: &[Job]) -> Vec<Skill> {
+        let mut skills = FxHashSet::<Skill>::default();
+
+        for vehicle in vehicles {
+            skills.extend(vehicle.skills().iter().cloned());
+        }
+
+        for job in jobs {
+            skills.extend(job.skills().iter().cloned());
+        }
+
+        skills.into_iter().collect()
     }
 }
 

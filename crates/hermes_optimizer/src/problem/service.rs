@@ -4,7 +4,10 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 
-use crate::problem::{skill::Skill, time_window::TimeWindows};
+use crate::problem::{
+    skill::{Skill, SkillBitset},
+    time_window::TimeWindows,
+};
 
 use super::{capacity::Capacity, location::LocationIdx, time_window::TimeWindow};
 
@@ -25,6 +28,10 @@ pub struct Service {
 
     #[serde(default)]
     skills: FxHashSet<Skill>,
+
+    #[serde(skip)]
+    skills_bitset: SkillBitset,
+
     service_duration: SignedDuration,
 
     #[serde(default = "ServiceType::default")]
@@ -62,6 +69,14 @@ impl Service {
 
     pub fn has_time_windows(&self) -> bool {
         !self.time_windows.is_empty()
+    }
+
+    pub fn skills_bitset(&self) -> &SkillBitset {
+        &self.skills_bitset
+    }
+
+    pub fn set_skills_bitset(&mut self, skills_bitset: SkillBitset) {
+        self.skills_bitset = skills_bitset;
     }
 }
 
@@ -133,6 +148,8 @@ impl ServiceBuilder {
             )),
             service_type: self.service_type.unwrap_or(ServiceType::Delivery),
             skills: FxHashSet::from_iter(self.skills.unwrap_or_default()),
+            // Will be filled later by the problem
+            skills_bitset: SkillBitset::empty(),
         }
     }
 }

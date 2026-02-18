@@ -4,7 +4,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     define_index_newtype,
-    problem::{job::Job, skill::Skill, vehicle_profile::VehicleProfileIdx},
+    problem::{
+        job::Job,
+        skill::{Skill, SkillBitset},
+        vehicle_profile::VehicleProfileIdx,
+        vehicle_routing_problem::VehicleRoutingProblem,
+    },
 };
 
 use super::{capacity::Capacity, location::LocationIdx};
@@ -23,6 +28,9 @@ pub struct Vehicle {
     should_return_to_depot: bool,
     maximum_activities: Option<usize>,
     skills: FxHashSet<Skill>,
+
+    #[serde(skip)]
+    skills_bitset: SkillBitset,
 }
 
 impl Vehicle {
@@ -104,6 +112,10 @@ impl Vehicle {
 
     pub fn is_compatible_with(&self, job: &Job) -> bool {
         self.skills.is_subset(job.skills())
+    }
+
+    pub fn set_skills_bitset(&mut self, skills_bitset: SkillBitset) {
+        self.skills_bitset = skills_bitset;
     }
 }
 
@@ -269,8 +281,11 @@ impl VehicleBuilder {
             should_return_to_depot: self.should_return_to_depot.unwrap_or(false),
             depot_duration: self.depot_duration,
             end_depot_duration: self.end_depot_duration,
-            skills: FxHashSet::from_iter(self.skills.unwrap_or_default()),
             maximum_activities: self.maximum_activities,
+            skills: FxHashSet::from_iter(self.skills.unwrap_or_default()),
+
+            // Will be set later by the problem
+            skills_bitset: SkillBitset::empty(),
         }
     }
 }

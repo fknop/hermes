@@ -19,6 +19,14 @@ impl Fleet {
     }
 
     #[inline]
+    pub fn vehicles_mut(&mut self) -> &mut [Vehicle] {
+        match self {
+            Fleet::Finite(vehicles) => vehicles,
+            Fleet::Infinite(vehicles) => vehicles,
+        }
+    }
+
+    #[inline]
     pub fn vehicle(&self, vehicle_id: VehicleIdx) -> &Vehicle {
         match self {
             Fleet::Finite(vehicles) => &vehicles[vehicle_id],

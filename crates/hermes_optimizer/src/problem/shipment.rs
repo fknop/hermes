@@ -3,7 +3,10 @@ use jiff::SignedDuration;
 use serde::Serialize;
 
 use crate::problem::{
-    capacity::Capacity, location::LocationIdx, skill::Skill, time_window::TimeWindows,
+    capacity::Capacity,
+    location::LocationIdx,
+    skill::{Skill, SkillBitset},
+    time_window::TimeWindows,
 };
 
 #[derive(Serialize, Debug, Clone)]
@@ -38,6 +41,8 @@ pub struct Shipment {
     pickup: ShipmentLocation,
     delivery: ShipmentLocation,
     skills: FxHashSet<Skill>,
+    #[serde(skip)]
+    skills_bitset: SkillBitset,
 }
 
 impl Shipment {
@@ -63,5 +68,13 @@ impl Shipment {
 
     pub fn has_time_windows(&self) -> bool {
         !self.pickup.time_windows.is_empty() || !self.delivery.time_windows.is_empty()
+    }
+
+    pub fn skills_bitset(&self) -> &SkillBitset {
+        &self.skills_bitset
+    }
+
+    pub fn set_skills_bitset(&mut self, skills_bitset: SkillBitset) {
+        self.skills_bitset = skills_bitset;
     }
 }
