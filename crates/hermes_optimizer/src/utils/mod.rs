@@ -1,4 +1,5 @@
 pub mod bbox;
+pub mod bitset;
 pub mod broken_pairs_distance;
 pub mod cancellable_barrier;
 pub mod enumerate_idx;

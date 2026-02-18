@@ -2,11 +2,9 @@ use fxhash::FxHashSet;
 use jiff::SignedDuration;
 use serde::Serialize;
 
-use crate::problem::{
-    capacity::Capacity,
-    location::LocationIdx,
-    skill::{Skill, SkillBitset},
-    time_window::TimeWindows,
+use crate::{
+    problem::{capacity::Capacity, location::LocationIdx, skill::Skill, time_window::TimeWindows},
+    utils::bitset::BitSet,
 };
 
 #[derive(Serialize, Debug, Clone)]
@@ -42,7 +40,7 @@ pub struct Shipment {
     delivery: ShipmentLocation,
     skills: FxHashSet<Skill>,
     #[serde(skip)]
-    skills_bitset: SkillBitset,
+    skills_bitset: BitSet,
 }
 
 impl Shipment {
@@ -70,11 +68,11 @@ impl Shipment {
         !self.pickup.time_windows.is_empty() || !self.delivery.time_windows.is_empty()
     }
 
-    pub fn skills_bitset(&self) -> &SkillBitset {
+    pub fn skills_bitset(&self) -> &BitSet {
         &self.skills_bitset
     }
 
-    pub fn set_skills_bitset(&mut self, skills_bitset: SkillBitset) {
+    pub fn set_skills_bitset(&mut self, skills_bitset: BitSet) {
         self.skills_bitset = skills_bitset;
     }
 }

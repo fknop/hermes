@@ -9,7 +9,6 @@ use crate::{
         location::LocationIdx,
         meters::Meters,
         service::{Service, ServiceType},
-        skill::SkillBitset,
         vehicle::{Vehicle, VehicleIdx},
         vehicle_routing_problem::VehicleRoutingProblem,
     },
@@ -832,7 +831,7 @@ impl WorkingSolutionRoute {
                 .iter()
                 .map(|&activity_id| {
                     let job = problem.job(activity_id.job_id());
-                    job.skills_bitset().bitset()
+                    job.skills_bitset()
                 })
                 .cloned()
                 .collect();
@@ -1105,6 +1104,30 @@ impl WorkingSolutionRoute {
         I: Iterator<Item = ActivityId>,
     {
         RouteUpdateIterator::new(problem, self, jobs_iter, start, end)
+    }
+
+    pub fn can_vehicle_deliver_segment(
+        &self,
+        problem: &VehicleRoutingProblem,
+        other: &Self,
+        start: usize,
+        end: usize,
+    ) -> bool {
+        if self.vehicle_id == other.vehicle_id {
+            return true;
+        }
+
+        if problem.has_skills() {
+            let vehicle = self.vehicle(problem);
+            if !other
+                .skills_sparse_table
+                .range_covered_by(start, end, vehicle.skills_bitset())
+            {
+                return false;
+            }
+        }
+
+        true
     }
 
     pub fn is_valid_change(
@@ -1696,7 +1719,7 @@ mod tests {
             service::{ServiceBuilder, ServiceType},
             time_window::TimeWindow,
             travel_cost_matrix::TravelMatrices,
-            vehicle::{VehicleBuilder, VehicleIdx, VehicleShift},
+            vehicle::{VehicleBuilder, VehicleIdx},
             vehicle_profile::VehicleProfile,
             vehicle_routing_problem::{VehicleRoutingProblem, VehicleRoutingProblemBuilder},
         },

@@ -14,12 +14,13 @@ use crate::{
         meters::Meters,
         service::Service,
         shipment::Shipment,
-        skill::{Skill, SkillBitset},
+        skill::Skill,
         vehicle_profile::{VehicleProfile, VehicleProfileIdx},
     },
     solver::constraints::transport_cost_constraint::TRANSPORT_COST_WEIGHT,
     utils::{
-        enumerate_idx::EnumerateIdx, one_tree::alpha_nearest_neighbors, zip_longest::zip_longest,
+        bitset::BitSet, enumerate_idx::EnumerateIdx, one_tree::alpha_nearest_neighbors,
+        zip_longest::zip_longest,
     },
 };
 
@@ -149,24 +150,17 @@ impl VehicleRoutingProblem {
         };
 
         for vehicle in problem.fleet.vehicles_mut() {
-            vehicle.set_skills_bitset(SkillBitset::from_registry(
+            vehicle.set_skills_bitset(BitSet::from_registry(
                 &problem.skill_registry,
                 vehicle.skills(),
             ));
         }
 
         for job in &mut problem.jobs {
-            job.set_skills_bitset(SkillBitset::from_registry(
-                &problem.skill_registry,
-                job.skills(),
-            ));
+            job.set_skills_bitset(BitSet::from_registry(&problem.skill_registry, job.skills()));
         }
 
         problem
-    }
-
-    pub fn create_skills_bitset(&self, skills: &FxHashSet<Skill>) -> SkillBitset {
-        SkillBitset::from_registry(&self.skill_registry, skills)
     }
 
     pub fn id(&self) -> &str {

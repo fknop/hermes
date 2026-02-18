@@ -1,8 +1,10 @@
 use fixedbitset::FixedBitSet;
 
+use crate::utils::bitset::BitSet;
+
 #[derive(Clone)]
 pub struct SparseTable {
-    table: Vec<Vec<FixedBitSet>>,
+    table: Vec<Vec<BitSet>>,
     len: usize,
 }
 
@@ -10,8 +12,8 @@ pub struct SparseTable {
 mod tests {
     use super::*;
 
-    fn bitset(bits: &[usize], size: usize) -> FixedBitSet {
-        let mut bs = FixedBitSet::with_capacity(size);
+    fn bitset(bits: &[usize], size: usize) -> BitSet {
+        let mut bs = BitSet::with_capacity(size);
         for &b in bits {
             bs.insert(b);
         }
@@ -171,7 +173,7 @@ mod tests {
     #[test]
     fn range_covered_by_large_table() {
         // 8 elements; element 5 has an extra bit (bit 3) not in the query.
-        let mut bitsets: Vec<FixedBitSet> = (0..8).map(|_| bitset(&[0, 1, 2], 4)).collect();
+        let mut bitsets: Vec<BitSet> = (0..8).map(|_| bitset(&[0, 1, 2], 4)).collect();
         bitsets[5] = bitset(&[0, 1, 2, 3], 4); // extra bit 3
 
         let table = SparseTable::build(bitsets);
@@ -192,12 +194,12 @@ impl SparseTable {
         }
     }
 
-    pub fn build(bitsets: Vec<FixedBitSet>) -> Self {
+    pub fn build(bitsets: Vec<BitSet>) -> Self {
         let n = bitsets.len();
         assert!(n > 0);
 
         let max_k = if n > 1 { n.ilog2() as usize + 1 } else { 1 };
-        let mut table: Vec<Vec<FixedBitSet>> = Vec::with_capacity(max_k);
+        let mut table: Vec<Vec<BitSet>> = Vec::with_capacity(max_k);
 
         table.push(bitsets);
 
@@ -228,17 +230,17 @@ impl SparseTable {
         if len > 1 { len.ilog2() as usize + 1 } else { 1 }
     }
 
-    pub fn range_covered_by(&self, i: usize, j: usize, bitset: &FixedBitSet) -> bool {
+    pub fn range_covered_by(&self, i: usize, j: usize, bitset: &BitSet) -> bool {
         debug_assert!(i <= j && j < self.len);
 
         if i == j {
-            self.table[0][i].is_subset(bitset)
+            self.table[0][i].is_subset(bitset.into())
         } else {
             let k = (j - i + 1).ilog2() as usize;
             let a = &self.table[k][i];
             let b = &self.table[k][j + 1 - (1 << k)];
 
-            a.is_subset(bitset) && b.is_subset(bitset)
+            a.is_subset(bitset.into()) && b.is_subset(bitset.into())
         }
     }
 }
