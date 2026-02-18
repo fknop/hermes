@@ -7,7 +7,7 @@ use crate::{
     define_index_newtype,
     problem::{
         capacity::Capacity, location::LocationIdx, service::Service, shipment::Shipment,
-        skill::Skill, time_window::TimeWindows,
+        skill::Skill, time_window::TimeWindows, vehicle::Vehicle,
     },
     utils::bitset::BitSet,
 };
@@ -128,6 +128,10 @@ impl Job {
         }
     }
 
+    pub fn skills_satisfied_by_vehicle(&self, vehicle: &Vehicle) -> bool {
+        self.skills_bitset().is_subset(vehicle.skills_bitset())
+    }
+
     pub fn skills_bitset(&self) -> &BitSet {
         match self {
             Job::Service(service) => service.skills_bitset(),
@@ -135,7 +139,11 @@ impl Job {
         }
     }
 
-    pub fn set_skills_bitset(&mut self, skills_bitset: BitSet) {
+    pub fn build_skills_bitset(&mut self, skill_registry: &[Skill]) {
+        self.set_skills_bitset(BitSet::from_registry(skill_registry, self.skills()));
+    }
+
+    fn set_skills_bitset(&mut self, skills_bitset: BitSet) {
         match self {
             Job::Service(service) => service.set_skills_bitset(skills_bitset),
             Job::Shipment(shipment) => shipment.set_skills_bitset(skills_bitset),

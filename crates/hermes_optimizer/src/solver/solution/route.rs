@@ -1113,6 +1113,8 @@ impl WorkingSolutionRoute {
         start: usize,
         end: usize,
     ) -> bool {
+        assert!(start < end);
+
         if self.vehicle_id == other.vehicle_id {
             return true;
         }
@@ -1121,13 +1123,20 @@ impl WorkingSolutionRoute {
             let vehicle = self.vehicle(problem);
             if !other
                 .skills_sparse_table
-                .range_covered_by(start, end, vehicle.skills_bitset())
+                .range_covered_by(start, end - 1, vehicle.skills_bitset())
             {
                 return false;
             }
         }
 
         true
+    }
+
+    pub fn can_vehicle_deliver_job(&self, problem: &VehicleRoutingProblem, job_id: JobIdx) -> bool {
+        let job = problem.job(job_id);
+        let vehicle = self.vehicle(problem);
+
+        job.skills_satisfied_by_vehicle(vehicle)
     }
 
     pub fn is_valid_change(

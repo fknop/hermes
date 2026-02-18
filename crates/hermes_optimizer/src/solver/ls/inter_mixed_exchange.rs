@@ -102,6 +102,10 @@ impl LocalSearchOperator for InterMixedExchange {
         }
 
         for position in 0..route1.len() {
+            if !route2.can_vehicle_deliver_segment(problem, route1, position, position + 1) {
+                continue;
+            }
+
             for segment_start in 0..route2.len().saturating_sub(segment_length) {
                 if !route1.in_swap_neighborhood(
                     problem,
@@ -117,6 +121,15 @@ impl LocalSearchOperator for InterMixedExchange {
                     route1,
                     position,
                     position + 1,
+                ) {
+                    continue;
+                }
+
+                if !route1.can_vehicle_deliver_segment(
+                    problem,
+                    route2,
+                    segment_start,
+                    segment_start + segment_length,
                 ) {
                     continue;
                 }

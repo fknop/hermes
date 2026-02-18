@@ -1,6 +1,7 @@
 use crate::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
+        constraints::skill_constraint::SkillConstraint,
         insertion_context::InsertionContext,
         score::Score,
         score_level::ScoreLevel,
@@ -24,12 +25,14 @@ pub trait ActivityConstraint {
 #[derive(Clone)]
 pub enum ActivityConstraintType {
     TimeWindow(TimeWindowConstraint),
+    Skill(SkillConstraint),
 }
 
 impl ActivityConstraintType {
     pub fn constraint_name(&self) -> &'static str {
         match self {
             Self::TimeWindow(_) => "time_window",
+            Self::Skill(_) => "skill",
         }
     }
 }
@@ -38,11 +41,13 @@ impl ActivityConstraint for ActivityConstraintType {
     fn score_level(&self) -> ScoreLevel {
         match self {
             Self::TimeWindow(constraint) => constraint.score_level(),
+            Self::Skill(constraint) => constraint.score_level(),
         }
     }
     fn compute_insertion_score(&self, context: &InsertionContext) -> Score {
         match self {
             Self::TimeWindow(constraint) => constraint.compute_insertion_score(context),
+            Self::Skill(constraint) => constraint.compute_insertion_score(context),
         }
     }
 
@@ -54,6 +59,7 @@ impl ActivityConstraint for ActivityConstraintType {
     ) -> Score {
         match self {
             Self::TimeWindow(constraint) => constraint.compute_score(problem, route, activity),
+            Self::Skill(constraint) => constraint.compute_score(problem, route, activity),
         }
     }
 }

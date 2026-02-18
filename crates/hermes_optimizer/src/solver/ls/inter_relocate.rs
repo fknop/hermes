@@ -67,6 +67,10 @@ impl LocalSearchOperator for InterRelocateOperator {
         }
 
         for from_pos in 0..from_route.activity_ids().len() {
+            if !to_route.can_vehicle_deliver_segment(problem, from_route, from_pos, from_pos + 1) {
+                continue;
+            }
+
             let from_activity_id = from_route.activity_id(from_pos);
 
             if from_activity_id.is_shipment() {

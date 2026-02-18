@@ -111,8 +111,18 @@ impl LocalSearchOperator for InterReverseTwoOptOperator {
         let to_route_length = to_route.activity_ids().len();
 
         for from_pos in 0..from_route_length - 1 {
+            let from_tail_length = from_route_length - from_pos - 1;
+
+            if !to_route.can_vehicle_deliver_segment(
+                problem,
+                from_route,
+                from_pos,
+                from_pos + from_tail_length,
+            ) {
+                continue;
+            }
+
             for to_pos in 0..to_route_length - 1 {
-                let from_tail_length = from_route_length - from_pos - 1;
                 let to_head_length = to_pos + 1;
 
                 if from_route
@@ -124,6 +134,15 @@ impl LocalSearchOperator for InterReverseTwoOptOperator {
                 if to_route
                     .will_break_maximum_activities(problem, from_tail_length - to_head_length)
                 {
+                    continue;
+                }
+
+                if !from_route.can_vehicle_deliver_segment(
+                    problem,
+                    to_route,
+                    to_pos,
+                    to_pos + to_head_length,
+                ) {
                     continue;
                 }
 

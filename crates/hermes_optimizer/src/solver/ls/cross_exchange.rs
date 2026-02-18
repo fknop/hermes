@@ -106,13 +106,11 @@ impl LocalSearchOperator for CrossExchangeOperator {
                 for from_length in 2..=max_from_chain {
                     let from_previous = from_route.get(from_pos - 1);
                     let from_start = from_route.activity_id(from_pos);
-                    let from_end = from_route.activity_id(from_pos + from_length - 1);
                     let from_next = from_route.get(from_pos + from_length);
 
                     for to_length in 2..=max_to_chain {
                         let to_previous = to_route.get(to_pos - 1);
                         let to_start = to_route.activity_id(to_pos);
-                        let to_end = to_route.activity_id(to_pos + to_length - 1);
                         let to_next = to_route.get(to_pos + to_length);
 
                         if from_route
@@ -146,6 +144,24 @@ impl LocalSearchOperator for CrossExchangeOperator {
                         if let Some(to_next) = to_next
                             && !problem.in_nearest_neighborhood_of(to_next, from_start)
                         {
+                            continue;
+                        }
+
+                        if !to_route.can_vehicle_deliver_segment(
+                            problem,
+                            from_route,
+                            from_pos,
+                            from_pos + from_length,
+                        ) {
+                            continue;
+                        }
+
+                        if !from_route.can_vehicle_deliver_segment(
+                            problem,
+                            to_route,
+                            to_pos,
+                            to_pos + to_length,
+                        ) {
                             continue;
                         }
 

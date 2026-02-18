@@ -110,11 +110,11 @@ impl Vehicle {
         self.end_depot_duration.unwrap_or(SignedDuration::ZERO)
     }
 
-    pub fn is_compatible_with(&self, job: &Job) -> bool {
-        self.skills.is_subset(job.skills())
+    pub fn build_skills_bitset(&mut self, skill_registry: &[Skill]) {
+        self.set_skills_bitset(BitSet::from_registry(skill_registry, self.skills()));
     }
 
-    pub fn set_skills_bitset(&mut self, skills_bitset: BitSet) {
+    fn set_skills_bitset(&mut self, skills_bitset: BitSet) {
         self.skills_bitset = skills_bitset;
     }
 }

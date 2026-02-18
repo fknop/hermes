@@ -95,23 +95,29 @@ fn for_each_service_insertion(
         .iter()
         .enumerate_idx()
         .for_each(|(route_id, route)| {
-            if !route.has_maximum_activities(solution.problem()) {
-                (0..=route.len())
-                    .filter(|position| {
-                        route.in_insertion_neighborhood(
-                            solution.problem(),
-                            ActivityId::Service(job_index),
-                            *position,
-                        )
-                    })
-                    .for_each(|position| {
-                        f(Insertion::Service(ServiceInsertion {
-                            route_id,
-                            job_index,
-                            position,
-                        }));
-                    });
+            if route.has_maximum_activities(solution.problem()) {
+                return;
             }
+
+            if !route.can_vehicle_deliver_job(solution.problem(), job_index) {
+                return;
+            }
+
+            (0..=route.len())
+                .filter(|position| {
+                    route.in_insertion_neighborhood(
+                        solution.problem(),
+                        ActivityId::Service(job_index),
+                        *position,
+                    )
+                })
+                .for_each(|position| {
+                    f(Insertion::Service(ServiceInsertion {
+                        route_id,
+                        job_index,
+                        position,
+                    }));
+                });
         });
 }
 
@@ -123,6 +129,10 @@ fn for_each_route_service_insertion(
 ) {
     let route = solution.route(route_index);
     if route.has_maximum_activities(solution.problem()) {
+        return;
+    }
+
+    if !route.can_vehicle_deliver_job(solution.problem(), job_index) {
         return;
     }
 
@@ -149,6 +159,14 @@ fn for_each_shipment_insertion(
     mut f: impl FnMut(Insertion),
 ) {
     for (route_id, route) in solution.routes().iter().enumerate_idx() {
+        if route.will_break_maximum_activities(solution.problem(), 2) {
+            continue;
+        }
+
+        if !route.can_vehicle_deliver_job(solution.problem(), job_index) {
+            continue;
+        }
+
         for pickup_position in 0..=route.len() {
             for delivery_position in pickup_position + 1..=route.len().max(pickup_position + 1) {
                 f(Insertion::Shipment(ShipmentInsertion {

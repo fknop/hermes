@@ -32,7 +32,7 @@ use crate::{
             maximum_activities_constraint::MaximumActivitiesConstraint,
             maximum_working_duration_constraint::MaximumWorkingDurationConstraint,
             route_constraint::RouteConstraintType, shift_constraint::ShiftConstraint,
-            time_window_constraint::TimeWindowConstraint,
+            skill_constraint::SkillConstraint, time_window_constraint::TimeWindowConstraint,
             transport_cost_constraint::TransportCostConstraint,
             vehicle_cost_constraint::VehicleCostConstraint,
             waiting_duration_constraint::WaitingDurationConstraint,
@@ -280,6 +280,7 @@ impl Alns {
                 TimeWindowConstraint::default(),
             )),
             Constraint::Route(RouteConstraintType::Capacity(CapacityConstraint::default())),
+            Constraint::Activity(ActivityConstraintType::Skill(SkillConstraint)),
             // Soft constraints
             Constraint::Global(GlobalConstraintType::TransportCost(TransportCostConstraint)),
             Constraint::Route(RouteConstraintType::VehicleCost(VehicleCostConstraint)),

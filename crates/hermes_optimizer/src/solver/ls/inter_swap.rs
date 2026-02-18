@@ -63,7 +63,15 @@ impl LocalSearchOperator for InterSwapOperator {
         let to_route = solution.route(r2);
 
         for from_pos in 0..from_route.activity_ids().len() {
+            if !to_route.can_vehicle_deliver_segment(problem, from_route, from_pos, from_pos + 1) {
+                continue;
+            }
+
             for to_pos in 0..to_route.activity_ids().len() {
+                if !from_route.can_vehicle_deliver_segment(problem, to_route, to_pos, to_pos + 1) {
+                    continue;
+                }
+
                 if !from_route.in_swap_neighborhood(
                     problem,
                     from_pos,

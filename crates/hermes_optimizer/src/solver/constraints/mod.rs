@@ -7,6 +7,7 @@ pub mod maximum_activities_constraint;
 pub mod maximum_working_duration_constraint;
 pub mod route_constraint;
 pub mod shift_constraint;
+pub mod skill_constraint;
 pub mod time_window_constraint;
 pub mod transport_cost_constraint;
 pub mod vehicle_cost_constraint;

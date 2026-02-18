@@ -83,14 +83,17 @@ impl LocalSearchOperator for InterOrOptOperator {
                 .len()
                 .saturating_sub(segment_length - 1)
             {
+                if !to_route.can_vehicle_deliver_segment(
+                    problem,
+                    from_route,
+                    from_pos,
+                    from_pos + segment_length,
+                ) {
+                    continue;
+                }
+
                 let from_start = from_route.activity_id(from_pos);
                 let from_end = from_route.activity_id(from_pos + segment_length - 1);
-                // TODO: handle shipments correctly
-                // let from_activity_id = from_route.activity_id(from_pos);
-
-                // if from_activity_id.is_shipment() {
-                //     continue; // skip shipments for or-opt
-                // }
 
                 for to_pos in 0..=to_route.activity_ids().len() {
                     if !to_route

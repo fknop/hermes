@@ -49,7 +49,6 @@ pub struct VehicleRoutingProblem {
     neighborhoods: Vec<FxHashSet<ActivityId>>,
 
     skill_registry: Vec<Skill>,
-    precomputed_vehicle_compatibilities: Vec<bool>,
     precomputed_capacity_dimensions: usize,
     precomputed_normalized_demands: PrecomputedNormalizedDemands,
     precomputed_average_cost_from_depot: PrecomputedAverageCostFromDepot,
@@ -112,12 +111,6 @@ impl VehicleRoutingProblem {
             0.0
         };
 
-        let precomputed_vehicle_compatibilities =
-            VehicleRoutingProblem::precompute_vehicle_compatibilities(
-                params.fleet.vehicles(),
-                &params.jobs,
-            );
-
         let neighborhoods = VehicleRoutingProblem::precompute_neighborhoods(
             &params.locations,
             &params.jobs,
@@ -143,21 +136,17 @@ impl VehicleRoutingProblem {
             precomputed_average_cost_from_depot,
             precomputed_normalized_demands,
             precomputed_capacity_dimensions,
-            precomputed_vehicle_compatibilities,
             waiting_duration_weight,
             skill_registry: skills,
             version_counter: AtomicUsize::new(0),
         };
 
         for vehicle in problem.fleet.vehicles_mut() {
-            vehicle.set_skills_bitset(BitSet::from_registry(
-                &problem.skill_registry,
-                vehicle.skills(),
-            ));
+            vehicle.build_skills_bitset(&problem.skill_registry);
         }
 
         for job in &mut problem.jobs {
-            job.set_skills_bitset(BitSet::from_registry(&problem.skill_registry, job.skills()));
+            job.build_skills_bitset(&problem.skill_registry);
         }
 
         problem
@@ -402,15 +391,6 @@ impl VehicleRoutingProblem {
         self.precomputed_capacity_dimensions
     }
 
-    pub fn is_service_compatible_with_vehicle(
-        &self,
-        vehicle_index: usize,
-        job_index: usize,
-    ) -> bool {
-        let index = (vehicle_index * self.fleet.vehicles().len()) + job_index;
-        self.precomputed_vehicle_compatibilities[index]
-    }
-
     pub fn set_waiting_duration_weight(&mut self, cost: f64) {
         self.waiting_duration_weight = cost;
     }
@@ -473,23 +453,6 @@ impl VehicleRoutingProblem {
                 neighborhood
             })
             .collect()
-    }
-
-    #[instrument(skip_all, level = "debug")]
-    fn precompute_vehicle_compatibilities(vehicles: &[Vehicle], jobs: &[Job]) -> Vec<bool> {
-        let mut compatibilities = vec![true; vehicles.len() * jobs.len()];
-
-        for (vehicle_index, vehicle) in vehicles.iter().enumerate() {
-            for (job_index, job) in jobs.iter().enumerate() {
-                //  from * self.num_locations + to
-                let index = (vehicle_index * vehicles.len()) + job_index;
-                if !vehicle.is_compatible_with(job) {
-                    compatibilities[index] = false;
-                }
-            }
-        }
-
-        compatibilities
     }
 
     #[instrument(skip_all, level = "debug")]
