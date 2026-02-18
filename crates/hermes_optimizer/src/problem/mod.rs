@@ -6,6 +6,7 @@ pub mod job;
 pub mod kmh;
 pub mod location;
 pub mod meters;
+pub mod relation;
 pub mod service;
 mod service_location_index;
 pub mod shipment;
