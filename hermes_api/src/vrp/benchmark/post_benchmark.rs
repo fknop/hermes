@@ -37,7 +37,7 @@ pub async fn post_benchmark_handler(
 
     let job_id = Uuid::new_v4().to_string();
 
-    let file = format!("./data/solomon/{}/{}.txt", body.category, body.name);
+    let file = format!("./data/vrptw/solomon/{}/{}.txt", body.category, body.name);
 
     let parser = SolomonParser;
     let vrp = parser.parse(&file).ok().unwrap();

@@ -6,7 +6,7 @@ use crate::{error::ApiError, vrp::job::VehicleRoutingJobInput};
 pub async fn get_benchmark_handler(
     Path((category, name)): Path<(String, String)>,
 ) -> Result<Json<VehicleRoutingJobInput>, ApiError> {
-    let file = format!("./data/solomon/{category}/{name}.txt");
+    let file = format!("./data/vrptw/solomon/{category}/{name}.txt");
 
     let parser = SolomonParser;
     if let Ok(vrp) = parser.parse(&file) {
