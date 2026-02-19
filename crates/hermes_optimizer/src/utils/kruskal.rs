@@ -2,11 +2,13 @@ use std::collections::BinaryHeap;
 
 use fxhash::FxHashMap;
 
-use crate::problem::{vehicle::VehicleIdx, vehicle_routing_problem::VehicleRoutingProblem};
+use crate::problem::{
+    job::ActivityId, vehicle::VehicleIdx, vehicle_routing_problem::VehicleRoutingProblem,
+};
 
 struct KruskalEdge {
-    from: usize,
-    to: usize,
+    from: ActivityId,
+    to: ActivityId,
     weight: f64,
 }
 
@@ -33,12 +35,12 @@ impl Ord for KruskalEdge {
 
 // Disjoint set union
 struct Dsu {
-    parent: FxHashMap<usize, usize>,
+    parent: FxHashMap<ActivityId, ActivityId>,
     num_components: usize,
 }
 
 impl Dsu {
-    fn new(ids: &[usize]) -> Self {
+    fn new(ids: &[ActivityId]) -> Self {
         Dsu {
             parent: ids.iter().fold(FxHashMap::default(), |mut acc, &id| {
                 acc.insert(id, id);
@@ -48,7 +50,7 @@ impl Dsu {
         }
     }
 
-    fn find(&mut self, i: usize) -> usize {
+    fn find(&mut self, i: ActivityId) -> ActivityId {
         let parent = self.parent.get(&i).unwrap_or(&i);
         if *parent == i {
             i
@@ -59,7 +61,7 @@ impl Dsu {
         }
     }
 
-    fn union(&mut self, i: usize, j: usize) {
+    fn union(&mut self, i: ActivityId, j: ActivityId) {
         let root_i = self.find(i);
         let root_j = self.find(j);
         if root_i != root_j {
@@ -71,13 +73,13 @@ impl Dsu {
 
 pub fn kruskal_cluster(
     problem: &VehicleRoutingProblem,
-    service_ids: &[usize],
-) -> Option<Vec<Vec<usize>>> {
-    let n = service_ids.len();
+    activity_ids: &[ActivityId],
+) -> Option<Vec<Vec<ActivityId>>> {
+    let n = activity_ids.len();
 
     if n <= 2 {
         // If there are 2 or fewer locations, return them as individual clusters
-        return Some(service_ids.iter().map(|&id| vec![id]).collect());
+        return Some(activity_ids.iter().map(|&id| vec![id]).collect());
     }
 
     let mut edges = BinaryHeap::new();
@@ -85,25 +87,25 @@ pub fn kruskal_cluster(
     // Create edges between all pairs of locations
     for i in 0..n {
         for j in (i + 1)..n {
-            let from = service_ids[i];
-            let to = service_ids[j];
+            let from = activity_ids[i];
+            let to = activity_ids[j];
             let weight = (problem.travel_cost(
                 problem.vehicle(VehicleIdx::new(0)),
-                problem.service(from.into()).location_id(),
-                problem.service(to.into()).location_id(),
+                problem.job_activity(from).location_id(),
+                problem.job_activity(to).location_id(),
             ) + problem.travel_cost(
                 problem.vehicle(VehicleIdx::new(0)),
-                problem.service(to.into()).location_id(),
-                problem.service(from.into()).location_id(),
+                problem.job_activity(to).location_id(),
+                problem.job_activity(from).location_id(),
             )) / 2.0;
             edges.push(KruskalEdge { from, to, weight });
         }
     }
 
     // Initialize disjoint set union
-    let mut dsu = Dsu::new(service_ids);
+    let mut dsu = Dsu::new(activity_ids);
 
-    let mut clusters: FxHashMap<usize, Vec<usize>> = FxHashMap::default();
+    let mut clusters: FxHashMap<ActivityId, Vec<ActivityId>> = FxHashMap::default();
 
     // Process edges in order of weight
     while let Some(edge) = edges.pop() {
@@ -114,7 +116,7 @@ pub fn kruskal_cluster(
         dsu.union(edge.from, edge.to);
     }
 
-    for &id in service_ids {
+    for &id in activity_ids {
         let root = dsu.find(id);
         clusters.entry(root).or_default().push(id);
     }
@@ -127,7 +129,7 @@ mod tests {
     use std::env;
 
     use super::*;
-    use crate::parsers::parser::parse_dataset;
+    use crate::{parsers::parser::parse_dataset, problem::job::JobIdx};
 
     #[test]
     fn test_kruskal_cluster() {
@@ -137,7 +139,10 @@ mod tests {
 
         let problem = parse_dataset(&path).unwrap();
 
-        let location_ids = vec![1, 2, 3, 4, 5, 6, 7, 8, 9];
+        let location_ids = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+            .into_iter()
+            .map(|id| ActivityId::Service(JobIdx::new(id)))
+            .collect::<Vec<_>>();
 
         let clusters = kruskal_cluster(&problem, &location_ids);
         assert!(clusters.is_some());

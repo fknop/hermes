@@ -11,7 +11,6 @@ use crate::{
 
 use super::{ruin_context::RuinContext, ruin_solution::RuinSolution};
 
-// TODO: support shipments
 pub struct RuinString {
     /// Min numbers of string to ruin
     k_min: usize,
@@ -189,10 +188,10 @@ impl RuinSolution for RuinString {
 
         let mut ruined_routes = FxHashSet::<RouteIdx>::default();
 
-        let mut seed_job = context.problem.random_job(context.rng);
+        let mut seed_activity = solution.random_activity(context.rng).unwrap();
 
         while ruined_routes.len() < k {
-            let route_to_ruin = solution.route_of_job(seed_job);
+            let route_to_ruin = solution.route_of_activity(seed_activity);
 
             if let Some(route_id) = route_to_ruin {
                 if context.rng.random_bool(0.5) {
@@ -207,25 +206,25 @@ impl RuinSolution for RuinString {
 
             let nearest_service_of_different_route = context
                 .problem
-                .nearest_jobs(ActivityId::Service(seed_job))
-                .find(|&job_id| {
-                    if let Some(route_id) = solution.route_of_activity(job_id) {
+                .nearest_jobs(seed_activity)
+                .find(|&activity_id| {
+                    if let Some(route_id) = solution.route_of_activity(activity_id) {
                         // TODO: tests intersection, it maybe be too restrictive
-                        let intersects = match route_to_ruin {
-                            Some(ruined_route) => solution
-                                .route(ruined_route)
-                                .bbox_intersects(solution.route(route_id)),
-                            None => true,
-                        };
+                        // let intersects = match route_to_ruin {
+                        //     Some(ruined_route) => solution
+                        //         .route(ruined_route)
+                        //         .bbox_intersects(solution.route(route_id)),
+                        //     None => true,
+                        // };
 
-                        intersects && !ruined_routes.contains(&route_id)
+                        !ruined_routes.contains(&route_id)
                     } else {
                         false
                     }
                 });
 
             if let Some(service_id) = nearest_service_of_different_route {
-                seed_job = service_id.job_id();
+                seed_activity = service_id;
             } else {
                 // No more services to ruin, break the loop
                 break;

@@ -203,6 +203,31 @@ impl WorkingSolution {
         }
     }
 
+    pub fn random_activity<R>(&self, rng: &mut R) -> Option<ActivityId>
+    where
+        R: rand::Rng,
+    {
+        if self.unassigned_jobs.len() == self.problem.jobs().len() {
+            return None;
+        }
+
+        loop {
+            let job_id = self.problem().random_job(rng);
+            if !self.unassigned_jobs.contains(&job_id) {
+                return match self.problem.job(job_id) {
+                    Job::Service(_) => Some(ActivityId::Service(job_id)),
+                    Job::Shipment(_) => {
+                        if rng.random_bool(0.5) {
+                            Some(ActivityId::ShipmentPickup(job_id))
+                        } else {
+                            Some(ActivityId::ShipmentDelivery(job_id))
+                        }
+                    }
+                };
+            }
+        }
+    }
+
     pub fn random_non_empty_route<R>(&self, rng: &mut R) -> Option<RouteIdx>
     where
         R: rand::Rng,

@@ -9,7 +9,6 @@ use crate::{
 
 use super::{ruin_context::RuinContext, ruin_solution::RuinSolution};
 
-// TODO: support shipments
 pub struct RuinCluster;
 
 impl RuinSolution for RuinCluster {
@@ -36,22 +35,16 @@ impl RuinSolution for RuinCluster {
         {
             let route_id = solution.route_of_job(target).unwrap();
 
-            let service_ids = solution
-                .route(route_id)
-                .activity_ids()
-                .iter()
-                .map(|job_id| job_id.job_id().get()) // TODO: support shipments
-                .collect::<Vec<_>>();
-
-            let mut removed_job_ids: Vec<JobIdx> = vec![];
-            if let Some(clusters) = kruskal_cluster(problem, &service_ids)
+            let mut removed_activity_ids: Vec<ActivityId> = vec![];
+            if let Some(clusters) =
+                kruskal_cluster(problem, solution.route(route_id).activity_ids())
                 && !clusters.is_empty()
             {
                 let cluster = clusters.choose(rng).unwrap();
-                for &service_id in cluster {
-                    let removed = solution.remove_service(service_id.into());
+                for &activity_id in cluster {
+                    let removed = solution.remove_activity(activity_id);
                     if removed {
-                        removed_job_ids.push(JobIdx::new(service_id));
+                        removed_activity_ids.push(activity_id);
                         remaining_to_remove -= 1;
                         if remaining_to_remove == 0 {
                             break;
@@ -67,9 +60,7 @@ impl RuinSolution for RuinCluster {
             if remaining_to_remove > 0 {
                 target_job_id = solution
                     .problem()
-                    .nearest_jobs(ActivityId::Service(
-                        removed_job_ids.choose(rng).cloned().unwrap(),
-                    ))
+                    .nearest_jobs(removed_activity_ids.choose(rng).copied().unwrap())
                     .find(|&activity_id| {
                         let route_id = solution.route_of_activity(activity_id);
                         if let Some(route_id) = route_id {
