@@ -32,49 +32,106 @@ impl GlobalConstraint for TransportCostConstraint {
         let problem = context.problem();
 
         let route = context.route();
+        let vehicle = route.vehicle(problem);
 
-        let position = match context.insertion {
-            Insertion::Service(service_insertion) => service_insertion.position,
-            Insertion::Shipment(_) => unimplemented!(),
-        };
+        let delta = match context.insertion {
+            Insertion::Service(insertion) => {
+                let position = insertion.position;
+                let previous_location_id = route.previous_location_id(problem, position);
+                let next_location_id = route
+                    .location_id(problem, position)
+                    .or_else(|| route.end_location(problem));
+                let location_id = insertion.service(problem).location_id();
 
-        let previous_location_id = route.previous_location_id(problem, position);
-        let next_location_id = route
-            .location_id(problem, position)
-            .or_else(|| route.end_location(problem));
+                let old_cost = problem.travel_cost_or_zero(
+                    route.vehicle(problem),
+                    previous_location_id,
+                    next_location_id,
+                );
 
-        let location_id = match &context.insertion {
-            Insertion::Service(service_insertion) => {
-                problem.service(service_insertion.job_index).location_id()
+                let mut new_cost = 0.0;
+
+                new_cost += problem.travel_cost_or_zero(
+                    route.vehicle(problem),
+                    previous_location_id,
+                    Some(location_id),
+                );
+                new_cost += problem.travel_cost_or_zero(
+                    route.vehicle(problem),
+                    Some(location_id),
+                    next_location_id,
+                );
+
+                new_cost - old_cost
             }
-            Insertion::Shipment(_) => unimplemented!(),
+            Insertion::Shipment(insertion) => {
+                let pickup_position = insertion.pickup_position;
+                let delivery_position = insertion.delivery_position;
+                let shipment = insertion.shipment(problem);
+                let pickup_location_id = shipment.pickup().location_id();
+                let delivery_location_id = shipment.delivery().location_id();
+
+                let previous_pickup_location_id =
+                    route.previous_location_id(problem, pickup_position);
+
+                let mut delta = 0.0;
+
+                delta += problem.travel_cost_or_zero(
+                    vehicle,
+                    previous_pickup_location_id,
+                    Some(pickup_location_id),
+                );
+
+                delta -= problem.travel_cost_or_zero(
+                    vehicle,
+                    previous_pickup_location_id,
+                    route.location_id(problem, pickup_position),
+                );
+
+                if pickup_position == delivery_position {
+                    delta += problem.travel_cost(vehicle, pickup_location_id, delivery_location_id);
+                    delta += problem.travel_cost_or_zero(
+                        vehicle,
+                        Some(delivery_location_id),
+                        route.location_id(problem, pickup_position),
+                    );
+                } else {
+                    delta += problem.travel_cost_or_zero(
+                        vehicle,
+                        Some(pickup_location_id),
+                        route.location_id(problem, pickup_position),
+                    );
+
+                    let previous_delivery_location_id =
+                        route.previous_location_id(problem, delivery_position);
+                    delta -= problem.travel_cost_or_zero(
+                        vehicle,
+                        previous_delivery_location_id,
+                        route.location_id(problem, delivery_position),
+                    );
+
+                    let next_delivery_location_id = route
+                        .location_id(problem, delivery_position)
+                        .or_else(|| route.end_location(problem));
+
+                    delta += problem.travel_cost_or_zero(
+                        vehicle,
+                        previous_delivery_location_id,
+                        Some(delivery_location_id),
+                    );
+
+                    delta += problem.travel_cost_or_zero(
+                        vehicle,
+                        Some(delivery_location_id),
+                        next_delivery_location_id,
+                    );
+                }
+
+                delta
+            }
         };
 
-        let old_cost = problem.travel_cost_or_zero(
-            route.vehicle(problem),
-            previous_location_id,
-            next_location_id,
-        );
-
-        let mut new_cost = 0.0;
-
-        new_cost += problem.travel_cost_or_zero(
-            route.vehicle(problem),
-            previous_location_id,
-            Some(location_id),
-        );
-        new_cost += problem.travel_cost_or_zero(
-            route.vehicle(problem),
-            Some(location_id),
-            next_location_id,
-        );
-
-        let travel_cost_delta = new_cost - old_cost;
-
-        Score::of(
-            self.score_level(),
-            travel_cost_delta * TRANSPORT_COST_WEIGHT,
-        )
+        Score::of(self.score_level(), delta * TRANSPORT_COST_WEIGHT)
     }
 }
 

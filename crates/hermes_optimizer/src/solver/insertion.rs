@@ -1,5 +1,10 @@
 use crate::{
-    problem::job::{ActivityId, Job, JobIdx},
+    problem::{
+        job::{ActivityId, Job, JobIdx},
+        service::Service,
+        shipment::Shipment,
+        vehicle_routing_problem::VehicleRoutingProblem,
+    },
     solver::solution::{
         route::WorkingSolutionRoute, route_id::RouteIdx, working_solution::WorkingSolution,
     },
@@ -16,6 +21,13 @@ pub struct ServiceInsertion {
 impl ServiceInsertion {
     pub fn inserted_activity_ids(&self) -> impl Iterator<Item = ActivityId> {
         std::iter::once(ActivityId::Service(self.job_index))
+    }
+
+    pub fn service<'a>(&self, problem: &'a VehicleRoutingProblem) -> &'a Service {
+        match problem.job(self.job_index) {
+            Job::Service(service) => service,
+            _ => panic!("Job is not a service"),
+        }
     }
 }
 
@@ -41,6 +53,13 @@ impl ShipmentInsertion {
             .chain(std::iter::once(ActivityId::ShipmentDelivery(
                 self.job_index,
             )))
+    }
+
+    pub fn shipment<'a>(&self, problem: &'a VehicleRoutingProblem) -> &'a Shipment {
+        match problem.job(self.job_index) {
+            Job::Shipment(shipment) => shipment,
+            _ => panic!("Job is not a shipment"),
+        }
     }
 }
 
