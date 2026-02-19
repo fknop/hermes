@@ -1,5 +1,3 @@
-use std::path::Path;
-
 use jiff::{SignedDuration, Timestamp};
 
 use crate::{
@@ -21,12 +19,10 @@ use crate::{
 pub struct SolomonParser;
 
 impl DatasetParser for SolomonParser {
-    fn parse<P: AsRef<Path>>(&self, file: P) -> Result<VehicleRoutingProblem, anyhow::Error> {
-        let file_content = std::fs::read_to_string(file)?;
-
+    fn parse(&self, content: &str) -> Result<VehicleRoutingProblem, anyhow::Error> {
         let mut builder = VehicleRoutingProblemBuilder::default();
 
-        let mut lines = file_content.lines().peekable();
+        let mut lines = content.lines().peekable();
 
         // Skip initial descriptive lines until "VEHICLE" or "NUMBER" is found
         while let Some(line) = lines.next() {
@@ -160,8 +156,9 @@ mod tests {
         let root_directory = current_dir.parent().unwrap();
 
         let path = root_directory.join("../data/vrptw/solomon/c1/c101.txt");
+        let content = std::fs::read_to_string(&path).unwrap();
         let parser = SolomonParser;
-        let vrp = parser.parse(&path).unwrap();
+        let vrp = parser.parse(&content).unwrap();
 
         assert_eq!(vrp.vehicles().len(), 25);
 

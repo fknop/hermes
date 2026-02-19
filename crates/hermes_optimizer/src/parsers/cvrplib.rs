@@ -22,9 +22,8 @@ pub struct CVRPLibParser;
 
 impl DatasetParser for CVRPLibParser {
     #[instrument(skip_all, level = "debug")]
-    fn parse<P: AsRef<Path>>(&self, file: P) -> Result<VehicleRoutingProblem, anyhow::Error> {
-        let file_content = std::fs::read_to_string(file)?;
-        let instance = parse(&file_content)?;
+    fn parse(&self, content: &str) -> Result<VehicleRoutingProblem, anyhow::Error> {
+        let instance = parse(content)?;
 
         let mut builder = VehicleRoutingProblemBuilder::default();
 
@@ -82,7 +81,7 @@ pub struct CvrpInstance {
     pub depots: Vec<usize>,
 }
 
-pub fn parse(text: &str) -> Result<CvrpInstance, anyhow::Error> {
+fn parse(text: &str) -> Result<CvrpInstance, anyhow::Error> {
     let mut dimension: Option<usize> = None;
     let mut capacity: Option<f64> = None;
     let mut coords: Option<Vec<geo::Coord<f64>>> = None;

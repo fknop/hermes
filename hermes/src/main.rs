@@ -1,5 +1,5 @@
 use hermes_optimizer::{
-    parsers::{parser::DatasetParser, solomon::SolomonParser},
+    parsers::parser::parse_dataset,
     solver::{
         solver::{self, Solver},
         solver_params::{SolverParams, SolverParamsDebugOptions, Termination, Threads},
@@ -220,8 +220,7 @@ async fn main() {
     let datasets = create_solomon_dataset();
 
     for dataset in datasets {
-        let parser = SolomonParser;
-        let vrp = parser.parse(dataset.file).unwrap();
+        let vrp = parse_dataset(dataset.file).unwrap();
 
         let solver_params = SolverParams {
             terminations: vec![

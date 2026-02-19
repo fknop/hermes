@@ -1,5 +1,3 @@
-use std::path::Path;
-
 use jiff::{SignedDuration, Timestamp};
 
 use crate::{
@@ -33,9 +31,8 @@ struct LiLimRow {
 }
 
 impl DatasetParser for LiLimParser {
-    fn parse<P: AsRef<Path>>(&self, file: P) -> Result<VehicleRoutingProblem, anyhow::Error> {
-        let file_content = std::fs::read_to_string(file)?;
-        let mut lines = file_content.lines();
+    fn parse(&self, content: &str) -> Result<VehicleRoutingProblem, anyhow::Error> {
+        let mut lines = content.lines();
 
         // Parse header: <num_vehicles> <capacity> <speed>
         let header = lines
@@ -172,8 +169,9 @@ mod tests {
         let root_directory = current_dir.parent().unwrap();
 
         let path = root_directory.join("../data/pdptw/li-lim/100/lc101.txt");
+        let content = std::fs::read_to_string(&path).unwrap();
         let parser = LiLimParser;
-        let vrp = parser.parse(&path).unwrap();
+        let vrp = parser.parse(&content).unwrap();
 
         assert_eq!(vrp.vehicles().len(), 25);
 
@@ -194,12 +192,14 @@ mod tests {
         // Row 75: x=45 y=65 demand=-10 earliest=997 latest=1068 service=90 pickup_idx=3 delivery_idx=0
         let first_shipment = vrp.shipment(0);
         assert_eq!(first_shipment.external_id(), "3");
-        assert_eq!(
-            *first_shipment.demand(),
-            Capacity::from_vec(vec![10.0])
-        );
+        assert_eq!(*first_shipment.demand(), Capacity::from_vec(vec![10.0]));
 
-        let pickup_tw = first_shipment.pickup().time_windows().iter().next().unwrap();
+        let pickup_tw = first_shipment
+            .pickup()
+            .time_windows()
+            .iter()
+            .next()
+            .unwrap();
         let timestamp_zero = Timestamp::from_second(0).unwrap();
         assert_eq!(
             pickup_tw.start().unwrap(),
@@ -210,7 +210,12 @@ mod tests {
             timestamp_zero + SignedDuration::from_secs(146)
         );
 
-        let delivery_tw = first_shipment.delivery().time_windows().iter().next().unwrap();
+        let delivery_tw = first_shipment
+            .delivery()
+            .time_windows()
+            .iter()
+            .next()
+            .unwrap();
         assert_eq!(
             delivery_tw.start().unwrap(),
             timestamp_zero + SignedDuration::from_secs(997)

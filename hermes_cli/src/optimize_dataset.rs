@@ -2,11 +2,7 @@ use std::{path::PathBuf, sync::Arc, time::Duration};
 
 use clap::Args;
 use hermes_optimizer::{
-    parsers::{
-        cvrplib::{CVRPLibParser, parse_solution_file},
-        parser::DatasetParser,
-        solomon::SolomonParser,
-    },
+    parsers::{cvrplib::parse_solution_file, parser::parse_dataset},
     solver::{
         solution::working_solution::WorkingSolution,
         solver::Solver,
@@ -73,24 +69,12 @@ pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
             .map(|ext| ext == "txt" || ext == "vrp")
             .unwrap_or(false)
     }) {
-        let mut optimal_sol: Option<(usize, f64)> = None;
+        // Try to load an accompanying .sol file for optimal solution reference
+        let mut solution_path = path.clone();
+        solution_path.set_extension("sol");
+        let bks = parse_solution_file(solution_path);
 
-        let extension = path.extension().unwrap();
-
-        let vrp = if extension == "txt" {
-            let parser = SolomonParser;
-            parser.parse(path)?
-        } else if extension == "vrp" {
-            let parser = CVRPLibParser;
-
-            let mut solution_path = path.clone();
-            solution_path.set_extension("sol");
-            optimal_sol = parse_solution_file(solution_path);
-
-            parser.parse(path)?
-        } else {
-            continue;
-        };
+        let vrp = parse_dataset(path)?;
 
         let mut terminations: Vec<Termination> = vec![];
 
@@ -102,7 +86,7 @@ pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
             terminations.push(Termination::Iterations(iterations));
         }
 
-        if let Some(optimal_sol) = optimal_sol {
+        if let Some(optimal_sol) = bks {
             terminations.push(Termination::VehiclesAndCosts {
                 vehicles: optimal_sol.0,
                 costs: optimal_sol.1,
@@ -135,13 +119,11 @@ pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
             callback_bar.lock().finish_with_message(format!(
                 "Running... Routes = {}{}, costs = {}, unassigned = {}, gap = {}",
                 n_routes,
-                optimal_sol
-                    .map(|os| format!(" (optimal: {})", os.0))
+                bks.map(|os| format!(" (optimal: {})", os.0))
                     .unwrap_or_default(),
                 total_transport_cost,
                 s.solution.unassigned_jobs().len(),
-                optimal_sol
-                    .map(|oc| format!("{:+.2}%", gap_percent(total_transport_cost, oc.1)))
+                bks.map(|oc| format!("{:+.2}%", gap_percent(total_transport_cost, oc.1)))
                     .unwrap_or_else(|| "n/a".to_string())
             ));
         });
@@ -155,13 +137,11 @@ pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
             bar.lock().finish_with_message(format!(
                 "Finished - routes = {}{}, costs = {}, unassigned = {}, gap = {}",
                 n_routes,
-                optimal_sol
-                    .map(|os| format!(" (optimal: {})", os.0))
+                bks.map(|os| format!(" (optimal: {})", os.0))
                     .unwrap_or_default(),
                 total_transport_cost,
                 best_solution.solution.unassigned_jobs().len(),
-                optimal_sol
-                    .map(|oc| format!("{:+.2}%", gap_percent(total_transport_cost, oc.1)))
+                bks.map(|oc| format!("{:+.2}%", gap_percent(total_transport_cost, oc.1)))
                     .unwrap_or_else(|| "n/a".to_string())
             ));
 
