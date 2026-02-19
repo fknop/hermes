@@ -556,6 +556,7 @@ impl VehicleRoutingProblem {
 pub struct VehicleRoutingProblemBuilder {
     id: Option<String>,
     services: Option<Vec<Service>>,
+    shipments: Option<Vec<Shipment>>,
     locations: Option<Vec<Location>>,
     fleet: Option<Fleet>,
     vehicle_profiles: Option<Vec<VehicleProfile>>,
@@ -582,6 +583,14 @@ impl VehicleRoutingProblemBuilder {
 
     pub fn set_services(&mut self, services: Vec<Service>) -> &mut VehicleRoutingProblemBuilder {
         self.services = Some(services);
+        self
+    }
+
+    pub fn set_shipments(
+        &mut self,
+        shipments: Vec<Shipment>,
+    ) -> &mut VehicleRoutingProblemBuilder {
+        self.shipments = Some(shipments);
         self
     }
 
@@ -633,13 +642,13 @@ impl VehicleRoutingProblemBuilder {
 
     pub fn build(self) -> VehicleRoutingProblem {
         let locations = self.locations.expect("Expected list of locations");
-        let services = self.services.expect("Expected list of services");
+        let services = self.services.unwrap_or_default();
+        let shipments = self.shipments.unwrap_or_default();
 
-        // for (index, location) in locations.iter().enumerate_idx() {
-        //     if location.id() != index {
-        //         panic!("Location IDs must be sequential starting from 0");
-        //     }
-        // }
+        assert!(
+            !services.is_empty() || !shipments.is_empty(),
+            "Expected at least one service or shipment"
+        );
 
         for service in services.iter() {
             if service.location_id().get() >= locations.len() {
@@ -647,7 +656,8 @@ impl VehicleRoutingProblemBuilder {
             }
         }
 
-        let jobs = services.into_iter().map(Job::Service).collect::<Vec<Job>>();
+        let mut jobs: Vec<Job> = services.into_iter().map(Job::Service).collect();
+        jobs.extend(shipments.into_iter().map(Job::Shipment));
 
         let distance_method = self.distance_method.unwrap_or(DistanceMethod::Haversine);
 
