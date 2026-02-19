@@ -56,7 +56,7 @@ impl ActivityConstraint for TimeWindowConstraint {
     ) -> Score {
         TimeWindowConstraint::compute_time_window_score(
             self.score_level(),
-            activity.job_task(problem).time_windows(),
+            activity.job_activity(problem).time_windows(),
             activity.arrival_time(),
         )
     }
@@ -69,20 +69,25 @@ impl ActivityConstraint for TimeWindowConstraint {
 
         let route = context.insertion.route(context.solution);
 
-        match context.insertion {
-            Insertion::Service(insertion) => {
-                if route.is_valid_time_change(
-                    problem,
-                    std::iter::once(ActivityId::Service(context.insertion.job_idx())),
-                    insertion.position,
-                    insertion.position,
-                ) {
-                    return Score::zero();
-                } else if !context.insert_on_failure && self.score_level == ScoreLevel::Hard {
-                    return Score::hard(1.0);
-                }
-            }
-            Insertion::Shipment(_) => todo!(),
+        let is_valid = match context.insertion {
+            Insertion::Service(insertion) => route.is_valid_time_change(
+                problem,
+                insertion.inserted_activity_ids(),
+                insertion.position,
+                insertion.position,
+            ),
+            Insertion::Shipment(insertion) => route.is_valid_time_change(
+                problem,
+                insertion.inserted_activity_ids(route),
+                insertion.pickup_position,
+                insertion.delivery_position,
+            ),
+        };
+
+        if is_valid {
+            return Score::zero();
+        } else if !context.insert_on_failure && self.score_level == ScoreLevel::Hard {
+            return Score::hard(1.0);
         }
 
         let mut total_score = Score::zero();

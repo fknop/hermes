@@ -379,8 +379,24 @@ impl VehicleRoutingProblem {
         !self.skill_registry.is_empty()
     }
 
-    pub fn average_cost_from_depot(&self, location_id: LocationIdx) -> f64 {
-        self.precomputed_average_cost_from_depot[location_id.get()]
+    pub fn average_cost_from_depot(&self, job: &Job) -> f64 {
+        match job {
+            Job::Shipment(shipment) => {
+                let pickup_distance =
+                    self.precomputed_average_cost_from_depot[shipment.pickup().location_id().get()];
+
+                let delivery_distance = self.precomputed_average_cost_from_depot
+                    [shipment.delivery().location_id().get()];
+
+                let avg_distance = (pickup_distance + delivery_distance) / 2.0;
+                -avg_distance
+            }
+            Job::Service(service) => {
+                let distance_from_depot =
+                    self.precomputed_average_cost_from_depot[service.location_id().get()];
+                -distance_from_depot
+            }
+        }
     }
 
     pub fn normalized_demand(&self, index: JobIdx) -> &Capacity {
@@ -586,10 +602,7 @@ impl VehicleRoutingProblemBuilder {
         self
     }
 
-    pub fn set_shipments(
-        &mut self,
-        shipments: Vec<Shipment>,
-    ) -> &mut VehicleRoutingProblemBuilder {
+    pub fn set_shipments(&mut self, shipments: Vec<Shipment>) -> &mut VehicleRoutingProblemBuilder {
         self.shipments = Some(shipments);
         self
     }

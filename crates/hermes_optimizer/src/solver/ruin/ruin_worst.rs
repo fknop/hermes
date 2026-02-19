@@ -20,7 +20,12 @@ fn compute_savings(
     let previous_location_id = if index == 0 {
         vehicle.depot_location_id()
     } else {
-        Some(route.activity(index - 1).job_task(problem).location_id())
+        Some(
+            route
+                .activity(index - 1)
+                .job_activity(problem)
+                .location_id(),
+        )
     };
 
     let next_location_id = if index == route.activity_ids().len() - 1 {
@@ -30,10 +35,15 @@ fn compute_savings(
             None
         }
     } else {
-        Some(route.activity(index + 1).job_task(problem).location_id())
+        Some(
+            route
+                .activity(index + 1)
+                .job_activity(problem)
+                .location_id(),
+        )
     };
 
-    let location_id = activity.job_task(problem).location_id();
+    let location_id = activity.job_activity(problem).location_id();
 
     let travel_cost_previous = if let Some(previous_location_id) = previous_location_id {
         problem.travel_cost(vehicle, previous_location_id, location_id)

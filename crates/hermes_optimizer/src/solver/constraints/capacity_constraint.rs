@@ -83,10 +83,6 @@ impl RouteConstraint for CapacityConstraint {
                             vehicle.capacity(),
                             &(service.demand() + route.bwd_load_peak(insertion.position)),
                         ) {
-                            // if !context.insert_on_failure {
-                            //     return Score::hard(1.0);
-                            // }
-
                             score += Score::of(
                                 self.score_level,
                                 over_capacity_demand(
@@ -116,7 +112,22 @@ impl RouteConstraint for CapacityConstraint {
                     }
                 }
             }
-            _ => unimplemented!(),
+            Insertion::Shipment(insertion) => {
+                let is_valid = route.is_valid_capacity_change(
+                    problem,
+                    insertion.inserted_activity_ids(route),
+                    insertion.pickup_position,
+                    insertion.delivery_position,
+                );
+
+                if is_valid {
+                    return Score::zero();
+                } else if !context.insert_on_failure {
+                    return Score::hard(1.0);
+                } else {
+                    unimplemented!("Shipment failure not implemented on insert_on_failure=true")
+                }
+            }
         }
 
         score

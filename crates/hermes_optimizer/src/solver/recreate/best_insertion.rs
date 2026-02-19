@@ -83,42 +83,18 @@ impl BestInsertion {
 
                 first_demand_a.total_cmp(&first_demand_b)
             }),
-            BestInsertionSortStrategy::Far => {
-                unassigned_jobs.sort_unstable_by_key(|&id| match problem.job(id) {
-                    Job::Shipment(shipment) => {
-                        let pickup_distance =
-                            problem.average_cost_from_depot(shipment.pickup().location_id());
-                        let delivery_distance =
-                            problem.average_cost_from_depot(shipment.delivery().location_id());
-
-                        let avg_distance = (pickup_distance + delivery_distance) / 2.0;
-                        -avg_distance.round() as i64
-                    }
-                    Job::Service(service) => {
-                        let distance_from_depot =
-                            problem.average_cost_from_depot(service.location_id());
-                        -distance_from_depot.round() as i64
-                    }
-                });
-            }
-            BestInsertionSortStrategy::Close => {
-                unassigned_jobs.sort_unstable_by_key(|&id| match problem.job(id) {
-                    Job::Shipment(shipment) => {
-                        let pickup_distance =
-                            problem.average_cost_from_depot(shipment.pickup().location_id());
-                        let delivery_distance =
-                            problem.average_cost_from_depot(shipment.delivery().location_id());
-
-                        let avg_distance = (pickup_distance + delivery_distance) / 2.0;
-                        avg_distance.round() as i64
-                    }
-                    Job::Service(service) => {
-                        let distance_from_depot =
-                            problem.average_cost_from_depot(service.location_id());
-                        distance_from_depot.round() as i64
-                    }
-                })
-            }
+            BestInsertionSortStrategy::Far => unassigned_jobs.sort_unstable_by(|a, b| {
+                problem
+                    .average_cost_from_depot(problem.job(*b))
+                    .partial_cmp(&problem.average_cost_from_depot(problem.job(*a)))
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            }),
+            BestInsertionSortStrategy::Close => unassigned_jobs.sort_unstable_by(|a, b| {
+                problem
+                    .average_cost_from_depot(problem.job(*a))
+                    .partial_cmp(&problem.average_cost_from_depot(problem.job(*b)))
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            }),
             BestInsertionSortStrategy::TimeWindow => {
                 unassigned_jobs.sort_unstable_by_key(|&job_id| {
                     let time_windows = match problem.job(job_id) {

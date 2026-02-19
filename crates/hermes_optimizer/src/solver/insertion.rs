@@ -13,6 +13,12 @@ pub struct ServiceInsertion {
     pub position: usize,
 }
 
+impl ServiceInsertion {
+    pub fn inserted_activity_ids(&self) -> impl Iterator<Item = ActivityId> {
+        std::iter::once(ActivityId::Service(self.job_index))
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct ShipmentInsertion {
     pub route_id: RouteIdx,
@@ -23,6 +29,19 @@ pub struct ShipmentInsertion {
 
     /// This is the position before the pickup has been inserted
     pub delivery_position: usize,
+}
+
+impl ShipmentInsertion {
+    pub fn inserted_activity_ids(
+        &self,
+        route: &WorkingSolutionRoute,
+    ) -> impl Iterator<Item = ActivityId> {
+        std::iter::once(ActivityId::ShipmentPickup(self.job_index))
+            .chain(route.activity_ids_iter(self.pickup_position, self.delivery_position))
+            .chain(std::iter::once(ActivityId::ShipmentDelivery(
+                self.job_index,
+            )))
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -80,7 +99,9 @@ pub fn for_each_route_insertion(
         Job::Service(_) => {
             for_each_route_service_insertion(solution, route_index, job_index, &mut f)
         }
-        Job::Shipment(_) => todo!(),
+        Job::Shipment(_) => {
+            for_each_route_shipment_insertion(solution, route_index, job_index, &mut f)
+        }
     }
 }
 
@@ -168,7 +189,23 @@ fn for_each_shipment_insertion(
         }
 
         for pickup_position in 0..=route.len() {
-            for delivery_position in pickup_position + 1..=route.len().max(pickup_position + 1) {
+            if !route.in_insertion_neighborhood(
+                solution.problem(),
+                ActivityId::ShipmentPickup(job_index),
+                pickup_position,
+            ) {
+                continue;
+            }
+
+            for delivery_position in pickup_position..=route.len() {
+                if !route.in_insertion_neighborhood(
+                    solution.problem(),
+                    ActivityId::ShipmentDelivery(job_index),
+                    delivery_position,
+                ) {
+                    continue;
+                }
+
                 f(Insertion::Shipment(ShipmentInsertion {
                     route_id,
                     job_index,
@@ -176,6 +213,49 @@ fn for_each_shipment_insertion(
                     delivery_position,
                 }));
             }
+        }
+    }
+}
+
+fn for_each_route_shipment_insertion(
+    solution: &WorkingSolution,
+    route_index: RouteIdx,
+    job_index: JobIdx,
+    mut f: impl FnMut(Insertion),
+) {
+    let route = solution.route(route_index);
+    if route.will_break_maximum_activities(solution.problem(), 2) {
+        return;
+    }
+
+    if !route.can_vehicle_deliver_job(solution.problem(), job_index) {
+        return;
+    }
+
+    for pickup_position in 0..=route.len() {
+        if !route.in_insertion_neighborhood(
+            solution.problem(),
+            ActivityId::ShipmentPickup(job_index),
+            pickup_position,
+        ) {
+            continue;
+        }
+
+        for delivery_position in pickup_position..=route.len() {
+            if !route.in_insertion_neighborhood(
+                solution.problem(),
+                ActivityId::ShipmentDelivery(job_index),
+                delivery_position,
+            ) {
+                continue;
+            }
+
+            f(Insertion::Shipment(ShipmentInsertion {
+                route_id: route_index,
+                job_index,
+                pickup_position,
+                delivery_position,
+            }));
         }
     }
 }

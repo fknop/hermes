@@ -284,14 +284,14 @@ impl WorkingSolutionRoute {
                 transport_duration += problem.travel_time(
                     vehicle,
                     depot_location_id,
-                    self.first().job_task(problem).location_id(),
+                    self.first().job_activity(problem).location_id(),
                 );
             }
 
             if self.has_end(problem) {
                 transport_duration += problem.travel_time(
                     vehicle,
-                    self.last().job_task(problem).location_id(),
+                    self.last().job_activity(problem).location_id(),
                     depot_location_id,
                 );
             }
@@ -337,14 +337,14 @@ impl WorkingSolutionRoute {
                 distance += problem.travel_distance(
                     vehicle,
                     depot_location_id,
-                    self.first().job_task(problem).location_id(),
+                    self.first().job_activity(problem).location_id(),
                 );
             }
 
             if self.has_end(problem) {
                 distance += problem.travel_distance(
                     vehicle,
-                    self.last().job_task(problem).location_id(),
+                    self.last().job_activity(problem).location_id(),
                     depot_location_id,
                 );
             }
@@ -680,11 +680,12 @@ impl WorkingSolutionRoute {
                 self.insert_service(problem, *position, *job_index);
             }
             Insertion::Shipment(ShipmentInsertion {
-                job_index: _,
-                delivery_position: _,
+                job_index,
+                pickup_position,
+                delivery_position,
                 ..
             }) => {
-                unimplemented!()
+                self.insert_shipment(problem, *pickup_position, *delivery_position, *job_index);
             }
         }
     }
@@ -701,6 +702,39 @@ impl WorkingSolutionRoute {
 
         self.activity_ids
             .insert(position, ActivityId::Service(service_id));
+
+        // Update the arrival times and departure times of subsequent activities
+        self.update_data(problem);
+    }
+
+    /// Inserts a shipment into the route at the specified positions.
+    /// If delivery_position is equal to pickup position, it means the delivery will be inserted directly after the pickup
+    fn insert_shipment(
+        &mut self,
+        problem: &VehicleRoutingProblem,
+        pickup_position: usize,
+        delivery_position: usize,
+        shipment_id: JobIdx,
+    ) {
+        assert!(delivery_position >= pickup_position);
+
+        if self
+            .jobs
+            .contains_key(&ActivityId::ShipmentPickup(shipment_id))
+            || self
+                .jobs
+                .contains_key(&ActivityId::ShipmentDelivery(shipment_id))
+        {
+            return;
+        }
+
+        self.activity_ids
+            .insert(pickup_position, ActivityId::ShipmentPickup(shipment_id));
+
+        self.activity_ids.insert(
+            delivery_position + 1,
+            ActivityId::ShipmentDelivery(shipment_id),
+        );
 
         // Update the arrival times and departure times of subsequent activities
         self.update_data(problem);
@@ -1699,16 +1733,11 @@ impl RouteActivityInfo {
         self.activity_id
     }
 
-    #[deprecated]
-    pub fn service<'a>(&self, problem: &'a VehicleRoutingProblem) -> &'a Service {
-        problem.service(self.activity_id.job_id())
-    }
-
     pub fn job<'a>(&self, problem: &'a VehicleRoutingProblem) -> &'a Job {
         problem.job(self.activity_id.job_id())
     }
 
-    pub fn job_task<'a>(&self, problem: &'a VehicleRoutingProblem) -> JobActivity<'a> {
+    pub fn job_activity<'a>(&self, problem: &'a VehicleRoutingProblem) -> JobActivity<'a> {
         problem.job_activity(self.activity_id)
     }
 }

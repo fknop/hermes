@@ -262,8 +262,16 @@ impl WorkingSolution {
                     self.create_additional_route(vehicle_id);
                 }
             }
-            Insertion::Shipment(_context) => {
-                unimplemented!()
+            Insertion::Shipment(context) => {
+                let route = &mut self.routes[context.route_id];
+                let is_currently_empty = route.is_empty();
+                let vehicle_id = route.vehicle_id;
+                route.insert(&self.problem, insertion);
+                self.unassigned_jobs.remove(&context.job_index);
+
+                if is_currently_empty {
+                    self.create_additional_route(vehicle_id);
+                }
             }
         }
     }

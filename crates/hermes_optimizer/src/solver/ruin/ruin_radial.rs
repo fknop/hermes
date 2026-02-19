@@ -1,6 +1,6 @@
 use rand::seq::IteratorRandom;
 
-use crate::solver::solution::working_solution::WorkingSolution;
+use crate::{problem::job::Job, solver::solution::working_solution::WorkingSolution};
 
 use super::{ruin_context::RuinContext, ruin_solution::RuinSolution};
 
@@ -22,8 +22,18 @@ impl RuinSolution for RuinRadial {
         let random_location_id = if solution.has_unassigned() && rng.random_bool(0.3) {
             let job_id = solution.unassigned_jobs().iter().choose(rng).unwrap();
 
-            // TODO: shipments
-            problem.service(*job_id).location_id()
+            let job = problem.job(*job_id);
+
+            match job {
+                Job::Shipment(shipment) => {
+                    if rng.random_bool(0.5) {
+                        shipment.pickup().location_id()
+                    } else {
+                        shipment.delivery().location_id()
+                    }
+                }
+                Job::Service(service) => service.location_id(),
+            }
         } else {
             problem.random_location(rng)
         };

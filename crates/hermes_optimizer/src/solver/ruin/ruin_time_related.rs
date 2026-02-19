@@ -89,8 +89,8 @@ impl RuinSolution for RuinTimeRelated {
                     .abs();
                 let distance = context.problem.travel_distance(
                     route.vehicle(context.problem),
-                    target_activity.job_task(context.problem).location_id(),
-                    activity.job_task(context.problem).location_id(),
+                    target_activity.job_activity(context.problem).location_id(),
+                    activity.job_activity(context.problem).location_id(),
                 );
 
                 let demand_difference = (solution
