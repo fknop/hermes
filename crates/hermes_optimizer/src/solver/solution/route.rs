@@ -265,6 +265,22 @@ impl WorkingSolutionRoute {
         self.jobs.get(&job_id).copied()
     }
 
+    pub fn matching_shipment_position(&self, id: ActivityId) -> usize {
+        match id {
+            ActivityId::ShipmentPickup(job_id) => self
+                .jobs
+                .get(&ActivityId::ShipmentDelivery(job_id))
+                .copied()
+                .expect("ShipmentDelivery should be present if ShipmentPickup is in the route"),
+            ActivityId::ShipmentDelivery(job_id) => self
+                .jobs
+                .get(&ActivityId::ShipmentPickup(job_id))
+                .copied()
+                .expect("ShipmentPickup should be present if ShipmentDelivery is in the route"),
+            ActivityId::Service(_) => panic!("Calling matching_shipment_position with a service"),
+        }
+    }
+
     pub fn duration(&self, problem: &VehicleRoutingProblem) -> SignedDuration {
         if self.is_empty() {
             return SignedDuration::ZERO;
@@ -973,7 +989,11 @@ impl WorkingSolutionRoute {
 
         self.fwd_cumulative_waiting_durations[len + 1] = self.fwd_cumulative_waiting_durations[len];
 
-        assert!(self.fwd_load_shipments[self.len() - 1].is_empty());
+        assert!(
+            self.fwd_load_shipments[self.len() - 1].is_empty(),
+            "{:?}",
+            self.fwd_load_shipments[self.len() - 1]
+        );
         self.current_load[len + 1].update(&self.fwd_load_pickups[len - 1]);
 
         // Reset for the reverse pass

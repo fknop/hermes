@@ -43,6 +43,8 @@ pub struct VehicleRoutingProblem {
     jobs: Vec<Job>,
     service_location_index: ServiceLocationIndex,
 
+    has_services: bool,
+    has_shipments: bool,
     has_time_windows: bool,
     has_capacity: bool,
 
@@ -123,6 +125,12 @@ impl VehicleRoutingProblem {
 
         let skills = VehicleRoutingProblem::collect_skills(params.fleet.vehicles(), &params.jobs);
 
+        let has_services = params.jobs.iter().any(|job| matches!(job, Job::Service(_)));
+        let has_shipments = params
+            .jobs
+            .iter()
+            .any(|job| matches!(job, Job::Shipment(_)));
+
         let mut problem = Self {
             id: params.id,
             has_time_windows: params.jobs.iter().any(|job| job.has_time_windows()),
@@ -137,6 +145,8 @@ impl VehicleRoutingProblem {
             precomputed_normalized_demands,
             precomputed_capacity_dimensions,
             waiting_duration_weight,
+            has_services,
+            has_shipments,
             skill_registry: skills,
             version_counter: AtomicUsize::new(0),
         };
@@ -167,6 +177,14 @@ impl VehicleRoutingProblem {
 
     pub fn neighbors(&self, location_id: LocationIdx) -> &FxHashSet<ActivityId> {
         &self.neighborhoods[location_id.get()]
+    }
+
+    pub fn has_services(&self) -> bool {
+        self.has_services
+    }
+
+    pub fn has_shipments(&self) -> bool {
+        self.has_shipments
     }
 
     pub fn services_iter(&self) -> impl Iterator<Item = &Service> {

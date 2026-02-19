@@ -55,6 +55,10 @@ impl LocalSearchOperator for InterRelocateOperator {
     ) where
         C: FnMut(Self),
     {
+        if !problem.has_services() {
+            return;
+        }
+
         if r1 == r2 {
             return;
         }

@@ -94,6 +94,12 @@ impl LocalSearch {
         iterations: usize,
     ) -> usize {
         self.build_pairs(solution);
+
+        // TODO: support shipments for most operators
+        if !problem.has_services() {
+            return 0;
+        }
+
         for i in 0..iterations {
             if !self.run_iteration(problem, solution, i + 1) {
                 return i + 1;
@@ -110,6 +116,11 @@ impl LocalSearch {
         solution: &mut WorkingSolution,
         route: RouteIdx,
     ) {
+        // TODO: support shipments for most operators
+        if !problem.has_services() {
+            return;
+        }
+
         self.pairs.clear();
         self.pairs.push((route, route));
         let mut iteration = 0;

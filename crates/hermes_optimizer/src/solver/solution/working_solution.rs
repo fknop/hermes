@@ -276,14 +276,18 @@ impl WorkingSolution {
         }
     }
 
-    pub fn remove_route_activity(&mut self, route_id: RouteIdx, activity_id: usize) {
+    pub fn remove_activity_at(&mut self, route_id: RouteIdx, position: usize) {
         if route_id.get() >= self.routes.len() {
             return; // Invalid route ID
         }
 
         let route = &mut self.routes[route_id];
-        if let Some(job_id) = route.remove(&self.problem, activity_id) {
-            self.unassigned_jobs.insert(job_id.job_id());
+
+        if let Some(activity_id) = route.get(position) {
+            let removed = route.remove_activity(&self.problem, activity_id);
+            if removed {
+                self.unassigned_jobs.insert(activity_id.job_id());
+            }
         }
     }
 

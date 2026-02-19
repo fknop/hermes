@@ -49,6 +49,10 @@ impl Amount {
         Self::EMPTY
     }
 
+    pub fn is_positive(&self) -> bool {
+        self.0.iter().all(|&x| x > 0.0)
+    }
+
     pub fn with_dimensions(capacity: usize) -> Self {
         let mut vec = SmallVec::with_capacity(capacity);
         vec.resize(capacity, 0.0);

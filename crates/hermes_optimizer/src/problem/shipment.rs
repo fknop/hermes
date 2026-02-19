@@ -179,9 +179,13 @@ impl ShipmentBuilder {
             )),
         };
 
+        let demand = self.demand.unwrap_or_default();
+
+        assert!(demand.is_positive(), "{:?}", demand);
+
         Shipment {
             external_id: self.external_id.expect("Expected external id"),
-            demand: self.demand.unwrap_or_default(),
+            demand,
             pickup,
             delivery,
             skills: FxHashSet::default(),

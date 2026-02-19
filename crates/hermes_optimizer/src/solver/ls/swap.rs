@@ -78,7 +78,18 @@ impl LocalSearchOperator for SwapOperator {
         let route = solution.route(r1);
 
         for from_pos in 0..route.activity_ids().len() {
-            for to_pos in from_pos + 1..route.activity_ids().len() {
+            let (to_start, to_end) = match route.activity_id(from_pos) {
+                ActivityId::Service(_) => (from_pos + 1, route.len()),
+                activity_id @ ActivityId::ShipmentPickup(_) => {
+                    (from_pos + 1, route.matching_shipment_position(activity_id))
+                }
+                activity_id @ ActivityId::ShipmentDelivery(_) => (
+                    route.matching_shipment_position(activity_id) + 1,
+                    route.len(),
+                ),
+            };
+
+            for to_pos in to_start..to_end {
                 if !route.in_swap_neighborhood(
                     problem,
                     from_pos,

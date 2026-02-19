@@ -55,6 +55,10 @@ impl LocalSearchOperator for InterSwapOperator {
     ) where
         C: FnMut(Self),
     {
+        if !problem.has_services() {
+            return;
+        }
+
         if r1 <= r2 {
             return;
         }
@@ -63,11 +67,19 @@ impl LocalSearchOperator for InterSwapOperator {
         let to_route = solution.route(r2);
 
         for from_pos in 0..from_route.activity_ids().len() {
+            if from_route.activity_id(from_pos).is_shipment() {
+                continue;
+            }
+
             if !to_route.can_vehicle_deliver_segment(problem, from_route, from_pos, from_pos + 1) {
                 continue;
             }
 
             for to_pos in 0..to_route.activity_ids().len() {
+                if to_route.activity_id(to_pos).is_shipment() {
+                    continue;
+                }
+
                 if !from_route.can_vehicle_deliver_segment(problem, to_route, to_pos, to_pos + 1) {
                     continue;
                 }
