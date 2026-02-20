@@ -334,6 +334,49 @@ impl VehicleRoutingProblem {
         self.vehicle_profiles[vehicle.profile_id()].travel_cost_or_zero(from, to)
     }
 
+    pub fn travel_distance_between_jobs(&self, a: JobIdx, b: JobIdx) -> Meters {
+        match (self.job(a), self.job(b)) {
+            (Job::Service(service_a), Job::Service(service_b)) => self.travel_distance(
+                self.vehicle(0.into()),
+                service_a.location_id(),
+                service_b.location_id(),
+            ),
+            (Job::Shipment(shipment_a), Job::Shipment(shipment_b)) => {
+                let pickup_a = shipment_a.pickup().location_id();
+                let delivery_a = shipment_a.delivery().location_id();
+                let pickup_b = shipment_b.pickup().location_id();
+                let delivery_b = shipment_b.delivery().location_id();
+
+                self.travel_distance(self.vehicle(0.into()), pickup_a, pickup_b)
+                    + self.travel_distance(self.vehicle(0.into()), delivery_a, delivery_b)
+            }
+            (Job::Service(service_a), Job::Shipment(shipment_b)) => {
+                let pickup_b = shipment_b.pickup().location_id();
+                let delivery_b = shipment_b.delivery().location_id();
+
+                (self.travel_distance(self.vehicle(0.into()), service_a.location_id(), pickup_b)
+                    + self.travel_distance(
+                        self.vehicle(0.into()),
+                        service_a.location_id(),
+                        delivery_b,
+                    ))
+                    / 2.0
+            }
+            (Job::Shipment(shipment_a), Job::Service(service_b)) => {
+                let pickup_a = shipment_a.pickup().location_id();
+                let delivery_a = shipment_a.delivery().location_id();
+
+                (self.travel_distance(self.vehicle(0.into()), pickup_a, service_b.location_id())
+                    + self.travel_distance(
+                        self.vehicle(0.into()),
+                        delivery_a,
+                        service_b.location_id(),
+                    ))
+                    / 2.0
+            }
+        }
+    }
+
     #[inline(always)]
     pub fn acceptable_service_waiting_duration(&self) -> SignedDuration {
         SignedDuration::ZERO

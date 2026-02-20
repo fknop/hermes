@@ -93,6 +93,14 @@ impl Div<usize> for Meters {
     }
 }
 
+impl Div<f64> for Meters {
+    type Output = Meters;
+
+    fn div(self, rhs: f64) -> Meters {
+        Meters(self.0 / rhs)
+    }
+}
+
 impl Div<Meters> for Meters {
     type Output = f64;
 

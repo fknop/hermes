@@ -7,7 +7,7 @@ use crate::{
 
 use super::{ruin_context::RuinContext, ruin_solution::RuinSolution};
 
-// TODO: support shipments
+// TODO: support shipments: right now it only compute savings from activity independently
 pub struct RuinWorst;
 
 fn compute_savings(
@@ -101,8 +101,8 @@ impl RuinSolution for RuinWorst {
 
             // Remove the activity with the worst savings
             if let Some(job_id) = candidates.get(index).map(|candidate| candidate.0) {
-                solution.remove_service(job_id.into());
-                // solution.resync();
+                // TODO: check for shipments
+                solution.remove_job(job_id.job_id());
             } else {
                 break;
             }

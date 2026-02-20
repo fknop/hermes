@@ -330,8 +330,13 @@ impl WorkingSolution {
         removed
     }
 
-    pub fn remove_service(&mut self, service_id: JobIdx) -> bool {
-        self.remove_activity(ActivityId::Service(service_id))
+    pub fn remove_job(&mut self, job_id: JobIdx) -> bool {
+        let job = self.problem.job(job_id);
+        match job {
+            Job::Service(_) => self.remove_activity(ActivityId::Service(job_id)),
+            // Removing the pickup should remove the delivery too
+            Job::Shipment(_) => self.remove_activity(ActivityId::ShipmentPickup(job_id)),
+        }
     }
 
     pub fn remove_service_from_route(&mut self, route_id: usize, service_id: JobIdx) -> bool {

@@ -1,28 +1,21 @@
+use fxhash::FxHashSet;
 use jiff::SignedDuration;
 
 use crate::{
-    problem::{amount::AmountExpression, job::JobIdx, meters::Meters},
-    solver::solution::{route_id::RouteIdx, working_solution::WorkingSolution},
+    problem::{
+        amount::AmountExpression,
+        job::{ActivityId, Job, JobIdx},
+        meters::Meters,
+    },
+    solver::solution::working_solution::WorkingSolution,
 };
 
 use super::{ruin_context::RuinContext, ruin_solution::RuinSolution};
 
 pub struct RuinTimeRelated;
 
-/*
-*   fn default() -> Self {
-      Self {
-          distance_weight: 9.0,
-          time_weight: 3.0,
-          demand_weight: 2.0,
-          same_vehicle_weight: 5.0,
-          determinism: 6.0,
-      }
-  }
-*/
-
-const TIME_RELATEDNESS_WEIGHT: f64 = 3.0;
 const DISTANCE_RELATEDNESS_WEIGHT: f64 = 9.0;
+const TIME_RELATEDNESS_WEIGHT: f64 = 3.0;
 const DEMAND_RELATEDNESS_WEIGHT: f64 = 2.0;
 
 impl RuinTimeRelated {
@@ -54,57 +47,152 @@ impl RuinSolution for RuinTimeRelated {
     where
         R: rand::Rng,
     {
+        let p = context.params.ruin_shaw_determinism;
         let routes = solution.routes();
 
-        let target_route_id = solution.random_non_empty_route(context.rng).unwrap();
-
-        let target_activity_id = context
-            .rng
-            .random_range(0..routes[target_route_id].activity_ids().len());
-
-        let target_activity = &routes[target_route_id].activity(target_activity_id);
+        let target_job = solution.random_assigned_job(context.rng).unwrap();
 
         let mut max_distance: Meters = Meters::ZERO;
         let mut max_time: SignedDuration = SignedDuration::ZERO;
 
         let mut related_activities: Vec<RelatednessToTargetActivity> = Vec::new();
-        for (route_index, route) in routes.iter().enumerate() {
-            for (activity_index, _) in route.activity_ids().iter().enumerate() {
-                if target_activity_id == activity_index
-                    && target_route_id == RouteIdx::new(route_index)
-                {
-                    continue; // Skip the target activity itself
+        let mut processed_jobs = FxHashSet::<JobIdx>::default();
+
+        let target_job_route_id = solution.route_of_job(target_job).unwrap();
+
+        for route in routes.iter() {
+            for (pos, activity_id) in route.activity_ids().iter().enumerate() {
+                if target_job == activity_id.job_id() {
+                    continue; // Skip the target job itself
                 }
 
-                let activity = route.activity(activity_index);
+                if processed_jobs.contains(&activity_id.job_id()) {
+                    continue;
+                }
 
-                let target_arrival =
-                    target_activity.arrival_time() /*+ target_activity.waiting_duration()*/;
+                processed_jobs.insert(activity_id.job_id());
 
-                let time_difference = target_arrival
-                    .duration_since(
-                        activity.arrival_time(), /*+ activity.waiting_duration()*/
-                    )
-                    .abs();
-                let distance = context.problem.travel_distance(
-                    route.vehicle(context.problem),
-                    target_activity.job_activity(context.problem).location_id(),
-                    activity.job_activity(context.problem).location_id(),
-                );
+                let target_job_route = solution.route(target_job_route_id);
 
-                let demand_difference = (solution
-                    .problem()
-                    .normalized_demand(target_activity.activity_id().job_id())
-                    - solution
-                        .problem()
-                        .normalized_demand(activity.activity_id().job_id()))
+                let time_difference = match (
+                    context.problem.job(target_job),
+                    context.problem.job(activity_id.job_id()),
+                ) {
+                    (Job::Service(_), Job::Service(_)) => {
+                        let target_job_position = target_job_route
+                            .job_position(ActivityId::Service(target_job))
+                            .unwrap();
+
+                        let target_activity = target_job_route.activity(target_job_position);
+                        let target_arrival = target_activity.arrival_time();
+
+                        let activity = route.activity(pos);
+
+                        target_arrival.duration_since(activity.arrival_time()).abs()
+                    }
+                    (Job::Shipment(_), Job::Shipment(_)) => {
+                        let target_pickup_position = target_job_route
+                            .job_position(ActivityId::ShipmentPickup(target_job))
+                            .unwrap();
+
+                        let target_delivery_position = target_job_route
+                            .job_position(ActivityId::ShipmentPickup(target_job))
+                            .unwrap();
+
+                        let target_pickup_activity =
+                            target_job_route.activity(target_pickup_position);
+                        let target_delivery_activity =
+                            target_job_route.activity(target_delivery_position);
+
+                        let pickup_position = route
+                            .job_position(ActivityId::ShipmentPickup(activity_id.job_id()))
+                            .unwrap();
+
+                        let delivery_position = route
+                            .job_position(ActivityId::ShipmentPickup(activity_id.job_id()))
+                            .unwrap();
+
+                        let pickup_activity = route.activity(pickup_position);
+                        let delivery_activity = route.activity(delivery_position);
+
+                        target_pickup_activity
+                            .arrival_time()
+                            .duration_since(pickup_activity.arrival_time())
+                            .abs()
+                            + target_delivery_activity
+                                .arrival_time()
+                                .duration_since(delivery_activity.arrival_time())
+                                .abs()
+                    }
+                    (Job::Service(_), Job::Shipment(_)) => {
+                        let target_job_position = target_job_route
+                            .job_position(ActivityId::Service(target_job))
+                            .unwrap();
+
+                        let target_activity = target_job_route.activity(target_job_position);
+
+                        let pickup_position = route
+                            .job_position(ActivityId::ShipmentPickup(activity_id.job_id()))
+                            .unwrap();
+
+                        let delivery_position = route
+                            .job_position(ActivityId::ShipmentPickup(activity_id.job_id()))
+                            .unwrap();
+
+                        let pickup_activity = route.activity(pickup_position);
+                        let delivery_activity = route.activity(delivery_position);
+
+                        (target_activity
+                            .arrival_time()
+                            .duration_since(pickup_activity.arrival_time())
+                            .abs()
+                            + target_activity
+                                .arrival_time()
+                                .duration_since(delivery_activity.arrival_time())
+                                .abs())
+                            / 2
+                    }
+                    (Job::Shipment(_), Job::Service(_)) => {
+                        let target_pickup_position = target_job_route
+                            .job_position(ActivityId::ShipmentPickup(target_job))
+                            .unwrap();
+
+                        let target_delivery_position = target_job_route
+                            .job_position(ActivityId::ShipmentPickup(target_job))
+                            .unwrap();
+
+                        let target_pickup_activity =
+                            target_job_route.activity(target_pickup_position);
+                        let target_delivery_activity =
+                            target_job_route.activity(target_delivery_position);
+
+                        let activity = route.activity(pos);
+
+                        (target_pickup_activity
+                            .arrival_time()
+                            .duration_since(activity.arrival_time())
+                            .abs()
+                            + target_delivery_activity
+                                .arrival_time()
+                                .duration_since(activity.arrival_time())
+                                .abs())
+                            / 2
+                    }
+                };
+
+                let distance = context
+                    .problem
+                    .travel_distance_between_jobs(target_job, activity_id.job_id());
+
+                let demand_difference = (solution.problem().normalized_demand(target_job)
+                    - solution.problem().normalized_demand(activity_id.job_id()))
                 .iter()
                 .map(|value| value.abs())
                 .sum::<f64>()
                     / solution.problem().capacity_dimensions() as f64;
 
                 related_activities.push(RelatednessToTargetActivity {
-                    job_idx: activity.activity_id().job_id(),
+                    job_idx: activity_id.job_id(),
                     time: time_difference,
                     distance,
                     normalized_demand: demand_difference,
@@ -122,19 +210,22 @@ impl RuinSolution for RuinTimeRelated {
 
         let mut remaining_to_remove = context.num_jobs_to_remove;
 
-        solution.remove_activity_at(target_route_id, target_activity_id);
+        solution.remove_job(target_job);
         remaining_to_remove -= 1;
 
-        for related_activity in related_activities {
-            if remaining_to_remove == 0 {
+        while remaining_to_remove > 0 {
+            let y: f64 = context.rng.random_range(0.0..1.0);
+            let index = (y.powf(p) * related_activities.len() as f64).floor() as usize;
+
+            if let Some(job_id) = related_activities
+                .get(index)
+                .map(|candidate| candidate.job_idx)
+            {
+                solution.remove_job(job_id);
+                remaining_to_remove -= 1;
+            } else {
                 break;
             }
-
-            if solution.remove_service(related_activity.job_idx) {
-                remaining_to_remove -= 1;
-            }
-            // solution
-            // .remove_service_from_route(related_activity.route_id, related_activity.service_id);
         }
     }
 }
