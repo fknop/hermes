@@ -1541,12 +1541,9 @@ impl WorkingSolutionRoute {
                 return false;
             }
 
-            let delta = if let Some(current_vehicle_start) = current_vehicle_start
-                && let Some(vehicle_start) = vehicle_start
-                && vehicle_start < current_vehicle_start
-                && next_delta < SignedDuration::ZERO
-            {
-                // Starting earlier + arriving earlier: waiting time absorbs some work
+            // If we arrive earlier (next_delta < 0), we may need to add duration because we end up adding waiting time
+            // If we arrive later (next_delta > 0), we need to remove duration because we end up removing waiting time from the next activities
+            let delta = if next_delta < SignedDuration::ZERO {
                 let waiting_slack = self.waiting_time_slacks[end];
 
                 // next_delta: the amount of work that we actually remove
@@ -1557,6 +1554,7 @@ impl WorkingSolutionRoute {
 
                 start_delta + work_delta
             } else {
+                // When arriving later, we remove waiting time from the next activities
                 (start_delta + next_delta - self.bwd_cumulative_waiting_durations[end + 1])
                     .max(SignedDuration::ZERO)
             };
