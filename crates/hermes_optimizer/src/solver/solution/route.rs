@@ -8,7 +8,7 @@ use crate::{
         job::{ActivityId, Job, JobActivity, JobIdx},
         location::LocationIdx,
         meters::Meters,
-        service::{Service, ServiceType},
+        service::ServiceType,
         vehicle::{Vehicle, VehicleIdx},
         vehicle_routing_problem::VehicleRoutingProblem,
     },
@@ -712,6 +712,7 @@ impl WorkingSolutionRoute {
         position: usize,
         service_id: JobIdx,
     ) {
+        assert!(position <= self.len());
         if self.jobs.contains_key(&ActivityId::Service(service_id)) {
             return;
         }
@@ -732,6 +733,8 @@ impl WorkingSolutionRoute {
         delivery_position: usize,
         shipment_id: JobIdx,
     ) {
+        assert!(pickup_position <= self.len());
+        assert!(delivery_position <= self.len());
         assert!(delivery_position >= pickup_position);
 
         if self
@@ -860,6 +863,7 @@ impl WorkingSolutionRoute {
                 .enumerate()
                 .map(|(index, &job_id)| (job_id, index)),
         );
+
         self.update_bbox(problem);
         self.resize_data(problem);
 
@@ -896,6 +900,29 @@ impl WorkingSolutionRoute {
 
         for i in 0..len {
             let activity_id = self.activity_ids[i];
+
+            match activity_id {
+                ActivityId::ShipmentPickup(id) => {
+                    let delivery_pos = self.jobs[&ActivityId::ShipmentDelivery(id)];
+                    assert!(
+                        delivery_pos > i,
+                        "Activity {} does not have its delivery after it, {:?}",
+                        activity_id,
+                        self.activity_ids
+                    );
+                }
+                ActivityId::ShipmentDelivery(id) => {
+                    let pickup_pos = self.jobs[&ActivityId::ShipmentPickup(id)];
+                    assert!(
+                        pickup_pos < i,
+                        "Activity {} does not have its pickup before it, {:?}",
+                        activity_id,
+                        self.activity_ids
+                    );
+                }
+                _ => {}
+            }
+
             let job = problem.job(activity_id.job_id());
 
             match activity_id {
@@ -1783,10 +1810,17 @@ mod tests {
             vehicle_profile::VehicleProfile,
             vehicle_routing_problem::{VehicleRoutingProblem, VehicleRoutingProblemBuilder},
         },
-        solver::solution::{
-            route::WorkingSolutionRoute, route_update_iterator::RouteUpdateActivityData,
+        solver::{
+            insertion::{Insertion, ServiceInsertion, ShipmentInsertion},
+            solution::{
+                route::WorkingSolutionRoute, route_id::RouteIdx,
+                route_update_iterator::RouteUpdateActivityData,
+            },
         },
-        test_utils::{self, TestProblemOptions, TestService, create_problem_for_tw_change},
+        test_utils::{
+            self, TestProblemOptions, TestService, TestShipment, create_mixed_problem,
+            create_problem_for_tw_change,
+        },
         timestamp,
     };
 
@@ -1904,6 +1938,131 @@ mod tests {
         builder.set_services(services);
 
         builder.build()
+    }
+
+    #[test]
+    fn test_route_insert() {
+        let problem = create_mixed_problem(
+            vec![TestService::default(), TestService::default()],
+            vec![TestShipment::default(), TestShipment::default()],
+            TestProblemOptions::default(),
+        );
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+
+        route.insert(
+            &problem,
+            &Insertion::Service(ServiceInsertion {
+                job_index: JobIdx::new(0),
+                position: 0,
+                route_id: RouteIdx::new(0),
+            }),
+        );
+
+        assert_eq!(route.activity_ids, vec![ActivityId::service(0)]);
+
+        route.insert(
+            &problem,
+            &Insertion::Shipment(ShipmentInsertion {
+                pickup_position: 0,
+                delivery_position: 1,
+                job_index: JobIdx::new(2),
+                route_id: RouteIdx::new(0),
+            }),
+        );
+
+        assert_eq!(
+            route.activity_ids,
+            vec![
+                ActivityId::shipment_pickup(2),
+                ActivityId::service(0),
+                ActivityId::shipment_delivery(2)
+            ]
+        );
+
+        route.insert(
+            &problem,
+            &Insertion::Shipment(ShipmentInsertion {
+                pickup_position: 1,
+                delivery_position: 1,
+                job_index: JobIdx::new(3),
+                route_id: RouteIdx::new(0),
+            }),
+        );
+
+        assert_eq!(
+            route.activity_ids,
+            vec![
+                ActivityId::shipment_pickup(2),
+                ActivityId::shipment_pickup(3),
+                ActivityId::shipment_delivery(3),
+                ActivityId::service(0),
+                ActivityId::shipment_delivery(2)
+            ]
+        );
+    }
+
+    #[test]
+    fn test_remove_shipment() {
+        let problem = create_mixed_problem(
+            vec![TestService::default(), TestService::default()],
+            vec![TestShipment::default(), TestShipment::default()],
+            TestProblemOptions::default(),
+        );
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+
+        route.insert(
+            &problem,
+            &Insertion::Service(ServiceInsertion {
+                job_index: JobIdx::new(0),
+                position: 0,
+                route_id: RouteIdx::new(0),
+            }),
+        );
+
+        route.insert(
+            &problem,
+            &Insertion::Shipment(ShipmentInsertion {
+                pickup_position: 0,
+                delivery_position: 1,
+                job_index: JobIdx::new(2),
+                route_id: RouteIdx::new(0),
+            }),
+        );
+
+        route.insert(
+            &problem,
+            &Insertion::Shipment(ShipmentInsertion {
+                pickup_position: 1,
+                delivery_position: 1,
+                job_index: JobIdx::new(3),
+                route_id: RouteIdx::new(0),
+            }),
+        );
+
+        assert_eq!(
+            route.activity_ids,
+            vec![
+                ActivityId::shipment_pickup(2),
+                ActivityId::shipment_pickup(3),
+                ActivityId::shipment_delivery(3),
+                ActivityId::service(0),
+                ActivityId::shipment_delivery(2)
+            ]
+        );
+
+        route.remove_activity(&problem, ActivityId::shipment_pickup(2));
+
+        assert_eq!(
+            route.activity_ids,
+            vec![
+                ActivityId::shipment_pickup(3),
+                ActivityId::shipment_delivery(3),
+                ActivityId::service(0),
+            ]
+        );
+
+        route.remove_activity(&problem, ActivityId::shipment_delivery(3));
+        assert_eq!(route.activity_ids, vec![ActivityId::service(0),]);
     }
 
     #[test]

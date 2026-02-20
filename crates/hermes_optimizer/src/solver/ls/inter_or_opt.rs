@@ -62,6 +62,11 @@ impl LocalSearchOperator for InterOrOptOperator {
     ) where
         C: FnMut(Self),
     {
+        // TODO: shipments
+        if problem.has_shipments() {
+            return;
+        }
+
         if r1 == r2 {
             return;
         }

@@ -36,9 +36,52 @@ pub struct SwapOperatorParams {
 }
 
 impl SwapOperator {
-    pub fn new(params: SwapOperatorParams) -> Self {
+    pub fn new(solution: &WorkingSolution, params: SwapOperatorParams) -> Self {
         if params.first == params.second {
             panic!("SwapOperator: 'first' and 'second' positions must be different.");
+        }
+
+        let route = solution.route(params.route_id);
+        let first = route.activity_id(params.first);
+        let second = route.activity_id(params.second);
+
+        if first.is_shipment() && second.is_shipment() && first.job_id() == second.job_id() {
+            panic!(
+                "SwapOperator: cannot swap shipments of the same job. {:?}, {:?} <=> {:?}",
+                params, first, second
+            );
+        }
+
+        match first {
+            ActivityId::ShipmentPickup(_) => {
+                if route.matching_shipment_position(first) < params.second {
+                    panic!(
+                        "Cannot move pickup shipment to a position after its matching delivery. {:?}, {:?} <=> {:?}",
+                        params, first, second
+                    )
+                }
+            }
+            ActivityId::ShipmentDelivery(_) => {
+                if route.matching_shipment_position(first) >= params.first {
+                    panic!(
+                        "Cannot move delivery shipment to a position before its matching pickup. {:?}, {:?} <=> {:?}",
+                        params, first, second
+                    )
+                }
+            }
+            _ => {}
+        }
+
+        if let ActivityId::ShipmentDelivery(_) = second
+            && route.matching_shipment_position(second) >= params.first
+        {
+            panic!(
+                "Cannot move delivery shipment to a position before its matching pickup. {:?}, {:?} <=> {:?}\n{:?}",
+                params,
+                first,
+                second,
+                route.activity_ids()
+            )
         }
 
         SwapOperator { params }
@@ -84,12 +127,23 @@ impl LocalSearchOperator for SwapOperator {
                     (from_pos + 1, route.matching_shipment_position(activity_id))
                 }
                 activity_id @ ActivityId::ShipmentDelivery(_) => (
-                    route.matching_shipment_position(activity_id) + 1,
+                    ((from_pos + 1).max(route.matching_shipment_position(activity_id) + 1)),
                     route.len(),
                 ),
             };
 
             for to_pos in to_start..to_end {
+                let from = route.activity_id(from_pos);
+                let to = route.activity_id(to_pos);
+                if from.is_shipment() && to.is_shipment() && from.job_id() == to.job_id() {
+                    // Cannot swap shipments with own pickup / delivery
+                    continue;
+                }
+
+                if to.is_shipment() && route.matching_shipment_position(to) >= from_pos {
+                    continue;
+                }
+
                 if !route.in_swap_neighborhood(
                     problem,
                     from_pos,
@@ -101,11 +155,14 @@ impl LocalSearchOperator for SwapOperator {
                     continue;
                 }
 
-                let op = SwapOperator::new(SwapOperatorParams {
-                    route_id: r1,
-                    first: from_pos,
-                    second: to_pos,
-                });
+                let op = SwapOperator::new(
+                    solution,
+                    SwapOperatorParams {
+                        route_id: r1,
+                        first: from_pos,
+                        second: to_pos,
+                    },
+                );
 
                 consumer(op)
             }
@@ -253,11 +310,14 @@ mod tests {
             ],
         );
 
-        let operator = SwapOperator::new(SwapOperatorParams {
-            route_id: RouteIdx::new(0),
-            first: 1,
-            second: 5,
-        });
+        let operator = SwapOperator::new(
+            &solution,
+            SwapOperatorParams {
+                route_id: RouteIdx::new(0),
+                first: 1,
+                second: 5,
+            },
+        );
 
         let distance = solution.route(RouteIdx::new(0)).transport_costs(&problem);
         let delta = operator.transport_cost_delta(&solution);
@@ -302,11 +362,14 @@ mod tests {
             ],
         );
 
-        let operator = SwapOperator::new(SwapOperatorParams {
-            route_id: RouteIdx::new(0),
-            first: 5,
-            second: 2,
-        });
+        let operator = SwapOperator::new(
+            &solution,
+            SwapOperatorParams {
+                route_id: RouteIdx::new(0),
+                first: 5,
+                second: 2,
+            },
+        );
 
         let distance = solution.route(RouteIdx::new(0)).transport_costs(&problem);
         let delta = operator.transport_cost_delta(&solution);
@@ -345,11 +408,14 @@ mod tests {
             }],
         );
 
-        let operator = SwapOperator::new(SwapOperatorParams {
-            route_id: RouteIdx::new(0),
-            first: 0,
-            second: 5,
-        });
+        let operator = SwapOperator::new(
+            &solution,
+            SwapOperatorParams {
+                route_id: RouteIdx::new(0),
+                first: 0,
+                second: 5,
+            },
+        );
 
         let distance = solution.route(RouteIdx::new(0)).transport_costs(&problem);
         let delta = operator.transport_cost_delta(&solution);
@@ -389,11 +455,14 @@ mod tests {
             }],
         );
 
-        let operator = SwapOperator::new(SwapOperatorParams {
-            route_id: RouteIdx::new(0),
-            first: 0,
-            second: 5,
-        });
+        let operator = SwapOperator::new(
+            &solution,
+            SwapOperatorParams {
+                route_id: RouteIdx::new(0),
+                first: 0,
+                second: 5,
+            },
+        );
 
         let distance = solution.route(RouteIdx::new(0)).transport_costs(&problem);
         let delta = operator.transport_cost_delta(&solution);
@@ -432,11 +501,14 @@ mod tests {
             }],
         );
 
-        let operator = SwapOperator::new(SwapOperatorParams {
-            route_id: RouteIdx::new(0),
-            first: 1,
-            second: 2,
-        });
+        let operator = SwapOperator::new(
+            &solution,
+            SwapOperatorParams {
+                route_id: RouteIdx::new(0),
+                first: 1,
+                second: 2,
+            },
+        );
 
         let distance = solution.route(RouteIdx::new(0)).transport_costs(&problem);
         let delta = operator.transport_cost_delta(&solution);

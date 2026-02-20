@@ -52,13 +52,18 @@ impl TwoOptOperator {
 impl LocalSearchOperator for TwoOptOperator {
     #[instrument(skip_all,level = Level::TRACE)]
     fn generate_moves<C>(
-        _problem: &VehicleRoutingProblem,
+        problem: &VehicleRoutingProblem,
         solution: &WorkingSolution,
         (r1, r2): (RouteIdx, RouteIdx),
         mut consumer: C,
     ) where
         C: FnMut(Self),
     {
+        // TODO: shipments
+        if problem.has_shipments() {
+            return;
+        }
+
         if r1 != r2 {
             return;
         }

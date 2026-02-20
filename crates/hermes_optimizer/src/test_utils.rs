@@ -12,6 +12,7 @@ use crate::{
         fleet::Fleet,
         location::Location,
         service::{Service, ServiceBuilder},
+        shipment::{Shipment, ShipmentBuilder},
         time_window::TimeWindow,
         travel_cost_matrix::TravelMatrices,
         vehicle::{Vehicle, VehicleBuilder, VehicleShift},
@@ -227,6 +228,14 @@ impl TestService {
     }
 }
 
+#[derive(Default)]
+pub struct TestShipment {
+    pub pickup_time_windows: Option<Vec<TimeWindow>>,
+    pub pickup_duration: Option<SignedDuration>,
+    pub delivery_time_windows: Option<Vec<TimeWindow>>,
+    pub delivery_duration: Option<SignedDuration>,
+}
+
 pub fn create_problem_for_tw_change(
     services: Vec<TestService>,
     options: TestProblemOptions,
@@ -297,6 +306,112 @@ pub fn create_problem_for_tw_change(
     builder.set_locations(locations);
     builder.set_fleet(Fleet::Finite(vehicles));
     builder.set_services(services);
+
+    builder.build()
+}
+
+pub fn create_mixed_problem(
+    services: Vec<TestService>,
+    shipments: Vec<TestShipment>,
+    options: TestProblemOptions,
+) -> VehicleRoutingProblem {
+    // 10 locations from (0, 0) to (9, 0)
+    let locations = create_location_grid(1, services.len() + 1);
+
+    let mut vehicle_builder = VehicleBuilder::default();
+    vehicle_builder.set_depot_location_id(0);
+    vehicle_builder.set_capacity(Capacity::from_vec(vec![100.0]));
+    vehicle_builder.set_vehicle_id(String::from("vehicle"));
+    vehicle_builder.set_profile_id(0);
+
+    let shift = VehicleShift {
+        maximum_working_duration: options.maximum_working_duration,
+        earliest_start: options.earliest_start,
+        latest_start: options.latest_start,
+        latest_end: options.latest_end,
+        ..VehicleShift::default()
+    };
+    vehicle_builder.set_vehicle_shift(shift);
+
+    let vehicle = vehicle_builder.build();
+    let vehicles = vec![vehicle];
+
+    let services = services
+        .into_iter()
+        .enumerate()
+        .map(|(i, test_service)| {
+            let mut service_builder = ServiceBuilder::default();
+            service_builder.set_demand(Capacity::from_vec(vec![10.0]));
+            service_builder.set_external_id(format!("service_{}", i + 1));
+            service_builder.set_service_duration(
+                test_service.service_duration.unwrap_or(
+                    options
+                        .service_time
+                        .unwrap_or(SignedDuration::from_mins(10)),
+                ),
+            );
+            service_builder.set_location_id(i + 1);
+
+            if let Some(tw) = test_service.time_windows {
+                service_builder.set_time_windows(tw);
+            }
+
+            service_builder.build()
+        })
+        .collect::<Vec<_>>();
+
+    let shipments = shipments
+        .into_iter()
+        .enumerate()
+        .map(|(i, test_shipment)| {
+            let mut shipment_builder = ShipmentBuilder::default();
+            shipment_builder.set_pickup_location_id(i + 1);
+            shipment_builder.set_delivery_location_id(i + 1);
+            shipment_builder.set_external_id(format!("shipment_{}", i + 1));
+
+            if let Some(pickup_tw) = test_shipment.pickup_time_windows {
+                for tw in pickup_tw {
+                    shipment_builder.set_pickup_time_window(tw);
+                }
+            }
+            if let Some(delivery_tw) = test_shipment.delivery_time_windows {
+                for tw in delivery_tw {
+                    shipment_builder.set_delivery_time_window(tw);
+                }
+            }
+            if let Some(pickup_duration) = test_shipment.pickup_duration {
+                shipment_builder.set_pickup_duration(pickup_duration);
+            }
+            if let Some(delivery_duration) = test_shipment.delivery_duration {
+                shipment_builder.set_delivery_duration(delivery_duration);
+            }
+
+            shipment_builder.build()
+        })
+        .collect::<Vec<_>>();
+
+    let mut builder = VehicleRoutingProblemBuilder::default();
+    // Travel time of 30 mins between consecutive locations
+
+    builder.set_vehicle_profiles(vec![VehicleProfile::new(
+        "test_profile".to_owned(),
+        TravelMatrices::from_constant(
+            &locations,
+            options
+                .travel_time
+                .unwrap_or(SignedDuration::from_mins(30))
+                .as_secs_f64(),
+            100.0,
+            options
+                .travel_time
+                .unwrap_or(SignedDuration::from_mins(30))
+                .as_secs_f64(),
+        ),
+    )]);
+    builder.set_locations(locations);
+    builder.set_fleet(Fleet::Finite(vehicles));
+    builder.set_services(services);
+    builder.set_shipments(shipments);
 
     builder.build()
 }

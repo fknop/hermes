@@ -171,3 +171,22 @@ impl Job {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::problem::job::{ActivityId, JobIdx};
+
+    #[test]
+    fn test_is_shipment() {
+        assert!(ActivityId::shipment_pickup(1).is_shipment());
+        assert!(ActivityId::shipment_delivery(1).is_shipment());
+        assert!(!ActivityId::service(1).is_shipment());
+    }
+
+    #[test]
+    fn test_job_id() {
+        assert_eq!(ActivityId::shipment_pickup(1).job_id(), JobIdx::new(1));
+        assert_eq!(ActivityId::shipment_delivery(1).job_id(), JobIdx::new(1));
+        assert_eq!(ActivityId::service(1).job_id(), JobIdx::new(1));
+    }
+}

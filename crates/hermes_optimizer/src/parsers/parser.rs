@@ -1,4 +1,8 @@
-use std::path::Path;
+use std::{
+    fs::File,
+    io::{BufReader, Read},
+    path::Path,
+};
 
 use crate::problem::vehicle_routing_problem::VehicleRoutingProblem;
 
@@ -78,8 +82,11 @@ fn detect_format(content: &str) -> Result<DatasetFormat, anyhow::Error> {
 }
 
 /// Read a file and parse it by auto-detecting the format.
-pub fn parse_dataset<P: AsRef<Path>>(file: P) -> Result<VehicleRoutingProblem, anyhow::Error> {
-    let content = std::fs::read_to_string(file)?;
+pub fn parse_dataset<P: AsRef<Path>>(path: P) -> Result<VehicleRoutingProblem, anyhow::Error> {
+    let file = File::open(path)?;
+    let mut buf_reader = BufReader::new(file);
+    let mut content = String::new();
+    buf_reader.read_to_string(&mut content)?;
     let format = detect_format(&content)?;
     match format {
         DatasetFormat::Solomon => SolomonParser.parse(&content),

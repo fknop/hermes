@@ -3,7 +3,7 @@ use std::f64;
 use fxhash::{FxBuildHasher, FxHashMap, FxHashSet};
 use jiff::SignedDuration;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
-use tracing::{debug, info, instrument, warn};
+use tracing::{debug, info, instrument, trace, warn};
 
 use crate::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
@@ -87,7 +87,7 @@ impl LocalSearch {
         }
     }
 
-    #[instrument(skip_all, level = "debug")]
+    #[instrument(skip_all, level = "trace")]
     pub fn intensify(
         &mut self,
         problem: &VehicleRoutingProblem,
@@ -95,11 +95,6 @@ impl LocalSearch {
         iterations: usize,
     ) -> usize {
         self.build_pairs(solution);
-
-        // TODO: support shipments for most operators
-        if !problem.has_services() {
-            return 0;
-        }
 
         for i in 0..iterations {
             if !self.run_iteration(problem, solution, i + 1) {
@@ -110,18 +105,13 @@ impl LocalSearch {
         iterations
     }
 
-    #[instrument(skip_all, level = "debug")]
+    #[instrument(skip_all, level = "trace")]
     pub fn intensify_route(
         &mut self,
         problem: &VehicleRoutingProblem,
         solution: &mut WorkingSolution,
         route: RouteIdx,
     ) {
-        // TODO: support shipments for most operators
-        if !problem.has_services() {
-            return;
-        }
-
         self.pairs.clear();
         self.pairs.push((route, route));
         let mut iteration = 0;
@@ -452,7 +442,7 @@ impl LocalSearch {
             }
         }
 
-        debug!(
+        trace!(
             "Local Search: Built {} route pairs (max {}). Cache ratio: {}",
             self.pairs.len(),
             max,
