@@ -1485,12 +1485,11 @@ impl WorkingSolutionRoute {
 
         let mut next_delta = SignedDuration::ZERO;
         if let Some(&next_activity_id) = self.activity_ids.get(end)
-            && let Some(&current_activity_index) = self.jobs.get(&next_activity_id)
             && let Some(previous_departure_time) = previous_departure_time
             && let Some(previous_activity_id) = previous_activity_id
         {
-            let current_time_slack = self.fwd_time_slacks[current_activity_index + 1];
-            let current_arrival_time = self.arrival_times[current_activity_index];
+            let current_time_slack = self.fwd_time_slacks[end + 1];
+            let current_arrival_time = self.arrival_times[end];
 
             let arrival_time = compute_activity_arrival_time(
                 problem,
@@ -1549,8 +1548,13 @@ impl WorkingSolutionRoute {
             {
                 // Starting earlier + arriving earlier: waiting time absorbs some work
                 let waiting_slack = self.waiting_time_slacks[end];
-                let positive_delta = -next_delta;
-                let work_delta = positive_delta - waiting_slack;
+
+                // next_delta: the amount of work that we actually remove
+                // -next_delta - waiting_slack: if we end up adding waiting time, we need to add that time to the total duration of the route
+                // TODO: better tests for this
+                let work_delta =
+                    next_delta + (-next_delta - waiting_slack).max(SignedDuration::ZERO);
+
                 start_delta + work_delta
             } else {
                 (start_delta + next_delta - self.bwd_cumulative_waiting_durations[end + 1])

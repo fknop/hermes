@@ -1,8 +1,9 @@
 use std::f64;
 
 use fxhash::{FxBuildHasher, FxHashMap, FxHashSet};
+use jiff::SignedDuration;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
-use tracing::{debug, instrument, warn};
+use tracing::{debug, info, instrument, warn};
 
 use crate::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
@@ -317,6 +318,8 @@ impl LocalSearch {
                 // debug!("{:?}", solution.route(r1.into()).activity_ids());
                 // debug!("{:?}", solution.route(r2.into()).activity_ids());
 
+                // let cloned_solution = solution.clone();
+
                 op.apply(problem, solution);
 
                 // debug!("{:?}", solution.route(r1.into()).activity_ids());
@@ -371,12 +374,34 @@ impl LocalSearch {
                 let score = solution.compute_solution_score(&self.constraints);
 
                 if score.0.is_infeasible() {
+                    for (i, route) in solution.routes().iter().enumerate() {
+                        if route.duration(problem)
+                            > route
+                                .vehicle(problem)
+                                .maximum_working_duration()
+                                .unwrap_or(SignedDuration::MAX)
+                        {
+                            tracing::error!(
+                                "Route {} duration {} exceeds vehicle maximum duration {}",
+                                i,
+                                route.duration(problem),
+                                route
+                                    .vehicle(problem)
+                                    .maximum_working_duration()
+                                    .unwrap_or(SignedDuration::MAX)
+                            );
+                        }
+                    }
+
                     tracing::error!(
                         ?op,
                         "Operator {} broke constraints {:?}",
                         op.operator_name(),
                         score.1
                     );
+
+                    // op.is_valid(&cloned_solution);
+
                     panic!("Score failed after applying operation")
                 }
             } else {

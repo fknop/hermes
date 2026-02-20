@@ -1086,6 +1086,136 @@ mod tests {
     }
 
     #[test]
+    fn test_swap_star_first_position_start_of_route() {
+        let locations = test_utils::create_location_grid(10, 10);
+
+        let services = test_utils::create_basic_services(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        let vehicles = test_utils::create_basic_vehicles(vec![0, 0]);
+        let problem = Arc::new(test_utils::create_test_problem(
+            locations, services, vehicles,
+        ));
+
+        let mut solution = test_utils::create_test_working_solution(
+            Arc::clone(&problem),
+            vec![
+                TestRoute {
+                    vehicle_id: 0,
+                    service_ids: vec![0, 1, 2, 3, 4, 5],
+                },
+                TestRoute {
+                    vehicle_id: 1,
+                    service_ids: vec![6, 7, 8, 9, 10],
+                },
+            ],
+        );
+
+        let operator = SwapStar::new(SwapStarParams {
+            first_route: RouteIdx::new(0),
+            second_route: RouteIdx::new(1),
+            first_position: 0,  // the 0
+            second_position: 3, // The 9
+            first_insertion: 2,
+            second_insertion: 5,
+            delta: 0.0, // We don't care about the actual delta for this test
+        });
+
+        let distances = solution.route(0.into()).transport_costs(&problem)
+            + solution.route(1.into()).transport_costs(&problem);
+        let delta = operator.transport_cost_delta(&solution);
+        operator.apply(&problem, &mut solution);
+        assert_eq!(
+            solution.route(0.into()).transport_costs(&problem)
+                + solution.route(1.into()).transport_costs(&problem),
+            distances + delta,
+        );
+
+        assert_eq!(
+            solution
+                .route(0.into())
+                .activity_ids()
+                .iter()
+                .map(|activity| activity.job_id().get())
+                .collect::<Vec<_>>(),
+            vec![1, 9, 2, 3, 4, 5],
+        );
+
+        assert_eq!(
+            solution
+                .route(1.into())
+                .activity_ids()
+                .iter()
+                .map(|activity| activity.job_id().get())
+                .collect::<Vec<_>>(),
+            vec![6, 7, 8, 10, 0],
+        );
+    }
+
+    #[test]
+    fn test_swap_star_start_of_route() {
+        let locations = test_utils::create_location_grid(10, 10);
+
+        let services = test_utils::create_basic_services(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        let vehicles = test_utils::create_basic_vehicles(vec![0, 0]);
+        let problem = Arc::new(test_utils::create_test_problem(
+            locations, services, vehicles,
+        ));
+
+        let mut solution = test_utils::create_test_working_solution(
+            Arc::clone(&problem),
+            vec![
+                TestRoute {
+                    vehicle_id: 0,
+                    service_ids: vec![0, 1, 2, 3, 4, 5],
+                },
+                TestRoute {
+                    vehicle_id: 1,
+                    service_ids: vec![6, 7, 8, 9, 10],
+                },
+            ],
+        );
+
+        let operator = SwapStar::new(SwapStarParams {
+            first_route: RouteIdx::new(0),
+            second_route: RouteIdx::new(1),
+            first_position: 0,  // the 0
+            second_position: 3, // The 9
+            first_insertion: 0,
+            second_insertion: 5,
+            delta: 0.0, // We don't care about the actual delta for this test
+        });
+
+        let distances = solution.route(0.into()).transport_costs(&problem)
+            + solution.route(1.into()).transport_costs(&problem);
+        let delta = operator.transport_cost_delta(&solution);
+        operator.apply(&problem, &mut solution);
+        assert_eq!(
+            solution.route(0.into()).transport_costs(&problem)
+                + solution.route(1.into()).transport_costs(&problem),
+            distances + delta,
+        );
+
+        assert_eq!(
+            solution
+                .route(0.into())
+                .activity_ids()
+                .iter()
+                .map(|activity| activity.job_id().get())
+                .collect::<Vec<_>>(),
+            vec![9, 1, 2, 3, 4, 5],
+        );
+
+        assert_eq!(
+            solution
+                .route(1.into())
+                .activity_ids()
+                .iter()
+                .map(|activity| activity.job_id().get())
+                .collect::<Vec<_>>(),
+            vec![6, 7, 8, 10, 0],
+        );
+    }
+
+    #[test]
     fn test_swap_star_end_of_route_with_return() {
         let locations = test_utils::create_location_grid(10, 10);
 

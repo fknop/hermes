@@ -364,6 +364,16 @@ pub fn construct_solution(
     let mut solution = WorkingSolution::new(Arc::clone(problem));
     create_initial_routes(problem, &mut solution);
 
+    let (score, score_analysis) = solution.compute_solution_score(constraints);
+
+    if score.is_infeasible() {
+        tracing::error!(
+            "create_initial_routes solution rejected due to failure score: {:?}",
+            score_analysis,
+        );
+        panic!("Bug: score should never fail when insert_on_failure is false")
+    }
+
     if problem.jobs().len() > 500 {
         let best_insertion = BestInsertion::new(BestInsertionParams {
             blink_rate: 0.0,
