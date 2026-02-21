@@ -59,8 +59,8 @@ impl LocalSearchOperator for TwoOptOperator {
     ) where
         C: FnMut(Self),
     {
-        // TODO: shipments
-        if problem.has_shipments() {
+        // Shipments can't be reversed
+        if !problem.has_services() {
             return;
         }
 
@@ -76,6 +76,10 @@ impl LocalSearchOperator for TwoOptOperator {
 
         for from in 0..route.activity_ids().len() - 2 {
             for to in (from + 2)..route.activity_ids().len() {
+                if route.contains_shipments(from, to + 1) {
+                    continue;
+                }
+
                 let op = TwoOptOperator::new(TwoOptParams {
                     route_id: r1,
                     from,

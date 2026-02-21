@@ -106,11 +106,6 @@ impl LocalSearchOperator for InterTwoOptStarOperator {
     ) where
         C: FnMut(Self),
     {
-        // TODO: shipments
-        if problem.has_shipments() {
-            return;
-        }
-
         if r1 <= r2 {
             return;
         }
@@ -129,10 +124,14 @@ impl LocalSearchOperator for InterTwoOptStarOperator {
         for from_pos in 0..from_route_length - 1 {
             let from_tail_length = from_route_length - from_pos - 1;
 
+            if from_route.contains_pending_shipment(from_pos + 1, from_route_length) {
+                continue;
+            }
+
             if !to_route.can_vehicle_deliver_segment(
                 problem,
                 from_route,
-                from_pos,
+                from_pos + 1,
                 from_pos + from_tail_length,
             ) {
                 continue;
@@ -140,6 +139,10 @@ impl LocalSearchOperator for InterTwoOptStarOperator {
 
             for to_pos in 0..to_route_length - 1 {
                 let to_tail_length = to_route_length - to_pos - 1;
+
+                if to_route.contains_pending_shipment(to_pos + 1, to_route_length) {
+                    continue;
+                }
 
                 if from_route
                     .will_break_maximum_activities(problem, to_tail_length - from_tail_length)
@@ -156,7 +159,7 @@ impl LocalSearchOperator for InterTwoOptStarOperator {
                 if !from_route.can_vehicle_deliver_segment(
                     problem,
                     to_route,
-                    to_pos,
+                    to_pos + 1,
                     to_pos + to_tail_length,
                 ) {
                     continue;

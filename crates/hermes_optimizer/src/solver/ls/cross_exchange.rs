@@ -82,11 +82,6 @@ impl LocalSearchOperator for CrossExchangeOperator {
     ) where
         C: FnMut(Self),
     {
-        // TODO: shipments
-        if problem.has_shipments() {
-            return;
-        }
-
         if r1 <= r2 {
             return;
         }
@@ -109,11 +104,19 @@ impl LocalSearchOperator for CrossExchangeOperator {
 
                 // A chain is at least length 2
                 for from_length in 2..=max_from_chain {
+                    if from_route.contains_pending_shipment(from_pos, from_pos + from_length) {
+                        continue;
+                    }
+
                     let from_previous = from_route.get(from_pos - 1);
                     let from_start = from_route.activity_id(from_pos);
                     let from_next = from_route.get(from_pos + from_length);
 
                     for to_length in 2..=max_to_chain {
+                        if to_route.contains_pending_shipment(to_pos, to_pos + to_length) {
+                            continue;
+                        }
+
                         let to_previous = to_route.get(to_pos - 1);
                         let to_start = to_route.activity_id(to_pos);
                         let to_next = to_route.get(to_pos + to_length);

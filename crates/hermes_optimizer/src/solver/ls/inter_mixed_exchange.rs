@@ -85,11 +85,6 @@ impl LocalSearchOperator for InterMixedExchange {
     ) where
         C: FnMut(Self),
     {
-        // TODO: shipments
-        if problem.has_shipments() {
-            return;
-        }
-
         if r1 == r2 {
             return;
         }
@@ -111,7 +106,15 @@ impl LocalSearchOperator for InterMixedExchange {
                 continue;
             }
 
+            if route1.activity_id(position).is_shipment() {
+                continue;
+            }
+
             for segment_start in 0..route2.len().saturating_sub(segment_length) {
+                if route2.contains_pending_shipment(segment_start, segment_start + segment_length) {
+                    continue;
+                }
+
                 if !route1.in_swap_neighborhood(
                     problem,
                     position,

@@ -23,7 +23,7 @@ use crate::{
             },
         },
     },
-    utils::{bbox::BBox, sparse_table::SparseTable},
+    utils::{bbox::BBox, bitset::BitSet, sparse_table::SparseTable},
 };
 
 #[derive(Clone)]
@@ -108,6 +108,12 @@ pub struct WorkingSolutionRoute {
     /// Store the total set of required skills for the services from the start to step i
     pub(super) skills_sparse_table: SparseTable,
 
+    /// pending_shipments[i] stores the set of pending shipments after visiting activity i
+    pub(super) pending_shipments: Vec<BitSet>,
+
+    /// num_shipments[i] counts the total number of shipments activities from start to activity i
+    pub(super) num_shipments: Vec<usize>,
+
     bbox: BBox,
 
     updated_in_iteration: bool,
@@ -140,6 +146,8 @@ impl WorkingSolutionRoute {
             fwd_load_pickups: Vec::new(),
             fwd_load_shipments: Vec::new(),
             fwd_time_slacks: Vec::new(),
+            pending_shipments: Vec::new(),
+            num_shipments: Vec::new(),
             skills_sparse_table: SparseTable::empty(),
             delivery_load_slack: problem.vehicle(vehicle_id).capacity().clone(),
             pickup_load_slack: problem.vehicle(vehicle_id).capacity().clone(),
@@ -826,6 +834,14 @@ impl WorkingSolutionRoute {
             Capacity::with_dimensions(problem.capacity_dimensions())
         });
 
+        self.pending_shipments
+            .resize_with(len, || BitSet::with_capacity(problem.jobs().len()));
+        self.pending_shipments
+            .iter_mut()
+            .for_each(|set| set.clear());
+        self.num_shipments.resize(len, 0);
+        self.num_shipments.fill(0);
+
         let steps = len + 2;
         self.bwd_cumulative_waiting_durations
             .resize(steps, SignedDuration::ZERO);
@@ -901,26 +917,50 @@ impl WorkingSolutionRoute {
         for i in 0..len {
             let activity_id = self.activity_ids[i];
 
-            match activity_id {
-                ActivityId::ShipmentPickup(id) => {
-                    let delivery_pos = self.jobs[&ActivityId::ShipmentDelivery(id)];
-                    assert!(
-                        delivery_pos > i,
-                        "Activity {} does not have its delivery after it, {:?}",
-                        activity_id,
-                        self.activity_ids
-                    );
+            if problem.has_shipments() {
+                match activity_id {
+                    ActivityId::ShipmentPickup(id) => {
+                        let delivery_pos = self.jobs[&ActivityId::ShipmentDelivery(id)];
+                        assert!(
+                            delivery_pos > i,
+                            "Activity {} does not have its delivery after it, {:?}",
+                            activity_id,
+                            self.activity_ids
+                        );
+
+                        if i == 0 {
+                            self.pending_shipments[i].set(id.get(), true);
+                            self.num_shipments[i] = 1;
+                        } else {
+                            let (left, right) = self.pending_shipments.split_at_mut(i);
+                            right[0].clone_from(&left[i - 1]);
+                            right[0].set(id.get(), true);
+
+                            self.num_shipments[i] = self.num_shipments[i - 1] + 1;
+                        }
+                    }
+                    ActivityId::ShipmentDelivery(id) => {
+                        let pickup_pos = self.jobs[&ActivityId::ShipmentPickup(id)];
+                        assert!(
+                            pickup_pos < i,
+                            "Activity {} does not have its pickup before it, {:?}",
+                            activity_id,
+                            self.activity_ids
+                        );
+
+                        let (left, right) = self.pending_shipments.split_at_mut(i);
+                        right[0].clone_from(&left[i - 1]);
+                        right[0].set(id.get(), false);
+                        self.num_shipments[i] = self.num_shipments[i - 1] + 1;
+                    }
+                    ActivityId::Service(_) => {
+                        if i > 0 {
+                            let (left, right) = self.pending_shipments.split_at_mut(i);
+                            right[0].clone_from(&left[i - 1]);
+                            self.num_shipments[i] = self.num_shipments[i - 1];
+                        }
+                    }
                 }
-                ActivityId::ShipmentDelivery(id) => {
-                    let pickup_pos = self.jobs[&ActivityId::ShipmentPickup(id)];
-                    assert!(
-                        pickup_pos < i,
-                        "Activity {} does not have its pickup before it, {:?}",
-                        activity_id,
-                        self.activity_ids
-                    );
-                }
-                _ => {}
             }
 
             let job = problem.job(activity_id.job_id());
@@ -1187,6 +1227,31 @@ impl WorkingSolutionRoute {
         RouteUpdateIterator::new(problem, self, jobs_iter, start, end)
     }
 
+    /// Checks if there are any pending shipments in the range [start, end)
+    pub fn contains_pending_shipment(&self, start: usize, end: usize) -> bool {
+        assert!(start < self.len());
+        assert!(end <= self.len());
+
+        if start == 0 {
+            !self.pending_shipments[end - 1].is_all_zeroes()
+        } else {
+            self.pending_shipments[start - 1] != self.pending_shipments[end - 1]
+        }
+    }
+
+    /// Checks if there are any shipments in the range [start, end)
+    pub fn contains_shipments(&self, start: usize, end: usize) -> bool {
+        assert!(start < self.len());
+        assert!(end <= self.len());
+
+        if start == 0 {
+            self.num_shipments[end - 1] > 0
+        } else {
+            self.num_shipments[end - 1] - self.num_shipments[start - 1] > 0
+        }
+    }
+
+    /// Check if a vehicle can deliver a segment from another route between [start, end)
     pub fn can_vehicle_deliver_segment(
         &self,
         problem: &VehicleRoutingProblem,
@@ -2063,6 +2128,238 @@ mod tests {
 
         route.remove_activity(&problem, ActivityId::shipment_delivery(3));
         assert_eq!(route.activity_ids, vec![ActivityId::service(0),]);
+    }
+
+    #[test]
+    fn test_pending_shipments() {
+        let problem = create_mixed_problem(
+            vec![TestService::default(), TestService::default()],
+            vec![TestShipment::default(), TestShipment::default()],
+            TestProblemOptions::default(),
+        );
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+
+        route.insert(
+            &problem,
+            &Insertion::Service(ServiceInsertion {
+                job_index: JobIdx::new(0),
+                position: 0,
+                route_id: RouteIdx::new(0),
+            }),
+        );
+
+        route.insert(
+            &problem,
+            &Insertion::Shipment(ShipmentInsertion {
+                pickup_position: 0,
+                delivery_position: 1,
+                job_index: JobIdx::new(2),
+                route_id: RouteIdx::new(0),
+            }),
+        );
+
+        route.insert(
+            &problem,
+            &Insertion::Shipment(ShipmentInsertion {
+                pickup_position: 1,
+                delivery_position: 1,
+                job_index: JobIdx::new(3),
+                route_id: RouteIdx::new(0),
+            }),
+        );
+
+        assert_eq!(
+            route.activity_ids,
+            vec![
+                ActivityId::shipment_pickup(2),
+                ActivityId::shipment_pickup(3),
+                ActivityId::shipment_delivery(3),
+                ActivityId::service(0),
+                ActivityId::shipment_delivery(2)
+            ]
+        );
+
+        assert_eq!(route.pending_shipments[0].ones(), vec![2]);
+        assert_eq!(route.pending_shipments[1].ones(), vec![2, 3]);
+        assert_eq!(route.pending_shipments[2].ones(), vec![2]);
+        assert_eq!(route.pending_shipments[3].ones(), vec![2]);
+        assert_eq!(route.pending_shipments[4].ones(), Vec::<usize>::new());
+    }
+
+    #[test]
+    fn test_num_shipments() {
+        let problem = create_mixed_problem(
+            vec![TestService::default(), TestService::default()],
+            vec![TestShipment::default(), TestShipment::default()],
+            TestProblemOptions::default(),
+        );
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+
+        route.insert(
+            &problem,
+            &Insertion::Service(ServiceInsertion {
+                job_index: JobIdx::new(0),
+                position: 0,
+                route_id: RouteIdx::new(0),
+            }),
+        );
+
+        route.insert(
+            &problem,
+            &Insertion::Shipment(ShipmentInsertion {
+                pickup_position: 0,
+                delivery_position: 1,
+                job_index: JobIdx::new(2),
+                route_id: RouteIdx::new(0),
+            }),
+        );
+
+        route.insert(
+            &problem,
+            &Insertion::Shipment(ShipmentInsertion {
+                pickup_position: 1,
+                delivery_position: 1,
+                job_index: JobIdx::new(3),
+                route_id: RouteIdx::new(0),
+            }),
+        );
+
+        assert_eq!(
+            route.activity_ids,
+            vec![
+                ActivityId::shipment_pickup(2),
+                ActivityId::shipment_pickup(3),
+                ActivityId::shipment_delivery(3),
+                ActivityId::service(0),
+                ActivityId::shipment_delivery(2)
+            ]
+        );
+
+        assert_eq!(route.num_shipments[0], 1);
+        assert_eq!(route.num_shipments[1], 2);
+        assert_eq!(route.num_shipments[2], 3);
+        assert_eq!(route.num_shipments[3], 3);
+        assert_eq!(route.num_shipments[4], 4);
+    }
+
+    #[test]
+    fn test_contains_pending_shipment() {
+        let problem = create_mixed_problem(
+            vec![TestService::default(), TestService::default()],
+            vec![TestShipment::default(), TestShipment::default()],
+            TestProblemOptions::default(),
+        );
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+
+        route.insert(
+            &problem,
+            &Insertion::Service(ServiceInsertion {
+                job_index: JobIdx::new(0),
+                position: 0,
+                route_id: RouteIdx::new(0),
+            }),
+        );
+
+        route.insert(
+            &problem,
+            &Insertion::Shipment(ShipmentInsertion {
+                pickup_position: 0,
+                delivery_position: 1,
+                job_index: JobIdx::new(2),
+                route_id: RouteIdx::new(0),
+            }),
+        );
+
+        route.insert(
+            &problem,
+            &Insertion::Shipment(ShipmentInsertion {
+                pickup_position: 1,
+                delivery_position: 1,
+                job_index: JobIdx::new(3),
+                route_id: RouteIdx::new(0),
+            }),
+        );
+
+        assert_eq!(
+            route.activity_ids,
+            vec![
+                ActivityId::shipment_pickup(2),
+                ActivityId::shipment_pickup(3),
+                ActivityId::shipment_delivery(3),
+                ActivityId::service(0),
+                ActivityId::shipment_delivery(2)
+            ]
+        );
+
+        assert!(route.contains_pending_shipment(0, 1));
+        assert!(route.contains_pending_shipment(0, 2));
+        assert!(route.contains_pending_shipment(0, 3));
+
+        assert!(!route.contains_pending_shipment(1, 3));
+        assert!(!route.contains_pending_shipment(1, 4));
+        assert!(route.contains_pending_shipment(1, 5));
+        assert!(!route.contains_pending_shipment(0, 5));
+    }
+
+    #[test]
+    fn test_contains_shipments() {
+        let problem = create_mixed_problem(
+            vec![TestService::default(), TestService::default()],
+            vec![TestShipment::default(), TestShipment::default()],
+            TestProblemOptions::default(),
+        );
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+
+        route.insert(
+            &problem,
+            &Insertion::Service(ServiceInsertion {
+                job_index: JobIdx::new(0),
+                position: 0,
+                route_id: RouteIdx::new(0),
+            }),
+        );
+
+        route.insert(
+            &problem,
+            &Insertion::Shipment(ShipmentInsertion {
+                pickup_position: 0,
+                delivery_position: 1,
+                job_index: JobIdx::new(2),
+                route_id: RouteIdx::new(0),
+            }),
+        );
+
+        route.insert(
+            &problem,
+            &Insertion::Shipment(ShipmentInsertion {
+                pickup_position: 1,
+                delivery_position: 1,
+                job_index: JobIdx::new(3),
+                route_id: RouteIdx::new(0),
+            }),
+        );
+
+        assert_eq!(
+            route.activity_ids,
+            vec![
+                ActivityId::shipment_pickup(2),
+                ActivityId::shipment_pickup(3),
+                ActivityId::shipment_delivery(3),
+                ActivityId::service(0),
+                ActivityId::shipment_delivery(2)
+            ]
+        );
+
+        assert!(route.contains_shipments(0, 1));
+        assert!(route.contains_shipments(0, 2));
+        assert!(route.contains_shipments(0, 3));
+
+        assert!(route.contains_shipments(1, 3));
+        assert!(route.contains_shipments(1, 4));
+        assert!(route.contains_shipments(1, 5));
+        assert!(route.contains_shipments(0, 5));
+
+        assert!(!route.contains_shipments(3, 4));
     }
 
     #[test]

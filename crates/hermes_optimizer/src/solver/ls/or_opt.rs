@@ -98,11 +98,6 @@ impl LocalSearchOperator for OrOptOperator {
     ) where
         C: FnMut(Self),
     {
-        // TODO: shipments
-        if problem.has_shipments() {
-            return;
-        }
-
         if r1 != r2 {
             return;
         }
@@ -119,6 +114,10 @@ impl LocalSearchOperator for OrOptOperator {
 
         // A, B, C, D -> C, D, A, B, from_pos = 0, to_pos =
         for from_pos in 0..route_length - 1 {
+            if route.contains_pending_shipment(from_pos, from_pos + segment_length) {
+                continue;
+            }
+
             for to_pos in 0..route_length {
                 if from_pos == to_pos {
                     continue;

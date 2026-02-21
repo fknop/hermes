@@ -62,11 +62,6 @@ impl LocalSearchOperator for InterOrOptOperator {
     ) where
         C: FnMut(Self),
     {
-        // TODO: shipments
-        if problem.has_shipments() {
-            return;
-        }
-
         if r1 == r2 {
             return;
         }
@@ -94,6 +89,10 @@ impl LocalSearchOperator for InterOrOptOperator {
                     from_pos,
                     from_pos + segment_length,
                 ) {
+                    continue;
+                }
+
+                if from_route.contains_pending_shipment(from_pos, from_pos + segment_length) {
                     continue;
                 }
 

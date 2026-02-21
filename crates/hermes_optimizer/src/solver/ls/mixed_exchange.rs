@@ -112,11 +112,6 @@ impl LocalSearchOperator for MixedExchangeOperator {
     ) where
         C: FnMut(Self),
     {
-        // TODO: shipments
-        if problem.has_shipments() {
-            return;
-        }
-
         if r1 != r2 {
             return;
         }
@@ -129,6 +124,10 @@ impl LocalSearchOperator for MixedExchangeOperator {
 
         let segment_length = 2;
         for segment_start in 0..route.len() - segment_length + 1 {
+            if route.contains_pending_shipment(segment_start, segment_start + segment_length) {
+                continue;
+            }
+
             for to in 0..route.len() {
                 if to == segment_start {
                     continue;
@@ -139,6 +138,10 @@ impl LocalSearchOperator for MixedExchangeOperator {
                 }
 
                 if to > segment_start && to <= segment_start + segment_length {
+                    continue;
+                }
+
+                if route.activity_id(to).is_shipment() {
                     continue;
                 }
 
