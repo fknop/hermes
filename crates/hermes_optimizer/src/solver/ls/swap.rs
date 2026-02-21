@@ -46,7 +46,7 @@ impl SwapOperator {
         let first = route.activity_id(params.first);
         let second = route.activity_id(params.second);
 
-        if first.is_shipment() && second.is_shipment() && first.job_id() == second.job_id() {
+        if first.is_shipment() && second.is_shipment() {
             assert_ne!(
                 first.job_id(),
                 second.job_id(),
