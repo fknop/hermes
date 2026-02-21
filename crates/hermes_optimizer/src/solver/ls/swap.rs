@@ -37,51 +37,57 @@ pub struct SwapOperatorParams {
 
 impl SwapOperator {
     pub fn new(solution: &WorkingSolution, params: SwapOperatorParams) -> Self {
-        if params.first == params.second {
-            panic!("SwapOperator: 'first' and 'second' positions must be different.");
-        }
+        assert_ne!(
+            params.first, params.second,
+            "SwapOperator: 'first' and 'second' positions must be different."
+        );
 
         let route = solution.route(params.route_id);
         let first = route.activity_id(params.first);
         let second = route.activity_id(params.second);
 
         if first.is_shipment() && second.is_shipment() && first.job_id() == second.job_id() {
-            panic!(
+            assert_ne!(
+                first.job_id(),
+                second.job_id(),
                 "SwapOperator: cannot swap shipments of the same job. {:?}, {:?} <=> {:?}",
-                params, first, second
+                params,
+                first,
+                second
             );
         }
 
         match first {
             ActivityId::ShipmentPickup(_) => {
-                if route.matching_shipment_position(first) < params.second {
-                    panic!(
-                        "Cannot move pickup shipment to a position after its matching delivery. {:?}, {:?} <=> {:?}",
-                        params, first, second
-                    )
-                }
+                assert!(
+                    (route.matching_shipment_position(first) >= params.second),
+                    "Cannot move pickup shipment to a position after its matching delivery. {:?}, {:?} <=> {:?}",
+                    params,
+                    first,
+                    second
+                )
             }
             ActivityId::ShipmentDelivery(_) => {
-                if route.matching_shipment_position(first) >= params.first {
-                    panic!(
-                        "Cannot move delivery shipment to a position before its matching pickup. {:?}, {:?} <=> {:?}",
-                        params, first, second
-                    )
-                }
+                assert!(
+                    (route.matching_shipment_position(first) < params.first),
+                    "Cannot move delivery shipment to a position before its matching pickup. {:?}, {:?} <=> {:?}",
+                    params,
+                    first,
+                    second
+                );
             }
             _ => {}
         }
 
-        if let ActivityId::ShipmentDelivery(_) = second
-            && route.matching_shipment_position(second) >= params.first
-        {
-            panic!(
+        if let ActivityId::ShipmentDelivery(_) = second {
+            assert!(
+                route.matching_shipment_position(second) < params.first,
                 "Cannot move delivery shipment to a position before its matching pickup. {:?}, {:?} <=> {:?}\n{:?}",
                 params,
                 first,
                 second,
                 route.activity_ids()
-            )
+            );
         }
 
         SwapOperator { params }
