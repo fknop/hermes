@@ -125,7 +125,7 @@ impl RouteConstraint for CapacityConstraint {
                 } else if !context.insert_on_failure {
                     return Score::hard(1.0);
                 } else {
-                    unimplemented!("Shipment failure not implemented on insert_on_failure=true")
+                    todo!("Shipment failure not implemented on insert_on_failure=true")
                 }
             }
         }
