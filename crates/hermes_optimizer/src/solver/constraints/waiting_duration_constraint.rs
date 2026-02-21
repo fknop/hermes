@@ -42,18 +42,24 @@ impl RouteConstraint for WaitingDurationConstraint {
 
         let route = context.route();
 
-        match context.insertion {
-            Insertion::Service(i) => Score::soft(context.problem().waiting_duration_cost(
-                route.waiting_duration_change_delta(
-                    context.problem(),
-                    std::iter::once(problem::job::ActivityId::Service(
-                        context.insertion.job_idx(),
-                    )),
-                    i.position,
-                    i.position,
-                ),
-            )),
-            _ => todo!(),
-        }
+        let delta = match context.insertion {
+            Insertion::Service(insertion) => route.waiting_duration_change_delta(
+                context.problem(),
+                insertion.inserted_activity_ids(),
+                insertion.position,
+                insertion.position,
+            ),
+            Insertion::Shipment(insertion) => route.waiting_duration_change_delta(
+                context.problem(),
+                insertion.inserted_activity_ids(route),
+                insertion.pickup_position,
+                insertion.delivery_position,
+            ),
+        };
+
+        Score::of(
+            self.score_level(),
+            context.problem.waiting_duration_cost(delta),
+        )
     }
 }
