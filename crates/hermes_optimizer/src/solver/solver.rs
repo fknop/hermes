@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use jiff::Timestamp;
-use parking_lot::{MappedRwLockReadGuard, RwLock};
+use parking_lot::RwLock;
 use schemars::JsonSchema;
 use serde::Serialize;
 

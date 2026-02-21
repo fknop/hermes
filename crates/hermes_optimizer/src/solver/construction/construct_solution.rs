@@ -9,7 +9,7 @@ use crate::{
     problem::{
         amount::AmountExpression,
         capacity::Capacity,
-        job::{self, Job, JobIdx},
+        job::{Job, JobIdx},
         location::LocationIdx,
         service::ServiceType,
         time_window::TimeWindows,

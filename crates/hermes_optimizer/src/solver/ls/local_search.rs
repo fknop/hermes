@@ -3,7 +3,7 @@ use std::f64;
 use fxhash::{FxBuildHasher, FxHashMap, FxHashSet};
 use jiff::SignedDuration;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
-use tracing::{debug, info, instrument, trace, warn};
+use tracing::{debug, instrument, trace, warn};
 
 use crate::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,

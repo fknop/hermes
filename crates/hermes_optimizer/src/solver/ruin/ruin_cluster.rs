@@ -2,7 +2,7 @@ use fxhash::FxHashSet;
 use rand::seq::IndexedRandom;
 
 use crate::{
-    problem::job::{ActivityId, JobIdx},
+    problem::job::ActivityId,
     solver::solution::{route_id::RouteIdx, working_solution::WorkingSolution},
     utils::kruskal::kruskal_cluster,
 };

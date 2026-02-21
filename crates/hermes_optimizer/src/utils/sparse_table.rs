@@ -1,4 +1,3 @@
-use fixedbitset::FixedBitSet;
 
 use crate::utils::bitset::BitSet;
 

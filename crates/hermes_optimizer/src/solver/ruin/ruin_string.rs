@@ -4,10 +4,7 @@
 use fxhash::FxHashSet;
 use rand::seq::IndexedRandom;
 
-use crate::{
-    problem::job::ActivityId,
-    solver::solution::{route_id::RouteIdx, working_solution::WorkingSolution},
-};
+use crate::solver::solution::{route_id::RouteIdx, working_solution::WorkingSolution};
 
 use super::{ruin_context::RuinContext, ruin_solution::RuinSolution};
 

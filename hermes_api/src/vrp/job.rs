@@ -9,11 +9,11 @@ use geojson::{Feature, Geometry};
 use hermes_optimizer::{
     json::types::{FromProblem as _, JsonLocation, JsonService, JsonVehicle},
     problem::{
-        job::Job, location::Location, meters::Meters,
+        job::Job, meters::Meters,
         vehicle_routing_problem::VehicleRoutingProblem,
     },
     solver::{
-        accepted_solution::{self, AcceptedSolution},
+        accepted_solution::AcceptedSolution,
         alns_weights::AlnsWeights,
         recreate::recreate_strategy::RecreateStrategy,
         ruin::ruin_strategy::RuinStrategy,
@@ -22,20 +22,14 @@ use hermes_optimizer::{
         statistics::AggregatedStatistics,
     },
 };
-use hermes_routing::{
-    geopoint::GeoPoint,
-    hermes::Hermes,
-    routing::routing_request::{RoutingAlgorithm, RoutingRequest, RoutingRequestOptions},
-};
 use jiff::SignedDuration;
-use parking_lot::MappedRwLockReadGuard;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
     error::ApiError,
-    state::{self, AppState},
+    state::AppState,
 };
 
 use super::api_solution::{

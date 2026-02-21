@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     define_index_newtype,
-    problem::{job::Job, skill::Skill, vehicle_profile::VehicleProfileIdx},
+    problem::{skill::Skill, vehicle_profile::VehicleProfileIdx},
     utils::bitset::BitSet,
 };
 

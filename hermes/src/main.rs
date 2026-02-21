@@ -1,7 +1,7 @@
 use hermes_optimizer::{
     parsers::parser::parse_dataset,
     solver::{
-        solver::{self, Solver},
+        solver::Solver,
         solver_params::{SolverParams, SolverParamsDebugOptions, Termination, Threads},
     },
 };

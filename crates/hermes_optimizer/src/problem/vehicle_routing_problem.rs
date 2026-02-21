@@ -19,7 +19,7 @@ use crate::{
     },
     solver::constraints::transport_cost_constraint::TRANSPORT_COST_WEIGHT,
     utils::{
-        bitset::BitSet, enumerate_idx::EnumerateIdx, one_tree::alpha_nearest_neighbors,
+        enumerate_idx::EnumerateIdx, one_tree::alpha_nearest_neighbors,
         zip_longest::zip_longest,
     },
 };

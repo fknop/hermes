@@ -105,7 +105,7 @@ impl MixedExchangeOperator {
 impl LocalSearchOperator for MixedExchangeOperator {
     #[instrument(skip_all,level = Level::TRACE)]
     fn generate_moves<C>(
-        problem: &VehicleRoutingProblem,
+        _problem: &VehicleRoutingProblem,
         solution: &WorkingSolution,
         (r1, r2): (RouteIdx, RouteIdx),
         mut consumer: C,
