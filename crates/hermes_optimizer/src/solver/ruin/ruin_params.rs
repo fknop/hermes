@@ -22,7 +22,7 @@ impl Default for RuinParams {
         RuinParams {
             ruin_strategies: vec![
                 RuinStrategy::RuinString,
-                RuinStrategy::RuinTimeRelated,
+                RuinStrategy::RuinShaw,
                 RuinStrategy::RuinRadial,
                 // RuinStrategy::Random,
                 RuinStrategy::RuinWorst,

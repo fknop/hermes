@@ -6,8 +6,8 @@ use crate::solver::solution::working_solution::WorkingSolution;
 
 use super::{
     ruin_cluster::RuinCluster, ruin_context::RuinContext, ruin_radial::RuinRadial,
-    ruin_random::RuinRandom, ruin_route::RuinRoute, ruin_solution::RuinSolution,
-    ruin_string::RuinString, ruin_time_related::RuinTimeRelated, ruin_worst::RuinWorst,
+    ruin_random::RuinRandom, ruin_route::RuinRoute, ruin_shaw::RuinShaw,
+    ruin_solution::RuinSolution, ruin_string::RuinString, ruin_worst::RuinWorst,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize)]
@@ -16,7 +16,7 @@ pub enum RuinStrategy {
     RuinRadial,
     RuinWorst,
     RuinString,
-    RuinTimeRelated,
+    RuinShaw,
     RuinCluster,
     RuinRoute,
 }
@@ -28,7 +28,7 @@ impl Display for RuinStrategy {
             Self::RuinRadial => write!(f, "RuinRadial"),
             Self::RuinWorst => write!(f, "RuinWorst"),
             Self::RuinString => write!(f, "RuinString"),
-            Self::RuinTimeRelated => write!(f, "RuinTimeRelated"),
+            Self::RuinShaw => write!(f, "RuinShaw"),
             Self::RuinCluster => write!(f, "RuinCluster"),
             Self::RuinRoute => write!(f, "RuinRoute"),
         }
@@ -57,8 +57,8 @@ impl RuinSolution for RuinStrategy {
                 let strategy = RuinString::default();
                 strategy.ruin_solution(solution, context);
             }
-            RuinStrategy::RuinTimeRelated => {
-                let strategy = RuinTimeRelated;
+            RuinStrategy::RuinShaw => {
+                let strategy = RuinShaw;
                 strategy.ruin_solution(solution, context);
             }
             RuinStrategy::RuinCluster => {

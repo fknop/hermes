@@ -12,13 +12,13 @@ use crate::{
 
 use super::{ruin_context::RuinContext, ruin_solution::RuinSolution};
 
-pub struct RuinTimeRelated;
+pub struct RuinShaw;
 
 const DISTANCE_RELATEDNESS_WEIGHT: f64 = 9.0;
 const TIME_RELATEDNESS_WEIGHT: f64 = 3.0;
 const DEMAND_RELATEDNESS_WEIGHT: f64 = 2.0;
 
-impl RuinTimeRelated {
+impl RuinShaw {
     fn relatedness(
         activity: &RelatednessToTargetActivity,
         max_distance: Meters,
@@ -42,7 +42,7 @@ impl RuinTimeRelated {
     }
 }
 
-impl RuinSolution for RuinTimeRelated {
+impl RuinSolution for RuinShaw {
     fn ruin_solution<R>(&self, solution: &mut WorkingSolution, context: RuinContext<R>)
     where
         R: rand::Rng,
@@ -204,8 +204,11 @@ impl RuinSolution for RuinTimeRelated {
         }
 
         related_activities.sort_unstable_by(|a, b| {
-            RuinTimeRelated::relatedness(a, max_distance, max_time)
-                .total_cmp(&RuinTimeRelated::relatedness(b, max_distance, max_time))
+            RuinShaw::relatedness(a, max_distance, max_time).total_cmp(&RuinShaw::relatedness(
+                b,
+                max_distance,
+                max_time,
+            ))
         });
 
         let mut remaining_to_remove = context.num_jobs_to_remove;
