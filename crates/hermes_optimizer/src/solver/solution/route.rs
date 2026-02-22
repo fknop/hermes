@@ -1494,6 +1494,9 @@ impl WorkingSolutionRoute {
         start: usize,
         end: usize,
     ) -> bool {
+        assert!(start <= end);
+        assert!(end <= self.len() + 1);
+
         if !problem.has_time_windows()
             && self.vehicle(problem).maximum_working_duration().is_none()
             && self.vehicle(problem).latest_end_time().is_none()

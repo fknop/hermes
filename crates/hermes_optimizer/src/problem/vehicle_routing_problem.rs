@@ -275,7 +275,7 @@ impl VehicleRoutingProblem {
         {
             JobActivity::ShipmentDelivery(shipment)
         } else {
-            panic!("Job {activity_id} is not valid");
+            unreachable!("Job {activity_id} is not valid");
         }
     }
 
