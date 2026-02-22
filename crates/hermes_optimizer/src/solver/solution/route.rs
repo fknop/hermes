@@ -1723,6 +1723,7 @@ impl WorkingSolutionRoute {
             }
         }
 
+        // start < end means we delete existing activities
         if start < end && end <= self.len() {
             if start > 0 {
                 delivery_load_delta -=

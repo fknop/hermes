@@ -153,18 +153,6 @@ impl<E: AmountExpression> SubAssign<E> for Amount {
     }
 }
 
-impl<'a, 'b> Add<&'b Amount> for &'a Amount {
-    type Output = AmountSum<&'a Amount, &'b Amount>;
-    fn add(self, rhs: &'b Amount) -> Self::Output {
-        AmountSum { lhs: self, rhs }
-    }
-}
-impl<'a, 'b> Sub<&'b Amount> for &'a Amount {
-    type Output = AmountSub<&'a Amount, &'b Amount>;
-    fn sub(self, rhs: &'b Amount) -> Self::Output {
-        AmountSub { lhs: self, rhs }
-    }
-}
 
 impl<A> PartialEq<A> for Amount
 where
@@ -322,56 +310,78 @@ where
     }
 }
 
-// Macro to implement Add<RHS> for LHS where output is AmountSum<LHS, RHS>
-macro_rules! impl_add_mix {
-    ($lhs:ty, $rhs:ty) => {
-        impl<'a, L, R> Add<$rhs> for $lhs
-        where
-            L: AmountExpression,
-            R: AmountExpression,
-        {
-            type Output = AmountSum<$lhs, $rhs>;
-            fn add(self, rhs: $rhs) -> Self::Output {
-                AmountSum { lhs: self, rhs }
-            }
-        }
-    };
+// AmountSum<L, R> + any AmountExpression
+impl<L, R, E> Add<E> for AmountSum<L, R>
+where
+    L: AmountExpression,
+    R: AmountExpression,
+    E: AmountExpression,
+{
+    type Output = AmountSum<AmountSum<L, R>, E>;
+    fn add(self, rhs: E) -> Self::Output {
+        AmountSum { lhs: self, rhs }
+    }
 }
 
-// Macro to implement Sub<RHS> for LHS where output is AmountSub<LHS, RHS>
-macro_rules! impl_sub_mix {
-    ($lhs:ty, $rhs:ty) => {
-        impl<'a, L, R> Sub<$rhs> for $lhs
-        where
-            L: AmountExpression,
-            R: AmountExpression,
-        {
-            type Output = AmountSub<$lhs, $rhs>;
-            fn sub(self, rhs: $rhs) -> Self::Output {
-                AmountSub { lhs: self, rhs }
-            }
-        }
-    };
+// AmountSum<L, R> - any AmountExpression
+impl<L, R, E> Sub<E> for AmountSum<L, R>
+where
+    L: AmountExpression,
+    R: AmountExpression,
+    E: AmountExpression,
+{
+    type Output = AmountSub<AmountSum<L, R>, E>;
+    fn sub(self, rhs: E) -> Self::Output {
+        AmountSub { lhs: self, rhs }
+    }
 }
 
-// Register combinations
-impl_add_mix!(AmountSum<L, R>, &'a Amount);
-impl_add_mix!(AmountSub<L, R>, &'a Amount);
-impl_add_mix!(AmountSum<L, R>, AmountSum<L, R>); // Self mix
-impl_add_mix!(AmountSum<L, R>, AmountSub<L, R>); // Cross mix
-impl_add_mix!(AmountSub<L, R>, AmountSum<L, R>); // Cross mix
-impl_add_mix!(AmountSub<L, R>, AmountSub<L, R>); // Self mix
-impl_add_mix!(&'a Amount, AmountSum<L, R>);
-impl_add_mix!(&'a Amount, AmountSub<L, R>);
+// AmountSub<L, R> + any AmountExpression
+impl<L, R, E> Add<E> for AmountSub<L, R>
+where
+    L: AmountExpression,
+    R: AmountExpression,
+    E: AmountExpression,
+{
+    type Output = AmountSum<AmountSub<L, R>, E>;
+    fn add(self, rhs: E) -> Self::Output {
+        AmountSum { lhs: self, rhs }
+    }
+}
 
-impl_sub_mix!(AmountSum<L, R>, &'a Amount);
-impl_sub_mix!(AmountSub<L, R>, &'a Amount);
-impl_sub_mix!(AmountSum<L, R>, AmountSum<L, R>);
-impl_sub_mix!(AmountSum<L, R>, AmountSub<L, R>);
-impl_sub_mix!(AmountSub<L, R>, AmountSum<L, R>);
-impl_sub_mix!(AmountSub<L, R>, AmountSub<L, R>);
-impl_sub_mix!(&'a Amount, AmountSum<L, R>);
-impl_sub_mix!(&'a Amount, AmountSub<L, R>);
+// AmountSub<L, R> - any AmountExpression
+impl<L, R, E> Sub<E> for AmountSub<L, R>
+where
+    L: AmountExpression,
+    R: AmountExpression,
+    E: AmountExpression,
+{
+    type Output = AmountSub<AmountSub<L, R>, E>;
+    fn sub(self, rhs: E) -> Self::Output {
+        AmountSub { lhs: self, rhs }
+    }
+}
+
+// &Amount + AmountSum or AmountSub (the &Amount + &Amount case is already handled above)
+impl<'a, E> Add<E> for &'a Amount
+where
+    E: AmountExpression,
+{
+    type Output = AmountSum<&'a Amount, E>;
+    fn add(self, rhs: E) -> Self::Output {
+        AmountSum { lhs: self, rhs }
+    }
+}
+
+impl<'a, E> Sub<E> for &'a Amount
+where
+    E: AmountExpression,
+{
+    type Output = AmountSub<&'a Amount, E>;
+    fn sub(self, rhs: E) -> Self::Output {
+        AmountSub { lhs: self, rhs }
+    }
+}
 
 #[cfg(test)]
 mod tests {
