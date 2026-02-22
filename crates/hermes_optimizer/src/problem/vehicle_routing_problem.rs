@@ -19,8 +19,7 @@ use crate::{
     },
     solver::constraints::transport_cost_constraint::TRANSPORT_COST_WEIGHT,
     utils::{
-        enumerate_idx::EnumerateIdx, one_tree::alpha_nearest_neighbors,
-        zip_longest::zip_longest,
+        enumerate_idx::EnumerateIdx, one_tree::alpha_nearest_neighbors, zip_longest::zip_longest,
     },
 };
 
@@ -259,6 +258,9 @@ impl VehicleRoutingProblem {
     }
 
     pub fn job_activity<'a>(&'a self, activity_id: ActivityId) -> JobActivity<'a> {
+        let job_id = activity_id.job_id().get();
+        assert!(job_id < self.jobs.len(), "Job ID out of bounds");
+
         // Can't use match here because if let bindings are experimental
         if let ActivityId::Service(service_id) = activity_id
             && let Job::Service(service) = &self.jobs[service_id]
@@ -274,16 +276,6 @@ impl VehicleRoutingProblem {
             JobActivity::ShipmentDelivery(shipment)
         } else {
             panic!("Job {activity_id} is not valid");
-        }
-    }
-
-    #[deprecated(note = "use job location instead")]
-    pub fn service_location(&self, service_id: usize) -> &Location {
-        if let Job::Service(service) = &self.jobs[service_id] {
-            let location_id = service.location_id();
-            &self.locations[location_id]
-        } else {
-            panic!("Job {service_id} is not a service");
         }
     }
 
