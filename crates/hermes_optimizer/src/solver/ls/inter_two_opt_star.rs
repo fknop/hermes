@@ -124,6 +124,10 @@ impl LocalSearchOperator for InterTwoOptStarOperator {
         for from_pos in 0..from_route_length - 1 {
             let from_tail_length = from_route_length - from_pos - 1;
 
+            if from_tail_length <= 1 {
+                continue;
+            }
+
             if from_route.contains_pending_shipment(from_pos + 1, from_route_length) {
                 continue;
             }
@@ -139,6 +143,10 @@ impl LocalSearchOperator for InterTwoOptStarOperator {
 
             for to_pos in 0..to_route_length - 1 {
                 let to_tail_length = to_route_length - to_pos - 1;
+
+                if to_tail_length <= 1 {
+                    continue;
+                }
 
                 if to_route.contains_pending_shipment(to_pos + 1, to_route_length) {
                     continue;

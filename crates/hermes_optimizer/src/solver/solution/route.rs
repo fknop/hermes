@@ -1259,7 +1259,7 @@ impl WorkingSolutionRoute {
         start: usize,
         end: usize,
     ) -> bool {
-        assert!(start < end);
+        assert!(start < end, "{} < {}", start, end);
 
         if self.vehicle_id == other.vehicle_id {
             return true;
@@ -1678,13 +1678,10 @@ impl WorkingSolutionRoute {
         assert!(start <= end);
         assert!(end <= self.len() + 1);
 
-        let initial_load = &self.current_load[0];
+        let vehicle = self.vehicle(problem);
 
         // Added delivery load from the new activities
         let mut added_delivery_load = Capacity::with_dimensions(problem.capacity_dimensions());
-
-        // Added pickup load from the new activities
-        let mut added_pickup_load = Capacity::with_dimensions(problem.capacity_dimensions());
 
         // Load from added deliveries minus load from removed deliveries
         let mut delivery_load_delta = Capacity::with_dimensions(problem.capacity_dimensions());
@@ -1692,26 +1689,8 @@ impl WorkingSolutionRoute {
         // Load from added pickups minus load from removed pickups
         let mut pickup_load_delta = Capacity::with_dimensions(problem.capacity_dimensions());
 
-        // Load from added shipments minus load from removed shipments
-        let mut shipment_load_delta = Capacity::with_dimensions(problem.capacity_dimensions());
-        let mut shipment_load_peak = Capacity::with_dimensions(problem.capacity_dimensions());
-
-        if start < end && end <= self.len() {
-            if start > 0 {
-                delivery_load_delta -=
-                    &self.fwd_load_deliveries[end - 1] - &self.fwd_load_deliveries[start - 1];
-                pickup_load_delta -=
-                    &self.fwd_load_pickups[end - 1] - &self.fwd_load_pickups[start - 1];
-                shipment_load_delta -=
-                    &self.fwd_load_shipments[end - 1] - &self.fwd_load_shipments[start - 1];
-            } else {
-                delivery_load_delta -= &self.fwd_load_deliveries[end - 1];
-                pickup_load_delta -= &self.fwd_load_pickups[end - 1];
-                shipment_load_delta -= &self.fwd_load_shipments[end - 1];
-            }
-        }
-
-        let load_before_insertion = &self.current_load[start] + &delivery_load_delta;
+        let mut peak_load_delta = Capacity::with_dimensions(problem.capacity_dimensions());
+        let mut load_delta = Capacity::with_dimensions(problem.capacity_dimensions());
 
         for activity_id in activity_ids {
             let job = problem.job(activity_id.job_id());
@@ -1722,50 +1701,62 @@ impl WorkingSolutionRoute {
                         match service.service_type() {
                             ServiceType::Pickup => {
                                 pickup_load_delta += job.demand();
-                                added_pickup_load += job.demand();
+                                load_delta += job.demand();
                             }
                             ServiceType::Delivery => {
                                 delivery_load_delta += job.demand();
                                 added_delivery_load += job.demand();
+
+                                load_delta -= job.demand();
                             }
                         }
                     }
                 }
                 ActivityId::ShipmentPickup(_) => {
-                    shipment_load_delta += job.demand();
-                    if shipment_load_delta > shipment_load_peak {
-                        shipment_load_peak.update(&shipment_load_delta);
-                    }
+                    load_delta += job.demand();
                 }
                 ActivityId::ShipmentDelivery(_) => {
-                    shipment_load_delta -= job.demand();
+                    load_delta -= job.demand();
                 }
+            }
+
+            if load_delta > peak_load_delta {
+                peak_load_delta.update(&load_delta);
             }
         }
 
+        if start < end && end <= self.len() {
+            if start > 0 {
+                delivery_load_delta -=
+                    &self.fwd_load_deliveries[end - 1] - &self.fwd_load_deliveries[start - 1];
+                pickup_load_delta -=
+                    &self.fwd_load_pickups[end - 1] - &self.fwd_load_pickups[start - 1];
+            } else {
+                delivery_load_delta -= &self.fwd_load_deliveries[end - 1];
+                pickup_load_delta -= &self.fwd_load_pickups[end - 1];
+            }
+        }
+
+        // The new initial load is the initial load with the additional or removed deliveries
         let new_initial_load = &self.current_load[0] + &delivery_load_delta;
 
-        let vehicle = self.vehicle(problem);
-
-        // Check the new initial load against vehicle capacity
+        // Check 1: check the new initial load against vehicle capacity
         if !is_capacity_satisfied(vehicle.capacity(), &new_initial_load) {
             return false;
         }
 
-        // Check 2: Peak load before insertion point [0, start]
-        // The loads before start are increased by delivery_load_delta (more deliveries to carry)
-        if start > 0 {
-            let peak_load_before_insertion = &self.fwd_load_peaks[start] + &delivery_load_delta;
-            if !is_capacity_satisfied(vehicle.capacity(), &peak_load_before_insertion) {
-                return false;
-            }
-        }
-
-        let load_at_start = &self.current_load[start] + &delivery_load_delta + &shipment_load_peak;
-        if !is_capacity_satisfied(vehicle.capacity(), &load_at_start) {
-            println!("load at start not satisfied");
+        // Check 2: check the peak load in the insertion range
+        // current_load[start] is the load before insertion, updated by delivery_load_delta
+        let peak_during_insertion =
+            &self.current_load[start] + &delivery_load_delta + &peak_load_delta;
+        if !is_capacity_satisfied(vehicle.capacity(), &peak_during_insertion) {
             return false;
         }
+
+        // let load_at_start = &self.current_load[start] + &delivery_load_delta; //+ &load_peak_delta;
+        // if !is_capacity_satisfied(vehicle.capacity(), &load_at_start) {
+        //     return false;
+        // }
 
         // if !is_capacity_satisfied(
         //     vehicle.capacity(),
@@ -1775,6 +1766,8 @@ impl WorkingSolutionRoute {
         //     return false;
         // }
 
+        // TODO: tests for this
+        // Check 3: check the load at end
         let load_at_end = &self.current_load[start] + &delivery_load_delta + &pickup_load_delta
             - &added_delivery_load
             - &self.current_load[end];
