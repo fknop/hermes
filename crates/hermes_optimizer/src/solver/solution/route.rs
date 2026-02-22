@@ -1693,30 +1693,25 @@ impl WorkingSolutionRoute {
         let mut load_delta = Capacity::with_dimensions(problem.capacity_dimensions());
 
         for activity_id in activity_ids {
-            let job = problem.job(activity_id.job_id());
+            let activity = problem.job_activity(activity_id);
 
-            match activity_id {
-                ActivityId::Service(_) => {
-                    if let Job::Service(service) = job {
-                        match service.service_type() {
-                            ServiceType::Pickup => {
-                                pickup_load_delta += job.demand();
-                                load_delta += job.demand();
-                            }
-                            ServiceType::Delivery => {
-                                delivery_load_delta += job.demand();
-                                added_delivery_load += job.demand();
-
-                                load_delta -= job.demand();
-                            }
-                        }
+            match activity {
+                JobActivity::Service(service) => match service.service_type() {
+                    ServiceType::Pickup => {
+                        pickup_load_delta += service.demand();
+                        load_delta += service.demand();
                     }
+                    ServiceType::Delivery => {
+                        delivery_load_delta += service.demand();
+                        added_delivery_load += service.demand();
+                        load_delta -= service.demand();
+                    }
+                },
+                JobActivity::ShipmentPickup(shipment) => {
+                    load_delta += shipment.demand();
                 }
-                ActivityId::ShipmentPickup(_) => {
-                    load_delta += job.demand();
-                }
-                ActivityId::ShipmentDelivery(_) => {
-                    load_delta -= job.demand();
+                JobActivity::ShipmentDelivery(shipment) => {
+                    load_delta -= shipment.demand();
                 }
             }
 
@@ -1753,21 +1748,10 @@ impl WorkingSolutionRoute {
             return false;
         }
 
-        // let load_at_start = &self.current_load[start] + &delivery_load_delta; //+ &load_peak_delta;
-        // if !is_capacity_satisfied(vehicle.capacity(), &load_at_start) {
-        //     return false;
-        // }
-
-        // if !is_capacity_satisfied(
-        //     vehicle.capacity(),
-        //     &(load_at_start + &pickup_load_delta + &shipment_load_peak),
-        // ) {
-        //     println!("pickup load not satisfied");
-        //     return false;
-        // }
-
-        // TODO: tests for this
         // Check 3: check the load at end
+        // self.current_load[start] + delivery_load_delta is the new initial load
+        // - added_delivery_load because we already delivered them
+        // + pickup_load_delta because we may have added or removed pickups
         let load_at_end = &self.current_load[start] + &delivery_load_delta + &pickup_load_delta
             - &added_delivery_load
             - &self.current_load[end];
@@ -3446,7 +3430,7 @@ mod tests {
             [
                 ActivityId::shipment_pickup(3),
                 ActivityId::shipment_delivery(3),
-                ActivityId::shipment_pickup(2),
+                ActivityId::service(2),
             ]
             .into_iter(),
             0,
@@ -3465,7 +3449,7 @@ mod tests {
                 (ServiceType::Delivery, Capacity::from_vec(vec![10.0])),
                 (ServiceType::Pickup, Capacity::from_vec(vec![10.0])),
             ],
-            vec![Capacity::from_vec(vec![10.0])], // shipment 0 (JobIdx 2)
+            vec![Capacity::from_vec(vec![10.0])],
         );
 
         let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
@@ -3476,7 +3460,7 @@ mod tests {
             &problem,
             [
                 ActivityId::shipment_pickup(3),
-                ActivityId::shipment_pickup(2),
+                ActivityId::service(2),
                 ActivityId::shipment_delivery(3),
             ]
             .into_iter(),
@@ -3557,6 +3541,118 @@ mod tests {
             7,
         );
         assert!(!is_valid);
+    }
+
+    /// Check 3: inserting a pickup before the suffix must account for the suffix peak.
+    ///
+    /// Route: [P_svc0(10), P_svc1(10)]  capacity = 20
+    ///   current_load: [0, 10, 20]
+    ///   bwd_load_peaks: peak from each position to end
+    ///
+    /// Insert P_svc2(5) at position 1 (start=1, end=1), keeping svc1 in the suffix.
+    ///   Check 2 (peak during insertion): current_load[1] + 5 = 15 ≤ 20  → passes
+    ///   Check 3 (suffix peak):           15 + 10 (from svc1) = 25 > 20  → must reject
+    #[test]
+    fn test_is_valid_capacity_change_pickup_suffix_overflow() {
+        let problem = create_problem_for_capacity_change(
+            Capacity::from_vec(vec![20.0]),
+            vec![
+                (ServiceType::Pickup, Capacity::from_vec(vec![10.0])), // svc0  JobIdx 0
+                (ServiceType::Pickup, Capacity::from_vec(vec![10.0])), // svc1  JobIdx 1
+                (ServiceType::Pickup, Capacity::from_vec(vec![5.0])),  // svc2  JobIdx 2
+            ],
+        );
+
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        route.insert_service(&problem, 1, JobIdx::new(1));
+        // route: [P_svc0(10), P_svc1(10)]
+        // loads:  10            20
+        // Both pickups together exactly fill capacity.
+
+        // Insert svc2(5) between svc0 and svc1: Check 2 sees only 10+5=15 ≤ 20,
+        // but the suffix (svc1, +10) would push the total to 25 > 20 → invalid.
+        let is_valid =
+            route.is_valid_capacity_change(&problem, [ActivityId::service(2)].into_iter(), 1, 1);
+        assert!(!is_valid);
+
+        // Sanity: inserting svc2 *after* svc1 (at the very end) is also invalid because
+        // the load at that point is already 20 and adding 5 more gives 25 > 20.
+        let is_valid =
+            route.is_valid_capacity_change(&problem, [ActivityId::service(2)].into_iter(), 2, 2);
+        assert!(!is_valid);
+
+        // Sanity: with more capacity (25) the mid-insertion is valid.
+        let problem_larger = create_problem_for_capacity_change(
+            Capacity::from_vec(vec![25.0]),
+            vec![
+                (ServiceType::Pickup, Capacity::from_vec(vec![10.0])),
+                (ServiceType::Pickup, Capacity::from_vec(vec![10.0])),
+                (ServiceType::Pickup, Capacity::from_vec(vec![5.0])),
+            ],
+        );
+        let mut route_larger = WorkingSolutionRoute::empty(&problem_larger, VehicleIdx::new(0));
+        route_larger.insert_service(&problem_larger, 0, JobIdx::new(0));
+        route_larger.insert_service(&problem_larger, 1, JobIdx::new(1));
+
+        let is_valid = route_larger.is_valid_capacity_change(
+            &problem_larger,
+            [ActivityId::service(2)].into_iter(),
+            1,
+            1,
+        );
+        assert!(is_valid);
+    }
+
+    #[test]
+    fn test_is_valid_capacity_change_pickup_suffix_overflow_with_shipments() {
+        let problem = create_problem_for_capacity_change_with_shipments(
+            Capacity::from_vec(vec![30.0]),
+            vec![
+                (ServiceType::Pickup, Capacity::from_vec(vec![10.0])), // svc0  JobIdx 0
+                (ServiceType::Pickup, Capacity::from_vec(vec![10.0])), // svc1  JobIdx 1
+                (ServiceType::Pickup, Capacity::from_vec(vec![10.0])), // svc2  JobIdx 2
+            ],
+            vec![Capacity::from_vec(vec![10.0])],
+        );
+
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        route.insert_service(&problem, 1, JobIdx::new(1));
+        route.insert_shipment(&problem, 2, 2, JobIdx::new(3));
+
+        let is_valid =
+            route.is_valid_capacity_change(&problem, [ActivityId::service(2)].into_iter(), 4, 4);
+        assert!(is_valid);
+
+        let is_valid =
+            route.is_valid_capacity_change(&problem, [ActivityId::service(2)].into_iter(), 3, 3);
+        assert!(!is_valid);
+
+        let is_valid = route.is_valid_capacity_change(
+            &problem,
+            [ActivityId::service(2), ActivityId::shipment_delivery(3)].into_iter(),
+            3,
+            4,
+        );
+        assert!(!is_valid);
+
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        route.insert_service(&problem, 1, JobIdx::new(1));
+        route.insert_service(&problem, 2, JobIdx::new(2));
+
+        let is_valid = route.is_valid_capacity_change(
+            &problem,
+            [
+                ActivityId::shipment_pickup(3),
+                ActivityId::shipment_delivery(3),
+            ]
+            .into_iter(),
+            0,
+            0,
+        );
+        assert!(is_valid);
     }
 
     #[test]
