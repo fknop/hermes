@@ -1675,12 +1675,43 @@ impl WorkingSolutionRoute {
         start: usize,
         end: usize,
     ) -> bool {
+        assert!(start <= end);
+        assert!(end <= self.len() + 1);
+
+        let initial_load = &self.current_load[0];
+
+        // Added delivery load from the new activities
         let mut added_delivery_load = Capacity::with_dimensions(problem.capacity_dimensions());
+
+        // Added pickup load from the new activities
         let mut added_pickup_load = Capacity::with_dimensions(problem.capacity_dimensions());
 
+        // Load from added deliveries minus load from removed deliveries
         let mut delivery_load_delta = Capacity::with_dimensions(problem.capacity_dimensions());
+
+        // Load from added pickups minus load from removed pickups
         let mut pickup_load_delta = Capacity::with_dimensions(problem.capacity_dimensions());
+
+        // Load from added shipments minus load from removed shipments
         let mut shipment_load_delta = Capacity::with_dimensions(problem.capacity_dimensions());
+        let mut shipment_load_peak = Capacity::with_dimensions(problem.capacity_dimensions());
+
+        if start < end && end <= self.len() {
+            if start > 0 {
+                delivery_load_delta -=
+                    &self.fwd_load_deliveries[end - 1] - &self.fwd_load_deliveries[start - 1];
+                pickup_load_delta -=
+                    &self.fwd_load_pickups[end - 1] - &self.fwd_load_pickups[start - 1];
+                shipment_load_delta -=
+                    &self.fwd_load_shipments[end - 1] - &self.fwd_load_shipments[start - 1];
+            } else {
+                delivery_load_delta -= &self.fwd_load_deliveries[end - 1];
+                pickup_load_delta -= &self.fwd_load_pickups[end - 1];
+                shipment_load_delta -= &self.fwd_load_shipments[end - 1];
+            }
+        }
+
+        let load_before_insertion = &self.current_load[start] + &delivery_load_delta;
 
         for activity_id in activity_ids {
             let job = problem.job(activity_id.job_id());
@@ -1702,22 +1733,13 @@ impl WorkingSolutionRoute {
                 }
                 ActivityId::ShipmentPickup(_) => {
                     shipment_load_delta += job.demand();
+                    if shipment_load_delta > shipment_load_peak {
+                        shipment_load_peak.update(&shipment_load_delta);
+                    }
                 }
                 ActivityId::ShipmentDelivery(_) => {
                     shipment_load_delta -= job.demand();
                 }
-            }
-        }
-
-        if start < end && end <= self.len() {
-            if start > 0 {
-                delivery_load_delta -=
-                    &self.fwd_load_deliveries[end - 1] - &self.fwd_load_deliveries[start - 1];
-                pickup_load_delta -=
-                    &self.fwd_load_pickups[end - 1] - &self.fwd_load_pickups[start - 1];
-            } else {
-                delivery_load_delta -= &self.fwd_load_deliveries[end - 1];
-                pickup_load_delta -= &self.fwd_load_pickups[end - 1];
             }
         }
 
@@ -1739,17 +1761,19 @@ impl WorkingSolutionRoute {
             }
         }
 
-        // let load_at_start = &self.current_load[start] + &delivery_load_delta;
-        // if !is_capacity_satisfied(vehicle.capacity(), &load_at_start) {
-        //     println!("load at start not satisfied");
-        //     return false;
-        // }
+        let load_at_start = &self.current_load[start] + &delivery_load_delta + &shipment_load_peak;
+        if !is_capacity_satisfied(vehicle.capacity(), &load_at_start) {
+            println!("load at start not satisfied");
+            return false;
+        }
 
-        // if !is_capacity_satisfied(vehicle.capacity(), &(load_at_start + &pickup_load_delta)) {
+        // if !is_capacity_satisfied(
+        //     vehicle.capacity(),
+        //     &(load_at_start + &pickup_load_delta + &shipment_load_peak),
+        // ) {
         //     println!("pickup load not satisfied");
         //     return false;
         // }
-        //
 
         let load_at_end = &self.current_load[start] + &delivery_load_delta + &pickup_load_delta
             - &added_delivery_load
@@ -2754,6 +2778,791 @@ mod tests {
         let is_valid =
             route.is_valid_capacity_change(&problem, [ActivityId::service(6)].into_iter(), 3, 3);
 
+        assert!(!is_valid);
+    }
+
+    /// Build a problem with configurable vehicle capacity, services (type + demand), and
+    /// shipments (demand). Services are indexed first (0..n_services), then shipments
+    /// (n_services..n_services+n_shipments), matching the convention used in
+    /// `create_problem_for_capacity_change`.
+    fn create_problem_for_capacity_change_with_shipments(
+        vehicle_capacity: Capacity,
+        services: Vec<(ServiceType, Capacity)>,
+        shipment_demands: Vec<Capacity>,
+    ) -> VehicleRoutingProblem {
+        use crate::problem::shipment::ShipmentBuilder;
+
+        let n_locations = services.len() + shipment_demands.len() * 2 + 1;
+        let locations = test_utils::create_location_grid(1, n_locations);
+
+        let mut vehicle_builder = VehicleBuilder::default();
+        vehicle_builder.set_depot_location_id(0);
+        vehicle_builder.set_capacity(vehicle_capacity);
+        vehicle_builder.set_vehicle_id(String::from("vehicle"));
+        vehicle_builder.set_profile_id(0);
+        let vehicle = vehicle_builder.build();
+
+        let services = services
+            .into_iter()
+            .enumerate()
+            .map(|(i, (service_type, demand))| {
+                let mut b = ServiceBuilder::default();
+                b.set_demand(demand);
+                b.set_external_id(format!("service_{}", i + 1));
+                b.set_service_duration(SignedDuration::from_mins(10));
+                b.set_location_id(i + 1);
+                b.set_service_type(service_type);
+                b.build()
+            })
+            .collect::<Vec<_>>();
+
+        let n_services = services.len();
+        let shipments = shipment_demands
+            .into_iter()
+            .enumerate()
+            .map(|(i, demand)| {
+                let mut b = crate::problem::shipment::ShipmentBuilder::default();
+                b.set_demand(demand);
+                b.set_external_id(format!("shipment_{}", i + 1));
+                b.set_pickup_location_id(n_services + i * 2 + 1);
+                b.set_delivery_location_id(n_services + i * 2 + 2);
+                b.build()
+            })
+            .collect::<Vec<_>>();
+
+        let mut builder = VehicleRoutingProblemBuilder::default();
+        builder.set_vehicle_profiles(vec![VehicleProfile::new(
+            "test_profile".to_owned(),
+            TravelMatrices::from_constant(
+                &locations,
+                SignedDuration::from_mins(30).as_secs_f64(),
+                100.0,
+                SignedDuration::from_mins(30).as_secs_f64(),
+            ),
+        )]);
+        builder.set_locations(locations);
+        builder.set_fleet(Fleet::Finite(vec![vehicle]));
+        builder.set_services(services);
+        builder.set_shipments(shipments);
+
+        builder.build()
+    }
+
+    // -------------------------------------------------------------------------
+    // Tests: is_valid_capacity_change with shipments
+    // -------------------------------------------------------------------------
+    //
+    // Job index layout produced by `create_problem_for_capacity_change_with_shipments`:
+    //   services 0..n_services  (delivery or pickup)
+    //   shipments n_services..  (each occupying one JobIdx)
+    //
+    // For a route that only contains shipments (no services), n_services == 0 so
+    // the shipments start at JobIdx 0.
+    //
+    // Capacity semantics recap
+    // ------------------------
+    // `is_valid_capacity_change(problem, new_activity_ids, start, end)` simulates
+    // replacing the half-open segment [start, end) of the current route with the
+    // supplied activities and checks that the resulting load profile fits inside
+    // the vehicle capacity.
+    //
+    //   start == end  → pure insertion (nothing removed)
+    //   activity_ids empty, start < end → pure removal
+    //
+    // Shipment pickup  : adds demand to the running load (like a pickup service).
+    // Shipment delivery: subtracts demand from the running load.
+
+    /// Shipments only – inserting a single shipment (pickup then delivery) into an
+    /// empty route must always succeed when demand ≤ capacity.
+    #[test]
+    fn test_is_valid_capacity_change_shipments_only_insert_fits() {
+        // Vehicle capacity: 30, one shipment with demand 20.
+        // n_services = 0 → shipment 0 has JobIdx 0.
+        let problem = create_problem_for_capacity_change_with_shipments(
+            Capacity::from_vec(vec![30.0]),
+            vec![],
+            vec![Capacity::from_vec(vec![20.0])],
+        );
+
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+
+        // Insert pickup then delivery into an empty route.
+        let is_valid = route.is_valid_capacity_change(
+            &problem,
+            [
+                ActivityId::shipment_pickup(0),
+                ActivityId::shipment_delivery(0),
+            ]
+            .into_iter(),
+            0,
+            0,
+        );
+        assert!(is_valid);
+    }
+
+    /// Shipments only – inserting a shipment whose demand exceeds the vehicle
+    /// capacity must be rejected.
+    #[test]
+    fn test_is_valid_capacity_change_shipments_only_insert_exceeds_capacity() {
+        // Vehicle capacity: 10, shipment demand 20 → exceeds capacity at pickup.
+        let problem = create_problem_for_capacity_change_with_shipments(
+            Capacity::from_vec(vec![10.0]),
+            vec![],
+            vec![Capacity::from_vec(vec![20.0])],
+        );
+
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+
+        let is_valid = route.is_valid_capacity_change(
+            &problem,
+            [
+                ActivityId::shipment_pickup(0),
+                ActivityId::shipment_delivery(0),
+            ]
+            .into_iter(),
+            0,
+            0,
+        );
+        assert!(!is_valid);
+    }
+
+    /// Shipments only – inserting a second shipment between the first shipment's
+    /// pickup and delivery.  The combined load at the inner segment must fit.
+    ///
+    /// Route after first insert: [P0, D0]
+    /// Swap: insert P1 at position 1, D1 at position 1 (nested: P0 P1 D1 D0).
+    /// Peak load = demand_0 + demand_1; must be ≤ capacity.
+    #[test]
+    fn test_is_valid_capacity_change_shipments_only_nested_fits() {
+        // Two shipments each with demand 15; vehicle capacity 30.
+        // Nested layout peak = 30 which is exactly at capacity → valid.
+        let problem = create_problem_for_capacity_change_with_shipments(
+            Capacity::from_vec(vec![30.0]),
+            vec![],
+            vec![
+                Capacity::from_vec(vec![15.0]), // shipment 0
+                Capacity::from_vec(vec![15.0]), // shipment 1
+            ],
+        );
+
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        // Build route: [P0, D0]
+        route.insert(
+            &problem,
+            &Insertion::Shipment(ShipmentInsertion {
+                pickup_position: 0,
+                delivery_position: 0,
+                job_index: JobIdx::new(0),
+                route_id: RouteIdx::new(0),
+            }),
+        );
+        // route is now [P0, D0]
+
+        // Insert P1+D1 between P0 and D0 (position 1, 1 → nested).
+        let is_valid = route.is_valid_capacity_change(
+            &problem,
+            [
+                ActivityId::shipment_pickup(1),
+                ActivityId::shipment_delivery(1),
+            ]
+            .into_iter(),
+            1,
+            1,
+        );
+        assert!(is_valid);
+    }
+
+    /// Shipments only – nested layout where combined demand exceeds capacity.
+    #[test]
+    fn test_is_valid_capacity_change_shipments_only_nested_exceeds_capacity() {
+        // Two shipments with demand 20 each; vehicle capacity 30.
+        // Nested peak = 40 > 30 → invalid.
+        let problem = create_problem_for_capacity_change_with_shipments(
+            Capacity::from_vec(vec![30.0]),
+            vec![],
+            vec![
+                Capacity::from_vec(vec![20.0]), // shipment 0
+                Capacity::from_vec(vec![20.0]), // shipment 1
+            ],
+        );
+
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert(
+            &problem,
+            &Insertion::Shipment(ShipmentInsertion {
+                pickup_position: 0,
+                delivery_position: 0,
+                job_index: JobIdx::new(0),
+                route_id: RouteIdx::new(0),
+            }),
+        );
+
+        let is_valid = route.is_valid_capacity_change(
+            &problem,
+            [
+                ActivityId::shipment_pickup(1),
+                ActivityId::shipment_delivery(1),
+            ]
+            .into_iter(),
+            1,
+            1,
+        );
+        assert!(!is_valid);
+    }
+
+    /// Shipments only – replacing one shipment with another of smaller demand is valid.
+    #[test]
+    fn test_is_valid_capacity_change_shipments_only_replace_fits() {
+        // Route: [P0, D0] with demand 25.  Replace with shipment 1 demand 10.
+        // Vehicle capacity 30. After replacement peak = 10 ≤ 30 → valid.
+        let problem = create_problem_for_capacity_change_with_shipments(
+            Capacity::from_vec(vec![30.0]),
+            vec![],
+            vec![
+                Capacity::from_vec(vec![25.0]), // shipment 0
+                Capacity::from_vec(vec![10.0]), // shipment 1
+            ],
+        );
+
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert(
+            &problem,
+            &Insertion::Shipment(ShipmentInsertion {
+                pickup_position: 0,
+                delivery_position: 0,
+                job_index: JobIdx::new(0),
+                route_id: RouteIdx::new(0),
+            }),
+        );
+        // route: [P0, D0]
+
+        // Replace both activities [0, 2) with shipment 1.
+        let is_valid = route.is_valid_capacity_change(
+            &problem,
+            [
+                ActivityId::shipment_pickup(1),
+                ActivityId::shipment_delivery(1),
+            ]
+            .into_iter(),
+            0,
+            2,
+        );
+        assert!(is_valid);
+    }
+
+    /// Shipments only – replacing one shipment with another of larger demand that
+    /// would exceed capacity is invalid.
+    #[test]
+    fn test_is_valid_capacity_change_shipments_only_replace_exceeds_capacity() {
+        // Route: [P0, D0] with demand 10.  Replace with shipment 1 demand 40.
+        // Vehicle capacity 30. After replacement peak = 40 > 30 → invalid.
+        let problem = create_problem_for_capacity_change_with_shipments(
+            Capacity::from_vec(vec![30.0]),
+            vec![],
+            vec![
+                Capacity::from_vec(vec![10.0]), // shipment 0
+                Capacity::from_vec(vec![40.0]), // shipment 1
+            ],
+        );
+
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert(
+            &problem,
+            &Insertion::Shipment(ShipmentInsertion {
+                pickup_position: 0,
+                delivery_position: 0,
+                job_index: JobIdx::new(0),
+                route_id: RouteIdx::new(0),
+            }),
+        );
+
+        let is_valid = route.is_valid_capacity_change(
+            &problem,
+            [
+                ActivityId::shipment_pickup(1),
+                ActivityId::shipment_delivery(1),
+            ]
+            .into_iter(),
+            0,
+            2,
+        );
+        assert!(!is_valid);
+    }
+
+    /// Shipments only – purely removing a shipment (empty activity list, segment
+    /// covers both pickup and delivery) must always succeed.
+    #[test]
+    fn test_is_valid_capacity_change_shipments_only_removal() {
+        let problem = create_problem_for_capacity_change_with_shipments(
+            Capacity::from_vec(vec![30.0]),
+            vec![],
+            vec![Capacity::from_vec(vec![20.0])],
+        );
+
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert(
+            &problem,
+            &Insertion::Shipment(ShipmentInsertion {
+                pickup_position: 0,
+                delivery_position: 0,
+                job_index: JobIdx::new(0),
+                route_id: RouteIdx::new(0),
+            }),
+        );
+        // route: [P0, D0]
+
+        // Remove both → empty iter, segment [0, 2)
+        let is_valid = route.is_valid_capacity_change(&problem, [].into_iter(), 0, 2);
+        assert!(is_valid);
+    }
+
+    // -----------------------------------------------------------------------
+    // Shipments mixed with delivery services
+    // -----------------------------------------------------------------------
+    //
+    // Job index layout (n_services = 2):
+    //   0 → delivery service_1 (demand 20)
+    //   1 → delivery service_2 (demand 20)
+    //   2 → shipment_1         (demand 15)
+    //   3 → shipment_2         (demand 15)
+    //
+    // Vehicle capacity: 50.
+
+    /// Mixed: inserting a shipment into a route that already has delivery services
+    /// – combined load must fit.
+    #[test]
+    fn test_is_valid_capacity_change_shipments_mixed_delivery_services_fits() {
+        // Route: [D_svc0(20), D_svc1(20)]
+        // Initial load = 40 (deliveries are pre-loaded).
+        // Insert P2+D2 (shipment demand 5) at end → peak at pickup point = 40+5 = 45 ≤ 50 → valid.
+        let problem = create_problem_for_capacity_change_with_shipments(
+            Capacity::from_vec(vec![50.0]),
+            vec![
+                (ServiceType::Delivery, Capacity::from_vec(vec![20.0])),
+                (ServiceType::Delivery, Capacity::from_vec(vec![20.0])),
+            ],
+            vec![
+                Capacity::from_vec(vec![5.0]),  // shipment 0 (JobIdx 2)
+                Capacity::from_vec(vec![15.0]), // shipment 1 (JobIdx 3)
+            ],
+        );
+
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        route.insert_service(&problem, 1, JobIdx::new(1));
+        // route: [D_svc0, D_svc1]
+
+        // Insert shipment 2 (demand 5) at the end – after both deliveries have
+        // been made, load is 0 at that point → shipment pickup adds 5 → fine.
+        let is_valid = route.is_valid_capacity_change(
+            &problem,
+            [
+                ActivityId::shipment_pickup(2),
+                ActivityId::shipment_delivery(2),
+            ]
+            .into_iter(),
+            2,
+            2,
+        );
+        assert!(is_valid);
+    }
+
+    /// Mixed: inserting a shipment *before* the delivery services so the combined
+    /// peak (initial delivery load + shipment demand) exceeds capacity.
+    #[test]
+    fn test_is_valid_capacity_change_shipments_mixed_delivery_services_exceeds_capacity() {
+        // Route: [D_svc0(20), D_svc1(20)], vehicle capacity 30.
+        // Inserting shipment with demand 15 at the front raises peak at pickup
+        // to 40+15 = 55 > 30 → invalid.
+        let problem = create_problem_for_capacity_change_with_shipments(
+            Capacity::from_vec(vec![30.0]),
+            vec![
+                (ServiceType::Delivery, Capacity::from_vec(vec![10.0])),
+                (ServiceType::Delivery, Capacity::from_vec(vec![10.0])),
+            ],
+            vec![Capacity::from_vec(vec![15.0])], // shipment 0 (JobIdx 2)
+        );
+
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        route.insert_service(&problem, 1, JobIdx::new(1));
+        // route: [D_svc0, D_svc1], initial load = 20
+
+        // Insert shipment pickup before first delivery → peak = 20 + 15 = 35 > 30.
+        let is_valid = route.is_valid_capacity_change(
+            &problem,
+            [
+                ActivityId::shipment_pickup(2),
+                ActivityId::shipment_delivery(2),
+            ]
+            .into_iter(),
+            0,
+            0,
+        );
+        assert!(!is_valid);
+    }
+
+    /// Mixed: replacing a heavy delivery service with a lighter shipment that frees
+    /// enough capacity for the shipment to fit.
+    #[test]
+    fn test_is_valid_capacity_change_shipments_mixed_replace_delivery_with_shipment_fits() {
+        // Services: svc0(30), svc1(10).  Shipment: demand 5.
+        // Vehicle capacity: 35.
+        // Route: [D_svc0(30), D_svc1(10)], initial load = 40 which would fail by
+        // itself – but capacity_change validation starts from the current route.
+        //
+        // Let's use a cleaner setup: svc0(20), svc1(20), capacity 30.
+        // Route: [D_svc0, D_svc1] → initial 40 already invalid... use capacity 40.
+        //
+        // Route: [D_svc0(20), D_svc1(10)], capacity 30.  Initial load = 30.
+        // Replace D_svc1 (position 1) with shipment demand 5:
+        //   new initial load = 20+5 = 25 ≤ 30 (shipment load tracked separately).
+        //   Actually shipment demand does NOT affect initial load, only pickup adds.
+        //   new initial load stays 20, peak = 20 + 5 = 25 ≤ 30 → valid.
+        let problem = create_problem_for_capacity_change_with_shipments(
+            Capacity::from_vec(vec![30.0]),
+            vec![
+                (ServiceType::Delivery, Capacity::from_vec(vec![20.0])),
+                (ServiceType::Delivery, Capacity::from_vec(vec![10.0])),
+            ],
+            vec![Capacity::from_vec(vec![5.0])], // shipment 0 (JobIdx 2)
+        );
+
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        route.insert_service(&problem, 1, JobIdx::new(1));
+        // route: [D_svc0(20), D_svc1(10)]
+
+        // Replace D_svc1 [position 1, 2) with a shipment pickup+delivery.
+        let is_valid = route.is_valid_capacity_change(
+            &problem,
+            [
+                ActivityId::shipment_pickup(2),
+                ActivityId::shipment_delivery(2),
+            ]
+            .into_iter(),
+            1,
+            2,
+        );
+        assert!(is_valid);
+    }
+
+    // -----------------------------------------------------------------------
+    // Shipments mixed with pickup services
+    // -----------------------------------------------------------------------
+    //
+    // Pickup services accumulate load as the route progresses (they are picked up
+    // from customers), so peak load occurs toward the end of the route rather than
+    // at the start.
+    //
+    // Job index layout (n_services = 2):
+    //   0 → pickup service_1
+    //   1 → pickup service_2
+    //   2 → shipment_1
+    //   3 → shipment_2
+    //
+    // Vehicle capacity: 30.
+
+    /// Pickup-mode services + shipment: inserting a shipment into a route of pickup
+    /// services that still has remaining capacity is valid.
+    #[test]
+    fn test_is_valid_capacity_change_shipments_mixed_pickup_services_fits() {
+        // Pickup services each demand 10, vehicle capacity 30.
+        // Route: [P_svc0(10), P_svc1(10)]
+        // Cumulative pickup load grows: 10 after svc0, 20 after svc1.
+        // Insert shipment (demand 5) at the end → extra load during P2 = 20+5=25 ≤ 30 → valid.
+        let problem = create_problem_for_capacity_change_with_shipments(
+            Capacity::from_vec(vec![30.0]),
+            vec![
+                (ServiceType::Pickup, Capacity::from_vec(vec![10.0])),
+                (ServiceType::Pickup, Capacity::from_vec(vec![10.0])),
+            ],
+            vec![
+                Capacity::from_vec(vec![5.0]), // shipment 0 (JobIdx 2)
+                Capacity::from_vec(vec![5.0]), // shipment 1 (JobIdx 3)
+            ],
+        );
+
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        route.insert_service(&problem, 1, JobIdx::new(1));
+        // route: [P_svc0, P_svc1]
+
+        let is_valid = route.is_valid_capacity_change(
+            &problem,
+            [
+                ActivityId::shipment_pickup(2),
+                ActivityId::shipment_delivery(2),
+            ]
+            .into_iter(),
+            2,
+            2,
+        );
+        assert!(is_valid);
+    }
+
+    /// Pickup-mode services + shipment: cumulative load after pickup services plus
+    /// shipment demand exceeds capacity → invalid.
+    #[test]
+    fn test_is_valid_capacity_change_shipments_mixed_pickup_services_exceeds_capacity() {
+        // Pickup services each demand 10, vehicle capacity 25.
+        // Route: [P_svc0(10), P_svc1(10)] → cumulative 20 at end.
+        // Insert shipment demand 10 → peak = 20+10 = 30 > 25 → invalid.
+        let problem = create_problem_for_capacity_change_with_shipments(
+            Capacity::from_vec(vec![25.0]),
+            vec![
+                (ServiceType::Pickup, Capacity::from_vec(vec![10.0])),
+                (ServiceType::Pickup, Capacity::from_vec(vec![10.0])),
+            ],
+            vec![Capacity::from_vec(vec![10.0])], // shipment 0 (JobIdx 2)
+        );
+
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        route.insert_service(&problem, 1, JobIdx::new(1));
+
+        let is_valid = route.is_valid_capacity_change(
+            &problem,
+            [
+                ActivityId::shipment_pickup(2),
+                ActivityId::shipment_delivery(2),
+            ]
+            .into_iter(),
+            2,
+            2,
+        );
+        assert!(!is_valid);
+    }
+
+    #[test]
+    fn test_is_valid_capacity_change_shipments_mixed_pickup_services_fits_capacity_at_start() {
+        let problem = create_problem_for_capacity_change_with_shipments(
+            Capacity::from_vec(vec![25.0]),
+            vec![
+                (ServiceType::Pickup, Capacity::from_vec(vec![10.0])),
+                (ServiceType::Pickup, Capacity::from_vec(vec![10.0])),
+            ],
+            vec![Capacity::from_vec(vec![10.0])], // shipment 0 (JobIdx 2)
+        );
+
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        route.insert_service(&problem, 1, JobIdx::new(1));
+
+        let is_valid = route.is_valid_capacity_change(
+            &problem,
+            [
+                ActivityId::shipment_pickup(2),
+                ActivityId::shipment_delivery(2),
+            ]
+            .into_iter(),
+            0,
+            0,
+        );
+        assert!(is_valid);
+    }
+
+    #[test]
+    fn test_is_valid_capacity_change_shipments_mixed_pickup_services_replace_all() {
+        let problem = create_problem_for_capacity_change_with_shipments(
+            Capacity::from_vec(vec![25.0]),
+            vec![
+                (ServiceType::Pickup, Capacity::from_vec(vec![10.0])),
+                (ServiceType::Pickup, Capacity::from_vec(vec![10.0])),
+            ],
+            vec![Capacity::from_vec(vec![10.0])], // shipment 0 (JobIdx 2)
+        );
+
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        route.insert_service(&problem, 1, JobIdx::new(1));
+
+        let is_valid = route.is_valid_capacity_change(
+            &problem,
+            [
+                ActivityId::shipment_pickup(2),
+                ActivityId::shipment_delivery(2),
+                ActivityId::service(0),
+                ActivityId::service(1),
+            ]
+            .into_iter(),
+            0,
+            3,
+        );
+        assert!(is_valid);
+    }
+
+    /// Pickup-mode services + shipment: replacing a heavy pickup service with a
+    /// shipment whose load is lower results in a valid change.
+    #[test]
+    fn test_is_valid_capacity_change_shipments_mixed_replace_pickup_with_shipment_fits() {
+        // Pickup services: svc0(20), svc1(10). Vehicle capacity 25.
+        // Route: [P_svc0(20), P_svc1(10)] → peaks at 30 (already violates on its
+        // own, but we are validating a proposed *change*, not the existing route).
+        //
+        // Replace P_svc0 with shipment (demand 5).
+        // New effective pickup flow: shipment pickup (5) then svc1 pickup (10)
+        // → peak at end = 15 ≤ 25 → valid.
+        let problem = create_problem_for_capacity_change_with_shipments(
+            Capacity::from_vec(vec![25.0]),
+            vec![
+                (ServiceType::Pickup, Capacity::from_vec(vec![20.0])),
+                (ServiceType::Pickup, Capacity::from_vec(vec![10.0])),
+            ],
+            vec![Capacity::from_vec(vec![5.0])], // shipment 0 (JobIdx 2)
+        );
+
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        route.insert_service(&problem, 1, JobIdx::new(1));
+        // route: [P_svc0(20), P_svc1(10)]
+
+        // Replace P_svc0 [position 0, 1) with shipment pickup+delivery.
+        let is_valid = route.is_valid_capacity_change(
+            &problem,
+            [
+                ActivityId::shipment_pickup(2),
+                ActivityId::shipment_delivery(2),
+            ]
+            .into_iter(),
+            0,
+            1,
+        );
+        assert!(is_valid);
+    }
+
+    /// Adds a shipment and a pickup one after the other with fitting capacities
+    #[test]
+    fn test_is_valid_capacity_change_shipments_mixed_pickup_with_shipment_fits() {
+        let problem = create_problem_for_capacity_change_with_shipments(
+            Capacity::from_vec(vec![40.0]),
+            vec![
+                (ServiceType::Delivery, Capacity::from_vec(vec![20.0])),
+                (ServiceType::Delivery, Capacity::from_vec(vec![10.0])),
+                (ServiceType::Pickup, Capacity::from_vec(vec![10.0])),
+            ],
+            vec![Capacity::from_vec(vec![10.0])], // shipment 0 (JobIdx 2)
+        );
+
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        route.insert_service(&problem, 1, JobIdx::new(1));
+
+        let is_valid = route.is_valid_capacity_change(
+            &problem,
+            [
+                ActivityId::shipment_pickup(3),
+                ActivityId::shipment_delivery(3),
+                ActivityId::shipment_pickup(2),
+            ]
+            .into_iter(),
+            0,
+            0,
+        );
+        assert!(is_valid);
+    }
+
+    /// Adds a shipment pickup and a pickup and the shipment delivery after it, exceeding capacity
+    #[test]
+    fn test_is_valid_capacity_change_shipments_mixed_pickup_with_shipment_exceeds_capacity() {
+        let problem = create_problem_for_capacity_change_with_shipments(
+            Capacity::from_vec(vec![40.0]),
+            vec![
+                (ServiceType::Delivery, Capacity::from_vec(vec![20.0])),
+                (ServiceType::Delivery, Capacity::from_vec(vec![10.0])),
+                (ServiceType::Pickup, Capacity::from_vec(vec![10.0])),
+            ],
+            vec![Capacity::from_vec(vec![10.0])], // shipment 0 (JobIdx 2)
+        );
+
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        route.insert_service(&problem, 1, JobIdx::new(1));
+
+        let is_valid = route.is_valid_capacity_change(
+            &problem,
+            [
+                ActivityId::shipment_pickup(3),
+                ActivityId::shipment_pickup(2),
+                ActivityId::shipment_delivery(3),
+            ]
+            .into_iter(),
+            0,
+            0,
+        );
+        assert!(!is_valid);
+    }
+
+    /// Adds a shipment pickup and a pickup and the shipment delivery after it, exceeding capacity
+    #[test]
+    fn test_is_valid_capacity_change_shipments_mixed_move_shipment() {
+        let problem = create_problem_for_capacity_change_with_shipments(
+            Capacity::from_vec(vec![40.0]),
+            vec![
+                (ServiceType::Delivery, Capacity::from_vec(vec![10.0])),
+                (ServiceType::Delivery, Capacity::from_vec(vec![10.0])),
+                (ServiceType::Delivery, Capacity::from_vec(vec![10.0])),
+                (ServiceType::Delivery, Capacity::from_vec(vec![10.0])),
+                (ServiceType::Pickup, Capacity::from_vec(vec![40.0])),
+            ],
+            vec![Capacity::from_vec(vec![10.0])], // shipment 0 (JobIdx 2)
+        );
+
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        route.insert_service(&problem, 1, JobIdx::new(1));
+        route.insert_shipment(&problem, 2, 2, JobIdx::new(5));
+        route.insert_service(&problem, 3, JobIdx::new(2));
+        route.insert_service(&problem, 4, JobIdx::new(3));
+        route.insert_service(&problem, 6, JobIdx::new(4));
+
+        assert_eq!(
+            route.activity_ids,
+            vec![
+                // Capacity at start: 40
+                ActivityId::service(0),           // -10 -> 30
+                ActivityId::service(1),           // -10 -> 20
+                ActivityId::shipment_pickup(5),   // +10 -> 30
+                ActivityId::service(2),           // -10 -> 20
+                ActivityId::service(3),           // -10 -> 10
+                ActivityId::shipment_delivery(5), // -10 -> 0
+                ActivityId::service(4),           // +40 -> 40
+            ]
+        );
+
+        assert_eq!(route.current_load[0], Capacity::from_vec(vec![40.0]));
+        assert_eq!(route.max_load(&problem), 1.0);
+
+        // Moving the shipment pickup at the start exceeds the capacity
+        let is_valid = route.is_valid_capacity_change(
+            &problem,
+            [
+                ActivityId::shipment_pickup(5),
+                ActivityId::service(0),
+                ActivityId::service(1),
+            ]
+            .into_iter(),
+            0,
+            3,
+        );
+        assert!(!is_valid);
+
+        // Moving the shipment pickup at position 1 fits
+        let is_valid = route.is_valid_capacity_change(
+            &problem,
+            [ActivityId::shipment_pickup(5), ActivityId::service(1)].into_iter(),
+            1,
+            3,
+        );
+        assert!(is_valid);
+
+        // Moving the shipment delivery after the pickup exceeds the capacity
+        let is_valid = route.is_valid_capacity_change(
+            &problem,
+            [ActivityId::service(4), ActivityId::shipment_delivery(5)].into_iter(),
+            5,
+            7,
+        );
         assert!(!is_valid);
     }
 

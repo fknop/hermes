@@ -234,7 +234,10 @@ impl RuinSolution for RuinString {
 mod tests {
     use std::sync::Arc;
 
-    use crate::test_utils::{self, TestRoute};
+    use crate::{
+        problem::job::ActivityId,
+        test_utils::{self, TestRoute},
+    };
 
     use super::*;
 
