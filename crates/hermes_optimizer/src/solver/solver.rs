@@ -23,6 +23,7 @@ pub enum SolverStatus {
     Pending,
     Running,
     Completed,
+    Error,
 }
 
 pub struct Solver {
@@ -51,8 +52,14 @@ impl Solver {
 
     pub fn solve(&self) {
         *self.status.write() = SolverStatus::Running;
-        self.search.run();
-        *self.status.write() = SolverStatus::Completed;
+        match self.search.run() {
+            Ok(_) => {
+                *self.status.write() = SolverStatus::Completed;
+            }
+            Err(_) => {
+                *self.status.write() = SolverStatus::Error;
+            }
+        }
     }
 
     pub fn stop(&self) {
@@ -85,6 +92,3 @@ impl Solver {
         self.search.weights_cloned()
     }
 }
-
-#[cfg(test)]
-mod tests {}

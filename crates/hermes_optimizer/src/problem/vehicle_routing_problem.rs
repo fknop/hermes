@@ -12,9 +12,11 @@ use crate::{
         fleet::Fleet,
         job::{ActivityId, Job, JobActivity, JobIdx},
         meters::Meters,
+        relation::Relation,
         service::Service,
         shipment::Shipment,
         skill::Skill,
+        task_dependency_graph::TaskDependencyGraph,
         vehicle_profile::{VehicleProfile, VehicleProfileIdx},
     },
     solver::constraints::transport_cost_constraint::TRANSPORT_COST_WEIGHT,
@@ -46,8 +48,11 @@ pub struct VehicleRoutingProblem {
     has_shipments: bool,
     has_time_windows: bool,
     has_capacity: bool,
+    has_task_dependencies: bool,
 
     neighborhoods: Vec<FxHashSet<ActivityId>>,
+
+    task_dependency_graph: TaskDependencyGraph,
 
     skill_registry: Vec<Skill>,
     precomputed_capacity_dimensions: usize,
@@ -68,6 +73,7 @@ struct VehicleRoutingProblemParams {
     jobs: Vec<Job>,
     distance_method: DistanceMethod,
     penalize_waiting_duration: bool,
+    relations: Option<Vec<Relation>>,
 }
 
 impl VehicleRoutingProblem {
@@ -130,14 +136,25 @@ impl VehicleRoutingProblem {
             .iter()
             .any(|job| matches!(job, Job::Shipment(_)));
 
+        let has_task_dependencies = params
+            .relations
+            .as_ref()
+            .map(|relations| !relations.is_empty())
+            .unwrap_or(false);
+
+        let task_dependency_graph =
+            TaskDependencyGraph::from_relations(&params.relations.unwrap_or_default());
+
         let mut problem = Self {
             id: params.id,
             has_time_windows: params.jobs.iter().any(|job| job.has_time_windows()),
             has_capacity: params.jobs.iter().any(|job| !job.demand().is_empty()),
+            has_task_dependencies,
             locations: params.locations,
             fleet: params.fleet,
             vehicle_profiles: params.vehicle_profiles,
             jobs: params.jobs,
+            task_dependency_graph,
             neighborhoods,
             service_location_index,
             precomputed_average_cost_from_depot,
@@ -432,6 +449,10 @@ impl VehicleRoutingProblem {
         !self.skill_registry.is_empty()
     }
 
+    pub fn has_task_dependencies(&self) -> bool {
+        self.has_task_dependencies
+    }
+
     pub fn average_cost_from_depot(&self, job: &Job) -> f64 {
         match job {
             Job::Shipment(shipment) => {
@@ -631,6 +652,7 @@ pub struct VehicleRoutingProblemBuilder {
     vehicle_profiles: Option<Vec<VehicleProfile>>,
     distance_method: Option<DistanceMethod>,
     penalize_waiting_duration: Option<bool>,
+    relations: Option<Vec<Relation>>,
 }
 
 impl VehicleRoutingProblemBuilder {
@@ -739,6 +761,7 @@ impl VehicleRoutingProblemBuilder {
             jobs,
             distance_method,
             penalize_waiting_duration: self.penalize_waiting_duration.unwrap_or(true),
+            relations: self.relations,
         })
     }
 }

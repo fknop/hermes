@@ -2771,8 +2771,6 @@ mod tests {
         services: Vec<(ServiceType, Capacity)>,
         shipment_demands: Vec<Capacity>,
     ) -> VehicleRoutingProblem {
-        use crate::problem::shipment::ShipmentBuilder;
-
         let n_locations = services.len() + shipment_demands.len() * 2 + 1;
         let locations = test_utils::create_location_grid(1, n_locations);
 
@@ -2865,7 +2863,7 @@ mod tests {
             vec![Capacity::from_vec(vec![20.0])],
         );
 
-        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        let route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
 
         // Insert pickup then delivery into an empty route.
         let is_valid = route.is_valid_capacity_change(
@@ -2892,7 +2890,7 @@ mod tests {
             vec![Capacity::from_vec(vec![20.0])],
         );
 
-        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        let route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
 
         let is_valid = route.is_valid_capacity_change(
             &problem,

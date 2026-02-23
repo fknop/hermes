@@ -3,6 +3,7 @@ use std::{
     thread,
 };
 
+use anyhow::anyhow;
 use fxhash::FxHashMap;
 use jiff::{SignedDuration, Timestamp};
 use parking_lot::{Mutex, RwLock};
@@ -163,9 +164,9 @@ impl Alns {
         }
     }
 
-    fn create_solution_acceptor(&self) -> SolutionAcceptor {
+    fn create_solution_acceptor(&self) -> anyhow::Result<SolutionAcceptor> {
         match self.params.solver_acceptor {
-            SolverAcceptorStrategy::Greedy => SolutionAcceptor::Greedy(GreedySolutionAcceptor),
+            SolverAcceptorStrategy::Greedy => Ok(SolutionAcceptor::Greedy(GreedySolutionAcceptor)),
             SolverAcceptorStrategy::Schrimpf => {
                 let random_walks = 100;
 
@@ -194,7 +195,7 @@ impl Alns {
                         .set_initial_solution(best_solution.solution.clone());
                 }
 
-                shrimpf_initial_threshold_search.run();
+                shrimpf_initial_threshold_search.run()?;
 
                 let total_score = shrimpf_initial_threshold_search
                     .population
@@ -221,7 +222,9 @@ impl Alns {
                     "Schrimpf initial: total_score = {total_score}, mean = {mean}, variance = {variance}, std = {std}, initial_threshold = {initial_threshold}",
                 );
 
-                SolutionAcceptor::Schrimpf(SchrimpfAcceptor::new(initial_threshold))
+                Ok(SolutionAcceptor::Schrimpf(SchrimpfAcceptor::new(
+                    initial_threshold,
+                )))
             }
             SolverAcceptorStrategy::SimulatedAnnealing => {
                 let initial_temperature_search = Self::new(
@@ -248,7 +251,7 @@ impl Alns {
                     initial_temperature_search.set_initial_solution(best_solution.solution.clone());
                 }
 
-                initial_temperature_search.run();
+                initial_temperature_search.run()?;
                 let soft_score = initial_temperature_search
                     .best_solution()
                     .unwrap()
@@ -257,12 +260,11 @@ impl Alns {
 
                 let w = 0.3;
                 let start_temperature = w * soft_score / (0.5_f64.ln().abs());
-                SolutionAcceptor::SimulatedAnnealing(SimulatedAnnealingAcceptor::new(
-                    start_temperature,
-                    0.99999,
+                Ok(SolutionAcceptor::SimulatedAnnealing(
+                    SimulatedAnnealingAcceptor::new(start_temperature, 0.99999),
                 ))
             }
-            SolverAcceptorStrategy::Any => SolutionAcceptor::Any,
+            SolverAcceptorStrategy::Any => Ok(SolutionAcceptor::Any),
         }
     }
 
@@ -365,7 +367,7 @@ impl Alns {
         }
     }
 
-    pub fn run(&self) {
+    pub fn run(&self) -> anyhow::Result<()> {
         self.is_stopped
             .store(false, std::sync::atomic::Ordering::Relaxed);
 
@@ -375,19 +377,20 @@ impl Alns {
         self.run_construction(&mut rng);
 
         if !self.params.debug_options.enable_local_search {
-            return;
+            return Ok(());
         }
 
         let num_threads = self.params.search_threads.number_of_threads();
         // Could just clone this instead of storing in an Arc honestly
-        let solution_acceptor = Arc::new(self.create_solution_acceptor());
+        let solution_acceptor = Arc::new(self.create_solution_acceptor()?);
         let solution_selector = Arc::new(self.create_solution_selector());
 
         debug!("Running search on {} threads", num_threads);
 
         let barrier = Arc::new(CancellableBarrier::new(num_threads));
 
-        thread::scope(|s| {
+        thread::scope(|scope| {
+            let mut handles: Vec<_> = vec![];
             for thread_index in 0..num_threads {
                 let thread_barrier = Arc::clone(&barrier);
 
@@ -415,8 +418,8 @@ impl Alns {
                 let mut thread_rng = SmallRng::from_rng(&mut rng);
                 let builder = thread::Builder::new().name(thread_index.to_string());
 
-                builder
-                    .spawn_scoped(s, move || {
+                let handle = builder
+                    .spawn_scoped(scope, move || {
                         let mut state = ThreadedSearchState {
                             start,
                             thread: thread_index,
@@ -626,8 +629,24 @@ impl Alns {
                         }
                     })
                     .unwrap();
+
+                handles.push(handle);
             }
-        });
+
+            for (i, handle) in handles.into_iter().enumerate() {
+                match handle.join() {
+                    Ok(_) => {}
+                    Err(_) => {
+                        self.is_stopped
+                            .store(true, std::sync::atomic::Ordering::Relaxed);
+
+                        return Err(anyhow!("Thread {i} panicked"));
+                    }
+                }
+            }
+
+            Ok(())
+        })
     }
 
     fn check_termination(&self, state: &ThreadedSearchState, termination: &Termination) -> bool {
