@@ -289,9 +289,21 @@ impl TaskDependencies {
 
 #[cfg(test)]
 mod tests {
-    use crate::problem::{job::ActivityId, relation::*};
+    use crate::problem::{
+        job::ActivityId,
+        relation::*,
+        service::{Service, ServiceBuilder},
+    };
 
     use super::*;
+
+    fn create_dummy_job() -> Job {
+        let mut service_builder = ServiceBuilder::default();
+        service_builder.set_external_id("dummy".to_owned());
+        service_builder.set_location_id(0);
+        let service = service_builder.build();
+        Job::Service(service)
+    }
 
     #[test]
     fn test_from_relations() {
@@ -378,5 +390,108 @@ mod tests {
         let graph = TaskDependencies::from_jobs_and_relations(&[], &relations);
 
         assert!(graph.after_graph.has_cycle())
+    }
+
+    #[test]
+    fn test_from_relations_in_same_route() {
+        let dummy_jobs = (0..10).map(|_| create_dummy_job()).collect::<Vec<_>>();
+        let relations = vec![
+            Relation::InSameRoute(InSameRouteRelation {
+                vehicle_id: Some(VehicleIdx::new(0)),
+                activity_ids: vec![ActivityId::service(0), ActivityId::service(1)],
+            }),
+            Relation::InSameRoute(InSameRouteRelation {
+                vehicle_id: None,
+                activity_ids: vec![ActivityId::service(2), ActivityId::service(3)],
+            }),
+            Relation::InSameRoute(InSameRouteRelation {
+                vehicle_id: None,
+                activity_ids: vec![ActivityId::service(3), ActivityId::service(4)],
+            }),
+            Relation::InSameRoute(InSameRouteRelation {
+                vehicle_id: None,
+                activity_ids: vec![ActivityId::service(4), ActivityId::service(5)],
+            }),
+        ];
+
+        let dependencies = TaskDependencies::from_jobs_and_relations(&dummy_jobs, &relations);
+
+        for i in 0..=1 {
+            assert_eq!(
+                dependencies.in_same_route_bitsets[i]
+                    .ones()
+                    .collect::<Vec<_>>(),
+                vec![0, 1]
+            );
+            assert_eq!(dependencies.required_vehicle[i], Some(VehicleIdx::new(0)));
+        }
+
+        for i in 2..=5 {
+            assert_eq!(
+                dependencies.in_same_route_bitsets[i]
+                    .ones()
+                    .collect::<Vec<_>>(),
+                vec![2, 3, 4, 5]
+            );
+            assert_eq!(dependencies.required_vehicle[i], None);
+        }
+
+        for i in 6..10 {
+            assert_eq!(
+                dependencies.in_same_route_bitsets[i]
+                    .ones()
+                    .collect::<Vec<_>>(),
+                vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+            );
+            assert_eq!(dependencies.required_vehicle[i], None);
+        }
+    }
+
+    #[test]
+    fn test_from_relations_not_in_same_route() {
+        let dummy_jobs = (0..10).map(|_| create_dummy_job()).collect::<Vec<_>>();
+        let relations = vec![
+            Relation::NotInSameRoute(NotInSameRouteRelation {
+                activity_ids: vec![ActivityId::service(0), ActivityId::service(1)],
+            }),
+            Relation::NotInSameRoute(NotInSameRouteRelation {
+                activity_ids: vec![ActivityId::service(2), ActivityId::service(3)],
+            }),
+            Relation::NotInSameRoute(NotInSameRouteRelation {
+                activity_ids: vec![ActivityId::service(3), ActivityId::service(4)],
+            }),
+            Relation::NotInSameRoute(NotInSameRouteRelation {
+                activity_ids: vec![ActivityId::service(4), ActivityId::service(5)],
+            }),
+        ];
+
+        let dependencies = TaskDependencies::from_jobs_and_relations(&dummy_jobs, &relations);
+
+        for i in 0..=1 {
+            assert_eq!(
+                dependencies.not_in_same_route_bitsets[i]
+                    .ones()
+                    .collect::<Vec<_>>(),
+                vec![0, 1]
+            );
+        }
+
+        for i in 2..=5 {
+            assert_eq!(
+                dependencies.not_in_same_route_bitsets[i]
+                    .ones()
+                    .collect::<Vec<_>>(),
+                vec![2, 3, 4, 5]
+            );
+        }
+
+        for i in 6..10 {
+            assert_eq!(
+                dependencies.not_in_same_route_bitsets[i]
+                    .ones()
+                    .collect::<Vec<_>>(),
+                vec![] as Vec<usize>
+            );
+        }
     }
 }
