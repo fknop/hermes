@@ -1,3 +1,4 @@
+use fixedbitset::Ones;
 use fxhash::FxHashSet;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -36,8 +37,16 @@ impl BitSet {
         self.repr.clear();
     }
 
-    pub fn ones(&self) -> Vec<usize> {
-        self.repr.ones().collect()
+    pub fn fill_ones(&mut self) {
+        self.repr.set_range(0..self.repr.len(), true);
+    }
+
+    pub fn ones(&self) -> Ones {
+        self.repr.ones()
+    }
+
+    pub fn is_disjoint(&self, other: &BitSet) -> bool {
+        self.repr.is_disjoint(&other.repr)
     }
 
     pub fn intersects(&self, other: &BitSet) -> bool {

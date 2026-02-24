@@ -16,7 +16,7 @@ use crate::{
         service::Service,
         shipment::Shipment,
         skill::Skill,
-        task_dependency_graph::TaskDependencyGraph,
+        task_dependencies::TaskDependencies,
         vehicle_profile::{VehicleProfile, VehicleProfileIdx},
     },
     solver::constraints::transport_cost_constraint::TRANSPORT_COST_WEIGHT,
@@ -52,7 +52,7 @@ pub struct VehicleRoutingProblem {
 
     neighborhoods: Vec<FxHashSet<ActivityId>>,
 
-    task_dependency_graph: TaskDependencyGraph,
+    task_dependencies: TaskDependencies,
 
     skill_registry: Vec<Skill>,
     precomputed_capacity_dimensions: usize,
@@ -142,8 +142,10 @@ impl VehicleRoutingProblem {
             .map(|relations| !relations.is_empty())
             .unwrap_or(false);
 
-        let task_dependency_graph =
-            TaskDependencyGraph::from_relations(&params.relations.unwrap_or_default());
+        let task_dependencies = TaskDependencies::from_jobs_and_relations(
+            &params.jobs,
+            &params.relations.unwrap_or_default(),
+        );
 
         let mut problem = Self {
             id: params.id,
@@ -154,7 +156,7 @@ impl VehicleRoutingProblem {
             fleet: params.fleet,
             vehicle_profiles: params.vehicle_profiles,
             jobs: params.jobs,
-            task_dependency_graph,
+            task_dependencies,
             neighborhoods,
             service_location_index,
             precomputed_average_cost_from_depot,
@@ -451,6 +453,10 @@ impl VehicleRoutingProblem {
 
     pub fn has_task_dependencies(&self) -> bool {
         self.has_task_dependencies
+    }
+
+    pub fn task_dependencies(&self) -> &TaskDependencies {
+        &self.task_dependencies
     }
 
     pub fn average_cost_from_depot(&self, job: &Job) -> f64 {

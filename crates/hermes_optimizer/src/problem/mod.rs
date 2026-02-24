@@ -11,7 +11,7 @@ pub mod service;
 mod service_location_index;
 pub mod shipment;
 pub mod skill;
-pub mod task_dependency_graph;
+pub mod task_dependencies;
 pub mod time_window;
 pub mod travel_cost_matrix;
 pub mod vehicle;

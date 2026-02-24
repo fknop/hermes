@@ -9,6 +9,7 @@ use crate::{
         location::LocationIdx,
         meters::Meters,
         service::ServiceType,
+        task_dependencies::TaskDependencyType,
         vehicle::{Vehicle, VehicleIdx},
         vehicle_routing_problem::VehicleRoutingProblem,
     },
@@ -114,6 +115,8 @@ pub struct WorkingSolutionRoute {
     /// num_shipments[i] counts the total number of shipments activities from start to activity i
     pub(super) num_shipments: Vec<usize>,
 
+    pub(super) insertion_positions: FxHashMap<ActivityId, (usize, usize)>,
+
     bbox: BBox,
 
     updated_in_iteration: bool,
@@ -151,6 +154,7 @@ impl WorkingSolutionRoute {
             skills_sparse_table: SparseTable::empty(),
             delivery_load_slack: problem.vehicle(vehicle_id).capacity().clone(),
             pickup_load_slack: problem.vehicle(vehicle_id).capacity().clone(),
+            insertion_positions: FxHashMap::default(),
         };
 
         route.update_data(problem);
@@ -1118,26 +1122,7 @@ impl WorkingSolutionRoute {
         self.pickup_load_slack
             .update_expr(vehicle_capacity - &self.current_load[self.len()]);
 
-        if problem.has_time_windows()
-            // || vehicle.maximum_working_duration().is_some()
-            || vehicle.latest_end_time().is_some()
-        {
-            // TODO: remove max working duration from time slacks calculations, it's not correct
-            // It's not corect because arriving later does not mean we would break the duration, we could also remove a segment and start later
-            // let latest_end = match (
-            //     vehicle.latest_end_time(),
-            //     vehicle.maximum_working_duration(),
-            // ) {
-            //     (Some(latest_end), Some(maximum_working_duration)) => {
-            //         latest_end.min(self.start(problem) + maximum_working_duration)
-            //     }
-            //     (Some(latest_end), None) => latest_end,
-            //     (None, Some(maximum_working_duration)) => {
-            //         self.start(problem) + maximum_working_duration
-            //     }
-            //     (None, None) => Timestamp::MAX,
-            // };
-
+        if problem.has_time_windows() || vehicle.latest_end_time().is_some() {
             let latest_end = vehicle.latest_end_time().unwrap_or(Timestamp::MAX);
 
             self.fwd_time_slacks[len + 1] = latest_end.duration_since(self.end(problem));
@@ -1188,6 +1173,62 @@ impl WorkingSolutionRoute {
         } else {
             self.fwd_time_slacks.fill(SignedDuration::MAX);
         }
+
+        self.update_insertion_positions(problem);
+    }
+
+    fn update_insertion_positions(&mut self, problem: &VehicleRoutingProblem) {
+        if !problem.has_task_dependencies() {
+            return;
+        }
+
+        let len = self.len();
+
+        let dependencies = problem.task_dependencies();
+        for (pos, &activity_id) in self.activity_ids.iter().enumerate() {
+            for dependency in dependencies.traverse(activity_id, TaskDependencyType::After) {
+                let (start, _) = self
+                    .insertion_positions
+                    .entry(dependency)
+                    .or_insert_with(|| (0, len));
+                *start = (*start).max(pos + 1);
+            }
+
+            for dependency in dependencies.traverse(activity_id, TaskDependencyType::Before) {
+                let (_, end) = self
+                    .insertion_positions
+                    .entry(dependency)
+                    .or_insert_with(|| (0, len));
+                *end = (*end).min(pos);
+            }
+
+            for dependency in dependencies.traverse(activity_id, TaskDependencyType::DirectlyAfter)
+            {
+                let (start, end) = self
+                    .insertion_positions
+                    .entry(dependency)
+                    .or_insert_with(|| (0, len));
+                *start = pos + 1;
+                *end = pos + 1;
+            }
+
+            for dependency in dependencies.traverse(activity_id, TaskDependencyType::DirectlyBefore)
+            {
+                let (start, end) = self
+                    .insertion_positions
+                    .entry(dependency)
+                    .or_insert_with(|| (0, len));
+                *end = pos;
+                *start = pos;
+            }
+        }
+    }
+
+    pub fn insertion_range(&self, activity_id: ActivityId) -> (usize, usize) {
+        self.insertion_positions
+            .get(&activity_id)
+            .copied()
+            .unwrap_or((0, self.len()))
     }
 
     pub fn random_activity<R>(&self, rng: &mut R) -> usize
@@ -2184,11 +2225,26 @@ mod tests {
             ]
         );
 
-        assert_eq!(route.pending_shipments[0].ones(), vec![2]);
-        assert_eq!(route.pending_shipments[1].ones(), vec![2, 3]);
-        assert_eq!(route.pending_shipments[2].ones(), vec![2]);
-        assert_eq!(route.pending_shipments[3].ones(), vec![2]);
-        assert_eq!(route.pending_shipments[4].ones(), Vec::<usize>::new());
+        assert_eq!(
+            route.pending_shipments[0].ones().collect::<Vec<_>>(),
+            vec![2]
+        );
+        assert_eq!(
+            route.pending_shipments[1].ones().collect::<Vec<_>>(),
+            vec![2, 3]
+        );
+        assert_eq!(
+            route.pending_shipments[2].ones().collect::<Vec<_>>(),
+            vec![2]
+        );
+        assert_eq!(
+            route.pending_shipments[3].ones().collect::<Vec<_>>(),
+            vec![2]
+        );
+        assert_eq!(
+            route.pending_shipments[4].ones().collect::<Vec<_>>(),
+            Vec::<usize>::new()
+        );
     }
 
     #[test]

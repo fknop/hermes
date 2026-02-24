@@ -37,6 +37,7 @@ pub enum PollBenchmarkResponse {
     Pending,
     Running(PollSolverRunning),
     Completed(PollSolverCompleted),
+    Error,
 }
 
 fn transform_solution(accepted_solution: &AcceptedSolution) -> BenchmarkSolution {
@@ -94,6 +95,7 @@ pub async fn poll_handler(
 
     match status {
         SolverStatus::Pending => Ok(PollBenchmarkResponse::Pending),
+        SolverStatus::Error => Ok(PollBenchmarkResponse::Error),
         SolverStatus::Running => {
             let solution = solver
                 .current_best_solution()

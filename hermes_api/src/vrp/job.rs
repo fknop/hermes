@@ -8,17 +8,11 @@ use geo::{Coord, Point, Simplify};
 use geojson::{Feature, Geometry};
 use hermes_optimizer::{
     json::types::{FromProblem as _, JsonLocation, JsonService, JsonVehicle},
-    problem::{
-        job::Job, meters::Meters,
-        vehicle_routing_problem::VehicleRoutingProblem,
-    },
+    problem::{job::Job, meters::Meters, vehicle_routing_problem::VehicleRoutingProblem},
     solver::{
-        accepted_solution::AcceptedSolution,
-        alns_weights::AlnsWeights,
-        recreate::recreate_strategy::RecreateStrategy,
-        ruin::ruin_strategy::RuinStrategy,
-        solution::route::WorkingSolutionRoute,
-        solver::SolverStatus,
+        accepted_solution::AcceptedSolution, alns_weights::AlnsWeights,
+        recreate::recreate_strategy::RecreateStrategy, ruin::ruin_strategy::RuinStrategy,
+        solution::route::WorkingSolutionRoute, solver::SolverStatus,
         statistics::AggregatedStatistics,
     },
 };
@@ -27,10 +21,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{
-    error::ApiError,
-    state::AppState,
-};
+use crate::{error::ApiError, state::AppState};
 
 use super::api_solution::{
     ApiEndActivity, ApiServiceActivity, ApiSolution, ApiSolutionActivity, ApiSolutionRoute,
@@ -63,6 +54,7 @@ pub enum PollResponse {
     Pending,
     Running(PollSolverRunning),
     Completed(PollSolverCompleted),
+    Error,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -275,6 +267,7 @@ pub async fn poll_handler(
 
     match solver.status() {
         SolverStatus::Pending => Ok(Json(PollResponse::Pending)),
+        SolverStatus::Error => Ok(Json(PollResponse::Error)),
         SolverStatus::Running => {
             let solution = solver.current_best_solution().map(|solution| {
                 transform_solution(solution.clone(), &state, query.geojson.unwrap_or(true))
@@ -293,6 +286,7 @@ pub async fn poll_handler(
                 },
             })))
         }
+
         SolverStatus::Completed => {
             let solution = solver.current_best_solution().map(|solution| {
                 transform_solution(solution.clone(), &state, query.geojson.unwrap_or(true))
