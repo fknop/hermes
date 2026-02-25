@@ -1,0 +1,98 @@
+{
+  "r101": {
+    "best_known_cost": 1645.79,
+    "capacity": 200,
+    "jobs": 100,
+    "solved_with_vehicles": 19,
+    "total_demand": 1458,
+    "vehicles": 25
+  },
+  "r102": {
+    "best_known_cost": 1486.12,
+    "capacity": 200,
+    "jobs": 100,
+    "solved_with_vehicles": 17,
+    "total_demand": 1458,
+    "vehicles": 25
+  },
+  "r103": {
+    "best_known_cost": 1292.68,
+    "capacity": 200,
+    "jobs": 100,
+    "solved_with_vehicles": 13,
+    "total_demand": 1458,
+    "vehicles": 25
+  },
+  "r104": {
+    "best_known_cost": 1007.24,
+    "capacity": 200,
+    "jobs": 100,
+    "solved_with_vehicles": 9,
+    "total_demand": 1458,
+    "vehicles": 25
+  },
+  "r105": {
+    "best_known_cost": 1377.11,
+    "capacity": 200,
+    "jobs": 100,
+    "solved_with_vehicles": 14,
+    "total_demand": 1458,
+    "vehicles": 25
+  },
+  "r106": {
+    "best_known_cost": 1251.98,
+    "capacity": 200,
+    "jobs": 100,
+    "solved_with_vehicles": 12,
+    "total_demand": 1458,
+    "vehicles": 25
+  },
+  "r107": {
+    "best_known_cost": 1104.66,
+    "capacity": 200,
+    "jobs": 100,
+    "solved_with_vehicles": 10,
+    "total_demand": 1458,
+    "vehicles": 25
+  },
+  "r108": {
+    "best_known_cost": 960.88,
+    "capacity": 200,
+    "jobs": 100,
+    "solved_with_vehicles": 9,
+    "total_demand": 1458,
+    "vehicles": 25
+  },
+  "r109": {
+    "best_known_cost": 1194.73,
+    "capacity": 200,
+    "jobs": 100,
+    "solved_with_vehicles": 11,
+    "total_demand": 1458,
+    "vehicles": 25
+  },
+  "r110": {
+    "best_known_cost": 1118.59,
+    "capacity": 200,
+    "jobs": 100,
+    "solved_with_vehicles": 10,
+    "total_demand": 1458,
+    "vehicles": 25
+  },
+  "r111": {
+    "best_known_cost": 1096.72,
+    "capacity": 200,
+    "jobs": 100,
+    "solved_with_vehicles": 10,
+    "total_demand": 1458,
+    "vehicles": 25
+  },
+  "r112": {
+    "best_known_cost": 982.14,
+    "capacity": 200,
+    "jobs": 100,
+    "solved_with_vehicles": 9,
+    "total_demand": 1458,
+    "vehicles": 25
+  }
+}

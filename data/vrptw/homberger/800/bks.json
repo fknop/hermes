@@ -1,0 +1,543 @@
+{
+  "c1_8_1": {
+    "class": "homberger_800",
+    "best_known_cost": 25030.36,
+    "capacity": 200,
+    "comment": "2002. There are questions whether the solution is valid, several authors report 80/25184.38",
+    "jobs": 800,
+    "solved_with_vehicles": 80,
+    "total_demand": 14380,
+    "vehicles": 200
+  },
+  "c1_8_10": {
+    "class": "homberger_800",
+    "best_known_cost": 24070.17,
+    "capacity": 200,
+    "jobs": 800,
+    "solved_with_vehicles": 72,
+    "total_demand": 14380,
+    "vehicles": 200
+  },
+  "c1_8_2": {
+    "class": "homberger_800",
+    "best_known_cost": 26591.87,
+    "capacity": 200,
+    "jobs": 800,
+    "solved_with_vehicles": 72,
+    "total_demand": 14380,
+    "vehicles": 200
+  },
+  "c1_8_3": {
+    "class": "homberger_800",
+    "best_known_cost": 24249.35,
+    "capacity": 200,
+    "jobs": 800,
+    "solved_with_vehicles": 72,
+    "total_demand": 14380,
+    "vehicles": 200
+  },
+  "c1_8_4": {
+    "class": "homberger_800",
+    "best_known_cost": 23824.17,
+    "capacity": 200,
+    "jobs": 800,
+    "solved_with_vehicles": 72,
+    "total_demand": 14380,
+    "vehicles": 200
+  },
+  "c1_8_5": {
+    "class": "homberger_800",
+    "best_known_cost": 25166.28,
+    "capacity": 200,
+    "jobs": 800,
+    "solved_with_vehicles": 80,
+    "total_demand": 14380,
+    "vehicles": 200
+  },
+  "c1_8_6": {
+    "class": "homberger_800",
+    "best_known_cost": 27202.7,
+    "capacity": 200,
+    "jobs": 800,
+    "solved_with_vehicles": 79,
+    "total_demand": 14380,
+    "vehicles": 200
+  },
+  "c1_8_7": {
+    "class": "homberger_800",
+    "best_known_cost": 26486.14,
+    "capacity": 200,
+    "jobs": 800,
+    "solved_with_vehicles": 77,
+    "total_demand": 14380,
+    "vehicles": 200
+  },
+  "c1_8_8": {
+    "class": "homberger_800",
+    "best_known_cost": 26684.02,
+    "capacity": 200,
+    "jobs": 800,
+    "solved_with_vehicles": 73,
+    "total_demand": 14380,
+    "vehicles": 200
+  },
+  "c1_8_9": {
+    "class": "homberger_800",
+    "best_known_cost": 24300.21,
+    "capacity": 200,
+    "jobs": 800,
+    "solved_with_vehicles": 72,
+    "total_demand": 14380,
+    "vehicles": 200
+  },
+  "c2_8_1": {
+    "class": "homberger_800",
+    "best_known_cost": 11654.81,
+    "capacity": 700,
+    "jobs": 800,
+    "solved_with_vehicles": 24,
+    "total_demand": 15210,
+    "vehicles": 200
+  },
+  "c2_8_10": {
+    "class": "homberger_800",
+    "best_known_cost": 10977.36,
+    "capacity": 700,
+    "jobs": 800,
+    "solved_with_vehicles": 23,
+    "total_demand": 15210,
+    "vehicles": 200
+  },
+  "c2_8_2": {
+    "class": "homberger_800",
+    "best_known_cost": 12285.31,
+    "capacity": 700,
+    "jobs": 800,
+    "solved_with_vehicles": 23,
+    "total_demand": 15210,
+    "vehicles": 200
+  },
+  "c2_8_3": {
+    "class": "homberger_800",
+    "best_known_cost": 11410.69,
+    "capacity": 700,
+    "jobs": 800,
+    "solved_with_vehicles": 23,
+    "total_demand": 15210,
+    "vehicles": 200
+  },
+  "c2_8_4": {
+    "class": "homberger_800",
+    "best_known_cost": 11154.4,
+    "capacity": 700,
+    "jobs": 800,
+    "solved_with_vehicles": 22,
+    "total_demand": 15210,
+    "vehicles": 200
+  },
+  "c2_8_5": {
+    "class": "homberger_800",
+    "best_known_cost": 11425.23,
+    "capacity": 700,
+    "jobs": 800,
+    "solved_with_vehicles": 24,
+    "total_demand": 15210,
+    "vehicles": 200
+  },
+  "c2_8_6": {
+    "class": "homberger_800",
+    "best_known_cost": 12551.09,
+    "capacity": 700,
+    "jobs": 800,
+    "solved_with_vehicles": 23,
+    "total_demand": 15210,
+    "vehicles": 200
+  },
+  "c2_8_7": {
+    "class": "homberger_800",
+    "best_known_cost": 11370.84,
+    "capacity": 700,
+    "jobs": 800,
+    "solved_with_vehicles": 24,
+    "total_demand": 15210,
+    "vehicles": 200
+  },
+  "c2_8_8": {
+    "class": "homberger_800",
+    "best_known_cost": 11288.01,
+    "capacity": 700,
+    "jobs": 800,
+    "solved_with_vehicles": 23,
+    "total_demand": 15210,
+    "vehicles": 200
+  },
+  "c2_8_9": {
+    "class": "homberger_800",
+    "best_known_cost": 11592.52,
+    "capacity": 700,
+    "jobs": 800,
+    "solved_with_vehicles": 23,
+    "total_demand": 15210,
+    "vehicles": 200
+  },
+  "r1_8_1": {
+    "class": "homberger_800",
+    "best_known_cost": 36822.16,
+    "capacity": 200,
+    "jobs": 800,
+    "solved_with_vehicles": 80,
+    "total_demand": 14230,
+    "vehicles": 200
+  },
+  "r1_8_10": {
+    "class": "homberger_800",
+    "best_known_cost": 31031.27,
+    "capacity": 200,
+    "jobs": 800,
+    "solved_with_vehicles": 72,
+    "total_demand": 14230,
+    "vehicles": 200
+  },
+  "r1_8_2": {
+    "class": "homberger_800",
+    "best_known_cost": 32485.81,
+    "capacity": 200,
+    "jobs": 800,
+    "solved_with_vehicles": 72,
+    "total_demand": 14230,
+    "vehicles": 200
+  },
+  "r1_8_3": {
+    "class": "homberger_800",
+    "best_known_cost": 29361.59,
+    "capacity": 200,
+    "jobs": 800,
+    "solved_with_vehicles": 72,
+    "total_demand": 14230,
+    "vehicles": 200
+  },
+  "r1_8_4": {
+    "class": "homberger_800",
+    "best_known_cost": 26838.04,
+    "capacity": 200,
+    "jobs": 800,
+    "solved_with_vehicles": 72,
+    "total_demand": 14230,
+    "vehicles": 200
+  },
+  "r1_8_5": {
+    "class": "homberger_800",
+    "best_known_cost": 33663.61,
+    "capacity": 200,
+    "jobs": 800,
+    "solved_with_vehicles": 72,
+    "total_demand": 14230,
+    "vehicles": 200
+  },
+  "r1_8_6": {
+    "class": "homberger_800",
+    "best_known_cost": 30967.86,
+    "capacity": 200,
+    "jobs": 800,
+    "solved_with_vehicles": 72,
+    "total_demand": 14230,
+    "vehicles": 200
+  },
+  "r1_8_7": {
+    "class": "homberger_800",
+    "best_known_cost": 28898.89,
+    "capacity": 200,
+    "jobs": 800,
+    "solved_with_vehicles": 72,
+    "total_demand": 14230,
+    "vehicles": 200
+  },
+  "r1_8_8": {
+    "class": "homberger_800",
+    "best_known_cost": 27687.83,
+    "capacity": 200,
+    "jobs": 800,
+    "solved_with_vehicles": 72,
+    "total_demand": 14230,
+    "vehicles": 200
+  },
+  "r1_8_9": {
+    "class": "homberger_800",
+    "best_known_cost": 32358.44,
+    "capacity": 200,
+    "jobs": 800,
+    "solved_with_vehicles": 72,
+    "total_demand": 14230,
+    "vehicles": 200
+  },
+  "r2_8_1": {
+    "class": "homberger_800",
+    "best_known_cost": 28112.36,
+    "capacity": 1000,
+    "jobs": 800,
+    "solved_with_vehicles": 15,
+    "total_demand": 14230,
+    "vehicles": 200
+  },
+  "r2_8_10": {
+    "class": "homberger_800",
+    "best_known_cost": 20373.79,
+    "capacity": 1000,
+    "jobs": 800,
+    "solved_with_vehicles": 15,
+    "total_demand": 14230,
+    "vehicles": 200
+  },
+  "r2_8_2": {
+    "class": "homberger_800",
+    "best_known_cost": 22795.79,
+    "capacity": 1000,
+    "jobs": 800,
+    "solved_with_vehicles": 15,
+    "total_demand": 14230,
+    "vehicles": 200
+  },
+  "r2_8_3": {
+    "class": "homberger_800",
+    "best_known_cost": 17714.05,
+    "capacity": 1000,
+    "jobs": 800,
+    "solved_with_vehicles": 15,
+    "total_demand": 14230,
+    "vehicles": 200
+  },
+  "r2_8_4": {
+    "class": "homberger_800",
+    "best_known_cost": 13206.1,
+    "capacity": 1000,
+    "jobs": 800,
+    "solved_with_vehicles": 15,
+    "total_demand": 14230,
+    "vehicles": 200
+  },
+  "r2_8_5": {
+    "class": "homberger_800",
+    "best_known_cost": 24276.37,
+    "capacity": 1000,
+    "jobs": 800,
+    "solved_with_vehicles": 15,
+    "total_demand": 14230,
+    "vehicles": 200
+  },
+  "r2_8_6": {
+    "class": "homberger_800",
+    "best_known_cost": 20479.46,
+    "capacity": 1000,
+    "jobs": 800,
+    "solved_with_vehicles": 15,
+    "total_demand": 14230,
+    "vehicles": 200
+  },
+  "r2_8_7": {
+    "class": "homberger_800",
+    "best_known_cost": 16631.77,
+    "capacity": 1000,
+    "jobs": 800,
+    "solved_with_vehicles": 15,
+    "total_demand": 14230,
+    "vehicles": 200
+  },
+  "r2_8_8": {
+    "class": "homberger_800",
+    "best_known_cost": 12645.63,
+    "capacity": 1000,
+    "jobs": 800,
+    "solved_with_vehicles": 15,
+    "total_demand": 14230,
+    "vehicles": 200
+  },
+  "r2_8_9": {
+    "class": "homberger_800",
+    "best_known_cost": 22326.21,
+    "capacity": 1000,
+    "jobs": 800,
+    "solved_with_vehicles": 15,
+    "total_demand": 14230,
+    "vehicles": 200
+  },
+  "rc1_8_1": {
+    "class": "homberger_800",
+    "best_known_cost": 30907.27,
+    "capacity": 200,
+    "jobs": 800,
+    "solved_with_vehicles": 72,
+    "total_demand": 14387,
+    "vehicles": 200
+  },
+  "rc1_8_10": {
+    "class": "homberger_800",
+    "best_known_cost": 28474.35,
+    "capacity": 200,
+    "jobs": 800,
+    "solved_with_vehicles": 72,
+    "total_demand": 14387,
+    "vehicles": 200
+  },
+  "rc1_8_2": {
+    "class": "homberger_800",
+    "best_known_cost": 28716.34,
+    "capacity": 200,
+    "jobs": 800,
+    "solved_with_vehicles": 72,
+    "total_demand": 14387,
+    "vehicles": 200
+  },
+  "rc1_8_3": {
+    "class": "homberger_800",
+    "best_known_cost": 27677.1,
+    "capacity": 200,
+    "jobs": 800,
+    "solved_with_vehicles": 72,
+    "total_demand": 14387,
+    "vehicles": 200
+  },
+  "rc1_8_4": {
+    "class": "homberger_800",
+    "best_known_cost": 26774.93,
+    "capacity": 200,
+    "jobs": 800,
+    "solved_with_vehicles": 72,
+    "total_demand": 14387,
+    "vehicles": 200
+  },
+  "rc1_8_5": {
+    "class": "homberger_800",
+    "best_known_cost": 29796.67,
+    "capacity": 200,
+    "jobs": 800,
+    "solved_with_vehicles": 72,
+    "total_demand": 14387,
+    "vehicles": 200
+  },
+  "rc1_8_6": {
+    "class": "homberger_800",
+    "best_known_cost": 29850.79,
+    "capacity": 200,
+    "jobs": 800,
+    "solved_with_vehicles": 72,
+    "total_demand": 14387,
+    "vehicles": 200
+  },
+  "rc1_8_7": {
+    "class": "homberger_800",
+    "best_known_cost": 29276.53,
+    "capacity": 200,
+    "jobs": 800,
+    "solved_with_vehicles": 72,
+    "total_demand": 14387,
+    "vehicles": 200
+  },
+  "rc1_8_8": {
+    "class": "homberger_800",
+    "best_known_cost": 28797.39,
+    "capacity": 200,
+    "jobs": 800,
+    "solved_with_vehicles": 72,
+    "total_demand": 14387,
+    "vehicles": 200
+  },
+  "rc1_8_9": {
+    "class": "homberger_800",
+    "best_known_cost": 28740.44,
+    "capacity": 200,
+    "jobs": 800,
+    "solved_with_vehicles": 72,
+    "total_demand": 14387,
+    "vehicles": 200
+  },
+  "rc2_8_1": {
+    "class": "homberger_800",
+    "best_known_cost": 20981.14,
+    "capacity": 1000,
+    "jobs": 800,
+    "solved_with_vehicles": 18,
+    "total_demand": 14387,
+    "vehicles": 200
+  },
+  "rc2_8_10": {
+    "class": "homberger_800",
+    "best_known_cost": 14439.14,
+    "capacity": 1000,
+    "jobs": 800,
+    "solved_with_vehicles": 15,
+    "total_demand": 14387,
+    "vehicles": 200
+  },
+  "rc2_8_2": {
+    "class": "homberger_800",
+    "best_known_cost": 18181.14,
+    "capacity": 1000,
+    "jobs": 800,
+    "solved_with_vehicles": 16,
+    "total_demand": 14387,
+    "vehicles": 200
+  },
+  "rc2_8_3": {
+    "class": "homberger_800",
+    "best_known_cost": 14431.11,
+    "capacity": 1000,
+    "jobs": 800,
+    "solved_with_vehicles": 15,
+    "total_demand": 14387,
+    "vehicles": 200
+  },
+  "rc2_8_4": {
+    "class": "homberger_800",
+    "best_known_cost": 11006.56,
+    "capacity": 1000,
+    "jobs": 800,
+    "solved_with_vehicles": 15,
+    "total_demand": 14387,
+    "vehicles": 200
+  },
+  "rc2_8_5": {
+    "class": "homberger_800",
+    "best_known_cost": 19119.97,
+    "capacity": 1000,
+    "jobs": 800,
+    "solved_with_vehicles": 15,
+    "total_demand": 14387,
+    "vehicles": 200
+  },
+  "rc2_8_6": {
+    "class": "homberger_800",
+    "best_known_cost": 18146.03,
+    "capacity": 1000,
+    "jobs": 800,
+    "solved_with_vehicles": 15,
+    "total_demand": 14387,
+    "vehicles": 200
+  },
+  "rc2_8_7": {
+    "class": "homberger_800",
+    "best_known_cost": 16841.12,
+    "capacity": 1000,
+    "jobs": 800,
+    "solved_with_vehicles": 15,
+    "total_demand": 14387,
+    "vehicles": 200
+  },
+  "rc2_8_8": {
+    "class": "homberger_800",
+    "best_known_cost": 15790.21,
+    "capacity": 1000,
+    "jobs": 800,
+    "solved_with_vehicles": 15,
+    "total_demand": 14387,
+    "vehicles": 200
+  },
+  "rc2_8_9": {
+    "class": "homberger_800",
+    "best_known_cost": 15352.82,
+    "capacity": 1000,
+    "jobs": 800,
+    "solved_with_vehicles": 15,
+    "total_demand": 14387,
+    "vehicles": 200
+  }
+}

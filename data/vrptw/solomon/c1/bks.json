@@ -1,0 +1,74 @@
+{
+  "c101": {
+    "best_known_cost": 828.94,
+    "capacity": 200,
+    "jobs": 100,
+    "solved_with_vehicles": 10,
+    "total_demand": 1810,
+    "vehicles": 25
+  },
+  "c102": {
+    "best_known_cost": 828.94,
+    "capacity": 200,
+    "jobs": 100,
+    "solved_with_vehicles": 10,
+    "total_demand": 1810,
+    "vehicles": 25
+  },
+  "c103": {
+    "best_known_cost": 828.06,
+    "capacity": 200,
+    "jobs": 100,
+    "solved_with_vehicles": 10,
+    "total_demand": 1810,
+    "vehicles": 25
+  },
+  "c104": {
+    "best_known_cost": 824.78,
+    "capacity": 200,
+    "jobs": 100,
+    "solved_with_vehicles": 10,
+    "total_demand": 1810,
+    "vehicles": 25
+  },
+  "c105": {
+    "best_known_cost": 828.94,
+    "capacity": 200,
+    "jobs": 100,
+    "solved_with_vehicles": 10,
+    "total_demand": 1810,
+    "vehicles": 25
+  },
+  "c106": {
+    "best_known_cost": 828.94,
+    "capacity": 200,
+    "jobs": 100,
+    "solved_with_vehicles": 10,
+    "total_demand": 1810,
+    "vehicles": 25
+  },
+  "c107": {
+    "best_known_cost": 828.94,
+    "capacity": 200,
+    "jobs": 100,
+    "solved_with_vehicles": 10,
+    "total_demand": 1810,
+    "vehicles": 25
+  },
+  "c108": {
+    "best_known_cost": 828.94,
+    "capacity": 200,
+    "jobs": 100,
+    "solved_with_vehicles": 10,
+    "total_demand": 1810,
+    "vehicles": 25
+  },
+  "c109": {
+    "best_known_cost": 828.94,
+    "capacity": 200,
+    "jobs": 100,
+    "solved_with_vehicles": 10,
+    "total_demand": 1810,
+    "vehicles": 25
+  }
+}
