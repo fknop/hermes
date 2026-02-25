@@ -155,7 +155,7 @@ impl LocalSearchOperator for CrossExchangeOperator {
                             continue;
                         }
 
-                        if !to_route.can_vehicle_deliver_segment(
+                        if !to_route.can_deliver_segment(
                             problem,
                             from_route,
                             from_pos,
@@ -164,7 +164,7 @@ impl LocalSearchOperator for CrossExchangeOperator {
                             continue;
                         }
 
-                        if !from_route.can_vehicle_deliver_segment(
+                        if !from_route.can_deliver_segment(
                             problem,
                             to_route,
                             to_pos,

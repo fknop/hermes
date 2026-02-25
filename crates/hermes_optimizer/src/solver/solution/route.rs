@@ -37,6 +37,12 @@ pub struct WorkingSolutionRoute {
 
     total_transport_cost: f64,
 
+    /// fwd_jobs[i] is the set of jobs delivered by the route from start to activity i
+    pub(super) fwd_jobs: Vec<BitSet>,
+
+    /// bwd_jobs[i] is the set of jobs delivered by the route from activity i to end
+    pub(super) bwd_jobs: Vec<BitSet>,
+
     /// fwd_transport_cost[profile_id][i] is the transport cost from activity 0 to activity i for vehicle profile 'profile_id'
     pub(super) fwd_transport_cost: Vec<Vec<f64>>,
 
@@ -119,7 +125,7 @@ pub struct WorkingSolutionRoute {
 
     bbox: BBox,
 
-    updated_in_iteration: bool,
+    out_of_sync: bool,
 }
 
 impl WorkingSolutionRoute {
@@ -129,8 +135,10 @@ impl WorkingSolutionRoute {
             vehicle_id,
             jobs: FxHashMap::default(),
             bbox: BBox::default(),
-            updated_in_iteration: false,
+            out_of_sync: false,
             total_transport_cost: 0.0,
+            fwd_jobs: Vec::new(),
+            bwd_jobs: Vec::new(),
             fwd_transport_cost: vec![vec![]; problem.vehicle_profiles().len()],
             bwd_transport_cost: vec![vec![]; problem.vehicle_profiles().len()],
             activity_ids: Vec::new(),
@@ -637,7 +645,7 @@ impl WorkingSolutionRoute {
     }
 
     fn increment_version(&mut self, problem: &VehicleRoutingProblem) {
-        self.updated_in_iteration = true;
+        self.out_of_sync = true;
         self.version = problem.next_route_version();
     }
 
@@ -785,13 +793,12 @@ impl WorkingSolutionRoute {
         self.update_data(problem);
     }
 
-    pub(crate) fn resync(&mut self, problem: &VehicleRoutingProblem) {
-        if !self.updated_in_iteration {
+    pub(crate) fn sync(&mut self, problem: &VehicleRoutingProblem) {
+        if !self.out_of_sync {
             return;
         }
 
         self.update_data(problem);
-        self.updated_in_iteration = false;
     }
 
     fn update_bbox(&mut self, problem: &VehicleRoutingProblem) {
@@ -808,6 +815,13 @@ impl WorkingSolutionRoute {
 
     fn resize_data(&mut self, problem: &VehicleRoutingProblem) {
         let len = self.len();
+
+        self.fwd_jobs
+            .resize_with(len, || BitSet::with_capacity(problem.jobs().len()));
+        self.fwd_jobs.iter_mut().for_each(|set| set.clear());
+        self.bwd_jobs
+            .resize_with(len, || BitSet::with_capacity(problem.jobs().len()));
+        self.bwd_jobs.iter_mut().for_each(|set| set.clear());
 
         self.fwd_transport_cost
             .iter_mut()
@@ -918,8 +932,15 @@ impl WorkingSolutionRoute {
 
         self.fwd_cumulative_waiting_durations[0] = SignedDuration::ZERO;
 
-        for i in 0..len {
-            let activity_id = self.activity_ids[i];
+        for (i, &activity_id) in self.activity_ids.iter().enumerate() {
+            let job_id = activity_id.job_id();
+            if i == 0 {
+                self.fwd_jobs[i].insert(job_id.get());
+            } else {
+                let (left, right) = self.pending_shipments.split_at_mut(i);
+                right[0].union_with(&left[i - 1]);
+                right[0].set(job_id.get(), true);
+            }
 
             if problem.has_shipments() {
                 match activity_id {
@@ -1073,6 +1094,16 @@ impl WorkingSolutionRoute {
 
         for i in (0..len).rev() {
             let activity_id = self.activity_ids[i];
+            let job_id = activity_id.job_id();
+
+            if i == len - 1 {
+                self.bwd_jobs[i].insert(job_id.get());
+            } else {
+                let (left, right) = self.bwd_jobs.split_at_mut(i + 1);
+                left[i].union_with(&right[0]);
+                left[i].set(job_id.get(), true);
+            }
+
             let job = problem.job(activity_id.job_id());
 
             self.bwd_load_deliveries[i].update(&current_load_deliveries);
@@ -1175,6 +1206,8 @@ impl WorkingSolutionRoute {
         }
 
         self.update_insertion_positions(problem);
+
+        self.out_of_sync = false;
     }
 
     fn update_insertion_positions(&mut self, problem: &VehicleRoutingProblem) {
@@ -1293,7 +1326,7 @@ impl WorkingSolutionRoute {
     }
 
     /// Check if a vehicle can deliver a segment from another route between [start, end)
-    pub fn can_vehicle_deliver_segment(
+    pub fn can_deliver_segment(
         &self,
         problem: &VehicleRoutingProblem,
         other: &Self,
@@ -1319,9 +1352,21 @@ impl WorkingSolutionRoute {
         true
     }
 
-    pub fn can_vehicle_deliver_job(&self, problem: &VehicleRoutingProblem, job_id: JobIdx) -> bool {
+    fn segment_bitset(&self, problem: &VehicleRoutingProblem, start: usize, end: usize) -> BitSet {
+        let mut result = BitSet::with_capacity(problem.jobs().len());
+        result.intersection_from(&self.bwd_jobs[start], &self.fwd_jobs[end - 1]);
+        result
+    }
+
+    pub fn can_deliver_job(&self, problem: &VehicleRoutingProblem, job_id: JobIdx) -> bool {
         let job = problem.job(job_id);
         let vehicle = self.vehicle(problem);
+
+        if let Some(fixed_vehicle_id) = problem.task_dependencies().fixed_vehicle_for_job(job_id)
+            && fixed_vehicle_id != self.vehicle_id
+        {
+            return false;
+        }
 
         job.skills_satisfied_by_vehicle(vehicle)
     }

@@ -139,11 +139,13 @@ fn for_each_service_insertion(
                 return;
             }
 
-            if !route.can_vehicle_deliver_job(solution.problem(), job_index) {
+            if !route.can_deliver_job(solution.problem(), job_index) {
                 return;
             }
 
-            (0..=route.len())
+            let (start, end) = route.insertion_range(ActivityId::Service(job_index));
+
+            (start..=end)
                 .filter(|position| {
                     route.in_insertion_neighborhood(
                         solution.problem(),
@@ -168,15 +170,18 @@ fn for_each_route_service_insertion(
     mut f: impl FnMut(Insertion),
 ) {
     let route = solution.route(route_index);
+
     if route.has_maximum_activities(solution.problem()) {
         return;
     }
 
-    if !route.can_vehicle_deliver_job(solution.problem(), job_index) {
+    if !route.can_deliver_job(solution.problem(), job_index) {
         return;
     }
 
-    for position in 0..=route.len() {
+    let (start, end) = route.insertion_range(ActivityId::Service(job_index));
+
+    for position in start..=end {
         if !route.in_insertion_neighborhood(
             solution.problem(),
             ActivityId::Service(job_index),
@@ -203,11 +208,16 @@ fn for_each_shipment_insertion(
             continue;
         }
 
-        if !route.can_vehicle_deliver_job(solution.problem(), job_index) {
+        if !route.can_deliver_job(solution.problem(), job_index) {
             continue;
         }
 
-        for pickup_position in 0..=route.len() {
+        let (start_pickup, end_pickup) =
+            route.insertion_range(ActivityId::ShipmentPickup(job_index));
+        let (start_delivery, end_delivery) =
+            route.insertion_range(ActivityId::ShipmentDelivery(job_index));
+
+        for pickup_position in start_pickup..=end_pickup {
             if !route.in_insertion_neighborhood(
                 solution.problem(),
                 ActivityId::ShipmentPickup(job_index),
@@ -216,7 +226,7 @@ fn for_each_shipment_insertion(
                 continue;
             }
 
-            for delivery_position in pickup_position..=route.len() {
+            for delivery_position in (pickup_position.max(start_delivery))..=end_delivery {
                 if !route.in_insertion_neighborhood(
                     solution.problem(),
                     ActivityId::ShipmentDelivery(job_index),
@@ -243,15 +253,20 @@ fn for_each_route_shipment_insertion(
     mut f: impl FnMut(Insertion),
 ) {
     let route = solution.route(route_index);
+
     if route.will_break_maximum_activities(solution.problem(), 2) {
         return;
     }
 
-    if !route.can_vehicle_deliver_job(solution.problem(), job_index) {
+    if !route.can_deliver_job(solution.problem(), job_index) {
         return;
     }
 
-    for pickup_position in 0..=route.len() {
+    let (start_pickup, end_pickup) = route.insertion_range(ActivityId::ShipmentPickup(job_index));
+    let (start_delivery, end_delivery) =
+        route.insertion_range(ActivityId::ShipmentDelivery(job_index));
+
+    for pickup_position in start_pickup..=end_pickup {
         if !route.in_insertion_neighborhood(
             solution.problem(),
             ActivityId::ShipmentPickup(job_index),
@@ -260,7 +275,7 @@ fn for_each_route_shipment_insertion(
             continue;
         }
 
-        for delivery_position in pickup_position..=route.len() {
+        for delivery_position in (pickup_position.max(start_delivery))..=end_delivery {
             if !route.in_insertion_neighborhood(
                 solution.problem(),
                 ActivityId::ShipmentDelivery(job_index),

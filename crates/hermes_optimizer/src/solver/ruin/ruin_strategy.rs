@@ -71,6 +71,6 @@ impl RuinSolution for RuinStrategy {
             }
         }
 
-        solution.resync();
+        solution.sync();
     }
 }

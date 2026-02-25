@@ -83,7 +83,7 @@ impl LocalSearchOperator for InterOrOptOperator {
                 .len()
                 .saturating_sub(segment_length - 1)
             {
-                if !to_route.can_vehicle_deliver_segment(
+                if !to_route.can_deliver_segment(
                     problem,
                     from_route,
                     from_pos,

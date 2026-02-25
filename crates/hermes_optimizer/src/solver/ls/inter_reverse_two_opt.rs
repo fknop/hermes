@@ -122,7 +122,7 @@ impl LocalSearchOperator for InterReverseTwoOptOperator {
                 continue;
             }
 
-            if !to_route.can_vehicle_deliver_segment(
+            if !to_route.can_deliver_segment(
                 problem,
                 from_route,
                 from_pos,
@@ -150,7 +150,7 @@ impl LocalSearchOperator for InterReverseTwoOptOperator {
                     continue;
                 }
 
-                if !from_route.can_vehicle_deliver_segment(problem, to_route, 0, to_pos + 1) {
+                if !from_route.can_deliver_segment(problem, to_route, 0, to_pos + 1) {
                     continue;
                 }
 

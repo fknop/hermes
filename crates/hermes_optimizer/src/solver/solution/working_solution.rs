@@ -49,10 +49,11 @@ impl WorkingSolution {
             .collect::<FxHashMap<VehicleIdx, FxHashSet<RouteIdx>>>();
 
         WorkingSolution {
-            problem,
             routes,
             unassigned_jobs,
             vehicle_route_map,
+            job_routes: vec![None; problem.jobs().len()],
+            problem,
         }
     }
 
@@ -353,9 +354,9 @@ impl WorkingSolution {
         removed
     }
 
-    pub fn resync(&mut self) {
+    pub fn sync(&mut self) {
         for route in &mut self.routes {
-            route.resync(&self.problem);
+            route.sync(&self.problem);
         }
 
         if !self.problem().fleet().is_infinite() {
@@ -372,7 +373,7 @@ impl WorkingSolution {
     }
 
     pub fn resync_route(&mut self, route_id: RouteIdx) {
-        self.routes[route_id].resync(&self.problem);
+        self.routes[route_id].sync(&self.problem);
     }
 
     pub fn remove_route(&mut self, route_id: RouteIdx) -> usize {

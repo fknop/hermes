@@ -137,7 +137,7 @@ pub struct TaskDependencies {
     before_graph: TaskDependencyGraph,
     directly_before_graph: TaskDependencyGraph,
 
-    required_vehicle: Vec<Option<VehicleIdx>>,
+    fixed_jobs_vehicle: Vec<Option<VehicleIdx>>,
 
     in_same_route_bitsets: Vec<BitSet>,
     not_in_same_route_bitsets: Vec<BitSet>,
@@ -158,7 +158,7 @@ impl TaskDependencies {
         let mut task_dependencies = Self {
             in_same_route_bitsets,
             not_in_same_route_bitsets,
-            required_vehicle: vec![None; jobs.len()],
+            fixed_jobs_vehicle: vec![None; jobs.len()],
             ..Self::default()
         };
 
@@ -242,7 +242,7 @@ impl TaskDependencies {
         for group in in_same_route_groups {
             for job_id in group.bitset.ones() {
                 task_dependencies.in_same_route_bitsets[job_id] = group.bitset.clone();
-                task_dependencies.required_vehicle[job_id] = group.vehicle_id;
+                task_dependencies.fixed_jobs_vehicle[job_id] = group.vehicle_id;
             }
         }
 
@@ -271,6 +271,10 @@ impl TaskDependencies {
         }
 
         task_dependencies
+    }
+
+    pub fn fixed_vehicle_for_job(&self, job_id: JobIdx) -> Option<VehicleIdx> {
+        self.fixed_jobs_vehicle[job_id.get()]
     }
 
     pub fn traverse(
@@ -423,7 +427,7 @@ mod tests {
                     .collect::<Vec<_>>(),
                 vec![0, 1]
             );
-            assert_eq!(dependencies.required_vehicle[i], Some(VehicleIdx::new(0)));
+            assert_eq!(dependencies.fixed_jobs_vehicle[i], Some(VehicleIdx::new(0)));
         }
 
         for i in 2..=5 {
@@ -433,7 +437,7 @@ mod tests {
                     .collect::<Vec<_>>(),
                 vec![2, 3, 4, 5]
             );
-            assert_eq!(dependencies.required_vehicle[i], None);
+            assert_eq!(dependencies.fixed_jobs_vehicle[i], None);
         }
 
         for i in 6..10 {
@@ -443,7 +447,7 @@ mod tests {
                     .collect::<Vec<_>>(),
                 vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
             );
-            assert_eq!(dependencies.required_vehicle[i], None);
+            assert_eq!(dependencies.fixed_jobs_vehicle[i], None);
         }
     }
 

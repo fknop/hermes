@@ -71,7 +71,7 @@ impl LocalSearchOperator for InterSwapOperator {
                 continue;
             }
 
-            if !to_route.can_vehicle_deliver_segment(problem, from_route, from_pos, from_pos + 1) {
+            if !to_route.can_deliver_segment(problem, from_route, from_pos, from_pos + 1) {
                 continue;
             }
 
@@ -80,7 +80,7 @@ impl LocalSearchOperator for InterSwapOperator {
                     continue;
                 }
 
-                if !from_route.can_vehicle_deliver_segment(problem, to_route, to_pos, to_pos + 1) {
+                if !from_route.can_deliver_segment(problem, to_route, to_pos, to_pos + 1) {
                     continue;
                 }
 

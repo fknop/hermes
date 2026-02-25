@@ -41,7 +41,7 @@ impl BitSet {
         self.repr.set_range(0..self.repr.len(), true);
     }
 
-    pub fn ones(&self) -> Ones {
+    pub fn ones(&self) -> Ones<'_> {
         self.repr.ones()
     }
 
@@ -53,12 +53,22 @@ impl BitSet {
         self.repr.intersection_count(&other.repr) > 0
     }
 
+    pub fn intersection_from(&mut self, a: &BitSet, b: &BitSet) {
+        self.clear();
+        self.repr.union_with(&a.repr);
+        self.repr.intersect_with(&b.repr);
+    }
+
     pub fn set(&mut self, index: usize, value: bool) {
         self.repr.set(index, value);
     }
 
     pub fn union_with(&mut self, other: &BitSet) {
         self.repr.union_with(&other.repr)
+    }
+
+    pub fn intersection_with(&mut self, other: &BitSet) {
+        self.repr.intersect_with(&other.repr)
     }
 
     pub fn insert(&mut self, index: usize) {

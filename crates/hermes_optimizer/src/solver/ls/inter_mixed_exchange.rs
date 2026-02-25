@@ -102,7 +102,7 @@ impl LocalSearchOperator for InterMixedExchange {
         }
 
         for position in 0..route1.len() {
-            if !route2.can_vehicle_deliver_segment(problem, route1, position, position + 1) {
+            if !route2.can_deliver_segment(problem, route1, position, position + 1) {
                 continue;
             }
 
@@ -133,7 +133,7 @@ impl LocalSearchOperator for InterMixedExchange {
                     continue;
                 }
 
-                if !route1.can_vehicle_deliver_segment(
+                if !route1.can_deliver_segment(
                     problem,
                     route2,
                     segment_start,

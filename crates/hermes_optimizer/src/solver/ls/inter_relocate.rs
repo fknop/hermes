@@ -71,7 +71,7 @@ impl LocalSearchOperator for InterRelocateOperator {
         }
 
         for from_pos in 0..from_route.activity_ids().len() {
-            if !to_route.can_vehicle_deliver_segment(problem, from_route, from_pos, from_pos + 1) {
+            if !to_route.can_deliver_segment(problem, from_route, from_pos, from_pos + 1) {
                 continue;
             }
 
