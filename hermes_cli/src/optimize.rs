@@ -64,7 +64,7 @@ pub async fn run(args: OptimizeArgs) -> anyhow::Result<()> {
 
     // loading_bar.lock().set_message("running...");
 
-    solver.solve();
+    solver.solve()?;
     let best_solution = solver.current_best_solution();
     if let Some(best_solution) = best_solution {
         let n_routes = best_solution.solution.non_empty_routes_count();

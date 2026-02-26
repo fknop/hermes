@@ -1,19 +1,19 @@
-use std::{path::PathBuf, sync::Arc, time::Duration};
+use std::{fs::File, io::BufWriter, path::PathBuf};
 
-use clap::{Args, Subcommand, arg};
+use clap::{Args, Subcommand};
 use hermes_optimizer::{
     parsers::{
-        cvrplib::{parse_bks_for_file, parse_solution_file},
+        cvrplib::{Bks, parse_bks_for_file, parse_solution_file},
         parser::parse_dataset,
     },
     solver::{
-        solution::working_solution::WorkingSolution,
         solver::Solver,
         solver_params::{SolverParams, SolverParamsDebugOptions, Termination, Threads},
     },
 };
-use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
-use parking_lot::Mutex;
+use indicatif::{ProgressBar, ProgressStyle};
+use jiff::SignedDuration;
+use serde::{Deserialize, Serialize};
 
 use crate::{file_utils::read_folder, parsers};
 
@@ -48,12 +48,47 @@ pub struct RunBenchmarkArgs {
 
     /// Output folder into .sol files
     #[arg(long, short = 'o')]
-    out: Option<PathBuf>,
+    out: PathBuf,
 }
 
 pub fn run(subcommand: BenchmarkSubcommands) -> Result<(), anyhow::Error> {
     match subcommand {
         BenchmarkSubcommands::Run { args } => run_benchmark(args),
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+struct InstanceResult {
+    pub instance: String,
+    pub cost: f64,
+    pub vehicles: usize,
+    pub duration: SignedDuration,
+    pub feasible: bool,
+    pub iterations: usize,
+    pub bks: Option<Bks>,
+}
+
+#[derive(Serialize, Deserialize, Default)]
+struct BenchmarkRun {
+    pub instances: Vec<InstanceResult>,
+}
+
+impl InstanceResult {
+    pub fn gap_percent(&self) -> Option<f64> {
+        self.bks
+            .map(|bks| (self.cost - bks.cost) / bks.cost * 100.0)
+    }
+
+    pub fn is_bks(&self) -> bool {
+        if !self.feasible {
+            return false;
+        }
+
+        if let Some(bks) = &self.bks {
+            bks.cost == self.cost && bks.vehicles == self.vehicles
+        } else {
+            false
+        }
     }
 }
 
@@ -70,19 +105,12 @@ fn run_benchmark(args: RunBenchmarkArgs) -> Result<(), anyhow::Error> {
         files
     };
 
-    let multi_bar = MultiProgress::new();
-    let style = ProgressStyle::with_template("{prefix:.bold} [{elapsed_precise}] {msg}").unwrap();
+    let mut benchmark_run = BenchmarkRun::default();
 
-    let bars: Vec<_> = paths
-        .iter()
-        .map(|path| {
-            let pb = multi_bar.add(ProgressBar::new(0));
-            pb.set_style(style.clone());
-            pb.set_prefix(path.file_name().unwrap().to_string_lossy().into_owned());
-            pb.set_message("pending...");
-            Arc::new(Mutex::new(pb))
-        })
-        .collect();
+    let style = ProgressStyle::with_template("{msg}").unwrap();
+
+    let progress_bar = ProgressBar::new(0);
+    progress_bar.set_style(style);
 
     for (i, path) in paths.iter().enumerate().filter(|(_, p)| {
         p.extension()
@@ -95,8 +123,25 @@ fn run_benchmark(args: RunBenchmarkArgs) -> Result<(), anyhow::Error> {
         let bks = if let Some(bks) = parse_solution_file(solution_path) {
             Some(bks)
         } else {
+            // If no sol file, try to find bks.json file
             parse_bks_for_file(path).ok()
         };
+
+        let instance_name = path
+            .strip_prefix("./data")
+            .or_else(|_| path.strip_prefix("data"))
+            .unwrap_or(path)
+            .with_extension("")
+            .to_string_lossy()
+            .replace('\\', "/")
+            .to_string();
+
+        progress_bar.set_message(format!(
+            "Running benchmark instance {} ({}/{})",
+            instance_name,
+            i + 1,
+            paths.len()
+        ));
 
         let vrp = parse_dataset(path)?;
 
@@ -127,100 +172,34 @@ fn run_benchmark(args: RunBenchmarkArgs) -> Result<(), anyhow::Error> {
             ..SolverParams::default_from_problem(&vrp)
         };
 
-        let mut solver = Solver::new(vrp, solver_params);
+        let solver = Solver::new(vrp, solver_params);
 
-        let bar = Arc::clone(&bars[i]);
-        bar.lock().set_message("running...");
-        bar.lock().reset_elapsed();
-        bar.lock().enable_steady_tick(Duration::from_millis(100));
+        let result = solver.solve()?;
+        let best_solution = result
+            .best_solution
+            .ok_or(anyhow::anyhow!("No solution found"))?;
 
-        bar.lock().set_style(style.clone());
+        let instance_result = InstanceResult {
+            bks,
+            cost: best_solution.solution.total_transport_costs(),
+            duration: result.duration,
+            feasible: best_solution.solution.unassigned_jobs().is_empty()
+                && best_solution.score.is_feasible(),
+            instance: instance_name,
+            iterations: result.iterations,
+            vehicles: best_solution.solution.non_empty_routes_count(),
+        };
 
-        let callback_bar = Arc::clone(&bars[i]);
-        solver.on_best_solution(move |s| {
-            let n_routes = s.solution.non_empty_routes_count();
-            let total_transport_cost = s.solution.total_transport_costs();
-            callback_bar.lock().finish_with_message(format!(
-                "Running... Routes = {}{}, costs = {}, unassigned = {}, gap = {}",
-                n_routes,
-                bks.map(|os| format!(" (optimal: {})", os.vehicles))
-                    .unwrap_or_default(),
-                total_transport_cost,
-                s.solution.unassigned_jobs().len(),
-                bks.map(|oc| format!("{:+.2}%", gap_percent(total_transport_cost, oc.cost)))
-                    .unwrap_or_else(|| "n/a".to_string())
-            ));
-        });
-
-        solver.solve();
-        let best_solution = solver.current_best_solution();
-
-        if let Some(best_solution) = best_solution {
-            let n_routes = best_solution.solution.non_empty_routes_count();
-            let total_transport_cost = best_solution.solution.total_transport_costs();
-            bar.lock().finish_with_message(format!(
-                "Finished - routes = {}{}, costs = {}, unassigned = {}, gap = {}",
-                n_routes,
-                bks.map(|os| format!(" (optimal: {})", os.vehicles))
-                    .unwrap_or_default(),
-                total_transport_cost,
-                best_solution.solution.unassigned_jobs().len(),
-                bks.map(|oc| format!("{:+.2}%", gap_percent(total_transport_cost, oc.cost)))
-                    .unwrap_or_else(|| "n/a".to_string())
-            ));
-
-            if let Some(out) = &args.out {
-                let mut out_path = out.clone();
-                if out_path.is_dir() {
-                    let file_stem = path.file_stem().unwrap();
-                    out_path.push(file_stem);
-                    out_path.set_extension("sol");
-                }
-                std::fs::write(out_path, create_sol_file_contents(&best_solution.solution))?;
-            }
-
-            // println!("{}", create_sol_file_contents(&best_solution.solution));
-        } else {
-            bar.lock().finish_with_message(format!("No solution"));
-        }
+        benchmark_run.instances.push(instance_result);
     }
+
+    let mut out_path = args.out.clone();
+    out_path.push(args.name);
+    out_path.set_extension("json");
+
+    let file = File::create(out_path)?;
+    let writer = BufWriter::new(file);
+    serde_json::to_writer_pretty(writer, &benchmark_run)?;
 
     Ok(())
-}
-
-fn create_sol_file_contents(solution: &WorkingSolution) -> String {
-    // Should create content like this:
-    /*
-    Route #1: 21 31 19 17 13 7 26
-    Route #2: 12 1 16 30
-    Route #3: 27 24
-    Route #4: 29 18 8 9 22 15 10 25 5 20
-    Route #5: 14 28 11 4 23 3 2 6
-    Cost 784
-    */
-
-    let mut contents = String::new();
-    let problem = solution.problem();
-
-    for (idx, route) in solution.non_empty_routes_iter().enumerate() {
-        let route_number = idx + 1;
-        contents.push_str(&format!("Route #{}:", route_number));
-
-        for activity_id in route.activity_ids() {
-            let job = problem.job(activity_id.job_id());
-            let external_id = job.external_id();
-            contents.push_str(&format!(" {}", external_id));
-        }
-
-        contents.push('\n');
-    }
-
-    let total_cost = solution.total_transport_costs();
-    contents.push_str(&format!("Cost {}", total_cost as i64));
-
-    contents
-}
-
-fn gap_percent(cost: f64, optimal_cost: f64) -> f64 {
-    (cost - optimal_cost) / optimal_cost * 100.0
 }

@@ -135,7 +135,7 @@ pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
             ));
         });
 
-        solver.solve();
+        solver.solve()?;
         let best_solution = solver.current_best_solution();
 
         if let Some(best_solution) = best_solution {
@@ -164,7 +164,7 @@ pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
 
             // println!("{}", create_sol_file_contents(&best_solution.solution));
         } else {
-            bar.lock().finish_with_message(format!("No solution"));
+            bar.lock().finish_with_message("No solution".to_string());
         }
     }
 

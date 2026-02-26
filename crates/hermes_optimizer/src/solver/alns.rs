@@ -70,6 +70,12 @@ use super::statistics::{SearchStatistics, ThreadSearchStatistics};
 
 type BestSolutionHandler = Arc<Mutex<dyn FnMut(&AcceptedSolution) + Send + Sync + 'static>>;
 
+pub struct AlnsRunResult {
+    pub best_solution: Option<AcceptedSolution>,
+    pub iterations: usize,
+    pub duration: SignedDuration,
+}
+
 pub struct Alns {
     problem: Arc<VehicleRoutingProblem>,
     constraints: Vec<Constraint>,
@@ -299,11 +305,11 @@ impl Alns {
         self.on_best_solution_handler = Some(Arc::new(Mutex::new(callback)));
     }
 
-    pub fn best_solution(&self) -> Option<Arc<AcceptedSolution>> {
+    pub fn best_solution(&self) -> Option<AcceptedSolution> {
         self.population
             .read()
             .best()
-            .map(|accepted_solution| Arc::new(accepted_solution.clone()))
+            .map(|accepted_solution| accepted_solution.clone())
     }
 
     #[cfg(feature = "statistics")]
@@ -365,7 +371,7 @@ impl Alns {
         }
     }
 
-    pub fn run(&self) -> anyhow::Result<()> {
+    pub fn run(&self) -> anyhow::Result<AlnsRunResult> {
         self.is_stopped
             .store(false, std::sync::atomic::Ordering::Relaxed);
 
@@ -375,7 +381,11 @@ impl Alns {
         self.run_construction(&mut rng);
 
         if !self.params.debug_options.enable_local_search {
-            return Ok(());
+            return Ok(AlnsRunResult {
+                best_solution: self.best_solution(),
+                iterations: 0,
+                duration: Timestamp::now().duration_since(start),
+            });
         }
 
         let num_threads = self.params.search_threads.number_of_threads();
@@ -625,15 +635,20 @@ impl Alns {
                                 break;
                             }
                         }
+
+                        return state.iteration;
                     })
                     .unwrap();
 
                 handles.push(handle);
             }
 
+            let mut total_iterations = 0;
             for (i, handle) in handles.into_iter().enumerate() {
                 match handle.join() {
-                    Ok(_) => {}
+                    Ok(iterations) => {
+                        total_iterations += iterations;
+                    }
                     Err(_) => {
                         self.is_stopped
                             .store(true, std::sync::atomic::Ordering::Relaxed);
@@ -643,7 +658,11 @@ impl Alns {
                 }
             }
 
-            Ok(())
+            Ok(AlnsRunResult {
+                best_solution: self.best_solution(),
+                iterations: total_iterations,
+                duration: Timestamp::now().duration_since(start),
+            })
         })
     }
 

@@ -5,18 +5,17 @@ use parking_lot::RwLock;
 use schemars::JsonSchema;
 use serde::Serialize;
 
+#[cfg(feature = "statistics")]
+use crate::solver::statistics::SearchStatistics;
 use crate::{
     problem::vehicle_routing_problem::VehicleRoutingProblem,
     solver::{
-        alns_weights::AlnsWeights, recreate::recreate_strategy::RecreateStrategy,
-        ruin::ruin_strategy::RuinStrategy,
+        alns::AlnsRunResult, alns_weights::AlnsWeights,
+        recreate::recreate_strategy::RecreateStrategy, ruin::ruin_strategy::RuinStrategy,
     },
 };
 
-use super::{
-    accepted_solution::AcceptedSolution, alns::Alns, solver_params::SolverParams,
-    statistics::SearchStatistics,
-};
+use super::{accepted_solution::AcceptedSolution, alns::Alns, solver_params::SolverParams};
 
 #[derive(Copy, Clone, Debug, Serialize, JsonSchema)]
 pub enum SolverStatus {
@@ -50,14 +49,16 @@ impl Solver {
         self.search.on_best_solution(callback);
     }
 
-    pub fn solve(&self) {
+    pub fn solve(&self) -> anyhow::Result<AlnsRunResult> {
         *self.status.write() = SolverStatus::Running;
         match self.search.run() {
-            Ok(_) => {
+            Ok(result) => {
                 *self.status.write() = SolverStatus::Completed;
+                Ok(result)
             }
-            Err(_) => {
+            Err(err) => {
                 *self.status.write() = SolverStatus::Error;
+                Err(err)
             }
         }
     }
@@ -79,7 +80,7 @@ impl Solver {
         self.created_at
     }
 
-    pub fn current_best_solution(&self) -> Option<Arc<AcceptedSolution>> {
+    pub fn current_best_solution(&self) -> Option<AcceptedSolution> {
         self.search.best_solution()
     }
 

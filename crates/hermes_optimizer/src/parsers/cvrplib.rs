@@ -1,7 +1,7 @@
 use std::{collections::HashMap, io::BufReader, path::Path};
 
 use geo::Coord;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 use crate::{
@@ -194,7 +194,7 @@ fn parse(text: &str) -> Result<CvrpInstance, anyhow::Error> {
     })
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct Bks {
     pub vehicles: usize,
     pub cost: f64,

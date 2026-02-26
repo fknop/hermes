@@ -154,10 +154,10 @@ async fn transform_solution(
             let problem = accepted_solution.solution.problem();
             let vehicle = problem.vehicle(route.vehicle_id());
             let mut activities: Vec<ApiSolutionActivity> = vec![];
-            if route.has_start(&problem) {
+            if route.has_start(problem) {
                 activities.push(ApiSolutionActivity::Start(ApiStartActivity {
-                    arrival_time: route.start(&problem),
-                    departure_time: route.start(&problem) + vehicle.depot_duration(),
+                    arrival_time: route.start(problem),
+                    departure_time: route.start(problem) + vehicle.depot_duration(),
                 }));
             }
 
@@ -173,23 +173,23 @@ async fn transform_solution(
                 })
             }));
 
-            if route.has_end(&problem) {
+            if route.has_end(problem) {
                 activities.push(ApiSolutionActivity::End(ApiEndActivity {
-                    arrival_time: route.end(&problem) - vehicle.end_depot_duration(),
-                    departure_time: route.end(&problem),
+                    arrival_time: route.end(problem) - vehicle.end_depot_duration(),
+                    departure_time: route.end(problem),
                 }));
             }
 
             ApiSolutionRoute {
-                distance: route.distance(&problem),
-                duration: route.duration(&problem),
-                transport_duration: route.transport_duration(&problem),
+                distance: route.distance(problem),
+                duration: route.duration(problem),
+                transport_duration: route.transport_duration(problem),
                 total_demand: route.total_initial_load().clone(),
-                vehicle_id: route.vehicle(&problem).external_id().to_owned(),
+                vehicle_id: route.vehicle(problem).external_id().to_owned(),
                 waiting_duration: route.total_waiting_duration(),
                 activities,
                 polyline: Feature::default(),
-                vehicle_max_load: route.max_load(&problem),
+                vehicle_max_load: route.max_load(problem),
             }
         })
         .collect();
@@ -270,7 +270,7 @@ pub async fn poll_handler(
         SolverStatus::Error => Ok(Json(PollResponse::Error)),
         SolverStatus::Running => {
             let solution = solver.current_best_solution().map(|solution| {
-                transform_solution(solution.clone(), &state, query.geojson.unwrap_or(true))
+                transform_solution(Arc::new(solution), &state, query.geojson.unwrap_or(true))
             });
             let statistics = solver.statistics().aggregate();
             let weights = solver.weights();
@@ -289,7 +289,7 @@ pub async fn poll_handler(
 
         SolverStatus::Completed => {
             let solution = solver.current_best_solution().map(|solution| {
-                transform_solution(solution.clone(), &state, query.geojson.unwrap_or(true))
+                transform_solution(Arc::new(solution), &state, query.geojson.unwrap_or(true))
             });
             let statistics = solver.statistics().aggregate();
             let weights = solver.weights();
