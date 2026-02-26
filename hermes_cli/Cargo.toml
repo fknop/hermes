@@ -27,3 +27,4 @@ hermes_matrix_providers = { version = "0.1.0", path = "../crates/hermes_matrix_p
 parking_lot = "0.12.5"
 dotenvy.workspace = true
 serde.workspace = true
+comfy-table = "7.2.2"
