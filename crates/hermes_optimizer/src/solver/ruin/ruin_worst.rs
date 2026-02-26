@@ -1,8 +1,16 @@
 use std::f64;
 
 use crate::{
-    problem::{job::ActivityId, vehicle_routing_problem::VehicleRoutingProblem},
-    solver::solution::{route::WorkingSolutionRoute, working_solution::WorkingSolution},
+    problem::{
+        job::{ActivityId, JobIdx},
+        vehicle_routing_problem::VehicleRoutingProblem,
+    },
+    solver::solution::{
+        route::WorkingSolutionRoute,
+        route_id::{self, RouteIdx},
+        working_solution::WorkingSolution,
+    },
+    utils::enumerate_idx::EnumerateIdx,
 };
 
 use super::{ruin_context::RuinContext, ruin_solution::RuinSolution};
@@ -75,37 +83,68 @@ impl RuinSolution for RuinWorst {
     {
         let p = context.params.ruin_worst_determinism;
 
-        let mut candidates: Vec<(ActivityId, f64)> =
-            Vec::with_capacity(solution.problem().jobs().len());
+        let mut candidates: Vec<Savings> =
+            Vec::with_capacity(solution.problem().jobs().len() - solution.unassigned_jobs().len());
+
+        let mut route_ids = solution
+            .routes()
+            .iter()
+            .enumerate_idx()
+            .filter(|(_, route): &(RouteIdx, &WorkingSolutionRoute)| !route.is_empty())
+            .map(|(id, _): (RouteIdx, &WorkingSolutionRoute)| id)
+            .collect::<Vec<RouteIdx>>();
+
         for _ in 0..context.num_jobs_to_remove {
             if solution.is_empty() {
                 return;
             }
 
-            candidates.clear();
-            candidates.extend(solution.non_empty_routes_iter().flat_map(|route| {
+            // Instead of recomputing every candidates from a route every loop
+            // We could only recompute the neighbors of the activities that were removed
+            candidates.extend(route_ids.iter().flat_map(|route_id| {
+                let route = solution.route(*route_id);
                 route
                     .activity_ids()
                     .iter()
                     .enumerate()
-                    .map(|(index, &job_id)| {
+                    .map(|(index, &activity_id)| {
                         let savings = compute_savings(solution.problem(), route, index);
-                        (job_id, savings)
+                        Savings {
+                            job_id: activity_id.job_id(),
+                            route_id: *route_id,
+                            savings,
+                        }
                     })
             }));
 
-            candidates.sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+            candidates.sort_unstable_by(|a, b| b.savings.partial_cmp(&a.savings).unwrap());
 
             let y: f64 = context.rng.random_range(0.0..1.0);
             let index = (y.powf(p) * candidates.len() as f64).floor() as usize;
 
             // Remove the activity with the worst savings
-            if let Some(job_id) = candidates.get(index).map(|candidate| candidate.0) {
+            if let Some(candidate) = candidates.get(index) {
                 // TODO: check for shipments
-                solution.remove_job(job_id.job_id());
+                let removed = solution.remove_job(candidate.job_id);
+
+                if removed {
+                    route_ids.clear();
+
+                    // Only route_id changed, no need to recompute savings for other routes
+                    route_ids.push(candidate.route_id);
+                }
             } else {
                 break;
             }
+
+            // Remove candidates that are in route_ids
+            candidates.retain(|candidate| !route_ids.contains(&candidate.route_id));
         }
     }
+}
+
+struct Savings {
+    route_id: RouteIdx,
+    job_id: JobIdx,
+    savings: f64,
 }

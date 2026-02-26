@@ -1,6 +1,7 @@
-use std::path::Path;
+use std::{collections::HashMap, io::BufReader, path::Path};
 
 use geo::Coord;
+use serde::Deserialize;
 use tracing::instrument;
 
 use crate::{
@@ -193,7 +194,58 @@ fn parse(text: &str) -> Result<CvrpInstance, anyhow::Error> {
     })
 }
 
-pub fn parse_solution_file<P: AsRef<Path>>(path: P) -> Option<(usize, f64)> {
+#[derive(Clone, Copy, Debug)]
+pub struct Bks {
+    pub vehicles: usize,
+    pub cost: f64,
+}
+
+#[derive(Deserialize)]
+struct BksEntry {
+    best_known_cost: f64,
+    solved_with_vehicles: usize,
+}
+
+#[derive(Deserialize)]
+struct BksFile {
+    #[serde(flatten)]
+    bks: HashMap<String, BksEntry>,
+}
+
+pub fn parse_bks_for_file<P: AsRef<Path>>(path: P) -> anyhow::Result<Bks> {
+    if !path.as_ref().is_file() {
+        return Err(anyhow::anyhow!("File not found"));
+    }
+
+    let name = path
+        .as_ref()
+        .file_stem()
+        .ok_or(anyhow::anyhow!("Error parsing file name"))?
+        .to_str()
+        .ok_or(anyhow::anyhow!("Error parsing file name"))?;
+
+    let directory = path
+        .as_ref()
+        .parent()
+        .ok_or_else(|| anyhow::anyhow!("Invalid path"))?;
+
+    let bks_path = directory.join("bks.json");
+    let file = std::fs::File::open(bks_path)?;
+    let reader = BufReader::new(file);
+
+    let bks_file: BksFile = serde_json::from_reader(reader)?;
+
+    if let Some(bks) = bks_file.bks.get(name) {
+        Ok(Bks {
+            cost: bks.best_known_cost,
+            vehicles: bks.solved_with_vehicles,
+        })
+    } else {
+        Err(anyhow::anyhow!("Could not find bks key in bks file"))
+    }
+}
+
+pub fn parse_solution_file<P: AsRef<Path>>(path: P) -> Option<Bks> {
     if !path.as_ref().exists() {
         return None;
     }
@@ -211,7 +263,10 @@ pub fn parse_solution_file<P: AsRef<Path>>(path: P) -> Option<(usize, f64)> {
         .filter(|line| line.starts_with("Route"))
         .count();
 
-    cost.map(|c| (routes, c))
+    cost.map(|c| Bks {
+        cost: c,
+        vehicles: routes,
+    })
 }
 
 #[cfg(test)]

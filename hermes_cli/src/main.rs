@@ -5,10 +5,11 @@ use mimalloc::MiMalloc;
 use tracing_subscriber::fmt::format::FmtSpan;
 
 use crate::{
-    generate::GenerateSubcommands, get_matrix::GetMatrixArgs, optimize::OptimizeArgs,
-    optimize_dataset::OptimizeDatasetArgs,
+    benchmark::BenchmarkSubcommands, generate::GenerateSubcommands, get_matrix::GetMatrixArgs,
+    optimize::OptimizeArgs, optimize_dataset::OptimizeDatasetArgs,
 };
 
+mod benchmark;
 mod file_utils;
 mod generate;
 mod get_matrix;
@@ -52,6 +53,10 @@ enum Commands {
         #[command(subcommand)]
         commands: GenerateSubcommands,
     },
+    Benchmark {
+        #[command(subcommand)]
+        commands: BenchmarkSubcommands,
+    },
     GetMatrix {
         #[command(flatten)]
         args: GetMatrixArgs,
@@ -83,6 +88,7 @@ async fn main() -> Result<(), anyhow::Error> {
         Some(Commands::OptimizeDataset { args }) => optimize_dataset::run(args)?,
         Some(Commands::Generate { commands }) => generate::run(commands)?,
         Some(Commands::GetMatrix { args }) => get_matrix::run(args).await?,
+        Some(Commands::Benchmark { commands }) => benchmark::run(commands)?,
         None => {
             // Handle no command provided
         }

@@ -133,9 +133,7 @@ impl RegretInsertion {
 
     pub fn insert_services(&self, solution: &mut WorkingSolution, mut context: RecreateContext) {
         while !solution.unassigned_jobs().is_empty() {
-            let best_insertion_for_max_regret = context
-                .thread_pool
-                .install(|| self.compute_best_insertion(solution, &mut context));
+            let best_insertion_for_max_regret = self.compute_best_insertion(solution, &mut context);
 
             // 4. Perform the insertion of the service with the highest regret
             if let Some((best_score, insertion)) = best_insertion_for_max_regret {

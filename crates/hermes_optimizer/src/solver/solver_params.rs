@@ -123,8 +123,8 @@ impl Default for SolverParams {
             solver_selector: SolverSelectorStrategy::SelectWeighted,
             ruin: RuinParams::default(),
             recreate: RecreateParams::default(),
-            search_threads: Threads::Multi(2),
-            insertion_threads: Threads::Multi(6),
+            search_threads: Threads::Multi(1),
+            insertion_threads: Threads::Multi(8),
             noise_level: 0.025,
             noise_probability: 0.15,
 

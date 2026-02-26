@@ -52,7 +52,6 @@ impl WorkingSolution {
             routes,
             unassigned_jobs,
             vehicle_route_map,
-            job_routes: vec![None; problem.jobs().len()],
             problem,
         }
     }

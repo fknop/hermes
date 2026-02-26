@@ -1,6 +1,6 @@
 use std::{path::PathBuf, sync::Arc, time::Duration};
 
-use clap::Args;
+use clap::{Args, Subcommand, arg};
 use hermes_optimizer::{
     parsers::{
         cvrplib::{parse_bks_for_file, parse_solution_file},
@@ -17,11 +17,22 @@ use parking_lot::Mutex;
 
 use crate::{file_utils::read_folder, parsers};
 
+#[derive(Subcommand)]
+pub enum BenchmarkSubcommands {
+    Run {
+        #[command(flatten)]
+        args: RunBenchmarkArgs,
+    },
+}
+
 #[derive(Args)]
-pub struct OptimizeDatasetArgs {
+pub struct RunBenchmarkArgs {
     /// The file to optimize
     #[arg(short, long)]
     dataset: PathBuf,
+
+    #[arg(short, long)]
+    name: String,
 
     #[arg(short, long, value_parser=parsers::parse_duration)]
     timeout: Option<jiff::SignedDuration>,
@@ -40,7 +51,13 @@ pub struct OptimizeDatasetArgs {
     out: Option<PathBuf>,
 }
 
-pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
+pub fn run(subcommand: BenchmarkSubcommands) -> Result<(), anyhow::Error> {
+    match subcommand {
+        BenchmarkSubcommands::Run { args } => run_benchmark(args),
+    }
+}
+
+fn run_benchmark(args: RunBenchmarkArgs) -> Result<(), anyhow::Error> {
     let paths = if args.dataset.is_file() {
         vec![args.dataset]
     } else {
@@ -148,7 +165,7 @@ pub fn run(args: OptimizeDatasetArgs) -> Result<(), anyhow::Error> {
                     .unwrap_or_default(),
                 total_transport_cost,
                 best_solution.solution.unassigned_jobs().len(),
-                bks.map(|bks| format!("{:+.2}%", gap_percent(total_transport_cost, bks.cost)))
+                bks.map(|oc| format!("{:+.2}%", gap_percent(total_transport_cost, oc.cost)))
                     .unwrap_or_else(|| "n/a".to_string())
             ));
 

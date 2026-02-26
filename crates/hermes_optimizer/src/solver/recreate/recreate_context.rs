@@ -21,7 +21,6 @@ pub struct RecreateContext<'a> {
     pub constraints: &'a Vec<Constraint>,
     pub problem: &'a VehicleRoutingProblem,
     pub noise_params: NoiseParams,
-    pub thread_pool: &'a rayon::ThreadPool,
     pub insert_on_failure: bool,
 }
 

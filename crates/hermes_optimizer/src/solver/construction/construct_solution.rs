@@ -358,7 +358,6 @@ pub fn construct_solution(
     params: &SolverParams,
     rng: &mut SmallRng,
     constraints: &Vec<Constraint>,
-    thread_pool: &rayon::ThreadPool,
 ) -> WorkingSolution {
     debug!("Start construction heuristic");
     let mut solution = WorkingSolution::new(Arc::clone(problem));
@@ -391,7 +390,6 @@ pub fn construct_solution(
                     noise_probability: params.noise_probability,
                 },
                 problem,
-                thread_pool,
                 insert_on_failure: false,
             },
         );
@@ -407,7 +405,6 @@ pub fn construct_solution(
                     noise_probability: params.noise_probability,
                 },
                 problem,
-                thread_pool,
                 insert_on_failure: false,
             },
         );
@@ -435,33 +432,31 @@ pub fn construct_solution(
 
     debug!("construct_solution: start local search");
 
-    thread_pool.install(|| {
-        local_search.intensify(problem, &mut solution, 500);
+    local_search.intensify(problem, &mut solution, 500);
 
-        let (score, score_analysis) = solution.compute_solution_score(constraints);
+    let (score, score_analysis) = solution.compute_solution_score(constraints);
 
-        if score.is_infeasible() {
-            tracing::error!(
-                "Construction LS: solution rejected due to failure score: {:?}",
-                score_analysis,
-            );
-            panic!("Bug: score should never fail when insert_on_failure is false")
-        }
+    if score.is_infeasible() {
+        tracing::error!(
+            "Construction LS: solution rejected due to failure score: {:?}",
+            score_analysis,
+        );
+        panic!("Bug: score should never fail when insert_on_failure is false")
+    }
 
-        // for &route_id in &routes {
-        //     debug!("Intensifying route {}", route_id);
-        //     local_search.intensify_route(problem, &mut solution, route_id);
-        //     let (score, score_analysis) = solution.compute_solution_score(constraints);
+    // for &route_id in &routes {
+    //     debug!("Intensifying route {}", route_id);
+    //     local_search.intensify_route(problem, &mut solution, route_id);
+    //     let (score, score_analysis) = solution.compute_solution_score(constraints);
 
-        //     if score.is_infeasible() {
-        //         tracing::error!(
-        //             "Construction LS: solution rejected due to failure score: {:?}",
-        //             score_analysis,
-        //         );
-        //         panic!("Bug: score should never fail when insert_on_failure is false")
-        //     }
-        // }
-    });
+    //     if score.is_infeasible() {
+    //         tracing::error!(
+    //             "Construction LS: solution rejected due to failure score: {:?}",
+    //             score_analysis,
+    //         );
+    //         panic!("Bug: score should never fail when insert_on_failure is false")
+    //     }
+    // }
 
     solution
 }

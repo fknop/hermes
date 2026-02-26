@@ -330,15 +330,13 @@ impl Alns {
             return;
         }
 
+        let thread_pool = self.create_construction_thread_pool();
+
         let initial_solution = timer_debug!(
             "Construction",
-            construct_solution(
-                &self.problem,
-                &self.params,
-                rng,
-                &self.constraints,
-                &self.create_construction_thread_pool(),
-            )
+            thread_pool.install(|| {
+                construct_solution(&self.problem, &self.params, rng, &self.constraints)
+            })
         );
 
         let (score, score_analysis) = initial_solution.compute_solution_score(&self.constraints);
@@ -991,15 +989,17 @@ impl Alns {
         state: &ThreadedSearchState,
         rng: &mut SmallRng,
     ) -> RuinStrategy {
-        ruin_strategy.ruin_solution(
-            solution,
-            RuinContext {
-                problem: &self.problem,
-                num_jobs_to_remove: self.create_num_jobs_to_remove(state, rng),
-                rng,
-                params: &self.params.ruin,
-            },
-        );
+        state.insertion_thread_pool.install(|| {
+            ruin_strategy.ruin_solution(
+                solution,
+                RuinContext {
+                    problem: &self.problem,
+                    num_jobs_to_remove: self.create_num_jobs_to_remove(state, rng),
+                    rng,
+                    params: &self.params.ruin,
+                },
+            );
+        });
 
         ruin_strategy
     }
@@ -1011,21 +1011,22 @@ impl Alns {
         state: &mut ThreadedSearchState,
         rng: &mut SmallRng,
     ) -> RecreateStrategy {
-        recreate_strategy.recreate_solution(
-            solution,
-            RecreateContext {
-                rng,
-                constraints: &self.constraints,
-                noise_params: NoiseParams {
-                    max_cost: self.problem.max_cost(),
-                    noise_level: self.params.noise_level,
-                    noise_probability: self.params.noise_probability,
+        state.insertion_thread_pool.install(|| {
+            recreate_strategy.recreate_solution(
+                solution,
+                RecreateContext {
+                    rng,
+                    constraints: &self.constraints,
+                    noise_params: NoiseParams {
+                        max_cost: self.problem.max_cost(),
+                        noise_level: self.params.noise_level,
+                        noise_probability: self.params.noise_probability,
+                    },
+                    problem: &self.problem,
+                    insert_on_failure: self.params.recreate.insert_on_failure,
                 },
-                problem: &self.problem,
-                thread_pool: &state.insertion_thread_pool,
-                insert_on_failure: self.params.recreate.insert_on_failure,
-            },
-        );
+            );
+        });
 
         recreate_strategy
     }
