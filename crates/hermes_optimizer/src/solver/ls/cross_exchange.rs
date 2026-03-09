@@ -104,7 +104,7 @@ impl LocalSearchOperator for CrossExchangeOperator {
 
                 // A chain is at least length 2
                 for from_length in 2..=max_from_chain {
-                    if from_route.contains_pending_shipment(from_pos, from_pos + from_length) {
+                    if !from_route.can_remove_segment(problem, from_pos, from_pos + from_length) {
                         continue;
                     }
 
@@ -113,7 +113,7 @@ impl LocalSearchOperator for CrossExchangeOperator {
                     let from_next = from_route.get(from_pos + from_length);
 
                     for to_length in 2..=max_to_chain {
-                        if to_route.contains_pending_shipment(to_pos, to_pos + to_length) {
+                        if !to_route.can_remove_segment(problem, to_pos, to_pos + to_length) {
                             continue;
                         }
 

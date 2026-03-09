@@ -182,15 +182,15 @@ mod tests {
             .service(JobIdx::new(9))
             .time_windows()
             .iter()
-            .min_by_key(|tw| tw.start())
+            .min_by_key(|tw| tw.earliest())
             .unwrap();
         let timestamp_zero = Timestamp::from_second(0).unwrap();
         assert_eq!(
-            time_window.start().unwrap(),
+            time_window.earliest().unwrap(),
             timestamp_zero + SignedDuration::from_secs(357)
         );
         assert_eq!(
-            time_window.end().unwrap(),
+            time_window.latest().unwrap(),
             timestamp_zero + SignedDuration::from_secs(410)
         );
     }

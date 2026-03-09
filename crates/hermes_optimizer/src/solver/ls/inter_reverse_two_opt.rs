@@ -118,7 +118,7 @@ impl LocalSearchOperator for InterReverseTwoOptOperator {
         for from_pos in 0..from_route_length - 1 {
             let from_tail_length = from_route_length - from_pos - 1;
 
-            if from_route.contains_pending_shipment(from_pos, from_pos + from_tail_length) {
+            if !from_route.can_remove_segment(problem, from_pos, from_pos + from_tail_length) {
                 continue;
             }
 
@@ -134,7 +134,7 @@ impl LocalSearchOperator for InterReverseTwoOptOperator {
             for to_pos in 0..to_route_length - 1 {
                 let to_head_length = to_pos + 1;
 
-                if to_route.contains_pending_shipment(0, to_pos + 1) {
+                if !to_route.can_remove_segment(problem, 0, to_pos + 1) {
                     continue;
                 }
 

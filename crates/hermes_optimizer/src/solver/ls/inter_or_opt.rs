@@ -92,7 +92,7 @@ impl LocalSearchOperator for InterOrOptOperator {
                     continue;
                 }
 
-                if from_route.contains_pending_shipment(from_pos, from_pos + segment_length) {
+                if !from_route.can_remove_segment(problem, from_pos, from_pos + segment_length) {
                     continue;
                 }
 

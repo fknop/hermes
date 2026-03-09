@@ -9,7 +9,7 @@ use crate::{
         location::LocationIdx,
         meters::Meters,
         service::ServiceType,
-        task_dependencies::TaskDependencyType,
+        task_dependencies::{self, TaskDependencyType},
         vehicle::{Vehicle, VehicleIdx},
         vehicle_routing_problem::VehicleRoutingProblem,
     },
@@ -1282,7 +1282,7 @@ impl WorkingSolutionRoute {
         end: usize,
     ) -> impl DoubleEndedIterator<Item = ActivityId> + Clone + '_ {
         if end > self.activity_ids.len() || start > self.activity_ids.len() || start > end {
-            println!("{} -> {}", start, end)
+            panic!("{} -> {}", start, end)
         }
 
         self.activity_ids[start..end].iter().copied()
@@ -1371,15 +1371,109 @@ impl WorkingSolutionRoute {
         job.skills_satisfied_by_vehicle(vehicle)
     }
 
+    pub fn can_remove_segment(
+        &self,
+        problem: &VehicleRoutingProblem,
+        start: usize,
+        end: usize,
+    ) -> bool {
+        if self.contains_pending_shipment(start, end) {
+            return false;
+        }
+
+        if problem.has_task_dependencies() {
+            let task_dependencies = problem.task_dependencies();
+
+            if task_dependencies.has_in_same_route_dependencies() {
+                let segment = self.segment_bitset(problem, start, end);
+                let mut from_route_bitset = self.bwd_jobs[0].clone();
+                from_route_bitset.difference_with(&segment);
+
+                if task_dependencies
+                    .contains_in_same_route_dependencies(&from_route_bitset, &segment)
+                {
+                    return false;
+                }
+            }
+        }
+
+        true
+    }
+
+    pub fn is_valid_dependency_change(
+        &self,
+        problem: &VehicleRoutingProblem,
+        mut activity_ids: impl DoubleEndedIterator<Item = ActivityId> + Clone,
+        start: usize,
+        end: usize,
+    ) -> bool {
+        if !problem.has_task_dependencies() {
+            return true;
+        }
+
+        let task_dependencies = problem.task_dependencies();
+
+        if task_dependencies.has_not_in_same_route_dependencies() {
+            let segment = BitSet::from_iter(
+                activity_ids
+                    .clone()
+                    .map(|activity_id| activity_id.job_id().get()),
+            );
+
+            let mut route_bitset = BitSet::with_capacity(problem.jobs().len());
+            if start > 0 {
+                route_bitset.union_with(&self.fwd_jobs[start - 1]);
+            }
+
+            if end < self.len() {
+                route_bitset.union_with(&self.bwd_jobs[end]);
+            }
+            // Check that the segment is not inserted into a route with jobs with "not in same route" constraint
+            if task_dependencies.contains_not_in_same_route_dependencies(&route_bitset, &segment) {
+                return false;
+            }
+        }
+
+        let first = activity_ids.next();
+        let last = activity_ids.next_back().or(first);
+
+        // Check that we're not inserting between direct sequence activities
+        if start > 0 {
+            let directly_after = task_dependencies
+                .traverse(
+                    self.activity_ids[start - 1],
+                    TaskDependencyType::DirectlyAfter,
+                )
+                .next();
+
+            if directly_after != first {
+                return false;
+            }
+        }
+
+        if end < self.len() {
+            let directly_before = task_dependencies
+                .traverse(self.activity_ids[end], TaskDependencyType::DirectlyBefore)
+                .next();
+
+            if directly_before != last {
+                return false;
+            }
+        }
+
+        true
+    }
+
     pub fn is_valid_change(
         &self,
         problem: &VehicleRoutingProblem,
-        activity_ids: impl Iterator<Item = ActivityId> + Clone,
+        activity_ids: impl DoubleEndedIterator<Item = ActivityId> + Clone,
         start: usize,
         end: usize,
     ) -> bool {
         self.is_valid_time_change(problem, activity_ids.clone(), start, end)
-            && self.is_valid_capacity_change(problem, activity_ids, start, end)
+            && self.is_valid_capacity_change(problem, activity_ids.clone(), start, end)
+            && self.is_valid_dependency_change(problem, activity_ids, start, end)
     }
 
     /// Return the transport cost delta of inserting [r2_start, r2_end) of r2 into [r1_start, r1_end) of r1

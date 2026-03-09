@@ -126,7 +126,7 @@ pub(crate) fn compute_waiting_time_slack(
     if let Some(start) = time_windows
         .iter()
         .filter(|tw| tw.is_satisfied(arrival_time))
-        .filter_map(|tw| tw.start())
+        .filter_map(|tw| tw.earliest())
         .min()
     {
         arrival_time
@@ -151,8 +151,8 @@ fn compute_initial_arrival_time(
     let time_window_start = time_windows
         .iter()
         .filter(|tw| tw.is_satisfied(earliest_start_time + depot_duration + travel_time))
-        .min_by_key(|tw| tw.start())
-        .and_then(|tw| tw.start());
+        .min_by_key(|tw| tw.earliest())
+        .and_then(|tw| tw.earliest());
 
     match time_window_start {
         Some(tw_start) => {

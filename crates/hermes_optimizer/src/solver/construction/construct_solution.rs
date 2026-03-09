@@ -232,7 +232,7 @@ fn create_initial_routes(problem: &VehicleRoutingProblem, solution: &mut Working
 
             let urgency_a = tw_a
                 .iter()
-                .filter_map(|time_window| time_window.end())
+                .filter_map(|time_window| time_window.latest())
                 .max()
                 .map(|end| {
                     end - problem.travel_time(problem.vehicle(0.into()), depot_id, location_a)
@@ -241,7 +241,7 @@ fn create_initial_routes(problem: &VehicleRoutingProblem, solution: &mut Working
 
             let urgency_b = tw_b
                 .iter()
-                .filter_map(|time_window| time_window.end())
+                .filter_map(|time_window| time_window.latest())
                 .max()
                 .map(|end| {
                     end - problem.travel_time(problem.vehicle(0.into()), depot_id, location_b)

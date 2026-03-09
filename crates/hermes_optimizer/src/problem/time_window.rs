@@ -23,11 +23,11 @@ impl TimeWindow {
         }
     }
 
-    pub fn start(&self) -> Option<Timestamp> {
+    pub fn earliest(&self) -> Option<Timestamp> {
         self.start
     }
 
-    pub fn end(&self) -> Option<Timestamp> {
+    pub fn latest(&self) -> Option<Timestamp> {
         self.end
     }
 
@@ -108,7 +108,7 @@ impl TimeWindows {
     }
 
     pub fn end(&self) -> Option<Timestamp> {
-        self.0.iter().filter_map(|tw| tw.end()).max()
+        self.0.iter().filter_map(|tw| tw.latest()).max()
     }
 
     pub fn waiting_duration(&self, arrival: Timestamp) -> SignedDuration {
@@ -174,8 +174,8 @@ mod tests {
             .with_end(end)
             .build();
 
-        assert_eq!(time_window.start().unwrap(), start);
-        assert_eq!(time_window.end().unwrap(), end);
+        assert_eq!(time_window.earliest().unwrap(), start);
+        assert_eq!(time_window.latest().unwrap(), end);
     }
 
     #[test]
@@ -188,8 +188,8 @@ mod tests {
         let start = "2025-06-10T08:00:00+02:00".parse().unwrap();
         let end = "2025-06-10T10:00:00+02:00".parse().unwrap();
 
-        assert_eq!(time_window.start().unwrap(), start);
-        assert_eq!(time_window.end().unwrap(), end);
+        assert_eq!(time_window.earliest().unwrap(), start);
+        assert_eq!(time_window.latest().unwrap(), end);
     }
 
     #[test]

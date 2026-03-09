@@ -1,4 +1,4 @@
-use fixedbitset::Ones;
+use fixedbitset::{FixedBitSet, Ones};
 use fxhash::FxHashSet;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -27,6 +27,16 @@ impl BitSet {
         }
 
         bitset
+    }
+
+    pub fn from_iter(iter: impl Iterator<Item = usize>) -> Self {
+        Self {
+            repr: FixedBitSet::from_iter(iter),
+        }
+    }
+
+    pub fn contains(&self, bit: usize) -> bool {
+        self.repr.contains(bit)
     }
 
     pub fn is_all_zeroes(&self) -> bool {
@@ -61,6 +71,10 @@ impl BitSet {
 
     pub fn set(&mut self, index: usize, value: bool) {
         self.repr.set(index, value);
+    }
+
+    pub fn difference_with(&mut self, other: &BitSet) {
+        self.repr.difference_with(&other.repr);
     }
 
     pub fn union_with(&mut self, other: &BitSet) {

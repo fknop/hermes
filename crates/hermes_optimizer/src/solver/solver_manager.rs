@@ -20,7 +20,7 @@ impl SolverManager {
             .insert(job_id, Arc::clone(&solver));
 
         tokio::spawn(async move {
-            solver.solve();
+            let _ = solver.solve();
         });
     }
 
@@ -43,7 +43,7 @@ impl SolverManager {
     pub async fn start(&self, job_id: &str) -> bool {
         if let Some(solver) = self.solvers.read().await.get(job_id).cloned() {
             std::thread::spawn(move || {
-                solver.solve();
+                let _ = solver.solve();
             });
             true
         } else {

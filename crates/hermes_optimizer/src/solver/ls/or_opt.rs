@@ -62,7 +62,7 @@ impl OrOptOperator {
     fn moved_jobs<'a>(
         &'a self,
         route: &'a WorkingSolutionRoute,
-    ) -> impl Iterator<Item = ActivityId> + Clone + 'a {
+    ) -> impl DoubleEndedIterator<Item = ActivityId> + Clone + 'a {
         if self.params.from < self.params.to {
             let moved_jobs = route.activity_ids_iter(
                 self.params.from,
@@ -91,7 +91,7 @@ impl OrOptOperator {
 impl LocalSearchOperator for OrOptOperator {
     #[instrument(skip_all,level = Level::TRACE)]
     fn generate_moves<C>(
-        _problem: &VehicleRoutingProblem,
+        problem: &VehicleRoutingProblem,
         solution: &WorkingSolution,
         (r1, r2): (RouteIdx, RouteIdx),
         mut consumer: C,
@@ -114,7 +114,7 @@ impl LocalSearchOperator for OrOptOperator {
 
         // A, B, C, D -> C, D, A, B, from_pos = 0, to_pos =
         for from_pos in 0..route_length - 1 {
-            if route.contains_pending_shipment(from_pos, from_pos + segment_length) {
+            if !route.can_remove_segment(problem, from_pos, from_pos + segment_length) {
                 continue;
             }
 

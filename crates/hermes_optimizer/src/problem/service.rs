@@ -144,7 +144,11 @@ impl ServiceBuilder {
             demand: self.demand.unwrap_or_default(),
             service_duration: self.service_duration.unwrap_or(SignedDuration::ZERO),
             time_windows: TimeWindows::new(SmallVec::from_vec(
-                self.time_windows.unwrap_or_default(),
+                self.time_windows
+                    .unwrap_or_default()
+                    .into_iter()
+                    .filter(|tw| !tw.is_empty())
+                    .collect::<Vec<_>>(),
             )),
             service_type: self.service_type.unwrap_or(ServiceType::Delivery),
             skills: FxHashSet::from_iter(self.skills.unwrap_or_default()),

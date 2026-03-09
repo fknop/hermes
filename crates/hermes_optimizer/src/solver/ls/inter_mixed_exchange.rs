@@ -111,7 +111,11 @@ impl LocalSearchOperator for InterMixedExchange {
             }
 
             for segment_start in 0..route2.len().saturating_sub(segment_length) {
-                if route2.contains_pending_shipment(segment_start, segment_start + segment_length) {
+                if !route2.can_remove_segment(
+                    problem,
+                    segment_start,
+                    segment_start + segment_length,
+                ) {
                     continue;
                 }
 

@@ -128,7 +128,7 @@ impl LocalSearchOperator for InterTwoOptStarOperator {
                 continue;
             }
 
-            if from_route.contains_pending_shipment(from_pos + 1, from_route_length) {
+            if !from_route.can_remove_segment(problem, from_pos + 1, from_route_length) {
                 continue;
             }
 
@@ -148,7 +148,7 @@ impl LocalSearchOperator for InterTwoOptStarOperator {
                     continue;
                 }
 
-                if to_route.contains_pending_shipment(to_pos + 1, to_route_length) {
+                if !to_route.can_remove_segment(problem, to_pos + 1, to_route_length) {
                     continue;
                 }
 

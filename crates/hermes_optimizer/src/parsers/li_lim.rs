@@ -202,11 +202,11 @@ mod tests {
             .unwrap();
         let timestamp_zero = Timestamp::from_second(0).unwrap();
         assert_eq!(
-            pickup_tw.start().unwrap(),
+            pickup_tw.earliest().unwrap(),
             timestamp_zero + SignedDuration::from_secs(65)
         );
         assert_eq!(
-            pickup_tw.end().unwrap(),
+            pickup_tw.latest().unwrap(),
             timestamp_zero + SignedDuration::from_secs(146)
         );
 
@@ -217,11 +217,11 @@ mod tests {
             .next()
             .unwrap();
         assert_eq!(
-            delivery_tw.start().unwrap(),
+            delivery_tw.earliest().unwrap(),
             timestamp_zero + SignedDuration::from_secs(997)
         );
         assert_eq!(
-            delivery_tw.end().unwrap(),
+            delivery_tw.latest().unwrap(),
             timestamp_zero + SignedDuration::from_secs(1068)
         );
     }

@@ -273,6 +273,14 @@ impl TaskDependencies {
         task_dependencies
     }
 
+    pub fn has_in_same_route_dependencies(&self) -> bool {
+        !self.in_same_route_bitsets.is_empty()
+    }
+
+    pub fn has_not_in_same_route_dependencies(&self) -> bool {
+        !self.not_in_same_route_bitsets.is_empty()
+    }
+
     pub fn fixed_vehicle_for_job(&self, job_id: JobIdx) -> Option<VehicleIdx> {
         self.fixed_jobs_vehicle[job_id.get()]
     }
@@ -288,6 +296,42 @@ impl TaskDependencies {
             TaskDependencyType::Before => self.before_graph.traverse(activity_id),
             TaskDependencyType::DirectlyBefore => self.directly_before_graph.traverse(activity_id),
         }
+    }
+
+    pub fn contains_not_in_same_route_dependencies(
+        &self,
+        route_bitset: &BitSet,
+        segment: &BitSet,
+    ) -> bool {
+        for not_in_same_route_bitset in &self.not_in_same_route_bitsets {
+            if !not_in_same_route_bitset.intersects(segment) {
+                continue;
+            }
+
+            if route_bitset.intersects(not_in_same_route_bitset) {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    pub fn contains_in_same_route_dependencies(
+        &self,
+        route_bitset: &BitSet,
+        segment: &BitSet,
+    ) -> bool {
+        for in_same_route_bitset in &self.in_same_route_bitsets {
+            if !in_same_route_bitset.intersects(segment) {
+                continue;
+            }
+
+            if route_bitset.intersects(in_same_route_bitset) {
+                return true;
+            }
+        }
+
+        false
     }
 }
 
