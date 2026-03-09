@@ -194,7 +194,7 @@ mod tests {
         builder.set_fleet(Fleet::Finite(vehicles));
         builder.set_services(services);
 
-        builder.build()
+        builder.build().expect("Expect valid problem")
     }
 
     #[test]

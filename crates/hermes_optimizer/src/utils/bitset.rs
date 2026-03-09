@@ -63,6 +63,10 @@ impl BitSet {
         self.repr.intersection_count(&other.repr) > 0
     }
 
+    pub fn intersection_count(&self, other: &BitSet) -> usize {
+        self.repr.intersection_count(&other.repr)
+    }
+
     pub fn intersection_from(&mut self, a: &BitSet, b: &BitSet) {
         self.clear();
         self.repr.union_with(&a.repr);

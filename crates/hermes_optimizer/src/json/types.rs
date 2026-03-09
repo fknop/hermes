@@ -307,6 +307,6 @@ impl JsonVehicleRoutingProblem {
         );
 
         builder.set_locations(locations);
-        Ok(builder.build())
+        Ok(builder.build()?)
     }
 }

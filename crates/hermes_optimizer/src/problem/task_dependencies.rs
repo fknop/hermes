@@ -1,4 +1,5 @@
 use fxhash::{FxHashMap, FxHashSet};
+use thiserror::Error;
 
 use crate::{
     problem::{
@@ -8,6 +9,15 @@ use crate::{
     },
     utils::bitset::BitSet,
 };
+
+#[derive(Error, Debug)]
+pub enum MalformedRelationError {
+    #[error("Relations contain cycle")]
+    Cycle,
+
+    #[error("Conflicting relations, both in same routes and not in same routes")]
+    Conflict,
+}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum TaskDependencyType {
@@ -144,7 +154,10 @@ pub struct TaskDependencies {
 }
 
 impl TaskDependencies {
-    pub fn from_jobs_and_relations(jobs: &[Job], relations: &[Relation]) -> Self {
+    pub fn try_from_jobs_and_relations(
+        jobs: &[Job],
+        relations: &[Relation],
+    ) -> Result<Self, MalformedRelationError> {
         let mut in_same_route_bitsets: Vec<BitSet> = Vec::with_capacity(jobs.len());
         let mut not_in_same_route_bitsets: Vec<BitSet> = Vec::with_capacity(jobs.len());
 
@@ -290,7 +303,21 @@ impl TaskDependencies {
             }
         }
 
-        task_dependencies
+        if task_dependencies.after_graph.has_cycle()
+            || task_dependencies.directly_after_graph.has_cycle()
+        {
+            return Err(MalformedRelationError::Cycle);
+        }
+
+        for same_route_bitset in &task_dependencies.in_same_route_bitsets {
+            for not_same_route_bitset in &task_dependencies.not_in_same_route_bitsets {
+                if same_route_bitset.intersection_count(not_same_route_bitset) > 1 {
+                    return Err(MalformedRelationError::Conflict);
+                }
+            }
+        }
+
+        Ok(task_dependencies)
     }
 
     pub fn has_in_same_route_dependencies(&self) -> bool {
@@ -393,7 +420,8 @@ mod tests {
             }),
         ];
 
-        let dependencies = TaskDependencies::from_jobs_and_relations(&dummy_jobs, &relations);
+        let dependencies =
+            TaskDependencies::try_from_jobs_and_relations(&dummy_jobs, &relations).unwrap();
 
         assert_eq!(dependencies.after_graph.len(), 3);
         assert_eq!(
@@ -445,7 +473,8 @@ mod tests {
             }),
         ];
 
-        let dependencies = TaskDependencies::from_jobs_and_relations(&dummy_jobs, &relations);
+        let dependencies =
+            TaskDependencies::try_from_jobs_and_relations(&dummy_jobs, &relations).unwrap();
 
         assert!(dependencies.after_graph.has_cycle());
 
@@ -459,7 +488,7 @@ mod tests {
             ],
         })];
 
-        let graph = TaskDependencies::from_jobs_and_relations(&dummy_jobs, &relations);
+        let graph = TaskDependencies::try_from_jobs_and_relations(&dummy_jobs, &relations).unwrap();
 
         assert!(graph.after_graph.has_cycle())
     }
@@ -486,7 +515,8 @@ mod tests {
             }),
         ];
 
-        let dependencies = TaskDependencies::from_jobs_and_relations(&dummy_jobs, &relations);
+        let dependencies =
+            TaskDependencies::try_from_jobs_and_relations(&dummy_jobs, &relations).unwrap();
 
         for i in 0..=1 {
             assert_eq!(
@@ -537,7 +567,8 @@ mod tests {
             }),
         ];
 
-        let dependencies = TaskDependencies::from_jobs_and_relations(&dummy_jobs, &relations);
+        let dependencies =
+            TaskDependencies::try_from_jobs_and_relations(&dummy_jobs, &relations).unwrap();
 
         for i in 0..=1 {
             assert_eq!(

@@ -2,6 +2,8 @@ use std::sync::atomic::AtomicUsize;
 
 use fxhash::FxHashSet;
 use jiff::SignedDuration;
+use thiserror::Error;
+use tokio::time::error;
 use tracing::instrument;
 use uuid::Uuid;
 
@@ -16,7 +18,7 @@ use crate::{
         service::Service,
         shipment::Shipment,
         skill::Skill,
-        task_dependencies::TaskDependencies,
+        task_dependencies::{MalformedRelationError, TaskDependencies},
         vehicle_profile::{VehicleProfile, VehicleProfileIdx},
     },
     solver::constraints::transport_cost_constraint::TRANSPORT_COST_WEIGHT,
@@ -65,6 +67,29 @@ pub struct VehicleRoutingProblem {
     version_counter: AtomicUsize,
 }
 
+#[derive(Error, Debug)]
+pub enum VehicleRoutingProblemError {
+    #[error("{0}")]
+    MalformedRelation(#[from] MalformedRelationError),
+    #[error("Invalid vehicle profile {vehicle_id} for {profile_id}")]
+    InvalidVehicleProfile {
+        vehicle_id: usize,
+        profile_id: usize,
+    },
+    #[error("Location ID {0} out of bounds")]
+    LocationIdOutOfBounds(usize),
+    #[error("Missing jobs")]
+    MissingJobs,
+    #[error("Missing locations")]
+    MissingLocations,
+    #[error("Missing vehicle profiles")]
+    MissingVehicleProfiles,
+    #[error("Missing fleet")]
+    MissingFleet,
+    #[error("Empty fleet")]
+    EmptyFleet,
+}
+
 struct VehicleRoutingProblemParams {
     id: String,
     locations: Vec<Location>,
@@ -77,10 +102,19 @@ struct VehicleRoutingProblemParams {
 }
 
 impl VehicleRoutingProblem {
-    fn new(params: VehicleRoutingProblemParams) -> Self {
-        for vehicle in params.fleet.vehicles() {
+    fn try_from_params(
+        params: VehicleRoutingProblemParams,
+    ) -> Result<Self, VehicleRoutingProblemError> {
+        if params.fleet.vehicles().is_empty() {
+            return Err(VehicleRoutingProblemError::EmptyFleet);
+        }
+
+        for (vehicle_id, vehicle) in params.fleet.vehicles().iter().enumerate() {
             if vehicle.profile_id().get() >= params.vehicle_profiles.len() {
-                panic!("Vehicle profile ID out of bounds")
+                return Err(VehicleRoutingProblemError::InvalidVehicleProfile {
+                    vehicle_id,
+                    profile_id: vehicle.profile_id().get(),
+                });
             }
         }
 
@@ -142,10 +176,11 @@ impl VehicleRoutingProblem {
             .map(|relations| !relations.is_empty())
             .unwrap_or(false);
 
-        let task_dependencies = TaskDependencies::from_jobs_and_relations(
+        let task_dependencies = TaskDependencies::try_from_jobs_and_relations(
             &params.jobs,
             &params.relations.unwrap_or_default(),
-        );
+        )
+        .map_err(VehicleRoutingProblemError::MalformedRelation)?;
 
         let mut problem = Self {
             id: params.id,
@@ -177,7 +212,7 @@ impl VehicleRoutingProblem {
             job.build_skills_bitset(&problem.skill_registry);
         }
 
-        problem
+        Ok(problem)
     }
 
     pub fn id(&self) -> &str {
@@ -734,19 +769,22 @@ impl VehicleRoutingProblemBuilder {
         self
     }
 
-    pub fn build(self) -> VehicleRoutingProblem {
-        let locations = self.locations.expect("Expected list of locations");
+    pub fn build(self) -> Result<VehicleRoutingProblem, VehicleRoutingProblemError> {
+        let locations = self
+            .locations
+            .ok_or(VehicleRoutingProblemError::MissingLocations)?;
         let services = self.services.unwrap_or_default();
         let shipments = self.shipments.unwrap_or_default();
 
-        assert!(
-            !services.is_empty() || !shipments.is_empty(),
-            "Expected at least one service or shipment"
-        );
+        if services.is_empty() && shipments.is_empty() {
+            return Err(VehicleRoutingProblemError::MissingJobs);
+        }
 
         for service in services.iter() {
             if service.location_id().get() >= locations.len() {
-                panic!("Service location_id must be within the range of locations");
+                return Err(VehicleRoutingProblemError::LocationIdOutOfBounds(
+                    service.location_id().get(),
+                ));
             }
         }
 
@@ -757,12 +795,14 @@ impl VehicleRoutingProblemBuilder {
 
         let vehicle_profiles = self
             .vehicle_profiles
-            .expect("Expected list of vehicle profiles");
+            .ok_or(VehicleRoutingProblemError::MissingVehicleProfiles)?;
 
-        VehicleRoutingProblem::new(VehicleRoutingProblemParams {
+        let fleet = self.fleet.ok_or(VehicleRoutingProblemError::MissingFleet)?;
+
+        VehicleRoutingProblem::try_from_params(VehicleRoutingProblemParams {
             id: self.id.unwrap_or_else(|| Uuid::new_v4().to_string()),
             locations,
-            fleet: self.fleet.expect("Expected fleet"),
+            fleet,
             vehicle_profiles,
             jobs,
             distance_method,

@@ -69,7 +69,7 @@ impl DatasetParser for CVRPLibParser {
         builder.set_distance_method(DistanceMethod::Euclidean);
         builder.set_penalize_waiting_duration(false);
 
-        Ok(builder.build())
+        Ok(builder.build()?)
     }
 }
 

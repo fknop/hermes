@@ -2143,7 +2143,7 @@ mod tests {
         builder.set_fleet(Fleet::Finite(vehicles));
         builder.set_services(services);
 
-        builder.build()
+        builder.build().expect("Expect valid problem")
     }
 
     fn create_problem_for_capacity_change(
@@ -2189,7 +2189,7 @@ mod tests {
         builder.set_fleet(Fleet::Finite(vehicles));
         builder.set_services(services);
 
-        builder.build()
+        builder.build().expect("Expected valid problem")
     }
 
     #[test]
@@ -3021,7 +3021,7 @@ mod tests {
         builder.set_services(services);
         builder.set_shipments(shipments);
 
-        builder.build()
+        builder.build().expect("Expected valid problem")
     }
 
     // -------------------------------------------------------------------------
@@ -4838,7 +4838,7 @@ mod tests {
         builder.set_fleet(Fleet::Finite(vehicles));
         builder.set_services(services);
 
-        builder.build()
+        builder.build().expect("Expected valid problem")
     }
 
     #[test]

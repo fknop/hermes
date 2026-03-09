@@ -138,7 +138,7 @@ impl DatasetParser for SolomonParser {
             .set_distance_method(DistanceMethod::Euclidean)
             .set_penalize_waiting_duration(false);
 
-        Ok(builder.build())
+        Ok(builder.build()?)
     }
 }
 

@@ -12,7 +12,7 @@ use crate::{
         fleet::Fleet,
         location::Location,
         service::{Service, ServiceBuilder},
-        shipment::{Shipment, ShipmentBuilder},
+        shipment::ShipmentBuilder,
         time_window::TimeWindow,
         travel_cost_matrix::TravelMatrices,
         vehicle::{Vehicle, VehicleBuilder, VehicleShift},
@@ -157,7 +157,7 @@ pub fn create_test_problem(
     builder.set_locations(locations);
     builder.set_fleet(Fleet::Finite(vehicles));
 
-    builder.build()
+    builder.build().expect("Expected valid problem")
 }
 
 pub fn create_asymmetric_test_problem(
@@ -176,7 +176,7 @@ pub fn create_asymmetric_test_problem(
     builder.set_locations(locations);
     builder.set_fleet(Fleet::Finite(vehicles));
 
-    builder.build()
+    builder.build().expect("Expected valid problem")
 }
 
 pub struct TestRoute {
@@ -307,7 +307,7 @@ pub fn create_problem_for_tw_change(
     builder.set_fleet(Fleet::Finite(vehicles));
     builder.set_services(services);
 
-    builder.build()
+    builder.build().expect("Expected valid problem")
 }
 
 pub fn create_mixed_problem(
@@ -413,7 +413,7 @@ pub fn create_mixed_problem(
     builder.set_services(services);
     builder.set_shipments(shipments);
 
-    builder.build()
+    builder.build().expect("Expected valid problem")
 }
 
 pub struct MockRng {
