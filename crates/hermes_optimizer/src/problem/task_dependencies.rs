@@ -375,6 +375,8 @@ mod tests {
 
     #[test]
     fn test_from_relations() {
+        let dummy_jobs = (0..10).map(|_| create_dummy_job()).collect::<Vec<_>>();
+
         let relations = vec![
             Relation::InSequence(InSequenceRelation {
                 vehicle_id: None,
@@ -391,7 +393,7 @@ mod tests {
             }),
         ];
 
-        let dependencies = TaskDependencies::from_jobs_and_relations(&[], &relations);
+        let dependencies = TaskDependencies::from_jobs_and_relations(&dummy_jobs, &relations);
 
         assert_eq!(dependencies.after_graph.len(), 3);
         assert_eq!(
@@ -421,6 +423,8 @@ mod tests {
 
     #[test]
     fn test_has_cycle() {
+        let dummy_jobs = (0..10).map(|_| create_dummy_job()).collect::<Vec<_>>();
+
         let relations = vec![
             Relation::InSequence(InSequenceRelation {
                 vehicle_id: None,
@@ -441,7 +445,7 @@ mod tests {
             }),
         ];
 
-        let dependencies = TaskDependencies::from_jobs_and_relations(&[], &relations);
+        let dependencies = TaskDependencies::from_jobs_and_relations(&dummy_jobs, &relations);
 
         assert!(dependencies.after_graph.has_cycle());
 
@@ -455,7 +459,7 @@ mod tests {
             ],
         })];
 
-        let graph = TaskDependencies::from_jobs_and_relations(&[], &relations);
+        let graph = TaskDependencies::from_jobs_and_relations(&dummy_jobs, &relations);
 
         assert!(graph.after_graph.has_cycle())
     }
