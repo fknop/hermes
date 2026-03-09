@@ -181,6 +181,16 @@ impl TaskDependencies {
                     task_dependencies.after_graph.add_edges(&activity_ids);
                     activity_ids.reverse();
                     task_dependencies.before_graph.add_edges(&activity_ids);
+
+                    let mut bitset = BitSet::with_capacity(jobs.len());
+                    for activity_id in &r.activity_ids {
+                        bitset.insert(activity_id.job_id().get());
+                    }
+
+                    in_same_route_groups.push(InSameRouteGroup {
+                        vehicle_id: r.vehicle_id,
+                        bitset,
+                    });
                 }
                 Relation::InDirectSequence(r) => {
                     let mut activity_ids = r.activity_ids.to_vec();
@@ -194,6 +204,16 @@ impl TaskDependencies {
                         .directly_before_graph
                         .add_edges(&activity_ids);
                     task_dependencies.before_graph.add_edges(&activity_ids);
+
+                    let mut bitset = BitSet::with_capacity(jobs.len());
+                    for activity_id in &r.activity_ids {
+                        bitset.insert(activity_id.job_id().get());
+                    }
+
+                    in_same_route_groups.push(InSameRouteGroup {
+                        vehicle_id: r.vehicle_id,
+                        bitset,
+                    });
                 }
                 Relation::InSameRoute(r) => {
                     let mut bitset = BitSet::with_capacity(jobs.len());

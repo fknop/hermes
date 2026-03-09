@@ -1407,6 +1407,8 @@ impl WorkingSolutionRoute {
         start: usize,
         end: usize,
     ) -> bool {
+        // TODO: Check that the sequence still satisfies before / after dependencies
+
         if !problem.has_task_dependencies() {
             return true;
         }
