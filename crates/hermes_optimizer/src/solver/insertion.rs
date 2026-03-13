@@ -124,17 +124,51 @@ pub fn for_each_route_insertion(
     }
 }
 
+fn route_with_dependencies(
+    problem: &VehicleRoutingProblem,
+    solution: &WorkingSolution,
+    job_id: JobIdx,
+) -> Option<RouteIdx> {
+    if !problem.task_dependencies().has_in_same_route_dependencies() {
+        return None;
+    }
+
+    solution
+        .routes()
+        .iter()
+        .enumerate_idx()
+        .find_map(|(route_id, route)| {
+            if problem
+                .task_dependencies()
+                .contains_in_same_route_dependencies_for_unassigned_job(job_id, route.jobs_bitset())
+            {
+                Some(route_id)
+            } else {
+                None
+            }
+        })
+}
+
 #[inline(always)]
 fn for_each_service_insertion(
     solution: &WorkingSolution,
     job_index: JobIdx,
     mut f: impl FnMut(Insertion),
 ) {
+    let route_with_deps = route_with_dependencies(solution.problem(), solution, job_index);
+
     solution
         .routes()
         .iter()
         .enumerate_idx()
         .for_each(|(route_id, route)| {
+            // If a route with already assigned dependencies exists and this is not the route, skip
+            if let Some(route_with_deps) = route_with_deps
+                && route_id != route_with_deps
+            {
+                return;
+            }
+
             if route.has_maximum_activities(solution.problem()) {
                 return;
             }

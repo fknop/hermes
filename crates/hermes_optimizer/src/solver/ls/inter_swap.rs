@@ -67,7 +67,7 @@ impl LocalSearchOperator for InterSwapOperator {
         let to_route = solution.route(r2);
 
         for from_pos in 0..from_route.activity_ids().len() {
-            if from_route.activity_id(from_pos).is_shipment() {
+            if !from_route.can_remove_segment(problem, from_pos, from_pos + 1) {
                 continue;
             }
 
@@ -76,7 +76,7 @@ impl LocalSearchOperator for InterSwapOperator {
             }
 
             for to_pos in 0..to_route.activity_ids().len() {
-                if to_route.activity_id(to_pos).is_shipment() {
+                if !to_route.can_remove_segment(problem, to_pos, to_pos + 1) {
                     continue;
                 }
 

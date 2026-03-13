@@ -106,7 +106,7 @@ impl LocalSearchOperator for InterMixedExchange {
                 continue;
             }
 
-            if route1.activity_id(position).is_shipment() {
+            if !route1.can_remove_segment(problem, position, position + 1) {
                 continue;
             }
 

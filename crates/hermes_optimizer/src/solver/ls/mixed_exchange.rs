@@ -124,7 +124,7 @@ impl LocalSearchOperator for MixedExchangeOperator {
 
         let segment_length = 2;
         for segment_start in 0..route.len() - segment_length + 1 {
-            if !route.can_remove_segment(problem, segment_start, segment_start + segment_length) {
+            if route.contains_pending_shipment(segment_start, segment_start + segment_length) {
                 continue;
             }
 

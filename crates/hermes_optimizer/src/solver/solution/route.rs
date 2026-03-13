@@ -937,53 +937,51 @@ impl WorkingSolutionRoute {
             if i == 0 {
                 self.fwd_jobs[i].insert(job_id.get());
             } else {
-                let (left, right) = self.pending_shipments.split_at_mut(i);
+                let (left, right) = self.fwd_jobs.split_at_mut(i);
                 right[0].union_with(&left[i - 1]);
                 right[0].set(job_id.get(), true);
             }
 
-            if problem.has_shipments() {
-                match activity_id {
-                    ActivityId::ShipmentPickup(id) => {
-                        let delivery_pos = self.jobs[&ActivityId::ShipmentDelivery(id)];
-                        assert!(
-                            delivery_pos > i,
-                            "Activity {} does not have its delivery after it, {:?}",
-                            activity_id,
-                            self.activity_ids
-                        );
+            match activity_id {
+                ActivityId::ShipmentPickup(id) => {
+                    let delivery_pos = self.jobs[&ActivityId::ShipmentDelivery(id)];
+                    assert!(
+                        delivery_pos > i,
+                        "Activity {} does not have its delivery after it, {:?}",
+                        activity_id,
+                        self.activity_ids
+                    );
 
-                        if i == 0 {
-                            self.pending_shipments[i].set(id.get(), true);
-                            self.num_shipments[i] = 1;
-                        } else {
-                            let (left, right) = self.pending_shipments.split_at_mut(i);
-                            right[0].clone_from(&left[i - 1]);
-                            right[0].set(id.get(), true);
-
-                            self.num_shipments[i] = self.num_shipments[i - 1] + 1;
-                        }
-                    }
-                    ActivityId::ShipmentDelivery(id) => {
-                        let pickup_pos = self.jobs[&ActivityId::ShipmentPickup(id)];
-                        assert!(
-                            pickup_pos < i,
-                            "Activity {} does not have its pickup before it, {:?}",
-                            activity_id,
-                            self.activity_ids
-                        );
-
+                    if i == 0 {
+                        self.pending_shipments[i].set(id.get(), true);
+                        self.num_shipments[i] = 1;
+                    } else {
                         let (left, right) = self.pending_shipments.split_at_mut(i);
                         right[0].clone_from(&left[i - 1]);
-                        right[0].set(id.get(), false);
+                        right[0].set(id.get(), true);
+
                         self.num_shipments[i] = self.num_shipments[i - 1] + 1;
                     }
-                    ActivityId::Service(_) => {
-                        if i > 0 {
-                            let (left, right) = self.pending_shipments.split_at_mut(i);
-                            right[0].clone_from(&left[i - 1]);
-                            self.num_shipments[i] = self.num_shipments[i - 1];
-                        }
+                }
+                ActivityId::ShipmentDelivery(id) => {
+                    let pickup_pos = self.jobs[&ActivityId::ShipmentPickup(id)];
+                    assert!(
+                        pickup_pos < i,
+                        "Activity {} does not have its pickup before it, {:?}",
+                        activity_id,
+                        self.activity_ids
+                    );
+
+                    let (left, right) = self.pending_shipments.split_at_mut(i);
+                    right[0].clone_from(&left[i - 1]);
+                    right[0].set(id.get(), false);
+                    self.num_shipments[i] = self.num_shipments[i - 1] + 1;
+                }
+                ActivityId::Service(_) => {
+                    if i > 0 {
+                        let (left, right) = self.pending_shipments.split_at_mut(i);
+                        right[0].clone_from(&left[i - 1]);
+                        self.num_shipments[i] = self.num_shipments[i - 1];
                     }
                 }
             }
@@ -1305,6 +1303,7 @@ impl WorkingSolutionRoute {
     pub fn contains_pending_shipment(&self, start: usize, end: usize) -> bool {
         assert!(start < self.len());
         assert!(end <= self.len());
+        assert!(start < end);
 
         if start == 0 {
             !self.pending_shipments[end - 1].is_all_zeroes()
@@ -1356,6 +1355,10 @@ impl WorkingSolutionRoute {
         let mut result = BitSet::with_capacity(problem.jobs().len());
         result.intersection_from(&self.bwd_jobs[start], &self.fwd_jobs[end - 1]);
         result
+    }
+
+    pub fn jobs_bitset(&self) -> &BitSet {
+        &self.bwd_jobs[0]
     }
 
     pub fn can_deliver_job(&self, problem: &VehicleRoutingProblem, job_id: JobIdx) -> bool {

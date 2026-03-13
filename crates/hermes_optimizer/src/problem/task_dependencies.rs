@@ -10,7 +10,7 @@ use crate::{
     utils::bitset::BitSet,
 };
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq, Eq)]
 pub enum MalformedRelationError {
     #[error("Relations contain cycle")]
     Cycle,
@@ -77,7 +77,7 @@ impl TaskDependencyGraph {
     }
 
     /// Returns true if the dependency graph contains a cycle. Making the solution impossible.
-    pub fn has_cycle(&self) -> bool {
+    fn has_cycle(&self) -> bool {
         let mut visited = FxHashSet::default();
         let mut rec_stack = FxHashSet::default();
 
@@ -149,8 +149,8 @@ pub struct TaskDependencies {
 
     fixed_jobs_vehicle: Vec<Option<VehicleIdx>>,
 
-    in_same_route_bitsets: Vec<BitSet>,
-    not_in_same_route_bitsets: Vec<BitSet>,
+    in_same_route_groups: Vec<BitSet>,
+    not_in_same_route_groups: Vec<BitSet>,
 }
 
 impl TaskDependencies {
@@ -158,28 +158,23 @@ impl TaskDependencies {
         jobs: &[Job],
         relations: &[Relation],
     ) -> Result<Self, MalformedRelationError> {
-        let mut in_same_route_bitsets: Vec<BitSet> = Vec::with_capacity(jobs.len());
-        let mut not_in_same_route_bitsets: Vec<BitSet> = Vec::with_capacity(jobs.len());
-
-        in_same_route_bitsets.resize_with(jobs.len(), || {
-            let mut bitset = BitSet::with_capacity(jobs.len());
-            bitset.fill_ones();
-            bitset
-        });
-        not_in_same_route_bitsets.resize_with(jobs.len(), || BitSet::with_capacity(jobs.len()));
+        let in_same_route_bitsets: Vec<BitSet> = Vec::new();
+        let not_in_same_route_bitsets: Vec<BitSet> = Vec::new();
 
         let mut task_dependencies = Self {
-            in_same_route_bitsets,
-            not_in_same_route_bitsets,
+            in_same_route_groups: in_same_route_bitsets,
+            not_in_same_route_groups: not_in_same_route_bitsets,
             fixed_jobs_vehicle: vec![None; jobs.len()],
             ..Self::default()
         };
 
+        #[derive(Debug)]
         struct InSameRouteGroup {
             vehicle_id: Option<VehicleIdx>,
             bitset: BitSet,
         }
 
+        #[derive(Debug)]
         struct NotInSameRouteGroup {
             bitset: BitSet,
         }
@@ -263,9 +258,18 @@ impl TaskDependencies {
                         let InSameRouteGroup { vehicle_id, bitset } =
                             in_same_route_groups.remove(j);
                         in_same_route_groups[i].bitset.union_with(&bitset);
-                        if in_same_route_groups[i].vehicle_id.is_none() {
+
+                        if let Some(group_vehicle_id) = in_same_route_groups[i].vehicle_id {
+                            if let Some(vehicle_id) = vehicle_id
+                                && group_vehicle_id != vehicle_id
+                            {
+                                // If jobs in the same group have different vehicle ids, raise a conflict
+                                return Err(MalformedRelationError::Conflict);
+                            }
+                        } else {
                             in_same_route_groups[i].vehicle_id = vehicle_id;
                         }
+
                         changed = true;
                     }
                 }
@@ -273,8 +277,11 @@ impl TaskDependencies {
         }
 
         for group in in_same_route_groups {
+            task_dependencies
+                .in_same_route_groups
+                .push(group.bitset.clone());
+
             for job_id in group.bitset.ones() {
-                task_dependencies.in_same_route_bitsets[job_id] = group.bitset.clone();
                 task_dependencies.fixed_jobs_vehicle[job_id] = group.vehicle_id;
             }
         }
@@ -298,9 +305,9 @@ impl TaskDependencies {
         }
 
         for group in not_in_same_route_groups {
-            for job_id in group.bitset.ones() {
-                task_dependencies.not_in_same_route_bitsets[job_id] = group.bitset.clone();
-            }
+            task_dependencies
+                .not_in_same_route_groups
+                .push(group.bitset);
         }
 
         if task_dependencies.after_graph.has_cycle()
@@ -309,8 +316,8 @@ impl TaskDependencies {
             return Err(MalformedRelationError::Cycle);
         }
 
-        for same_route_bitset in &task_dependencies.in_same_route_bitsets {
-            for not_same_route_bitset in &task_dependencies.not_in_same_route_bitsets {
+        for same_route_bitset in &task_dependencies.in_same_route_groups {
+            for not_same_route_bitset in &task_dependencies.not_in_same_route_groups {
                 if same_route_bitset.intersection_count(not_same_route_bitset) > 1 {
                     return Err(MalformedRelationError::Conflict);
                 }
@@ -321,11 +328,11 @@ impl TaskDependencies {
     }
 
     pub fn has_in_same_route_dependencies(&self) -> bool {
-        !self.in_same_route_bitsets.is_empty()
+        !self.in_same_route_groups.is_empty()
     }
 
     pub fn has_not_in_same_route_dependencies(&self) -> bool {
-        !self.not_in_same_route_bitsets.is_empty()
+        !self.not_in_same_route_groups.is_empty()
     }
 
     pub fn fixed_vehicle_for_job(&self, job_id: JobIdx) -> Option<VehicleIdx> {
@@ -350,7 +357,7 @@ impl TaskDependencies {
         route_bitset: &BitSet,
         segment: &BitSet,
     ) -> bool {
-        for not_in_same_route_bitset in &self.not_in_same_route_bitsets {
+        for not_in_same_route_bitset in &self.not_in_same_route_groups {
             if !not_in_same_route_bitset.intersects(segment) {
                 continue;
             }
@@ -363,12 +370,22 @@ impl TaskDependencies {
         false
     }
 
+    pub fn contains_in_same_route_dependencies_for_unassigned_job(
+        &self,
+        job_id: JobIdx,
+        route_bitset: &BitSet,
+    ) -> bool {
+        self.in_same_route_groups
+            .iter()
+            .any(|bs| bs.contains(job_id.get()) && route_bitset.intersects(bs))
+    }
+
     pub fn contains_in_same_route_dependencies(
         &self,
         route_bitset: &BitSet,
         segment: &BitSet,
     ) -> bool {
-        for in_same_route_bitset in &self.in_same_route_bitsets {
+        for in_same_route_bitset in &self.in_same_route_groups {
             if !in_same_route_bitset.intersects(segment) {
                 continue;
             }
@@ -388,6 +405,7 @@ mod tests {
         job::ActivityId,
         relation::*,
         service::{Service, ServiceBuilder},
+        task_dependencies,
     };
 
     use super::*;
@@ -473,10 +491,10 @@ mod tests {
             }),
         ];
 
-        let dependencies =
-            TaskDependencies::try_from_jobs_and_relations(&dummy_jobs, &relations).unwrap();
+        let error =
+            TaskDependencies::try_from_jobs_and_relations(&dummy_jobs, &relations).unwrap_err();
 
-        assert!(dependencies.after_graph.has_cycle());
+        assert_eq!(error, MalformedRelationError::Cycle);
 
         let relations = vec![Relation::InSequence(InSequenceRelation {
             vehicle_id: None,
@@ -488,9 +506,10 @@ mod tests {
             ],
         })];
 
-        let graph = TaskDependencies::try_from_jobs_and_relations(&dummy_jobs, &relations).unwrap();
+        let error =
+            TaskDependencies::try_from_jobs_and_relations(&dummy_jobs, &relations).unwrap_err();
 
-        assert!(graph.after_graph.has_cycle())
+        assert_eq!(error, MalformedRelationError::Cycle)
     }
 
     #[test]
@@ -518,33 +537,25 @@ mod tests {
         let dependencies =
             TaskDependencies::try_from_jobs_and_relations(&dummy_jobs, &relations).unwrap();
 
+        assert_eq!(dependencies.in_same_route_groups.len(), 2);
+
+        assert_eq!(
+            dependencies.in_same_route_groups[0]
+                .ones()
+                .collect::<Vec<_>>(),
+            vec![0, 1]
+        );
         for i in 0..=1 {
-            assert_eq!(
-                dependencies.in_same_route_bitsets[i]
-                    .ones()
-                    .collect::<Vec<_>>(),
-                vec![0, 1]
-            );
             assert_eq!(dependencies.fixed_jobs_vehicle[i], Some(VehicleIdx::new(0)));
         }
 
+        assert_eq!(
+            dependencies.in_same_route_groups[1]
+                .ones()
+                .collect::<Vec<_>>(),
+            vec![2, 3, 4, 5]
+        );
         for i in 2..=5 {
-            assert_eq!(
-                dependencies.in_same_route_bitsets[i]
-                    .ones()
-                    .collect::<Vec<_>>(),
-                vec![2, 3, 4, 5]
-            );
-            assert_eq!(dependencies.fixed_jobs_vehicle[i], None);
-        }
-
-        for i in 6..10 {
-            assert_eq!(
-                dependencies.in_same_route_bitsets[i]
-                    .ones()
-                    .collect::<Vec<_>>(),
-                vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-            );
             assert_eq!(dependencies.fixed_jobs_vehicle[i], None);
         }
     }
@@ -570,31 +581,62 @@ mod tests {
         let dependencies =
             TaskDependencies::try_from_jobs_and_relations(&dummy_jobs, &relations).unwrap();
 
-        for i in 0..=1 {
-            assert_eq!(
-                dependencies.not_in_same_route_bitsets[i]
-                    .ones()
-                    .collect::<Vec<_>>(),
-                vec![0, 1]
-            );
-        }
+        assert_eq!(dependencies.not_in_same_route_groups.len(), 2);
+        assert_eq!(
+            dependencies.not_in_same_route_groups[0]
+                .ones()
+                .collect::<Vec<_>>(),
+            vec![0, 1]
+        );
 
-        for i in 2..=5 {
-            assert_eq!(
-                dependencies.not_in_same_route_bitsets[i]
-                    .ones()
-                    .collect::<Vec<_>>(),
-                vec![2, 3, 4, 5]
-            );
-        }
+        assert_eq!(
+            dependencies.not_in_same_route_groups[1]
+                .ones()
+                .collect::<Vec<_>>(),
+            vec![2, 3, 4, 5]
+        );
+    }
 
-        for i in 6..10 {
-            assert_eq!(
-                dependencies.not_in_same_route_bitsets[i]
-                    .ones()
-                    .collect::<Vec<_>>(),
-                vec![] as Vec<usize>
-            );
-        }
+    #[test]
+    fn test_conflict() {
+        let dummy_jobs = (0..10).map(|_| create_dummy_job()).collect::<Vec<_>>();
+        let relations = vec![
+            Relation::InSameRoute(InSameRouteRelation {
+                vehicle_id: None,
+                activity_ids: vec![ActivityId::service(0), ActivityId::service(1)],
+            }),
+            Relation::InSameRoute(InSameRouteRelation {
+                vehicle_id: None,
+                activity_ids: vec![ActivityId::service(1), ActivityId::service(2)],
+            }),
+            Relation::NotInSameRoute(NotInSameRouteRelation {
+                activity_ids: vec![ActivityId::service(0), ActivityId::service(2)],
+            }),
+        ];
+
+        let error =
+            TaskDependencies::try_from_jobs_and_relations(&dummy_jobs, &relations).unwrap_err();
+
+        assert_eq!(error, MalformedRelationError::Conflict);
+    }
+
+    #[test]
+    fn test_vehicle_conflict() {
+        let dummy_jobs = (0..10).map(|_| create_dummy_job()).collect::<Vec<_>>();
+        let relations = vec![
+            Relation::InSameRoute(InSameRouteRelation {
+                vehicle_id: Some(VehicleIdx::new(0)),
+                activity_ids: vec![ActivityId::service(0), ActivityId::service(1)],
+            }),
+            Relation::InSameRoute(InSameRouteRelation {
+                vehicle_id: Some(VehicleIdx::new(1)),
+                activity_ids: vec![ActivityId::service(1), ActivityId::service(2)],
+            }),
+        ];
+
+        let error =
+            TaskDependencies::try_from_jobs_and_relations(&dummy_jobs, &relations).unwrap_err();
+
+        assert_eq!(error, MalformedRelationError::Conflict);
     }
 }

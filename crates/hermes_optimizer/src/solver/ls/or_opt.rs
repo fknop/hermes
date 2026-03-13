@@ -114,7 +114,7 @@ impl LocalSearchOperator for OrOptOperator {
 
         // A, B, C, D -> C, D, A, B, from_pos = 0, to_pos =
         for from_pos in 0..route_length - 1 {
-            if !route.can_remove_segment(problem, from_pos, from_pos + segment_length) {
+            if route.contains_pending_shipment(from_pos, from_pos + segment_length) {
                 continue;
             }
 

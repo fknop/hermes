@@ -75,11 +75,11 @@ impl LocalSearchOperator for InterRelocateOperator {
                 continue;
             }
 
-            let from_activity_id = from_route.activity_id(from_pos);
-
-            if from_activity_id.is_shipment() {
-                continue; // skip shipments for inter-relocate
+            if !from_route.can_remove_segment(problem, from_pos, from_pos + 1) {
+                continue;
             }
+
+            let from_activity_id = from_route.activity_id(from_pos);
 
             for to_pos in 0..=to_route.activity_ids().len() {
                 if !to_route.in_insertion_neighborhood(problem, from_activity_id, to_pos) {

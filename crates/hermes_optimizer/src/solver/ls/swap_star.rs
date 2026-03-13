@@ -166,6 +166,10 @@ pub fn find_best_swap_star_move(
             continue;
         }
 
+        if !route1.can_remove_segment(problem, position, position + 1) {
+            continue;
+        }
+
         top_insertions_r2[position] = find_top_three_insertions(solution, constraints, r2, job_id);
     }
 
@@ -176,6 +180,10 @@ pub fn find_best_swap_star_move(
 
         // Don't support shipment for Swap*
         if job.is_shipment() {
+            continue;
+        }
+
+        if !route2.can_remove_segment(problem, position, position + 1) {
             continue;
         }
 

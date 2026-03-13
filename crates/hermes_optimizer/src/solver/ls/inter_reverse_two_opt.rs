@@ -122,6 +122,11 @@ impl LocalSearchOperator for InterReverseTwoOptOperator {
                 continue;
             }
 
+            // Cannot reverse a shipment order
+            if from_route.contains_shipments(from_pos, from_pos + from_tail_length) {
+                continue;
+            }
+
             if !to_route.can_deliver_segment(
                 problem,
                 from_route,
@@ -135,6 +140,11 @@ impl LocalSearchOperator for InterReverseTwoOptOperator {
                 let to_head_length = to_pos + 1;
 
                 if !to_route.can_remove_segment(problem, 0, to_pos + 1) {
+                    continue;
+                }
+
+                // Cannot reverse a shipment order
+                if to_route.contains_shipments(0, to_pos + 1) {
                     continue;
                 }
 
