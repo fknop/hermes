@@ -2578,6 +2578,15 @@ mod tests {
         route.insert_service(&problem, 2, JobIdx::new(1));
 
         assert_eq!(route.len(), 3);
+
+        assert_eq!(route.fwd_jobs[0].ones().collect::<Vec<_>>(), vec![0]);
+        assert_eq!(route.fwd_jobs[1].ones().collect::<Vec<_>>(), vec![0, 2]);
+        assert_eq!(route.fwd_jobs[2].ones().collect::<Vec<_>>(), vec![0, 1, 2]);
+
+        assert_eq!(route.bwd_jobs[0].ones().collect::<Vec<_>>(), vec![0, 1, 2]);
+        assert_eq!(route.bwd_jobs[1].ones().collect::<Vec<_>>(), vec![1, 2]);
+        assert_eq!(route.bwd_jobs[2].ones().collect::<Vec<_>>(), vec![1]);
+
         assert_eq!(route.current_load.len(), 5);
         assert_eq!(route.fwd_load_peaks.len(), 5);
         assert_eq!(route.bwd_load_peaks.len(), 5);
