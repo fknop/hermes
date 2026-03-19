@@ -769,6 +769,11 @@ impl VehicleRoutingProblemBuilder {
         self
     }
 
+    pub fn set_relations(&mut self, relations: Vec<Relation>) -> &mut VehicleRoutingProblemBuilder {
+        self.relations = Some(relations);
+        self
+    }
+
     pub fn build(self) -> Result<VehicleRoutingProblem, VehicleRoutingProblemError> {
         let locations = self
             .locations

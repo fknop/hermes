@@ -1482,7 +1482,7 @@ impl WorkingSolutionRoute {
                 .traverse(self.activity_ids[end], TaskDependencyType::DirectlyBefore)
                 .next();
 
-            if directly_before != previous_activity {
+            if directly_before.is_some() && directly_before != previous_activity {
                 return false;
             }
         }
@@ -4997,5 +4997,373 @@ mod tests {
 
         let route2 = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
         assert_eq!(route2.version(), 4);
+    }
+
+    // ── helpers for dependency-change tests ──────────────────────────────────
+
+    use crate::problem::relation::{
+        InDirectSequenceRelation, InSequenceRelation, NotInSameRouteRelation, Relation,
+    };
+
+    fn create_problem_with_relations(
+        num_services: usize,
+        relations: Vec<Relation>,
+    ) -> VehicleRoutingProblem {
+        let locations = test_utils::create_location_grid(1, num_services + 1);
+
+        let mut vehicle_builder = VehicleBuilder::default();
+        vehicle_builder.set_depot_location_id(0);
+        vehicle_builder.set_capacity(Capacity::from_vec(vec![100.0]));
+        vehicle_builder.set_vehicle_id(String::from("vehicle"));
+        vehicle_builder.set_profile_id(0);
+        let vehicle = vehicle_builder.build();
+
+        let services: Vec<_> = (0..num_services)
+            .map(|i| {
+                let mut service_builder = ServiceBuilder::default();
+                service_builder.set_external_id(format!("svc_{i}"));
+                service_builder.set_location_id(i + 1);
+                service_builder.build()
+            })
+            .collect();
+
+        let mut builder = VehicleRoutingProblemBuilder::default();
+        builder.set_vehicle_profiles(vec![VehicleProfile::new(
+            "test_profile".to_owned(),
+            TravelMatrices::from_constant(&locations, 30.0, 100.0, 30.0),
+        )]);
+        builder.set_locations(locations);
+        builder.set_fleet(Fleet::Finite(vec![vehicle]));
+        builder.set_services(services);
+        builder.set_relations(relations);
+
+        builder.build().expect("Expected valid problem")
+    }
+
+    // ── is_valid_dependency_change tests ─────────────────────────────────────
+
+    #[test]
+    fn test_valid_dependency_change_no_deps() {
+        // No relations → always valid regardless of what is inserted
+        let problem = create_problem_with_relations(3, vec![]);
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        route.insert_service(&problem, 1, JobIdx::new(1));
+
+        // Replace second activity with the third service
+        let segment = vec![ActivityId::service(2)];
+        assert!(route.is_valid_dependency_change(
+            &problem,
+            segment.into_iter(),
+            1,
+            2
+        ));
+    }
+
+    #[test]
+    fn test_not_in_same_route_segment_conflicts() {
+        // s0 and s1 must NOT be in the same route.
+        // Route already contains s0; inserting s1 should be rejected.
+        let problem = create_problem_with_relations(
+            4,
+            vec![Relation::NotInSameRoute(NotInSameRouteRelation {
+                activity_ids: vec![ActivityId::service(0), ActivityId::service(1)],
+            })],
+        );
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0)); // s0
+        route.insert_service(&problem, 1, JobIdx::new(2)); // s2
+
+        // Try to append s1 at the end — route already has s0
+        let segment = vec![ActivityId::service(1)];
+        assert!(!route.is_valid_dependency_change(
+            &problem,
+            segment.into_iter(),
+            2,
+            2
+        ));
+    }
+
+    #[test]
+    fn test_not_in_same_route_no_conflict() {
+        // s0 and s1 must NOT be in the same route.
+        // Route only contains s2, s3; inserting s0 is fine.
+        let problem = create_problem_with_relations(
+            4,
+            vec![Relation::NotInSameRoute(NotInSameRouteRelation {
+                activity_ids: vec![ActivityId::service(0), ActivityId::service(1)],
+            })],
+        );
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(2)); // s2
+        route.insert_service(&problem, 1, JobIdx::new(3)); // s3
+
+        // Append s0 — s1 is not in this route
+        let segment = vec![ActivityId::service(0)];
+        assert!(route.is_valid_dependency_change(
+            &problem,
+            segment.into_iter(),
+            2,
+            2
+        ));
+    }
+
+    #[test]
+    fn test_directly_before_prev_matches() {
+        // InDirectSequence([s0, s1]): s1 must immediately follow s0.
+        // Route: [s0, s2]. Replace s2 with s1 → previous is s0 ✓
+        let problem = create_problem_with_relations(
+            3,
+            vec![Relation::InDirectSequence(InDirectSequenceRelation {
+                vehicle_id: None,
+                activity_ids: vec![ActivityId::service(0), ActivityId::service(1)],
+            })],
+        );
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0)); // s0 at pos 0
+        route.insert_service(&problem, 1, JobIdx::new(2)); // s2 at pos 1
+
+        let segment = vec![ActivityId::service(1)];
+        assert!(route.is_valid_dependency_change(
+            &problem,
+            segment.into_iter(),
+            1,
+            2
+        ));
+    }
+
+    #[test]
+    fn test_directly_before_prev_mismatches() {
+        // InDirectSequence([s0, s1]): s1 must immediately follow s0.
+        // Route: [s0, s2]. Append s1 after s2 → previous is s2, not s0 ✗
+        let problem = create_problem_with_relations(
+            3,
+            vec![Relation::InDirectSequence(InDirectSequenceRelation {
+                vehicle_id: None,
+                activity_ids: vec![ActivityId::service(0), ActivityId::service(1)],
+            })],
+        );
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0)); // s0 at pos 0
+        route.insert_service(&problem, 1, JobIdx::new(2)); // s2 at pos 1
+
+        // Append s1 after s2 — last activity before segment is s2, not s0
+        let segment = vec![ActivityId::service(1)];
+        assert!(!route.is_valid_dependency_change(
+            &problem,
+            segment.into_iter(),
+            2,
+            2
+        ));
+    }
+
+    #[test]
+    fn test_directly_before_predecessor_not_in_route() {
+        // InDirectSequence([s0, s1]): s1 must immediately follow s0.
+        // s0 is NOT in the route, so the constraint cannot be violated.
+        let problem = create_problem_with_relations(
+            3,
+            vec![Relation::InDirectSequence(InDirectSequenceRelation {
+                vehicle_id: None,
+                activity_ids: vec![ActivityId::service(0), ActivityId::service(1)],
+            })],
+        );
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(2)); // only s2 in route
+
+        // Append s1 — s0 is unassigned, so the directly-before check is skipped
+        let segment = vec![ActivityId::service(1)];
+        assert!(route.is_valid_dependency_change(
+            &problem,
+            segment.into_iter(),
+            1,
+            1
+        ));
+    }
+
+    #[test]
+    fn test_in_sequence_dep_before_start() {
+        // InSequence([s0, s1]): s0 must come before s1.
+        // Route: [s0, s1]. Replace s1 with s1 again at pos 1 — s0 is before start ✓
+        let problem = create_problem_with_relations(
+            3,
+            vec![Relation::InSequence(InSequenceRelation {
+                vehicle_id: None,
+                activity_ids: vec![ActivityId::service(0), ActivityId::service(1)],
+            })],
+        );
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0)); // s0 at pos 0
+        route.insert_service(&problem, 1, JobIdx::new(2)); // s2 at pos 1
+
+        // Append s1 at pos 2; s0 is already in route at pos 0 (< start=2)
+        let segment = vec![ActivityId::service(1)];
+        assert!(route.is_valid_dependency_change(
+            &problem,
+            segment.into_iter(),
+            2,
+            2
+        ));
+    }
+
+    #[test]
+    fn test_in_sequence_dep_after_end() {
+        // InSequence([s1, s0]): s1 must come before s0.
+        // Route: [s1, s2]. Insert s0 between s1 and s2 but s1 is at pos 0 which
+        // is < start=1. Wait — we need s1 to be AFTER end to trigger this case.
+        //
+        // InSequence([s1, s0]): s0 needs s1 before it.
+        // Route: [s1, s2]. s1 is at pos 0. Insert s0 replacing s2 (start=1, end=2).
+        // s1 is at pos 0 < start=1 → valid (dep already satisfied in route).
+        //
+        // To trigger the "dep after end" case: s0's dep (s1) must be at pos >= end.
+        // Route: [s2, s1]. Insert s0 at start=1, end=1 (between s2 and s1).
+        // s1 is at pos 1, end=1, pos >= end → invalid ✗
+        let problem = create_problem_with_relations(
+            3,
+            vec![Relation::InSequence(InSequenceRelation {
+                vehicle_id: None,
+                activity_ids: vec![ActivityId::service(1), ActivityId::service(0)],
+            })],
+        );
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(2)); // s2 at pos 0
+        route.insert_service(&problem, 1, JobIdx::new(1)); // s1 at pos 1
+
+        // Insert s0 between s2 and s1 — s1 (dep of s0) is at pos 1 == end=1
+        let segment = vec![ActivityId::service(0)];
+        assert!(!route.is_valid_dependency_change(
+            &problem,
+            segment.into_iter(),
+            1,
+            1
+        ));
+    }
+
+    #[test]
+    fn test_in_sequence_segment_correct_order() {
+        // InSequence([s0, s1]): s0 must come before s1.
+        // Segment contains [s0, s1] in the correct order.
+        let problem = create_problem_with_relations(
+            3,
+            vec![Relation::InSequence(InSequenceRelation {
+                vehicle_id: None,
+                activity_ids: vec![ActivityId::service(0), ActivityId::service(1)],
+            })],
+        );
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(2)); // s2 at pos 0
+
+        // Append [s0, s1] — correct order
+        let segment = vec![ActivityId::service(0), ActivityId::service(1)];
+        assert!(route.is_valid_dependency_change(
+            &problem,
+            segment.into_iter(),
+            1,
+            1
+        ));
+    }
+
+    #[test]
+    fn test_in_sequence_segment_wrong_order() {
+        // InSequence([s0, s1]): s0 must come before s1.
+        // Segment has [s1, s0] — wrong order ✗
+        let problem = create_problem_with_relations(
+            3,
+            vec![Relation::InSequence(InSequenceRelation {
+                vehicle_id: None,
+                activity_ids: vec![ActivityId::service(0), ActivityId::service(1)],
+            })],
+        );
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(2)); // s2 at pos 0
+
+        // Append [s1, s0] — s1 appears before s0, violating the sequence
+        let segment = vec![ActivityId::service(1), ActivityId::service(0)];
+        assert!(!route.is_valid_dependency_change(
+            &problem,
+            segment.into_iter(),
+            1,
+            1
+        ));
+    }
+
+    #[test]
+    fn test_end_boundary_directly_before_satisfied() {
+        // InDirectSequence([s0, s1]): s1 must immediately follow s0.
+        // Route: [s2, s1]. Insert s0 just before s1 (start=1, end=1).
+        // The activity at end=1 is s1, whose directly_before dep is s0.
+        // Last activity in segment is s0 ✓
+        let problem = create_problem_with_relations(
+            3,
+            vec![Relation::InDirectSequence(InDirectSequenceRelation {
+                vehicle_id: None,
+                activity_ids: vec![ActivityId::service(0), ActivityId::service(1)],
+            })],
+        );
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(2)); // s2 at pos 0
+        route.insert_service(&problem, 1, JobIdx::new(1)); // s1 at pos 1
+
+        // Insert s0 between s2 and s1 — s0 will be the last in segment and satisfies s1's dep
+        let segment = vec![ActivityId::service(0)];
+        assert!(route.is_valid_dependency_change(
+            &problem,
+            segment.into_iter(),
+            1,
+            1
+        ));
+    }
+
+    #[test]
+    fn test_end_boundary_directly_before_violated() {
+        // InDirectSequence([s0, s1]): s1 must immediately follow s0.
+        // Route: [s2, s1]. Insert s2 again just before s1 — last in segment is s2,
+        // but s1 requires s0 as the immediately preceding activity ✗
+        let problem = create_problem_with_relations(
+            3,
+            vec![Relation::InDirectSequence(InDirectSequenceRelation {
+                vehicle_id: None,
+                activity_ids: vec![ActivityId::service(0), ActivityId::service(1)],
+            })],
+        );
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(2)); // s2 at pos 0
+        route.insert_service(&problem, 1, JobIdx::new(1)); // s1 at pos 1
+
+        // Insert s2 between s2 and s1 — last in segment is s2, but s1 requires s0
+        let segment = vec![ActivityId::service(2)];
+        assert!(!route.is_valid_dependency_change(
+            &problem,
+            segment.into_iter(),
+            1,
+            1
+        ));
+    }
+
+    #[test]
+    fn test_end_boundary_no_directly_before_constraint() {
+        // InDirectSequence([s0, s1]): s1 requires s0 before it.
+        // Route: [s2, s0]. The activity after our segment is s0, which has no
+        // directly_before constraint (only s1 has one). Any previous is fine.
+        let problem = create_problem_with_relations(
+            3,
+            vec![Relation::InDirectSequence(InDirectSequenceRelation {
+                vehicle_id: None,
+                activity_ids: vec![ActivityId::service(0), ActivityId::service(1)],
+            })],
+        );
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(2)); // s2 at pos 0
+        route.insert_service(&problem, 1, JobIdx::new(0)); // s0 at pos 1
+
+        // Insert s2 before s0 — s0 has no DirectlyBefore constraint, so it's always valid
+        let segment = vec![ActivityId::service(2)];
+        assert!(route.is_valid_dependency_change(
+            &problem,
+            segment.into_iter(),
+            1,
+            1
+        ));
     }
 }

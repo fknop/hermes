@@ -80,7 +80,10 @@ impl TaskSequenceList {
     }
 
     pub fn traverse(&self, start: ActivityId) -> impl Iterator<Item = ActivityId> {
-        self.list.get(&start).unwrap().iter().copied()
+        self.list
+            .get(&start)
+            .into_iter()
+            .flat_map(|s| s.iter().copied())
     }
 
     /// Returns true if the dependency graph contains a cycle. Making the solution impossible.
