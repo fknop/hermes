@@ -5017,7 +5017,8 @@ mod tests {
     // ── helpers for dependency-change tests ──────────────────────────────────
 
     use crate::problem::relation::{
-        InDirectSequenceRelation, InSequenceRelation, NotInSameRouteRelation, Relation,
+        InDirectSequenceRelation, InSameRouteRelation, InSequenceRelation, NotInSameRouteRelation,
+        Relation,
     };
 
     fn create_problem_with_relations(
@@ -5412,5 +5413,128 @@ mod tests {
 
         let bitset = route.segment_bitset(&problem, 0, 1);
         assert_eq!(bitset.ones().collect::<Vec<_>>(), vec![0]);
+    }
+
+    // ── can_remove_segment tests ──────────────────────────────────────────────
+
+    #[test]
+    fn test_can_remove_segment_no_dependencies() {
+        // No relations, no shipments → every segment can be removed.
+        let problem = create_problem_with_relations(3, vec![]);
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        route.insert_service(&problem, 1, JobIdx::new(1));
+        route.insert_service(&problem, 2, JobIdx::new(2));
+
+        assert!(route.can_remove_segment(&problem, 0, 1));
+        assert!(route.can_remove_segment(&problem, 1, 2));
+        assert!(route.can_remove_segment(&problem, 2, 3));
+        assert!(route.can_remove_segment(&problem, 0, 3));
+    }
+
+    #[test]
+    fn test_can_remove_segment_pending_shipment_blocks_removal() {
+        // Route: [pickup(0), delivery(0)].
+        // Removing only the pickup leaves the delivery without its pickup → blocked.
+        // Removing both together is fine (no pending shipment spans the segment).
+        let problem = create_mixed_problem(
+            vec![],
+            vec![TestShipment::default()],
+            TestProblemOptions::default(),
+        );
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert(
+            &problem,
+            &Insertion::Shipment(ShipmentInsertion {
+                pickup_position: 0,
+                delivery_position: 0,
+                job_index: JobIdx::new(0),
+                route_id: RouteIdx::new(0),
+            }),
+        );
+
+        // Segment covering only the pickup: delivery is still pending → blocked.
+        assert!(!route.can_remove_segment(&problem, 0, 1));
+
+        // Segment covering both pickup and delivery: no pending shipment → allowed.
+        assert!(route.can_remove_segment(&problem, 0, 2));
+    }
+
+    #[test]
+    fn test_can_remove_segment_in_same_route_violated_by_suffix() {
+        // InSameRoute([s0, s1]): both must stay in the same route.
+        // Route: [s0, s1, s2]. Removing only s0 leaves s1 in the route → violated.
+        let problem = create_problem_with_relations(
+            3,
+            vec![Relation::InSameRoute(InSameRouteRelation {
+                vehicle_id: None,
+                activity_ids: vec![ActivityId::service(0), ActivityId::service(1)],
+            })],
+        );
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0)); // s0 @ pos 0
+        route.insert_service(&problem, 1, JobIdx::new(1)); // s1 @ pos 1
+        route.insert_service(&problem, 2, JobIdx::new(2)); // s2 @ pos 2
+
+        assert!(!route.can_remove_segment(&problem, 0, 1));
+    }
+
+    #[test]
+    fn test_can_remove_segment_in_same_route_violated_by_prefix() {
+        // InSameRoute([s0, s1]): both must stay in the same route.
+        // Route: [s0, s1, s2]. Removing only s1 leaves s0 in the route → violated.
+        let problem = create_problem_with_relations(
+            3,
+            vec![Relation::InSameRoute(InSameRouteRelation {
+                vehicle_id: None,
+                activity_ids: vec![ActivityId::service(0), ActivityId::service(1)],
+            })],
+        );
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0)); // s0 @ pos 0
+        route.insert_service(&problem, 1, JobIdx::new(1)); // s1 @ pos 1
+        route.insert_service(&problem, 2, JobIdx::new(2)); // s2 @ pos 2
+
+        assert!(!route.can_remove_segment(&problem, 1, 2));
+    }
+
+    #[test]
+    fn test_can_remove_segment_in_same_route_all_in_segment() {
+        // InSameRoute([s0, s1]): both must stay in the same route.
+        // Route: [s0, s1, s2]. Removing s0 and s1 together keeps the constraint
+        // satisfied because neither remains in the route.
+        let problem = create_problem_with_relations(
+            3,
+            vec![Relation::InSameRoute(InSameRouteRelation {
+                vehicle_id: None,
+                activity_ids: vec![ActivityId::service(0), ActivityId::service(1)],
+            })],
+        );
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0)); // s0 @ pos 0
+        route.insert_service(&problem, 1, JobIdx::new(1)); // s1 @ pos 1
+        route.insert_service(&problem, 2, JobIdx::new(2)); // s2 @ pos 2
+
+        assert!(route.can_remove_segment(&problem, 0, 2));
+    }
+
+    #[test]
+    fn test_can_remove_segment_in_same_route_unrelated_job_in_segment() {
+        // InSameRoute([s0, s1]): both must stay in the same route.
+        // Route: [s0, s1, s2]. Removing only s2 does not touch the InSameRoute
+        // group at all → allowed.
+        let problem = create_problem_with_relations(
+            3,
+            vec![Relation::InSameRoute(InSameRouteRelation {
+                vehicle_id: None,
+                activity_ids: vec![ActivityId::service(0), ActivityId::service(1)],
+            })],
+        );
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0)); // s0 @ pos 0
+        route.insert_service(&problem, 1, JobIdx::new(1)); // s1 @ pos 1
+        route.insert_service(&problem, 2, JobIdx::new(2)); // s2 @ pos 2
+
+        assert!(route.can_remove_segment(&problem, 2, 3));
     }
 }

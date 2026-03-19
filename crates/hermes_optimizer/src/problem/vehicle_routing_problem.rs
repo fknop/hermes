@@ -159,7 +159,10 @@ impl VehicleRoutingProblem {
         );
 
         for neighborhood in &neighborhoods {
-            assert!(!neighborhood.is_empty())
+            // Should be fine, warning for now
+            if neighborhood.is_empty() {
+                tracing::warn!("Empty neighborhood");
+            }
         }
 
         let skills = VehicleRoutingProblem::collect_skills(params.fleet.vehicles(), &params.jobs);

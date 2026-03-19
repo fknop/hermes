@@ -316,7 +316,7 @@ pub fn create_mixed_problem(
     options: TestProblemOptions,
 ) -> VehicleRoutingProblem {
     // 10 locations from (0, 0) to (9, 0)
-    let locations = create_location_grid(1, services.len() + 1);
+    let locations = create_location_grid(1, services.len() + (shipments.len() * 2) + 1);
 
     let mut vehicle_builder = VehicleBuilder::default();
     vehicle_builder.set_depot_location_id(0);
@@ -364,9 +364,10 @@ pub fn create_mixed_problem(
         .into_iter()
         .enumerate()
         .map(|(i, test_shipment)| {
+            let j = i + services.len() + 1;
             let mut shipment_builder = ShipmentBuilder::default();
-            shipment_builder.set_pickup_location_id(i + 1);
-            shipment_builder.set_delivery_location_id(i + 1);
+            shipment_builder.set_pickup_location_id(j);
+            shipment_builder.set_delivery_location_id(j + 1);
             shipment_builder.set_external_id(format!("shipment_{}", i + 1));
 
             if let Some(pickup_tw) = test_shipment.pickup_time_windows {
