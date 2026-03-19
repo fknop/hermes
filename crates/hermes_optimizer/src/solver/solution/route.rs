@@ -1389,11 +1389,17 @@ impl WorkingSolutionRoute {
 
             if task_dependencies.has_in_same_route_dependencies() {
                 let segment = self.segment_bitset(problem, start, end);
-                let mut from_route_bitset = self.bwd_jobs[0].clone();
-                from_route_bitset.difference_with(&segment);
 
-                if task_dependencies
-                    .contains_in_same_route_dependencies(&from_route_bitset, &segment)
+                if start > 0
+                    && task_dependencies
+                        .contains_in_same_route_dependencies(&self.fwd_jobs[start - 1], &segment)
+                {
+                    return false;
+                }
+
+                if end < self.len()
+                    && task_dependencies
+                        .contains_in_same_route_dependencies(&self.bwd_jobs[end], &segment)
                 {
                     return false;
                 }
