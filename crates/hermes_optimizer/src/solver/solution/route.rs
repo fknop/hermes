@@ -1406,12 +1406,10 @@ impl WorkingSolutionRoute {
     pub fn is_valid_dependency_change(
         &self,
         problem: &VehicleRoutingProblem,
-        mut activity_ids: impl DoubleEndedIterator<Item = ActivityId> + Clone,
+        activity_ids: impl DoubleEndedIterator<Item = ActivityId> + Clone,
         start: usize,
         end: usize,
     ) -> bool {
-        // TODO: Check that the sequence still satisfies before / after dependencies
-
         if !problem.has_task_dependencies() {
             return true;
         }
@@ -1439,21 +1437,44 @@ impl WorkingSolutionRoute {
             }
         }
 
-        let first = activity_ids.next();
-        let last = activity_ids.next_back().or(first);
-
-        // Check that we're not inserting between direct sequence activities
-        if start > 0 {
-            let directly_after = task_dependencies
-                .traverse(
-                    self.activity_ids[start - 1],
-                    TaskDependencyType::DirectlyAfter,
-                )
-                .next();
-
-            if directly_after != first {
-                return false;
+        let mut previous_activity = self.activity_ids.get(start - 1).copied();
+        for (index, activity_id) in activity_ids.clone().enumerate() {
+            // Check InDirectSequence
+            if let Some(previous_activity) = previous_activity
+                && let Some(before) = task_dependencies
+                    .traverse(activity_id, TaskDependencyType::DirectlyBefore)
+                    .next()
+            {
+                let is_in_route = self.jobs.contains_key(&before);
+                if is_in_route && before != previous_activity {
+                    return false;
+                }
             }
+
+            // Check InSequence
+            for dependency in task_dependencies.traverse(activity_id, TaskDependencyType::Before) {
+                if let Some(&position) = self.jobs.get(&dependency) {
+                    // Activity is before the start of the sequence
+                    if position < start {
+                        continue;
+                    }
+
+                    // Activity is after the end of the sequence
+                    if position >= end {
+                        return false;
+                    }
+                }
+
+                if let Some(position_in_sequence) =
+                    activity_ids.clone().position(|id| id == dependency)
+                {
+                    if start + position_in_sequence > start + index {
+                        return false;
+                    }
+                }
+            }
+
+            previous_activity = Some(activity_id);
         }
 
         if end < self.len() {
@@ -1461,7 +1482,7 @@ impl WorkingSolutionRoute {
                 .traverse(self.activity_ids[end], TaskDependencyType::DirectlyBefore)
                 .next();
 
-            if directly_before != last {
+            if directly_before != previous_activity {
                 return false;
             }
         }
@@ -1476,9 +1497,9 @@ impl WorkingSolutionRoute {
         start: usize,
         end: usize,
     ) -> bool {
-        self.is_valid_time_change(problem, activity_ids.clone(), start, end)
+        self.is_valid_dependency_change(problem, activity_ids.clone(), start, end)
+            && self.is_valid_time_change(problem, activity_ids.clone(), start, end)
             && self.is_valid_capacity_change(problem, activity_ids.clone(), start, end)
-            && self.is_valid_dependency_change(problem, activity_ids, start, end)
     }
 
     /// Return the transport cost delta of inserting [r2_start, r2_end) of r2 into [r1_start, r1_end) of r1

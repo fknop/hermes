@@ -39,21 +39,21 @@ impl TaskDependencyType {
 }
 
 #[derive(Default, Debug)]
-pub struct TaskDependencyGraph {
-    edges: FxHashMap<ActivityId, FxHashSet<ActivityId>>,
+struct TaskSequenceList {
+    list: FxHashMap<ActivityId, FxHashSet<ActivityId>>,
 }
 
-impl TaskDependencyGraph {
-    pub fn len(&self) -> usize {
-        self.edges.len()
+impl TaskSequenceList {
+    fn len(&self) -> usize {
+        self.list.len()
     }
 
-    pub fn is_empty(&self) -> bool {
+    fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
     fn add_edge(&mut self, from: ActivityId, to: ActivityId) {
-        self.edges.entry(from).or_default().insert(to);
+        self.list.entry(from).or_default().insert(to);
     }
 
     fn add_edges(&mut self, activity_ids: &[ActivityId]) {
@@ -61,19 +61,26 @@ impl TaskDependencyGraph {
             return;
         }
 
-        for window in activity_ids.windows(2) {
-            let from = window[0];
-            let to = window[1];
+        for i in 0..activity_ids.len() {
+            for j in i + 1..activity_ids.len() {
+                let a = activity_ids[i];
+                let b = activity_ids[j];
 
-            self.add_edge(from, to);
+                self.add_edge(a, b);
+            }
         }
     }
 
-    pub fn traverse(&self, start: ActivityId) -> TaskDependencyGraphIterator<'_> {
-        TaskDependencyGraphIterator {
-            graph: self,
-            stack: vec![start],
+    pub fn contains(&self, key: ActivityId, value: ActivityId) -> bool {
+        if let Some(neighbors) = self.list.get(&key) {
+            neighbors.contains(&value)
+        } else {
+            false
         }
+    }
+
+    pub fn traverse(&self, start: ActivityId) -> impl Iterator<Item = ActivityId> {
+        self.list.get(&start).unwrap().iter().copied()
     }
 
     /// Returns true if the dependency graph contains a cycle. Making the solution impossible.
@@ -81,7 +88,7 @@ impl TaskDependencyGraph {
         let mut visited = FxHashSet::default();
         let mut rec_stack = FxHashSet::default();
 
-        for &node in self.edges.keys() {
+        for &node in self.list.keys() {
             if !visited.contains(&node) && self.dfs_cycle_check(node, &mut visited, &mut rec_stack)
             {
                 return true;
@@ -102,7 +109,7 @@ impl TaskDependencyGraph {
         visited.insert(node);
         rec_stack.insert(node);
 
-        if let Some(neighbors) = self.edges.get(&node) {
+        if let Some(neighbors) = self.list.get(&node) {
             for &neighbor in neighbors {
                 // If not visited, recurse
                 if !visited.contains(&neighbor) {
@@ -123,29 +130,12 @@ impl TaskDependencyGraph {
     }
 }
 
-pub struct TaskDependencyGraphIterator<'a> {
-    graph: &'a TaskDependencyGraph,
-    stack: Vec<ActivityId>,
-}
-
-impl<'a> Iterator for TaskDependencyGraphIterator<'a> {
-    type Item = ActivityId;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let node = self.stack.pop()?;
-        if let Some(neighbors) = self.graph.edges.get(&node) {
-            self.stack.extend(neighbors);
-        }
-        Some(node)
-    }
-}
-
 #[derive(Default, Debug)]
 pub struct TaskDependencies {
-    directly_after_graph: TaskDependencyGraph,
-    after_graph: TaskDependencyGraph,
-    before_graph: TaskDependencyGraph,
-    directly_before_graph: TaskDependencyGraph,
+    sequence_after: TaskSequenceList,
+    sequence_before: TaskSequenceList,
+    direct_sequence_after: TaskSequenceList,
+    direct_sequence_before: TaskSequenceList,
 
     fixed_jobs_vehicle: Vec<Option<VehicleIdx>>,
 
@@ -186,9 +176,9 @@ impl TaskDependencies {
             match relation {
                 Relation::InSequence(r) => {
                     let mut activity_ids = r.activity_ids.to_vec();
-                    task_dependencies.after_graph.add_edges(&activity_ids);
+                    task_dependencies.sequence_after.add_edges(&activity_ids);
                     activity_ids.reverse();
-                    task_dependencies.before_graph.add_edges(&activity_ids);
+                    task_dependencies.sequence_before.add_edges(&activity_ids);
 
                     let mut bitset = BitSet::with_capacity(jobs.len());
                     for activity_id in &r.activity_ids {
@@ -203,15 +193,15 @@ impl TaskDependencies {
                 Relation::InDirectSequence(r) => {
                     let mut activity_ids = r.activity_ids.to_vec();
                     task_dependencies
-                        .directly_after_graph
+                        .direct_sequence_after
                         .add_edges(&activity_ids);
-                    task_dependencies.after_graph.add_edges(&activity_ids);
+                    task_dependencies.sequence_after.add_edges(&activity_ids);
 
                     activity_ids.reverse();
                     task_dependencies
-                        .directly_before_graph
+                        .direct_sequence_before
                         .add_edges(&activity_ids);
-                    task_dependencies.before_graph.add_edges(&activity_ids);
+                    task_dependencies.sequence_before.add_edges(&activity_ids);
 
                     let mut bitset = BitSet::with_capacity(jobs.len());
                     for activity_id in &r.activity_ids {
@@ -310,8 +300,8 @@ impl TaskDependencies {
                 .push(group.bitset);
         }
 
-        if task_dependencies.after_graph.has_cycle()
-            || task_dependencies.directly_after_graph.has_cycle()
+        if task_dependencies.sequence_after.has_cycle()
+            || task_dependencies.direct_sequence_after.has_cycle()
         {
             return Err(MalformedRelationError::Cycle);
         }
@@ -343,12 +333,28 @@ impl TaskDependencies {
         &self,
         activity_id: ActivityId,
         dependency_type: TaskDependencyType,
-    ) -> TaskDependencyGraphIterator<'_> {
+    ) -> impl Iterator<Item = ActivityId> {
         match dependency_type {
-            TaskDependencyType::After => self.after_graph.traverse(activity_id),
-            TaskDependencyType::DirectlyAfter => self.directly_after_graph.traverse(activity_id),
-            TaskDependencyType::Before => self.before_graph.traverse(activity_id),
-            TaskDependencyType::DirectlyBefore => self.directly_before_graph.traverse(activity_id),
+            TaskDependencyType::After => self.sequence_after.traverse(activity_id),
+            TaskDependencyType::DirectlyAfter => self.direct_sequence_after.traverse(activity_id),
+            TaskDependencyType::Before => self.sequence_before.traverse(activity_id),
+            TaskDependencyType::DirectlyBefore => self.direct_sequence_before.traverse(activity_id),
+        }
+    }
+
+    pub fn is(
+        &self,
+        first: ActivityId,
+        dependency_type: TaskDependencyType,
+        second: ActivityId,
+    ) -> bool {
+        match dependency_type {
+            TaskDependencyType::After => self.sequence_after.contains(second, first),
+            TaskDependencyType::DirectlyAfter => self.direct_sequence_after.contains(second, first),
+            TaskDependencyType::Before => self.sequence_before.contains(second, first),
+            TaskDependencyType::DirectlyBefore => {
+                self.direct_sequence_before.contains(second, first)
+            }
         }
     }
 
@@ -401,6 +407,8 @@ impl TaskDependencies {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use crate::problem::{
         job::ActivityId,
         relation::*,
@@ -441,30 +449,33 @@ mod tests {
         let dependencies =
             TaskDependencies::try_from_jobs_and_relations(&dummy_jobs, &relations).unwrap();
 
-        assert_eq!(dependencies.after_graph.len(), 3);
+        assert_eq!(dependencies.sequence_after.len(), 3);
         assert_eq!(
-            dependencies.after_graph.edges[&ActivityId::service(0)]
+            dependencies.sequence_after.list[&ActivityId::service(0)],
+            [
+                ActivityId::service(1),
+                ActivityId::service(2),
+                ActivityId::service(3)
+            ]
+            .into_iter()
+            .collect()
+        );
+        assert_eq!(
+            dependencies.sequence_after.list[&ActivityId::service(1)]
                 .iter()
                 .copied()
                 .collect::<Vec<_>>(),
-            vec![ActivityId::service(1)]
+            vec![ActivityId::service(2), ActivityId::service(3)]
         );
         assert_eq!(
-            dependencies.after_graph.edges[&ActivityId::service(1)]
-                .iter()
-                .copied()
-                .collect::<Vec<_>>(),
-            vec![ActivityId::service(2)]
-        );
-        assert_eq!(
-            dependencies.after_graph.edges[&ActivityId::service(2)]
+            dependencies.sequence_after.list[&ActivityId::service(2)]
                 .iter()
                 .copied()
                 .collect::<Vec<_>>(),
             vec![ActivityId::service(3)]
         );
 
-        assert!(!dependencies.after_graph.has_cycle())
+        assert!(!dependencies.sequence_after.has_cycle())
     }
 
     #[test]
