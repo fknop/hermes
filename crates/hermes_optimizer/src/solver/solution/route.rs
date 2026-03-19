@@ -886,6 +886,8 @@ impl WorkingSolutionRoute {
             self.current_load
                 .fill_with(|| Capacity::with_dimensions(problem.capacity_dimensions()));
         }
+
+        self.insertion_positions.clear();
     }
 
     fn update_data(&mut self, problem: &VehicleRoutingProblem) {
@@ -1715,6 +1717,12 @@ impl WorkingSolutionRoute {
         start: usize,
         end: usize,
     ) -> bool {
+        assert!(
+            start <= self.len(),
+            "{start} > {len}",
+            start = start,
+            len = self.len()
+        );
         assert!(start <= end);
         assert!(end <= self.len() + 1);
 

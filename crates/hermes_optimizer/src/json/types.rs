@@ -4,17 +4,22 @@ use hermes_matrix_providers::{
 };
 use jiff::{SignedDuration, Timestamp};
 use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use tracing::instrument;
 
 use crate::problem::{
     capacity::Capacity,
     fleet::Fleet,
+    job::{ActivityId, JobIdx},
     location::Location,
+    relation::{
+        InDirectSequenceRelation, InSameRouteRelation, InSequenceRelation, NotInSameRouteRelation,
+        Relation,
+    },
     service::{Service, ServiceBuilder, ServiceType},
     time_window::TimeWindow,
     travel_cost_matrix::TravelMatrices,
-    vehicle::{Vehicle, VehicleBuilder, VehicleShift},
+    vehicle::{Vehicle, VehicleBuilder, VehicleIdx, VehicleShift},
     vehicle_profile::VehicleProfile,
     vehicle_routing_problem::{VehicleRoutingProblem, VehicleRoutingProblemBuilder},
 };
@@ -31,6 +36,7 @@ pub struct JsonVehicleRoutingProblem {
     pub services: Vec<JsonService>,
     pub vehicle_profiles: Vec<JsonVehicleProfile>,
     pub vehicles: Vec<JsonVehicle>,
+    pub relations: Option<Vec<JsonRelation>>,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -169,6 +175,156 @@ impl From<JsonVehicleShift> for VehicleShift {
     }
 }
 
+#[derive(JsonSchema)]
+pub enum JsonActivityId {
+    Pickup(String),
+    Delivery(String),
+    Service(String),
+}
+
+impl JsonActivityId {
+    pub fn external_id(&self) -> &str {
+        match self {
+            JsonActivityId::Pickup(id) => id,
+            JsonActivityId::Delivery(id) => id,
+            JsonActivityId::Service(id) => id,
+        }
+    }
+}
+
+impl FromProblem<ActivityId> for JsonActivityId {
+    fn from_problem(value: ActivityId, problem: &VehicleRoutingProblem) -> Self {
+        match value {
+            ActivityId::ShipmentPickup(idx) => {
+                JsonActivityId::Pickup(problem.job(idx).external_id().to_owned())
+            }
+            ActivityId::ShipmentDelivery(idx) => {
+                JsonActivityId::Delivery(problem.job(idx).external_id().to_owned())
+            }
+            ActivityId::Service(idx) => {
+                JsonActivityId::Service(problem.job(idx).external_id().to_owned())
+            }
+        }
+    }
+}
+
+impl std::fmt::Display for JsonActivityId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            JsonActivityId::Pickup(id) => format!("pickup_{id}"),
+            JsonActivityId::Delivery(id) => format!("delivery_{id}"),
+            JsonActivityId::Service(id) => format!("service_{id}"),
+        };
+
+        write!(f, "{}", s)
+    }
+}
+
+impl Serialize for JsonActivityId {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let s = self.to_string();
+        serializer.serialize_str(&s)
+    }
+}
+
+impl<'de> Deserialize<'de> for JsonActivityId {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let s = String::deserialize(deserializer)?;
+        if let Some(id) = s.strip_prefix("pickup_") {
+            Ok(JsonActivityId::Pickup(id.to_owned()))
+        } else if let Some(id) = s.strip_prefix("delivery_") {
+            Ok(JsonActivityId::Delivery(id.to_owned()))
+        } else if let Some(id) = s.strip_prefix("service_") {
+            Ok(JsonActivityId::Service(id.to_owned()))
+        } else {
+            Ok(JsonActivityId::Service(s.to_owned()))
+            // Err(serde::de::Error::custom(format!(
+            // "expected prefix pickup_, delivery_, or service_, got: {s}"
+            // )))
+        }
+    }
+}
+
+#[derive(JsonSchema, Serialize, Deserialize)]
+pub struct JsonInDirectSequenceRelation {
+    pub vehicle_id: Option<String>,
+    pub ids: Vec<JsonActivityId>,
+}
+
+#[derive(JsonSchema, Serialize, Deserialize)]
+pub struct JsonInSequenceRelation {
+    pub vehicle_id: Option<String>,
+    pub ids: Vec<JsonActivityId>,
+}
+
+#[derive(JsonSchema, Serialize, Deserialize)]
+pub struct JsonInSameRouteRelation {
+    pub vehicle_id: Option<String>,
+    pub ids: Vec<JsonActivityId>,
+}
+
+#[derive(JsonSchema, Serialize, Deserialize)]
+pub struct JsonNotInSameRouteRelation {
+    pub ids: Vec<JsonActivityId>,
+}
+
+#[derive(JsonSchema, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum JsonRelation {
+    InSameRoute(JsonInSameRouteRelation),
+    NotInSameRoute(JsonNotInSameRouteRelation),
+    InSequence(JsonInDirectSequenceRelation),
+    InDirectSequence(JsonInDirectSequenceRelation),
+}
+
+impl FromProblem<&Relation> for JsonRelation {
+    fn from_problem(relation: &Relation, problem: &VehicleRoutingProblem) -> Self {
+        match relation {
+            Relation::InSameRoute(rel) => JsonRelation::InSameRoute(JsonInSameRouteRelation {
+                vehicle_id: rel
+                    .vehicle_id
+                    .map(|id| problem.vehicle(id).external_id().to_owned()),
+                ids: rel
+                    .activity_ids
+                    .iter()
+                    .map(|&id| JsonActivityId::from_problem(id, problem))
+                    .collect(),
+            }),
+            Relation::NotInSameRoute(rel) => {
+                JsonRelation::NotInSameRoute(JsonNotInSameRouteRelation {
+                    ids: rel
+                        .activity_ids
+                        .iter()
+                        .map(|&id| JsonActivityId::from_problem(id, problem))
+                        .collect(),
+                })
+            }
+            Relation::InSequence(rel) => JsonRelation::InSequence(JsonInDirectSequenceRelation {
+                vehicle_id: rel
+                    .vehicle_id
+                    .map(|id| problem.vehicle(id).external_id().to_owned()),
+                ids: rel
+                    .activity_ids
+                    .iter()
+                    .map(|&id| JsonActivityId::from_problem(id, problem))
+                    .collect(),
+            }),
+            Relation::InDirectSequence(rel) => {
+                JsonRelation::InDirectSequence(JsonInDirectSequenceRelation {
+                    vehicle_id: rel
+                        .vehicle_id
+                        .map(|id| problem.vehicle(id).external_id().to_owned()),
+                    ids: rel
+                        .activity_ids
+                        .iter()
+                        .map(|&id| JsonActivityId::from_problem(id, problem))
+                        .collect(),
+                })
+            }
+        }
+    }
+}
+
 impl JsonVehicleRoutingProblem {
     #[instrument(skip_all, level = "debug")]
     pub async fn build_problem(
@@ -189,7 +345,7 @@ impl JsonVehicleRoutingProblem {
             })
             .collect::<Vec<_>>();
 
-        let services = self
+        let services: Vec<Service> = self
             .services
             .into_iter()
             .map(|service| {
@@ -222,9 +378,7 @@ impl JsonVehicleRoutingProblem {
             })
             .collect();
 
-        builder.set_services(services);
-
-        let vehicles = self
+        let vehicles: Vec<Vehicle> = self
             .vehicles
             .into_iter()
             .map(|vehicle| {
@@ -276,6 +430,83 @@ impl JsonVehicleRoutingProblem {
             })
             .collect();
 
+        if let Some(json_relations) = self.relations {
+            // TODO: rework this to pass external ID to the problem instance
+
+            let external_to_internal_vehicle_id = |vehicle_id: Option<&str>| {
+                if let Some(vehicle_id) = vehicle_id {
+                    let position = vehicles
+                        .iter()
+                        .position(|vehicle| vehicle.external_id() == vehicle_id);
+
+                    position.map(VehicleIdx::new)
+                } else {
+                    None
+                }
+            };
+
+            let external_to_internal_service_id = |activity_id: JsonActivityId| -> ActivityId {
+                let position = services
+                    .iter()
+                    .position(|service| service.external_id() == activity_id.external_id())
+                    .expect("service not found");
+
+                ActivityId::service(position)
+            };
+
+            let relations = json_relations
+                .into_iter()
+                .map(|relation| match relation {
+                    JsonRelation::InSameRoute(rel) => {
+                        let vehicle_id = external_to_internal_vehicle_id(rel.vehicle_id.as_deref());
+
+                        Relation::InSameRoute(InSameRouteRelation {
+                            vehicle_id,
+                            activity_ids: rel
+                                .ids
+                                .into_iter()
+                                .map(external_to_internal_service_id)
+                                .collect(),
+                        })
+                    }
+                    JsonRelation::NotInSameRoute(rel) => {
+                        Relation::NotInSameRoute(NotInSameRouteRelation {
+                            activity_ids: rel
+                                .ids
+                                .into_iter()
+                                .map(external_to_internal_service_id)
+                                .collect(),
+                        })
+                    }
+                    JsonRelation::InSequence(rel) => {
+                        let vehicle_id = external_to_internal_vehicle_id(rel.vehicle_id.as_deref());
+                        Relation::InSequence(InSequenceRelation {
+                            vehicle_id,
+                            activity_ids: rel
+                                .ids
+                                .into_iter()
+                                .map(external_to_internal_service_id)
+                                .collect(),
+                        })
+                    }
+                    JsonRelation::InDirectSequence(rel) => {
+                        let vehicle_id = external_to_internal_vehicle_id(rel.vehicle_id.as_deref());
+                        Relation::InDirectSequence(InDirectSequenceRelation {
+                            vehicle_id,
+                            activity_ids: rel
+                                .ids
+                                .into_iter()
+                                .map(external_to_internal_service_id)
+                                .collect(),
+                        })
+                    }
+                })
+                .collect();
+
+            builder.set_relations(relations);
+        }
+
+        builder.set_services(services);
         builder.set_fleet(Fleet::Finite(vehicles));
 
         let futures = self

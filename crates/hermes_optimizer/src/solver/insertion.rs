@@ -138,9 +138,13 @@ fn route_with_dependencies(
         .iter()
         .enumerate_idx()
         .find_map(|(route_id, route)| {
-            if problem
-                .task_dependencies()
-                .contains_in_same_route_dependencies_for_unassigned_job(job_id, route.jobs_bitset())
+            if !route.is_empty()
+                && problem
+                    .task_dependencies()
+                    .contains_in_same_route_dependencies_for_unassigned_job(
+                        job_id,
+                        route.jobs_bitset(),
+                    )
             {
                 Some(route_id)
             } else {
