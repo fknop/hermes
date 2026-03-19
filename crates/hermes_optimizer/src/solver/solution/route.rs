@@ -1423,21 +1423,30 @@ impl WorkingSolutionRoute {
                     .map(|activity_id| activity_id.job_id().get()),
             );
 
-            let mut route_bitset = BitSet::with_capacity(problem.jobs().len());
-            if start > 0 {
-                route_bitset.union_with(&self.fwd_jobs[start - 1]);
+            // Check that the segment is not inserted into a route with jobs with "not in same route" constraint
+            if start > 0
+                && task_dependencies.contains_not_in_same_route_violations_for_segment_addition(
+                    &self.fwd_jobs[start - 1],
+                    &segment,
+                )
+            {
+                return false;
             }
 
-            if end < self.len() {
-                route_bitset.union_with(&self.bwd_jobs[end]);
-            }
-            // Check that the segment is not inserted into a route with jobs with "not in same route" constraint
-            if task_dependencies.contains_not_in_same_route_dependencies(&route_bitset, &segment) {
+            if end < self.len()
+                && task_dependencies.contains_not_in_same_route_violations_for_segment_addition(
+                    &self.bwd_jobs[end],
+                    &segment,
+                )
+            {
                 return false;
             }
         }
 
-        let mut previous_activity = self.activity_ids.get(start - 1).copied();
+        let mut previous_activity = start
+            .checked_sub(1)
+            .and_then(|i| self.activity_ids.get(i))
+            .copied();
         for (index, activity_id) in activity_ids.clone().enumerate() {
             // Check InDirectSequence
             if let Some(previous_activity) = previous_activity
@@ -5052,12 +5061,7 @@ mod tests {
 
         // Replace second activity with the third service
         let segment = vec![ActivityId::service(2)];
-        assert!(route.is_valid_dependency_change(
-            &problem,
-            segment.into_iter(),
-            1,
-            2
-        ));
+        assert!(route.is_valid_dependency_change(&problem, segment.into_iter(), 1, 2));
     }
 
     #[test]
@@ -5076,12 +5080,7 @@ mod tests {
 
         // Try to append s1 at the end — route already has s0
         let segment = vec![ActivityId::service(1)];
-        assert!(!route.is_valid_dependency_change(
-            &problem,
-            segment.into_iter(),
-            2,
-            2
-        ));
+        assert!(!route.is_valid_dependency_change(&problem, segment.into_iter(), 2, 2));
     }
 
     #[test]
@@ -5100,12 +5099,7 @@ mod tests {
 
         // Append s0 — s1 is not in this route
         let segment = vec![ActivityId::service(0)];
-        assert!(route.is_valid_dependency_change(
-            &problem,
-            segment.into_iter(),
-            2,
-            2
-        ));
+        assert!(route.is_valid_dependency_change(&problem, segment.into_iter(), 2, 2));
     }
 
     #[test]
@@ -5124,12 +5118,7 @@ mod tests {
         route.insert_service(&problem, 1, JobIdx::new(2)); // s2 at pos 1
 
         let segment = vec![ActivityId::service(1)];
-        assert!(route.is_valid_dependency_change(
-            &problem,
-            segment.into_iter(),
-            1,
-            2
-        ));
+        assert!(route.is_valid_dependency_change(&problem, segment.into_iter(), 1, 2));
     }
 
     #[test]
@@ -5149,12 +5138,7 @@ mod tests {
 
         // Append s1 after s2 — last activity before segment is s2, not s0
         let segment = vec![ActivityId::service(1)];
-        assert!(!route.is_valid_dependency_change(
-            &problem,
-            segment.into_iter(),
-            2,
-            2
-        ));
+        assert!(!route.is_valid_dependency_change(&problem, segment.into_iter(), 2, 2));
     }
 
     #[test]
@@ -5173,12 +5157,7 @@ mod tests {
 
         // Append s1 — s0 is unassigned, so the directly-before check is skipped
         let segment = vec![ActivityId::service(1)];
-        assert!(route.is_valid_dependency_change(
-            &problem,
-            segment.into_iter(),
-            1,
-            1
-        ));
+        assert!(route.is_valid_dependency_change(&problem, segment.into_iter(), 1, 1));
     }
 
     #[test]
@@ -5198,12 +5177,7 @@ mod tests {
 
         // Append s1 at pos 2; s0 is already in route at pos 0 (< start=2)
         let segment = vec![ActivityId::service(1)];
-        assert!(route.is_valid_dependency_change(
-            &problem,
-            segment.into_iter(),
-            2,
-            2
-        ));
+        assert!(route.is_valid_dependency_change(&problem, segment.into_iter(), 2, 2));
     }
 
     #[test]
@@ -5232,12 +5206,7 @@ mod tests {
 
         // Insert s0 between s2 and s1 — s1 (dep of s0) is at pos 1 == end=1
         let segment = vec![ActivityId::service(0)];
-        assert!(!route.is_valid_dependency_change(
-            &problem,
-            segment.into_iter(),
-            1,
-            1
-        ));
+        assert!(!route.is_valid_dependency_change(&problem, segment.into_iter(), 1, 1));
     }
 
     #[test]
@@ -5256,12 +5225,7 @@ mod tests {
 
         // Append [s0, s1] — correct order
         let segment = vec![ActivityId::service(0), ActivityId::service(1)];
-        assert!(route.is_valid_dependency_change(
-            &problem,
-            segment.into_iter(),
-            1,
-            1
-        ));
+        assert!(route.is_valid_dependency_change(&problem, segment.into_iter(), 1, 1));
     }
 
     #[test]
@@ -5280,12 +5244,7 @@ mod tests {
 
         // Append [s1, s0] — s1 appears before s0, violating the sequence
         let segment = vec![ActivityId::service(1), ActivityId::service(0)];
-        assert!(!route.is_valid_dependency_change(
-            &problem,
-            segment.into_iter(),
-            1,
-            1
-        ));
+        assert!(!route.is_valid_dependency_change(&problem, segment.into_iter(), 1, 1));
     }
 
     #[test]
@@ -5307,12 +5266,7 @@ mod tests {
 
         // Insert s0 between s2 and s1 — s0 will be the last in segment and satisfies s1's dep
         let segment = vec![ActivityId::service(0)];
-        assert!(route.is_valid_dependency_change(
-            &problem,
-            segment.into_iter(),
-            1,
-            1
-        ));
+        assert!(route.is_valid_dependency_change(&problem, segment.into_iter(), 1, 1));
     }
 
     #[test]
@@ -5333,12 +5287,7 @@ mod tests {
 
         // Insert s2 between s2 and s1 — last in segment is s2, but s1 requires s0
         let segment = vec![ActivityId::service(2)];
-        assert!(!route.is_valid_dependency_change(
-            &problem,
-            segment.into_iter(),
-            1,
-            1
-        ));
+        assert!(!route.is_valid_dependency_change(&problem, segment.into_iter(), 1, 1));
     }
 
     #[test]
@@ -5359,11 +5308,103 @@ mod tests {
 
         // Insert s2 before s0 — s0 has no DirectlyBefore constraint, so it's always valid
         let segment = vec![ActivityId::service(2)];
-        assert!(route.is_valid_dependency_change(
-            &problem,
-            segment.into_iter(),
-            1,
-            1
-        ));
+        assert!(route.is_valid_dependency_change(&problem, segment.into_iter(), 1, 1));
+    }
+
+    // ── segment_bitset tests ──────────────────────────────────────────────────
+    //
+    // Route: [job0 @ pos0, job2 @ pos1, job1 @ pos2]
+    // fwd_jobs: [0]={0}  [1]={0,2}  [2]={0,1,2}
+    // bwd_jobs: [0]={0,1,2}  [1]={1,2}  [2]={1}
+    //
+    // segment_bitset(start, end) = bwd_jobs[start] ∩ fwd_jobs[end-1]
+
+    #[test]
+    fn test_segment_bitset_full_range() {
+        // segment_bitset(0, 3) = {0,1,2} ∩ {0,1,2} = {0,1,2}
+        let problem = create_problem();
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        route.insert_service(&problem, 1, JobIdx::new(2));
+        route.insert_service(&problem, 2, JobIdx::new(1));
+
+        let bitset = route.segment_bitset(&problem, 0, 3);
+        assert_eq!(bitset.ones().collect::<Vec<_>>(), vec![0, 1, 2]);
+    }
+
+    #[test]
+    fn test_segment_bitset_first_element() {
+        // segment_bitset(0, 1) = {0,1,2} ∩ {0} = {0}
+        let problem = create_problem();
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        route.insert_service(&problem, 1, JobIdx::new(2));
+        route.insert_service(&problem, 2, JobIdx::new(1));
+
+        let bitset = route.segment_bitset(&problem, 0, 1);
+        assert_eq!(bitset.ones().collect::<Vec<_>>(), vec![0]);
+    }
+
+    #[test]
+    fn test_segment_bitset_middle_element() {
+        // segment_bitset(1, 2) = {1,2} ∩ {0,2} = {2}
+        let problem = create_problem();
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        route.insert_service(&problem, 1, JobIdx::new(2));
+        route.insert_service(&problem, 2, JobIdx::new(1));
+
+        let bitset = route.segment_bitset(&problem, 1, 2);
+        assert_eq!(bitset.ones().collect::<Vec<_>>(), vec![2]);
+    }
+
+    #[test]
+    fn test_segment_bitset_last_element() {
+        // segment_bitset(2, 3) = {1} ∩ {0,1,2} = {1}
+        let problem = create_problem();
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        route.insert_service(&problem, 1, JobIdx::new(2));
+        route.insert_service(&problem, 2, JobIdx::new(1));
+
+        let bitset = route.segment_bitset(&problem, 2, 3);
+        assert_eq!(bitset.ones().collect::<Vec<_>>(), vec![1]);
+    }
+
+    #[test]
+    fn test_segment_bitset_prefix() {
+        // segment_bitset(0, 2) = {0,1,2} ∩ {0,2} = {0,2}
+        let problem = create_problem();
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        route.insert_service(&problem, 1, JobIdx::new(2));
+        route.insert_service(&problem, 2, JobIdx::new(1));
+
+        let bitset = route.segment_bitset(&problem, 0, 2);
+        assert_eq!(bitset.ones().collect::<Vec<_>>(), vec![0, 2]);
+    }
+
+    #[test]
+    fn test_segment_bitset_suffix() {
+        // segment_bitset(1, 3) = {1,2} ∩ {0,1,2} = {1,2}
+        let problem = create_problem();
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0));
+        route.insert_service(&problem, 1, JobIdx::new(2));
+        route.insert_service(&problem, 2, JobIdx::new(1));
+
+        let bitset = route.segment_bitset(&problem, 1, 3);
+        assert_eq!(bitset.ones().collect::<Vec<_>>(), vec![1, 2]);
+    }
+
+    #[test]
+    fn test_segment_bitset_single_job_route() {
+        // Route with one job: segment_bitset(0, 1) = {0}
+        let problem = create_problem();
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0));
+
+        let bitset = route.segment_bitset(&problem, 0, 1);
+        assert_eq!(bitset.ones().collect::<Vec<_>>(), vec![0]);
     }
 }

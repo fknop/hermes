@@ -361,37 +361,40 @@ impl TaskDependencies {
         }
     }
 
-    pub fn contains_not_in_same_route_dependencies(
+    /// Check whether the segment "new_segment", if added into a route segment "route_segment" violates the "not in same route" constraint.
+    pub fn contains_not_in_same_route_violations_for_segment_addition(
         &self,
-        route_bitset: &BitSet,
-        segment: &BitSet,
+        route_segment: &BitSet,
+        new_segment: &BitSet,
     ) -> bool {
-        for not_in_same_route_bitset in &self.not_in_same_route_groups {
-            if !not_in_same_route_bitset.intersects(segment) {
-                continue;
-            }
+        self.not_in_same_route_groups.iter().any(|group| {
+            let count =
+                group.intersection_count(new_segment) + group.intersection_count(route_segment);
+            count > 1
+        })
+    }
 
-            if route_bitset.intersects(not_in_same_route_bitset) {
-                return true;
-            }
-        }
-
-        false
+    /// Check whether the segment "route_segment" violates the "not in same route" constraint.
+    pub fn contains_not_in_same_route_violations(&self, route_segment: &BitSet) -> bool {
+        self.not_in_same_route_groups.iter().any(|group| {
+            let count = group.intersection_count(route_segment);
+            count > 1
+        })
     }
 
     pub fn contains_in_same_route_dependencies_for_unassigned_job(
         &self,
         job_id: JobIdx,
-        route_bitset: &BitSet,
+        route_segment: &BitSet,
     ) -> bool {
         self.in_same_route_groups
             .iter()
-            .any(|bs| bs.contains(job_id.get()) && route_bitset.intersects(bs))
+            .any(|bs| bs.contains(job_id.get()) && route_segment.intersects(bs))
     }
 
     pub fn contains_in_same_route_dependencies(
         &self,
-        route_bitset: &BitSet,
+        route_segment: &BitSet,
         segment: &BitSet,
     ) -> bool {
         for in_same_route_bitset in &self.in_same_route_groups {
@@ -399,7 +402,7 @@ impl TaskDependencies {
                 continue;
             }
 
-            if route_bitset.intersects(in_same_route_bitset) {
+            if route_segment.intersects(in_same_route_bitset) {
                 return true;
             }
         }
