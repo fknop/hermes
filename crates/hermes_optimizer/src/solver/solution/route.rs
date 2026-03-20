@@ -121,7 +121,7 @@ pub struct WorkingSolutionRoute {
     /// num_shipments[i] counts the total number of shipments activities from start to activity i
     pub(super) num_shipments: Vec<usize>,
 
-    pub(super) insertion_positions: FxHashMap<ActivityId, (usize, usize)>,
+    pub(super) insertion_ranges: FxHashMap<ActivityId, (usize, usize)>,
 
     bbox: BBox,
 
@@ -162,7 +162,7 @@ impl WorkingSolutionRoute {
             skills_sparse_table: SparseTable::empty(),
             delivery_load_slack: problem.vehicle(vehicle_id).capacity().clone(),
             pickup_load_slack: problem.vehicle(vehicle_id).capacity().clone(),
-            insertion_positions: FxHashMap::default(),
+            insertion_ranges: FxHashMap::default(),
         };
 
         route.update_data(problem);
@@ -887,7 +887,7 @@ impl WorkingSolutionRoute {
                 .fill_with(|| Capacity::with_dimensions(problem.capacity_dimensions()));
         }
 
-        self.insertion_positions.clear();
+        self.insertion_ranges.clear();
     }
 
     fn update_data(&mut self, problem: &VehicleRoutingProblem) {
@@ -1205,12 +1205,12 @@ impl WorkingSolutionRoute {
             self.fwd_time_slacks.fill(SignedDuration::MAX);
         }
 
-        self.update_insertion_positions(problem);
+        self.update_insertion_ranges(problem);
 
         self.out_of_sync = false;
     }
 
-    fn update_insertion_positions(&mut self, problem: &VehicleRoutingProblem) {
+    fn update_insertion_ranges(&mut self, problem: &VehicleRoutingProblem) {
         if !problem.has_task_dependencies() {
             return;
         }
@@ -1221,7 +1221,7 @@ impl WorkingSolutionRoute {
         for (pos, &activity_id) in self.activity_ids.iter().enumerate() {
             for dependency in dependencies.traverse(activity_id, TaskDependencyType::After) {
                 let (start, _) = self
-                    .insertion_positions
+                    .insertion_ranges
                     .entry(dependency)
                     .or_insert_with(|| (0, len));
                 *start = (*start).max(pos + 1);
@@ -1229,7 +1229,7 @@ impl WorkingSolutionRoute {
 
             for dependency in dependencies.traverse(activity_id, TaskDependencyType::Before) {
                 let (_, end) = self
-                    .insertion_positions
+                    .insertion_ranges
                     .entry(dependency)
                     .or_insert_with(|| (0, len));
                 *end = (*end).min(pos);
@@ -1238,7 +1238,7 @@ impl WorkingSolutionRoute {
             for dependency in dependencies.traverse(activity_id, TaskDependencyType::DirectlyAfter)
             {
                 let (start, end) = self
-                    .insertion_positions
+                    .insertion_ranges
                     .entry(dependency)
                     .or_insert_with(|| (0, len));
                 *start = pos + 1;
@@ -1248,7 +1248,7 @@ impl WorkingSolutionRoute {
             for dependency in dependencies.traverse(activity_id, TaskDependencyType::DirectlyBefore)
             {
                 let (start, end) = self
-                    .insertion_positions
+                    .insertion_ranges
                     .entry(dependency)
                     .or_insert_with(|| (0, len));
                 *end = pos;
@@ -1257,8 +1257,12 @@ impl WorkingSolutionRoute {
         }
     }
 
+    /// Returns the insertion range for the given [activity_id], i.e. the range of indices where the
+    /// activity can be inserted without violating task dependencies.
+    ///
+    /// The range is inclusive on both ends, i.e. `(start, end)` is a valid insertion range.
     pub fn insertion_range(&self, activity_id: ActivityId) -> (usize, usize) {
-        self.insertion_positions
+        self.insertion_ranges
             .get(&activity_id)
             .copied()
             .unwrap_or((0, self.len()))
@@ -5544,5 +5548,182 @@ mod tests {
         route.insert_service(&problem, 2, JobIdx::new(2)); // s2 @ pos 2
 
         assert!(route.can_remove_segment(&problem, 2, 3));
+    }
+
+    // ── insertion_range tests ─────────────────────────────────────────────────
+
+    #[test]
+    fn test_insertion_range_no_dependencies_returns_full_range() {
+        // No relations → insertion_range returns (0, len) for any activity.
+        let problem = create_problem_with_relations(3, vec![]);
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0)); // s0 @ pos 0
+        route.insert_service(&problem, 1, JobIdx::new(1)); // s1 @ pos 1
+
+        // s2 is not in the route; without dependencies the full range is returned.
+        assert_eq!(route.insertion_range(ActivityId::service(2)), (0, 2));
+    }
+
+    #[test]
+    fn test_insertion_range_in_sequence_predecessor_in_route() {
+        // InSequence([s0, s1]): s1 must come after s0.
+        // Route: [s0, s2]. s0 is at pos 0 → s1's start must be at least 1.
+        let problem = create_problem_with_relations(
+            3,
+            vec![Relation::InSequence(InSequenceRelation {
+                vehicle_id: None,
+                activity_ids: vec![ActivityId::service(0), ActivityId::service(1)],
+            })],
+        );
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0)); // s0 @ pos 0
+        route.insert_service(&problem, 1, JobIdx::new(2)); // s2 @ pos 1
+
+        // s1 must be inserted after s0 (pos 0), so earliest valid position is 1.
+        assert_eq!(route.insertion_range(ActivityId::service(1)), (1, 2));
+    }
+
+    #[test]
+    fn test_insertion_range_in_sequence_successor_in_route() {
+        // InSequence([s0, s1]): s0 must come before s1.
+        // Route: [s2, s1]. s1 is at pos 1 → s0's end must be at most 1.
+        let problem = create_problem_with_relations(
+            3,
+            vec![Relation::InSequence(InSequenceRelation {
+                vehicle_id: None,
+                activity_ids: vec![ActivityId::service(0), ActivityId::service(1)],
+            })],
+        );
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(2)); // s2 @ pos 0
+        route.insert_service(&problem, 1, JobIdx::new(1)); // s1 @ pos 1
+
+        // s0 must be inserted before s1 (pos 1), so latest valid position is 1.
+        assert_eq!(route.insertion_range(ActivityId::service(0)), (0, 1));
+    }
+
+    #[test]
+    fn test_insertion_range_in_sequence_multiple_predecessors() {
+        // InSequence([s0, s1, s2]): s2 must come after both s0 and s1.
+        // Route: [s0, s1]. s0 @ pos 0, s1 @ pos 1 → s2's start = max(1, 2) = 2.
+        let problem = create_problem_with_relations(
+            3,
+            vec![Relation::InSequence(InSequenceRelation {
+                vehicle_id: None,
+                activity_ids: vec![
+                    ActivityId::service(0),
+                    ActivityId::service(1),
+                    ActivityId::service(2),
+                ],
+            })],
+        );
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0)); // s0 @ pos 0
+        route.insert_service(&problem, 1, JobIdx::new(1)); // s1 @ pos 1
+
+        // s2 must come after both s0 and s1; latest predecessor is s1 @ pos 1, so start = 2.
+        assert_eq!(route.insertion_range(ActivityId::service(2)), (2, 2));
+    }
+
+    #[test]
+    fn test_insertion_range_in_sequence_multiple_successors() {
+        // InSequence([s0, s1, s2]): s0 must come before both s1 and s2.
+        // Route: [s1, s2]. s1 @ pos 0, s2 @ pos 1 → s0's end = min(0, 1) = 0.
+        let problem = create_problem_with_relations(
+            3,
+            vec![Relation::InSequence(InSequenceRelation {
+                vehicle_id: None,
+                activity_ids: vec![
+                    ActivityId::service(0),
+                    ActivityId::service(1),
+                    ActivityId::service(2),
+                ],
+            })],
+        );
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(1)); // s1 @ pos 0
+        route.insert_service(&problem, 1, JobIdx::new(2)); // s2 @ pos 1
+
+        // s0 must come before s1 (pos 0) and s2 (pos 1); earliest successor is s1 @ pos 0, so end = 0.
+        assert_eq!(route.insertion_range(ActivityId::service(0)), (0, 0));
+    }
+
+    #[test]
+    fn test_insertion_range_in_direct_sequence_predecessor_in_route() {
+        // InDirectSequence([s0, s1]): s1 must be inserted directly after s0.
+        // Route: [s0, s2]. s0 @ pos 0 → s1's range is pinned to (1, 1).
+        let problem = create_problem_with_relations(
+            3,
+            vec![Relation::InDirectSequence(InDirectSequenceRelation {
+                vehicle_id: None,
+                activity_ids: vec![ActivityId::service(0), ActivityId::service(1)],
+            })],
+        );
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0)); // s0 @ pos 0
+        route.insert_service(&problem, 1, JobIdx::new(2)); // s2 @ pos 1
+
+        // s1 must be inserted directly after s0 at pos 0, so range is exactly (1, 1).
+        assert_eq!(route.insertion_range(ActivityId::service(1)), (1, 1));
+    }
+
+    #[test]
+    fn test_insertion_range_in_direct_sequence_successor_in_route() {
+        // InDirectSequence([s0, s1]): s0 must be inserted directly before s1.
+        // Route: [s2, s1]. s1 @ pos 1 → s0's range is pinned to (1, 1).
+        let problem = create_problem_with_relations(
+            3,
+            vec![Relation::InDirectSequence(InDirectSequenceRelation {
+                vehicle_id: None,
+                activity_ids: vec![ActivityId::service(0), ActivityId::service(1)],
+            })],
+        );
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(2)); // s2 @ pos 0
+        route.insert_service(&problem, 1, JobIdx::new(1)); // s1 @ pos 1
+
+        // s0 must be inserted directly before s1 at pos 1, so range is exactly (1, 1).
+        assert_eq!(route.insertion_range(ActivityId::service(0)), (1, 1));
+    }
+
+    #[test]
+    fn test_insertion_range_unrelated_activity_unaffected() {
+        // InSequence([s0, s1]): only s0 and s1 are constrained.
+        // s2 has no constraints and should always return the full range.
+        let problem = create_problem_with_relations(
+            3,
+            vec![Relation::InSequence(InSequenceRelation {
+                vehicle_id: None,
+                activity_ids: vec![ActivityId::service(0), ActivityId::service(1)],
+            })],
+        );
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(0)); // s0 @ pos 0
+        route.insert_service(&problem, 1, JobIdx::new(1)); // s1 @ pos 1
+
+        // s2 is unrelated to the constraint; full range is returned.
+        assert_eq!(route.insertion_range(ActivityId::service(2)), (0, 2));
+    }
+
+    #[test]
+    fn test_insertion_range_updates_after_new_insertion() {
+        // InSequence([s0, s1]): inserting s0 into an existing route updates s1's range.
+        let problem = create_problem_with_relations(
+            3,
+            vec![Relation::InSequence(InSequenceRelation {
+                vehicle_id: None,
+                activity_ids: vec![ActivityId::service(0), ActivityId::service(1)],
+            })],
+        );
+        let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
+        route.insert_service(&problem, 0, JobIdx::new(2)); // s2 @ pos 0, no constraint
+
+        // Before s0 is inserted, s1 can go anywhere.
+        assert_eq!(route.insertion_range(ActivityId::service(1)), (0, 1));
+
+        route.insert_service(&problem, 1, JobIdx::new(0)); // s0 @ pos 1
+
+        // Now s1 must come after s0 (pos 1), so start = 2.
+        assert_eq!(route.insertion_range(ActivityId::service(1)), (2, 2));
     }
 }
