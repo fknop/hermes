@@ -141,10 +141,7 @@ fn route_with_dependencies(
             if !route.is_empty()
                 && problem
                     .task_dependencies()
-                    .contains_in_same_route_dependencies_for_unassigned_job(
-                        job_id,
-                        route.jobs_bitset(),
-                    )
+                    .contains_in_same_route_dependencies_for_insertion(route.jobs_bitset(), job_id)
             {
                 Some(route_id)
             } else {

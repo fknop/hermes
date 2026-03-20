@@ -1,23 +1,13 @@
 use fxhash::{FxHashMap, FxHashSet};
-use thiserror::Error;
 
 use crate::{
     problem::{
         job::{ActivityId, Job, JobIdx},
-        relation::Relation,
+        relation::{MalformedRelationError, Relation},
         vehicle::VehicleIdx,
     },
     utils::bitset::BitSet,
 };
-
-#[derive(Error, Debug, PartialEq, Eq)]
-pub enum MalformedRelationError {
-    #[error("Relations contain cycle")]
-    Cycle,
-
-    #[error("Conflicting relations, both in same routes and not in same routes")]
-    Conflict,
-}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum TaskDependencyType {
@@ -218,8 +208,8 @@ impl TaskDependencies {
                 }
                 Relation::InSameRoute(r) => {
                     let mut bitset = BitSet::with_capacity(jobs.len());
-                    for activity_id in &r.activity_ids {
-                        bitset.insert(activity_id.job_id().get());
+                    for job_id in &r.job_ids {
+                        bitset.insert(job_id.get());
                     }
 
                     in_same_route_groups.push(InSameRouteGroup {
@@ -229,8 +219,8 @@ impl TaskDependencies {
                 }
                 Relation::NotInSameRoute(r) => {
                     let mut bitset = BitSet::with_capacity(jobs.len());
-                    for activity_id in &r.activity_ids {
-                        bitset.insert(activity_id.job_id().get());
+                    for job_id in &r.job_ids {
+                        bitset.insert(job_id.get());
                     }
 
                     not_in_same_route_groups.push(NotInSameRouteGroup { bitset });
@@ -405,14 +395,14 @@ impl TaskDependencies {
         })
     }
 
-    pub fn contains_in_same_route_dependencies_for_unassigned_job(
+    pub fn contains_in_same_route_dependencies_for_insertion(
         &self,
-        job_id: JobIdx,
         route_segment: &BitSet,
+        job_id: JobIdx,
     ) -> bool {
         self.in_same_route_groups
             .iter()
-            .any(|bs| bs.contains(job_id.get()) && route_segment.intersects(bs))
+            .any(|group| group.contains(job_id.get()) && route_segment.intersects(group))
     }
 
     pub fn contains_in_same_route_dependencies(
@@ -442,7 +432,6 @@ mod tests {
         job::ActivityId,
         relation::*,
         service::{Service, ServiceBuilder},
-        task_dependencies,
     };
 
     use super::*;
@@ -558,19 +547,19 @@ mod tests {
         let relations = vec![
             Relation::InSameRoute(InSameRouteRelation {
                 vehicle_id: Some(VehicleIdx::new(0)),
-                activity_ids: vec![ActivityId::service(0), ActivityId::service(1)],
+                job_ids: vec![JobIdx::new(0), JobIdx::new(1)],
             }),
             Relation::InSameRoute(InSameRouteRelation {
                 vehicle_id: None,
-                activity_ids: vec![ActivityId::service(2), ActivityId::service(3)],
+                job_ids: vec![JobIdx::new(2), JobIdx::new(3)],
             }),
             Relation::InSameRoute(InSameRouteRelation {
                 vehicle_id: None,
-                activity_ids: vec![ActivityId::service(3), ActivityId::service(4)],
+                job_ids: vec![JobIdx::new(3), JobIdx::new(4)],
             }),
             Relation::InSameRoute(InSameRouteRelation {
                 vehicle_id: None,
-                activity_ids: vec![ActivityId::service(4), ActivityId::service(5)],
+                job_ids: vec![JobIdx::new(4), JobIdx::new(5)],
             }),
         ];
 
@@ -605,16 +594,16 @@ mod tests {
         let dummy_jobs = (0..10).map(|_| create_dummy_job()).collect::<Vec<_>>();
         let relations = vec![
             Relation::NotInSameRoute(NotInSameRouteRelation {
-                activity_ids: vec![ActivityId::service(0), ActivityId::service(1)],
+                job_ids: vec![JobIdx::new(0), JobIdx::new(1)],
             }),
             Relation::NotInSameRoute(NotInSameRouteRelation {
-                activity_ids: vec![ActivityId::service(2), ActivityId::service(3)],
+                job_ids: vec![JobIdx::new(2), JobIdx::new(3)],
             }),
             Relation::NotInSameRoute(NotInSameRouteRelation {
-                activity_ids: vec![ActivityId::service(3), ActivityId::service(4)],
+                job_ids: vec![JobIdx::new(3), JobIdx::new(4)],
             }),
             Relation::NotInSameRoute(NotInSameRouteRelation {
-                activity_ids: vec![ActivityId::service(4), ActivityId::service(5)],
+                job_ids: vec![JobIdx::new(4), JobIdx::new(5)],
             }),
         ];
 
@@ -643,14 +632,14 @@ mod tests {
         let relations = vec![
             Relation::InSameRoute(InSameRouteRelation {
                 vehicle_id: None,
-                activity_ids: vec![ActivityId::service(0), ActivityId::service(1)],
+                job_ids: vec![JobIdx::new(0), JobIdx::new(1)],
             }),
             Relation::InSameRoute(InSameRouteRelation {
                 vehicle_id: None,
-                activity_ids: vec![ActivityId::service(1), ActivityId::service(2)],
+                job_ids: vec![JobIdx::new(1), JobIdx::new(2)],
             }),
             Relation::NotInSameRoute(NotInSameRouteRelation {
-                activity_ids: vec![ActivityId::service(0), ActivityId::service(2)],
+                job_ids: vec![JobIdx::new(0), JobIdx::new(2)],
             }),
         ];
 
@@ -666,11 +655,11 @@ mod tests {
         let relations = vec![
             Relation::InSameRoute(InSameRouteRelation {
                 vehicle_id: Some(VehicleIdx::new(0)),
-                activity_ids: vec![ActivityId::service(0), ActivityId::service(1)],
+                job_ids: vec![JobIdx::new(0), JobIdx::new(1)],
             }),
             Relation::InSameRoute(InSameRouteRelation {
                 vehicle_id: Some(VehicleIdx::new(1)),
-                activity_ids: vec![ActivityId::service(1), ActivityId::service(2)],
+                job_ids: vec![JobIdx::new(1), JobIdx::new(2)],
             }),
         ];
 

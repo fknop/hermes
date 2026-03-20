@@ -137,6 +137,7 @@ impl OsrmClient {
         let response = self
             .client
             .post(url)
+            .timeout(std::time::Duration::from_secs(1))
             .query(&[
                 ("geometries", "geojson"),
                 ("skip_waypoints", "true"),

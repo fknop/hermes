@@ -2115,6 +2115,7 @@ mod tests {
         },
         solver::{
             insertion::{Insertion, ServiceInsertion, ShipmentInsertion},
+            noise::JobNoiser,
             solution::{
                 route::WorkingSolutionRoute, route_id::RouteIdx,
                 route_update_iterator::RouteUpdateActivityData,
@@ -5090,7 +5091,7 @@ mod tests {
         let problem = create_problem_with_relations(
             4,
             vec![Relation::NotInSameRoute(NotInSameRouteRelation {
-                activity_ids: vec![ActivityId::service(0), ActivityId::service(1)],
+                job_ids: vec![JobIdx::new(0), JobIdx::new(1)],
             })],
         );
         let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
@@ -5109,7 +5110,7 @@ mod tests {
         let problem = create_problem_with_relations(
             4,
             vec![Relation::NotInSameRoute(NotInSameRouteRelation {
-                activity_ids: vec![ActivityId::service(0), ActivityId::service(1)],
+                job_ids: vec![JobIdx::new(0), JobIdx::new(1)],
             })],
         );
         let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
@@ -5480,7 +5481,7 @@ mod tests {
             3,
             vec![Relation::InSameRoute(InSameRouteRelation {
                 vehicle_id: None,
-                activity_ids: vec![ActivityId::service(0), ActivityId::service(1)],
+                job_ids: vec![JobIdx::new(0), JobIdx::new(1)],
             })],
         );
         let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
@@ -5499,7 +5500,7 @@ mod tests {
             3,
             vec![Relation::InSameRoute(InSameRouteRelation {
                 vehicle_id: None,
-                activity_ids: vec![ActivityId::service(0), ActivityId::service(1)],
+                job_ids: vec![JobIdx::new(0), JobIdx::new(1)],
             })],
         );
         let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
@@ -5519,7 +5520,7 @@ mod tests {
             3,
             vec![Relation::InSameRoute(InSameRouteRelation {
                 vehicle_id: None,
-                activity_ids: vec![ActivityId::service(0), ActivityId::service(1)],
+                job_ids: vec![JobIdx::new(0), JobIdx::new(1)],
             })],
         );
         let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
@@ -5539,7 +5540,7 @@ mod tests {
             3,
             vec![Relation::InSameRoute(InSameRouteRelation {
                 vehicle_id: None,
-                activity_ids: vec![ActivityId::service(0), ActivityId::service(1)],
+                job_ids: vec![JobIdx::new(0), JobIdx::new(1)],
             })],
         );
         let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));

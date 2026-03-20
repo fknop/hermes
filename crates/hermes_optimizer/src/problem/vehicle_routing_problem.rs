@@ -3,7 +3,6 @@ use std::sync::atomic::AtomicUsize;
 use fxhash::FxHashSet;
 use jiff::SignedDuration;
 use thiserror::Error;
-use tokio::time::error;
 use tracing::instrument;
 use uuid::Uuid;
 
@@ -14,16 +13,17 @@ use crate::{
         fleet::Fleet,
         job::{ActivityId, Job, JobActivity, JobIdx},
         meters::Meters,
-        relation::Relation,
+        relation::{ExternalRelation, MalformedRelationError, Relation},
         service::Service,
         shipment::Shipment,
         skill::Skill,
-        task_dependencies::{MalformedRelationError, TaskDependencies},
+        task_dependencies::TaskDependencies,
         vehicle_profile::{VehicleProfile, VehicleProfileIdx},
     },
     solver::constraints::transport_cost_constraint::TRANSPORT_COST_WEIGHT,
     utils::{
-        enumerate_idx::EnumerateIdx, one_tree::alpha_nearest_neighbors, zip_longest::zip_longest,
+        duplicate::find_duplicate, enumerate_idx::EnumerateIdx, one_tree::alpha_nearest_neighbors,
+        zip_longest::zip_longest,
     },
 };
 
@@ -54,6 +54,7 @@ pub struct VehicleRoutingProblem {
 
     neighborhoods: Vec<FxHashSet<ActivityId>>,
 
+    relations: Vec<Relation>,
     task_dependencies: TaskDependencies,
 
     skill_registry: Vec<Skill>,
@@ -88,6 +89,39 @@ pub enum VehicleRoutingProblemError {
     MissingFleet,
     #[error("Empty fleet")]
     EmptyFleet,
+
+    #[error("Duplicate job ID {0}")]
+    DuplicateJobId(String),
+
+    #[error("Duplicate vehicle ID {0}")]
+    DuplicateVehicleId(String),
+
+    #[error("Unknown activity ID {0} in relation {1}")]
+    UnknownActivityIdInRelation(String, usize),
+
+    #[error("Unknown job ID {0} in relation {1}")]
+    UnknownJobIdInRelation(String, usize),
+}
+
+enum VehicleRoutingRelationParams {
+    Internal(Vec<Relation>),
+    External(Vec<ExternalRelation>),
+}
+
+impl VehicleRoutingRelationParams {
+    fn try_into_relations(
+        self,
+        vehicles: &[Vehicle],
+        jobs: &[Job],
+    ) -> Result<Vec<Relation>, MalformedRelationError> {
+        match self {
+            VehicleRoutingRelationParams::Internal(relations) => Ok(relations),
+            VehicleRoutingRelationParams::External(relations) => relations
+                .into_iter()
+                .map(|rel| rel.try_into_relation(vehicles, jobs))
+                .collect(),
+        }
+    }
 }
 
 struct VehicleRoutingProblemParams {
@@ -98,7 +132,7 @@ struct VehicleRoutingProblemParams {
     jobs: Vec<Job>,
     distance_method: DistanceMethod,
     penalize_waiting_duration: bool,
-    relations: Option<Vec<Relation>>,
+    relations: Option<VehicleRoutingRelationParams>,
 }
 
 impl VehicleRoutingProblem {
@@ -107,6 +141,24 @@ impl VehicleRoutingProblem {
     ) -> Result<Self, VehicleRoutingProblemError> {
         if params.fleet.vehicles().is_empty() {
             return Err(VehicleRoutingProblemError::EmptyFleet);
+        }
+
+        if let Some(duplicate) = find_duplicate(params.jobs.iter().map(|job| job.external_id())) {
+            return Err(VehicleRoutingProblemError::DuplicateJobId(
+                duplicate.to_owned(),
+            ));
+        }
+
+        if let Some(duplicate) = find_duplicate(
+            params
+                .fleet
+                .vehicles()
+                .iter()
+                .map(|vehicle| vehicle.external_id()),
+        ) {
+            return Err(VehicleRoutingProblemError::DuplicateVehicleId(
+                duplicate.to_owned(),
+            ));
         }
 
         for (vehicle_id, vehicle) in params.fleet.vehicles().iter().enumerate() {
@@ -173,17 +225,17 @@ impl VehicleRoutingProblem {
             .iter()
             .any(|job| matches!(job, Job::Shipment(_)));
 
-        let has_task_dependencies = params
+        let relations = params
             .relations
-            .as_ref()
-            .map(|relations| !relations.is_empty())
-            .unwrap_or(false);
+            .map(|relations| relations.try_into_relations(params.fleet.vehicles(), &params.jobs))
+            .transpose()?
+            .unwrap_or_default();
 
-        let task_dependencies = TaskDependencies::try_from_jobs_and_relations(
-            &params.jobs,
-            &params.relations.unwrap_or_default(),
-        )
-        .map_err(VehicleRoutingProblemError::MalformedRelation)?;
+        let has_task_dependencies = !relations.is_empty();
+
+        let task_dependencies =
+            TaskDependencies::try_from_jobs_and_relations(&params.jobs, &relations)
+                .map_err(VehicleRoutingProblemError::MalformedRelation)?;
 
         let mut problem = Self {
             id: params.id,
@@ -194,6 +246,7 @@ impl VehicleRoutingProblem {
             fleet: params.fleet,
             vehicle_profiles: params.vehicle_profiles,
             jobs: params.jobs,
+            relations,
             task_dependencies,
             neighborhoods,
             service_location_index,
@@ -697,6 +750,7 @@ pub struct VehicleRoutingProblemBuilder {
     distance_method: Option<DistanceMethod>,
     penalize_waiting_duration: Option<bool>,
     relations: Option<Vec<Relation>>,
+    external_relations: Option<Vec<ExternalRelation>>,
 }
 
 impl VehicleRoutingProblemBuilder {
@@ -777,6 +831,14 @@ impl VehicleRoutingProblemBuilder {
         self
     }
 
+    pub fn set_external_relations(
+        &mut self,
+        relations: Vec<ExternalRelation>,
+    ) -> &mut VehicleRoutingProblemBuilder {
+        self.external_relations = Some(relations);
+        self
+    }
+
     pub fn build(self) -> Result<VehicleRoutingProblem, VehicleRoutingProblemError> {
         let locations = self
             .locations
@@ -815,7 +877,12 @@ impl VehicleRoutingProblemBuilder {
             jobs,
             distance_method,
             penalize_waiting_duration: self.penalize_waiting_duration.unwrap_or(true),
-            relations: self.relations,
+            relations: self
+                .external_relations
+                .map(|relations| VehicleRoutingRelationParams::External(relations))
+                .or(self
+                    .relations
+                    .map(|relations| VehicleRoutingRelationParams::Internal(relations))),
         })
     }
 }

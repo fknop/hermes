@@ -373,7 +373,7 @@ pub fn construct_solution(
         panic!("Bug: score should never fail when insert_on_failure is false")
     }
 
-    if problem.jobs().len() > 500 {
+    if problem.jobs().len() > 500 || solution.problem().has_task_dependencies() {
         let best_insertion = BestInsertion::new(BestInsertionParams {
             blink_rate: 0.0,
             sort_strategy: BestInsertionSortStrategy::Far,

@@ -1,6 +1,7 @@
 pub mod amount;
 pub mod capacity;
 pub mod distance_method;
+pub mod external_id;
 pub mod fleet;
 pub mod job;
 pub mod kmh;

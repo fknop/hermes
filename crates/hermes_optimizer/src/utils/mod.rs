@@ -2,6 +2,7 @@ pub mod bbox;
 pub mod bitset;
 pub mod broken_pairs_distance;
 pub mod cancellable_barrier;
+pub mod duplicate;
 pub mod enumerate_idx;
 pub mod kruskal;
 pub mod newtype_index;
