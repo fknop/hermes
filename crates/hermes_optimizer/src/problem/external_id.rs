@@ -3,6 +3,7 @@ use schemars::JsonSchema;
 use crate::problem::job::{ActivityId, Job};
 
 #[derive(JsonSchema)]
+#[schemars(with = "String")]
 pub enum ExternalActivityId {
     ShipmentPickup(String),
     ShipmentDelivery(String),

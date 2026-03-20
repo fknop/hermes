@@ -769,6 +769,135 @@
           "costs"
         ]
       },
+      "ExternalInDirectSequenceRelation": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "vehicle_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "ids"
+        ]
+      },
+      "ExternalInSameRouteRelation": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExternalJobId"
+            }
+          },
+          "vehicle_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "ids"
+        ]
+      },
+      "ExternalJobId": {
+        "type": "string"
+      },
+      "ExternalNotInSameRouteRelation": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExternalJobId"
+            }
+          }
+        },
+        "required": [
+          "ids"
+        ]
+      },
+      "ExternalRelation": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "IN_SAME_ROUTE"
+              }
+            },
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ExternalInSameRouteRelation"
+              }
+            ],
+            "required": [
+              "type"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "NOT_IN_SAME_ROUTE"
+              }
+            },
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ExternalNotInSameRouteRelation"
+              }
+            ],
+            "required": [
+              "type"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "IN_SEQUENCE"
+              }
+            },
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ExternalInDirectSequenceRelation"
+              }
+            ],
+            "required": [
+              "type"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "IN_DIRECT_SEQUENCE"
+              }
+            },
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ExternalInDirectSequenceRelation"
+              }
+            ],
+            "required": [
+              "type"
+            ]
+          }
+        ]
+      },
       "GraphHopperProfile": {
         "type": "string",
         "enum": [
@@ -953,6 +1082,18 @@
             "required": [
               "status"
             ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "const": "Error"
+              }
+            },
+            "required": [
+              "status"
+            ]
           }
         ]
       },
@@ -1123,7 +1264,8 @@
         "enum": [
           "Pending",
           "Running",
-          "Completed"
+          "Completed",
+          "Error"
         ]
       },
       "TimeWindow": {
@@ -1409,6 +1551,15 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/Location"
+            }
+          },
+          "relations": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ExternalRelation"
             }
           },
           "services": {
