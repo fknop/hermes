@@ -48,14 +48,14 @@ impl InsertionCache {
         );
     }
 
-    #[allow(dead_code)]
-    pub fn clear(&mut self, routes: &[WorkingSolutionRoute]) {
-        self.cache.retain(|(route_idx, version, _), _| {
-            if let Some(route) = routes.get(route_idx.get()) {
-                *version == route.version()
-            } else {
-                false
-            }
-        });
+    pub fn clear(&mut self) {
+        self.cache.clear();
+        // self.cache.retain(|(route_idx, version, _), _| {
+        //     if let Some(route) = routes.get(route_idx.get()) {
+        //         *version == route.version()
+        //     } else {
+        //         false
+        //     }
+        // });
     }
 }

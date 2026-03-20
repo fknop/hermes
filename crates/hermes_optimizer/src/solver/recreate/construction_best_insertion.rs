@@ -1,10 +1,13 @@
 use tracing::instrument;
 
-use crate::solver::{
-    insertion::{Insertion, for_each_route_insertion},
-    insertion_cache::InsertionCache,
-    score::Score,
-    solution::{route_id::RouteIdx, working_solution::WorkingSolution},
+use crate::{
+    problem,
+    solver::{
+        insertion::{Insertion, for_each_route_insertion},
+        insertion_cache::InsertionCache,
+        score::Score,
+        solution::{route_id::RouteIdx, working_solution::WorkingSolution},
+    },
 };
 
 use super::{recreate_context::RecreateContext, recreate_solution::RecreateSolution};
@@ -90,6 +93,12 @@ impl ConstructionBestInsertion {
 
             if let Some(insertion) = best_insertion {
                 solution.insert(&insertion);
+
+                // Small edge case right now: insertion cache is actually invalidated with relations because inserting in a route will also affect insertions in other routes
+                // This could be optimized to only clear the routes that may be impacted, e.g. inserting the first job in a "In Same Route" constraint will only affect the cache the first time
+                if solution.problem().has_task_dependencies() {
+                    insertion_cache.clear();
+                }
             } else {
                 break;
                 // panic!("No insertion possible")

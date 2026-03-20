@@ -208,6 +208,14 @@ fn for_each_route_service_insertion(
     mut f: impl FnMut(Insertion),
 ) {
     let route = solution.route(route_index);
+    // If a route with already assigned dependencies exists and this is not the route, skip
+    let route_with_deps = route_with_dependencies(solution.problem(), solution, job_index);
+
+    if let Some(route_with_deps) = route_with_deps
+        && route_index != route_with_deps
+    {
+        return;
+    }
 
     if route.has_maximum_activities(solution.problem()) {
         return;
@@ -291,6 +299,13 @@ fn for_each_route_shipment_insertion(
     mut f: impl FnMut(Insertion),
 ) {
     let route = solution.route(route_index);
+
+    let route_with_deps = route_with_dependencies(solution.problem(), solution, job_index);
+    if let Some(route_with_deps) = route_with_deps
+        && route_index != route_with_deps
+    {
+        return;
+    }
 
     if route.will_break_maximum_activities(solution.problem(), 2) {
         return;
