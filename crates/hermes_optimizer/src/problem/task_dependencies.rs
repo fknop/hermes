@@ -374,11 +374,34 @@ impl TaskDependencies {
         })
     }
 
+    /// Check whether the job "job_id", if added into a route segment "route_segment" violates the "not in same route" constraint.
+    pub fn contains_not_in_same_route_violations_for_job_addition(
+        &self,
+        route_segment: &BitSet,
+        job_id: JobIdx,
+    ) -> bool {
+        self.not_in_same_route_groups
+            .iter()
+            .any(|group| group.contains(job_id.get()) && group.intersects(route_segment))
+    }
+
     /// Check whether the segment "route_segment" violates the "not in same route" constraint.
     pub fn contains_not_in_same_route_violations(&self, route_segment: &BitSet) -> bool {
         self.not_in_same_route_groups.iter().any(|group| {
             let count = group.intersection_count(route_segment);
             count > 1
+        })
+    }
+
+    /// Check whether the two route segments violate the "in same route" constraint.
+    pub fn contains_in_same_route_violations(
+        &self,
+        first_route_segment: &BitSet,
+        second_route_segment: &BitSet,
+    ) -> bool {
+        self.in_same_route_groups.iter().any(|group| {
+            // If the two segments intersect with a group, it means they both have jobs that should be in the same route
+            group.intersects(first_route_segment) && group.intersects(second_route_segment)
         })
     }
 

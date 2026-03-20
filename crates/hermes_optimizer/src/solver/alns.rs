@@ -32,8 +32,9 @@ use crate::{
             global_constraint::GlobalConstraintType,
             maximum_activities_constraint::MaximumActivitiesConstraint,
             maximum_working_duration_constraint::MaximumWorkingDurationConstraint,
-            route_constraint::RouteConstraintType, shift_constraint::ShiftConstraint,
-            skill_constraint::SkillConstraint, time_window_constraint::TimeWindowConstraint,
+            relation_constraint::RelationConstraint, route_constraint::RouteConstraintType,
+            shift_constraint::ShiftConstraint, skill_constraint::SkillConstraint,
+            time_window_constraint::TimeWindowConstraint,
             transport_cost_constraint::TransportCostConstraint,
             vehicle_cost_constraint::VehicleCostConstraint,
             waiting_duration_constraint::WaitingDurationConstraint,
@@ -277,6 +278,7 @@ impl Alns {
     fn create_constraints() -> Vec<Constraint> {
         vec![
             // Hard constraints
+            Constraint::Global(GlobalConstraintType::Relation(RelationConstraint)),
             Constraint::Route(RouteConstraintType::MaximumJobs(
                 MaximumActivitiesConstraint,
             )),

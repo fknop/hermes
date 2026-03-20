@@ -1418,7 +1418,7 @@ impl WorkingSolutionRoute {
     pub fn is_valid_dependency_change(
         &self,
         problem: &VehicleRoutingProblem,
-        activity_ids: impl DoubleEndedIterator<Item = ActivityId> + Clone,
+        activity_ids: impl Iterator<Item = ActivityId> + Clone,
         start: usize,
         end: usize,
     ) -> bool {

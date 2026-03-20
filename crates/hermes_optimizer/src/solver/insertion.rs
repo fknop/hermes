@@ -19,7 +19,7 @@ pub struct ServiceInsertion {
 }
 
 impl ServiceInsertion {
-    pub fn inserted_activity_ids(&self) -> impl Iterator<Item = ActivityId> {
+    pub fn inserted_activity_ids(&self) -> impl Iterator<Item = ActivityId> + Clone {
         std::iter::once(ActivityId::Service(self.job_index))
     }
 
@@ -47,7 +47,7 @@ impl ShipmentInsertion {
     pub fn inserted_activity_ids(
         &self,
         route: &WorkingSolutionRoute,
-    ) -> impl Iterator<Item = ActivityId> {
+    ) -> impl Iterator<Item = ActivityId> + Clone {
         std::iter::once(ActivityId::ShipmentPickup(self.job_index))
             .chain(route.activity_ids_iter(self.pickup_position, self.delivery_position))
             .chain(std::iter::once(ActivityId::ShipmentDelivery(

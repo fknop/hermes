@@ -5,6 +5,7 @@ pub mod constraint;
 pub mod global_constraint;
 pub mod maximum_activities_constraint;
 pub mod maximum_working_duration_constraint;
+pub mod relation_constraint;
 pub mod route_constraint;
 pub mod shift_constraint;
 pub mod skill_constraint;
