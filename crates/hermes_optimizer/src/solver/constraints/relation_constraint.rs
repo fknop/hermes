@@ -32,7 +32,7 @@ impl GlobalConstraint for RelationConstraint {
 
         for route in solution.non_empty_routes_iter() {
             // 1: check not in same route constraints
-            if task_dependencies.contains_not_in_same_route_violations(route.jobs_bitset()) {
+            if route.contains_not_in_same_route_violations(problem) {
                 total_violations += RELATION_VIOLATION_WEIGHT;
             }
 
@@ -42,10 +42,7 @@ impl GlobalConstraint for RelationConstraint {
                     continue;
                 }
 
-                if task_dependencies.contains_in_same_route_violations(
-                    route.jobs_bitset(),
-                    other_route.jobs_bitset(),
-                ) {
+                if route.contains_in_same_route_violations(problem, other_route) {
                     total_violations += RELATION_VIOLATION_WEIGHT;
                 }
             }

@@ -1363,7 +1363,41 @@ impl WorkingSolutionRoute {
         result
     }
 
-    pub fn jobs_bitset(&self) -> &BitSet {
+    pub fn contains_in_same_route_dependencies_for_insertion(
+        &self,
+        problem: &VehicleRoutingProblem,
+        job_id: JobIdx,
+    ) -> bool {
+        problem.has_task_dependencies()
+            && !self.is_empty()
+            && problem
+                .task_dependencies()
+                .contains_in_same_route_dependencies_for_insertion(self.jobs_bitset(), job_id)
+    }
+
+    pub fn contains_in_same_route_violations(
+        &self,
+        problem: &VehicleRoutingProblem,
+        other: &Self,
+    ) -> bool {
+        problem.has_task_dependencies()
+            && !self.is_empty()
+            && !other.is_empty()
+            && problem
+                .task_dependencies()
+                .contains_in_same_route_violations(self.jobs_bitset(), other.jobs_bitset())
+    }
+
+    pub fn contains_not_in_same_route_violations(&self, problem: &VehicleRoutingProblem) -> bool {
+        problem.has_task_dependencies()
+            && problem
+                .task_dependencies()
+                .contains_not_in_same_route_violations(self.jobs_bitset())
+    }
+
+    fn jobs_bitset(&self) -> &BitSet {
+        assert!(!self.is_empty());
+
         &self.bwd_jobs[0]
     }
 
