@@ -231,6 +231,8 @@ impl VehicleRoutingProblem {
             .transpose()?
             .unwrap_or_default();
 
+        println!("{:?}", relations);
+
         let has_task_dependencies = !relations.is_empty();
 
         let task_dependencies =

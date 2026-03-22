@@ -8,42 +8,36 @@ use crate::problem::{
     vehicle::{Vehicle, VehicleIdx},
 };
 
+#[derive(Debug)]
 pub struct InDirectSequenceRelation {
     pub vehicle_id: Option<VehicleIdx>,
     pub activity_ids: Vec<ActivityId>,
 }
 
+#[derive(Debug)]
 pub struct InSequenceRelation {
     pub vehicle_id: Option<VehicleIdx>,
     pub activity_ids: Vec<ActivityId>,
 }
 
+#[derive(Debug)]
 pub struct InSameRouteRelation {
     pub vehicle_id: Option<VehicleIdx>,
     pub job_ids: Vec<JobIdx>,
 }
 
+#[derive(Debug)]
 pub struct NotInSameRouteRelation {
     pub job_ids: Vec<JobIdx>,
 }
 
+#[derive(Debug)]
 pub enum Relation {
     InSameRoute(InSameRouteRelation),
     NotInSameRoute(NotInSameRouteRelation),
     InSequence(InSequenceRelation),
     InDirectSequence(InDirectSequenceRelation),
 }
-
-// impl Relation {
-//     pub fn activity_ids(&self) -> &[ActivityId] {
-//         match self {
-//             Relation::InSameRoute(r) => &r.activity_ids,
-//             Relation::NotInSameRoute(r) => &r.activity_ids,
-//             Relation::InSequence(r) => &r.activity_ids,
-//             Relation::InDirectSequence(r) => &r.activity_ids,
-//         }
-//     }
-// }
 
 #[derive(JsonSchema, Serialize, Deserialize)]
 pub struct ExternalInDirectSequenceRelation {
@@ -52,7 +46,7 @@ pub struct ExternalInDirectSequenceRelation {
 }
 
 #[derive(JsonSchema, Serialize, Deserialize)]
-pub struct JsonInSequenceRelation {
+pub struct ExternalInSequenceRelation {
     pub vehicle_id: Option<String>,
     pub ids: Vec<ExternalActivityId>,
 }

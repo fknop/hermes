@@ -20,7 +20,7 @@ tracing-subscriber = "0.3.19"
 anyhow = { workspace=true }
 hermes_optimizer = { path = "../crates/hermes_optimizer" }
 indicatif = "0.18.3"
-mimalloc = "0.1.48"
+mimalloc = { version = "0.1.48", features = ["v3"] }
 dhat = "0.3.3"
 serde_json = {workspace = true}
 hermes_matrix_providers = { version = "0.1.0", path = "../crates/hermes_matrix_providers" }

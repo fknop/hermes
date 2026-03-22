@@ -19,7 +19,7 @@ uuid = { version = "1.17.0", features = ["serde"] }
 parking_lot = { version = "0.12.4", features = ["serde"] }
 jiff.workspace = true
 geo.workspace = true
-mimalloc = "0.1.47"
+mimalloc = { version = "0.1.48", features = ["v3"] }
 hermes_matrix_providers = { version = "0.1.0", path = "../crates/hermes_matrix_providers" }
 anyhow = {workspace = true}
 dotenvy.workspace = true

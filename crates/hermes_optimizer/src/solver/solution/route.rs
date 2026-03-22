@@ -1,3 +1,5 @@
+use std::cell::RefCell;
+
 use fxhash::FxHashMap;
 use jiff::{SignedDuration, Timestamp};
 
@@ -9,7 +11,7 @@ use crate::{
         location::LocationIdx,
         meters::Meters,
         service::ServiceType,
-        task_dependencies::{self, TaskDependencyType},
+        task_dependencies::TaskDependencyType,
         vehicle::{Vehicle, VehicleIdx},
         vehicle_routing_problem::VehicleRoutingProblem,
     },
@@ -1357,10 +1359,8 @@ impl WorkingSolutionRoute {
         true
     }
 
-    fn segment_bitset(&self, problem: &VehicleRoutingProblem, start: usize, end: usize) -> BitSet {
-        let mut result = BitSet::with_capacity(problem.jobs().len());
+    fn update_segment_bitset(&self, result: &mut BitSet, start: usize, end: usize) {
         result.intersection_from(&self.bwd_jobs[start], &self.fwd_jobs[end - 1]);
-        result
     }
 
     pub fn contains_in_same_route_dependencies_for_insertion(
@@ -1425,22 +1425,36 @@ impl WorkingSolutionRoute {
         }
 
         if problem.has_task_dependencies() {
+            thread_local! {
+                static SEGMENT: RefCell<BitSet> = RefCell::new(BitSet::with_capacity(0));
+            }
+
             let task_dependencies = problem.task_dependencies();
 
             if task_dependencies.has_in_same_route_dependencies() {
-                let segment = self.segment_bitset(problem, start, end);
+                SEGMENT.with_borrow_mut(|segment| {
+                    self.update_segment_bitset(segment, start, end);
+                });
 
-                if start > 0
-                    && task_dependencies
-                        .contains_in_same_route_dependencies(&self.fwd_jobs[start - 1], &segment)
-                {
-                    return false;
-                }
+                let is_valid = SEGMENT.with_borrow(|segment| {
+                    if start > 0
+                        && task_dependencies
+                            .contains_in_same_route_dependencies(&self.fwd_jobs[start - 1], segment)
+                    {
+                        return false;
+                    }
 
-                if end < self.len()
-                    && task_dependencies
-                        .contains_in_same_route_dependencies(&self.bwd_jobs[end], &segment)
-                {
+                    if end < self.len()
+                        && task_dependencies
+                            .contains_in_same_route_dependencies(&self.bwd_jobs[end], segment)
+                    {
+                        return false;
+                    }
+
+                    true
+                });
+
+                if !is_valid {
                     return false;
                 }
             }
@@ -2149,7 +2163,6 @@ mod tests {
         },
         solver::{
             insertion::{Insertion, ServiceInsertion, ShipmentInsertion},
-            noise::JobNoiser,
             solution::{
                 route::WorkingSolutionRoute, route_id::RouteIdx,
                 route_update_iterator::RouteUpdateActivityData,
@@ -2160,6 +2173,7 @@ mod tests {
             create_problem_for_tw_change,
         },
         timestamp,
+        utils::bitset::BitSet,
     };
 
     fn create_problem() -> VehicleRoutingProblem {
@@ -5373,6 +5387,17 @@ mod tests {
     //
     // segment_bitset(start, end) = bwd_jobs[start] ∩ fwd_jobs[end-1]
 
+    fn segment_bitset(
+        route: &WorkingSolutionRoute,
+        problem: &VehicleRoutingProblem,
+        start: usize,
+        end: usize,
+    ) -> BitSet {
+        let mut result = BitSet::with_capacity(problem.jobs().len());
+        route.update_segment_bitset(&mut result, start, end);
+        result
+    }
+
     #[test]
     fn test_segment_bitset_full_range() {
         // segment_bitset(0, 3) = {0,1,2} ∩ {0,1,2} = {0,1,2}
@@ -5382,7 +5407,7 @@ mod tests {
         route.insert_service(&problem, 1, JobIdx::new(2));
         route.insert_service(&problem, 2, JobIdx::new(1));
 
-        let bitset = route.segment_bitset(&problem, 0, 3);
+        let bitset = segment_bitset(&route, &problem, 0, 3);
         assert_eq!(bitset.ones().collect::<Vec<_>>(), vec![0, 1, 2]);
     }
 
@@ -5395,7 +5420,7 @@ mod tests {
         route.insert_service(&problem, 1, JobIdx::new(2));
         route.insert_service(&problem, 2, JobIdx::new(1));
 
-        let bitset = route.segment_bitset(&problem, 0, 1);
+        let bitset = segment_bitset(&route, &problem, 0, 1);
         assert_eq!(bitset.ones().collect::<Vec<_>>(), vec![0]);
     }
 
@@ -5408,7 +5433,7 @@ mod tests {
         route.insert_service(&problem, 1, JobIdx::new(2));
         route.insert_service(&problem, 2, JobIdx::new(1));
 
-        let bitset = route.segment_bitset(&problem, 1, 2);
+        let bitset = segment_bitset(&route, &problem, 1, 2);
         assert_eq!(bitset.ones().collect::<Vec<_>>(), vec![2]);
     }
 
@@ -5421,7 +5446,7 @@ mod tests {
         route.insert_service(&problem, 1, JobIdx::new(2));
         route.insert_service(&problem, 2, JobIdx::new(1));
 
-        let bitset = route.segment_bitset(&problem, 2, 3);
+        let bitset = segment_bitset(&route, &problem, 2, 3);
         assert_eq!(bitset.ones().collect::<Vec<_>>(), vec![1]);
     }
 
@@ -5434,7 +5459,7 @@ mod tests {
         route.insert_service(&problem, 1, JobIdx::new(2));
         route.insert_service(&problem, 2, JobIdx::new(1));
 
-        let bitset = route.segment_bitset(&problem, 0, 2);
+        let bitset = segment_bitset(&route, &problem, 0, 2);
         assert_eq!(bitset.ones().collect::<Vec<_>>(), vec![0, 2]);
     }
 
@@ -5447,7 +5472,7 @@ mod tests {
         route.insert_service(&problem, 1, JobIdx::new(2));
         route.insert_service(&problem, 2, JobIdx::new(1));
 
-        let bitset = route.segment_bitset(&problem, 1, 3);
+        let bitset = segment_bitset(&route, &problem, 1, 3);
         assert_eq!(bitset.ones().collect::<Vec<_>>(), vec![1, 2]);
     }
 
@@ -5458,7 +5483,7 @@ mod tests {
         let mut route = WorkingSolutionRoute::empty(&problem, VehicleIdx::new(0));
         route.insert_service(&problem, 0, JobIdx::new(0));
 
-        let bitset = route.segment_bitset(&problem, 0, 1);
+        let bitset = segment_bitset(&route, &problem, 0, 1);
         assert_eq!(bitset.ones().collect::<Vec<_>>(), vec![0]);
     }
 
